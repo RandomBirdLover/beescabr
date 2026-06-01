@@ -1,5 +1,47 @@
 ---
 title: "bee_data_analysis"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
+
+##Load packages
+```{r}
+install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate"))
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(writexl)
+library(egg)
+library(stringr)
+library(lubridate)
+
+
+```
+
+##Data Cleaning
+```{r}
+getwd()
+
+raw_bee_data <- read.csv("./data/raw_data/CABR_specimens_V4.csv",header=TRUE)
+
+clean_bee_data <- raw_bee_data%>%
+  mutate(date_clean = mdy(Date),
+        month = month(date_clean),
+        day = day(date_clean), 
+        year = year(date_clean))
+
+# Keep ONLY rows where both are NA
+##nolatlong <- clean_bee_data %>%   filter(is.na(Latitude) | is.na(Longitude)) <-- creates whole new data set
+
+##keeps it within the same data set of "clean_bee_data"
+clean_bee_data <- clean_bee_data %>% mutate(missinglatlong = is.na(Latitude) | is.na(Longitude))
+###filtering it here (filter is default true) will give you true, but best practice to write == True
+missinglatlong <- clean_bee_data %>% filter(missinglatlong == TRUE)
+
+
+
+```
+
 
