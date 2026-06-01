@@ -30,9 +30,12 @@ clean_bee_data <- raw_bee_data%>%
   mutate(date_clean = mdy(Date),
         month = month(date_clean),
         day = day(date_clean), 
-        year = year(date_clean))
+        year = year(date_clean),
+        across(where(is.character), ~na_if(.x, "")))
 
-# Keep ONLY rows where both are NA
+
+# Keep ONLY rows where either or NA
+#NO LAT OR LONG?
 ##nolatlong <- clean_bee_data %>%   filter(is.na(Latitude) | is.na(Longitude)) <-- creates whole new data set
 
 ##keeps it within the same data set of "clean_bee_data"
@@ -40,6 +43,20 @@ clean_bee_data <- clean_bee_data %>% mutate(missinglatlong = is.na(Latitude) | i
 ###filtering it here (filter is default true) will give you true, but best practice to write == True
 missinglatlong <- clean_bee_data %>% filter(missinglatlong == TRUE)
 
+#NO GENUS OR SPECIES?
+clean_bee_data <- clean_bee_data %>% mutate(missinggenusspecies = is.na(Genus) | is.na(Species))
+missinggenusspecies <- clean_bee_data %>% filter(missinggenusspecies == TRUE)
+
+clean_bee_data <- clean_bee_data %>% mutate(missingmethodplant = is.na(Method...Plant))
+missingmethodplant <- clean_bee_data %>% filter(missingmethodplant == TRUE)
+
+
+# SPECIES CHECKLIST
+clean_bee_data <- clean_bee_data %>% mutate(oldscientificname = paste0(Genus,"_",Subgenus,"_",Species))
+
+unique_old_species_list <- unique(clean_bee_data$oldscientificname)
+
+view(unique_old_species_list)
 
 
 ```
