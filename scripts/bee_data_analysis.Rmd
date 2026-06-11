@@ -5,22 +5,32 @@ editor_options:
   chunk_output_type: console
 ---
 
-##Load packages
+###### LOAD PACKAGES AND LIBRARIES ######
 ```{r}
-install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate"))
+install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate", "rgbif", "gbifdb", "sf"))
+install_github("duckdb/duckdb")
 
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(writexl)
-library(egg)
-library(stringr)
-library(lubridate)
+library(tidyverse) #data cleaning
+library(dplyr) # data cleaning
+library(ggplot2) #to make figures pretty
+library(writexl) #
+library(egg) #
+library(stringr) #
+library(lubridate) # to fix the date, and pull the month day and year as separate columns
+library(rgbif) #
+library(gbifdb) #
+library(sf)
+
+# Remote access without downloading data
+#gbif <- gbif_remote()
+#gbif %>%
+  #filter(phylum == "Chordata", year > 1990) %>%
+  #count(class, year)
 
 
 ```
 
-##Data Cleaning
+###### DATA CLEANING ######
 ```{r}
 getwd()
 
@@ -61,4 +71,63 @@ view(unique_old_species_list)
 
 ```
 
+###### SURVEYS ######
+```{r}
+transects <- st_read("U:/WILDLIFE/Bees/Bee_Analysis/Bee_Analysis_Project/Bee_Transects.shp")
+trails <- c("BST","UPMON","TP","OT")
+
+```
+
+
+
+###### BEES ######
+
+##Making Bee Reference Table for SD County, Point Loma, and CABR
+```{r}
+
+bee_family <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae", "Megachilidae", "Melittidae", "Stenotritidae")
+
+sd_county_bee_checklist <- read_csv("??")
+  # Keep only bee-relevant ranks 
+  filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>% 
+  # Get one row per unique taxon 
+  distinct(taxon_id, .keep_all = TRUE) %>% 
+  # Select taxonomic columns 
+  select( 
+    taxon_id,
+    taxon_rank, 
+    taxon_name,   # the identified name at whatever rank
+    taxon_family_name, 
+    taxon_genus_name
+  ) %>%
+arrange(taxon_family_name, taxon_genus_name, taxon_rank, taxon_name)
+```
+
+
+
+
+###### PLANTS ######
+
+##Making Plant Reference Table for SD County, Point Loma, and CABR
+```{r}
+sd_county_plant_checklist <- read_csv("??")
+  # Keep only bee-relevant ranks 
+  filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>% 
+  # Get one row per unique taxon 
+  distinct(taxon_id, .keep_all = TRUE) %>% 
+  # Select taxonomic columns 
+  select( 
+    taxon_id,
+    taxon_rank, 
+    taxon_name,   # the identified name at whatever rank
+    taxon_family_name, 
+    taxon_genus_name
+  ) %>%
+arrange(taxon_family_name, taxon_genus_name, taxon_rank, taxon_name)
+```
+
+
+```{r}
+
+```
 
