@@ -6,6 +6,13 @@
 .RData
 .RDataTmp
 /data
+!/data/Bee_Transects.shp
+!/data/Bee_Transects.dbf
+!/data/Bee_Transects.shx
+!/data/Bee_Transects.prj
+!/data/Bee_Transects.cpg
+!/data/Bee_Transects.sbn
+!/data/Bee_Transects.sbx
 
 # User-specific files
 .Ruserdata
