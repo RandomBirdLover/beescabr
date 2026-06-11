@@ -13,6 +13,11 @@
 !/data/Bee_Transects.cpg
 !/data/Bee_Transects.sbn
 !/data/Bee_Transects.sbx
+!/data/Buffer_10m.shp
+!/data/Buffer_10m.dbf
+!/data/Buffer_10m.shx
+!/data/Buffer_10m.prj
+!/data/Buffer_10m.cpg
 
 # User-specific files
 .Ruserdata
