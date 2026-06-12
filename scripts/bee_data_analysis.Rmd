@@ -7,6 +7,7 @@ editor_options:
 
 ###### LOAD PACKAGES AND LIBRARIES ######
 ```{r}
+#TEST TEST TEST
 install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate", "rgbif", "gbifdb", "sf"))
 install_github("duckdb/duckdb")
 
