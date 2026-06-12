@@ -8,9 +8,9 @@ editor_options:
 ###### LOAD PACKAGES AND LIBRARIES ######
 ```{r}
 #TEST TEST TEST
-install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate", "rgbif", "gbifdb", "sf"))
-install_github("duckdb/duckdb")
+#install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate", "rgbif", "gbifdb", "sf"))
 
+library(remotes)
 library(tidyverse) #data cleaning
 library(dplyr) # data cleaning
 library(ggplot2) #to make figures pretty
@@ -21,6 +21,9 @@ library(lubridate) # to fix the date, and pull the month day and year as separat
 library(rgbif) #
 library(gbifdb) #
 library(sf)
+library()
+
+install_github("duckdb/duckdb")
 
 # Remote access without downloading data
 #gbif <- gbif_remote()
