@@ -2,10 +2,12 @@
 # Created: June 11, 2026
 # Data: iNaturalist export, San Diego County, all years, all quality grades
 
+# Run once to install, then leave commented:
+# install.packages("tidyverse")
 library(tidyverse)
 
 # Load data
-bees <- read.csv("data/SD_native_bees_11_june_2026.csv")
+bees <- read.csv("data/reference_exports/bees/SD_native_bees_11_june_2026.csv")
 
 # Build checklist of unique taxa
 bee_checklist <- bees %>%
@@ -37,5 +39,3 @@ bee_checklist <- bees %>%
 # Preview
 head(bee_checklist)
 nrow(bee_checklist)
-
-

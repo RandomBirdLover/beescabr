@@ -1,169 +1,102 @@
 # =============================================================
-# SD Bee Master Reference Table
+# SD Bee Reference / Master Pivot Table
 # Created: June 11, 2026
 # Author: Brandi Sanchez
-# Purpose: Build a master reference/pivot table of all unique
-#          bee taxa for diversity (taxon richness) analyses.
-#          This table is the JOIN KEY for all future CABR /
-#          Point Loma / San Diego County comparison scripts.
-#
-# Counting philosophy: each unique genus_subgenus_species
-#          combination = one diversity unit (taxon richness).
-#          Genus-only and subgenus-only records are retained
-#          as their own units (conservative inclusion), since
-#          hard-to-ID genera (e.g. Colletes, Lasioglossum)
-#          are often only resolvable to genus/subgenus.
-#
-# Requires: bee_checklist (from native_bee_checklist.R) must
-#           already exist in the environment, OR load the
-#           saved checklist CSV below.
+# Description: Builds a master reference table from the native
+#              bee checklist. Creates three counting keys so the
+#              counting method can be switched with one line:
+#                key_full          = genus_subgenus_species  (TAXON RICHNESS)
+#                key_genus_species = genus_species
+#                key_species_only  = species
+#              Counting philosophy: "conservative inclusion" -- each
+#              unique genus_subgenus_species is one diversity unit.
+#              Genus-only records DO count as their own unit.
 # =============================================================
 
+# Run once to install, then leave commented:
+# install.packages("tidyverse")
 library(tidyverse)
 
 # ------------------------------------------------------------
-# STEP 1: Load the checklist (with subgenus already pulled)
+# STEP 1: Load checklist (re-run native_bee_checklist.R first
+#         if the file is missing, to avoid the ~3 min API call)
 # ------------------------------------------------------------
-# If bee_checklist isn't in your environment, load from CSV:
-if (!exists("bee_checklist")) {
-  bee_checklist <- read.csv("data/SD_native_bee_checklist.csv")
+checklist_path <- "data/outputs/SD_native_bee_checklist.csv"
+
+if (!file.exists(checklist_path)) {
+  message("Checklist not found -- running native_bee_checklist.R to build it...")
+  source("scripts/native_bee_checklist.R")
 }
 
-cat("Starting with", nrow(bee_checklist), "taxa\n")
+bee_checklist <- read.csv(checklist_path)
+
+cat("Loaded checklist with", nrow(bee_checklist), "taxa\n")
 
 # ------------------------------------------------------------
-# STEP 2: Clean up the species name
-# iNaturalist stores taxon_species_name as the FULL binomial
-# (e.g. "Bombus californicus"). We extract just the specific
-# epithet so the keys read cleanly.
+# STEP 2: Determine the rank of each record
 # ------------------------------------------------------------
 bee_reference <- bee_checklist %>%
   mutate(
-    # Treat empty strings as NA throughout
-    across(where(is.character), ~ na_if(.x, "")),
-    
-    # Extract just the specific epithet (second word) from species name
-    species_epithet = if_else(
-      !is.na(taxon_species_name),
-      word(taxon_species_name, 2),
-      NA_character_
-    ),
-    
-    # Extract just the subspecies epithet (third word) if present
-    subspecies_epithet = if_else(
-      !is.na(taxon_subspecies_name),
-      word(taxon_subspecies_name, 3),
-      NA_character_
-    )
-  )
-
-# ------------------------------------------------------------
-# STEP 3: Assign a rank to each taxon
-# Determines the finest level this taxon was identified to.
-# ------------------------------------------------------------
-bee_reference <- bee_reference %>%
-  mutate(
+    # Clean up blanks to NA
+    across(where(is.character), ~na_if(., "")),
     rank = case_when(
-      !is.na(subspecies_epithet) ~ "subspecies",
-      !is.na(species_epithet)    ~ "species",
-      !is.na(subgenus)           ~ "subgenus",
-      !is.na(taxon_genus_name)   ~ "genus",
-      TRUE                       ~ "above_genus"
+      !is.na(taxon_subspecies_name) ~ "subspecies",
+      !is.na(taxon_species_name)    ~ "species",
+      !is.na(subgenus)              ~ "subgenus",
+      !is.na(taxon_genus_name)      ~ "genus",
+      TRUE                          ~ "higher"
     )
   )
 
 # ------------------------------------------------------------
-# STEP 4: Build the key columns for flexible counting
+# STEP 3: Build the three counting keys
 # ------------------------------------------------------------
 bee_reference <- bee_reference %>%
   mutate(
-    # FULL KEY: genus_subgenus_species (taxon richness)
-    # NA parts become "NA" text so keys are always comparable
     key_full = paste(
       coalesce(taxon_genus_name, "NA"),
       coalesce(subgenus, "NA"),
-      coalesce(species_epithet, "NA"),
+      coalesce(taxon_species_name, "NA"),
       sep = "_"
     ),
-    
-    # GENUS + SPECIES KEY: ignores subgenus
     key_genus_species = paste(
       coalesce(taxon_genus_name, "NA"),
-      coalesce(species_epithet, "NA"),
+      coalesce(taxon_species_name, "NA"),
       sep = "_"
     ),
-    
-    # SPECIES-ONLY KEY: only filled for species-level IDs,
-    # NA otherwise (for strict species richness)
-    key_species_only = if_else(
-      rank %in% c("species", "subspecies"),
-      paste(taxon_genus_name, species_epithet),
-      NA_character_
-    )
+    key_species_only = coalesce(taxon_species_name, "NA")
   )
 
 # ------------------------------------------------------------
-# STEP 5: Deduplicate on the full key
-# Collapses any cases where multiple taxon_ids map to the
-# same genus_subgenus_species combination.
+# STEP 4: Dedupe on the full key and drop empty records
 # ------------------------------------------------------------
 bee_reference <- bee_reference %>%
-  arrange(taxon_family_name, taxon_genus_name, subgenus, species_epithet) %>%
-  distinct(key_full, .keep_all = TRUE)
-
-cat("After deduplicating on genus_subgenus_species:", nrow(bee_reference), "unique taxa\n")
-
-# Remove records with no genus-level information (uncountable)
-bee_reference <- bee_reference %>%
-  filter(key_full != "NA_NA_NA")
+  filter(key_full != "NA_NA_NA") %>%
+  distinct(key_full, .keep_all = TRUE) %>%
+  arrange(taxon_family_name, taxon_genus_name, subgenus, taxon_species_name)
 
 # ------------------------------------------------------------
-# STEP 6: Final column order
+# STEP 5: Diversity counts under each method
 # ------------------------------------------------------------
-bee_reference <- bee_reference %>%
-  select(
-    # Keys first (what future scripts join on)
-    key_full,
-    key_genus_species,
-    key_species_only,
-    rank,
-    # Then full taxonomy
-    taxon_id,
-    scientific_name,
-    common_name,
-    taxon_family_name,
-    taxon_subfamily_name,
-    taxon_tribe_name,
-    taxon_subtribe_name,
-    taxon_genus_name,
-    subgenus,
-    species_epithet,
-    subspecies_epithet
-  )
+cat("\n--- DIVERSITY COUNTS ---\n")
+cat("Taxon richness (genus_subgenus_species):", n_distinct(bee_reference$key_full), "\n")
+cat("Genus + species:                        ", n_distinct(bee_reference$key_genus_species), "\n")
+cat("Strict species only:                    ",
+    n_distinct(bee_reference$key_species_only[bee_reference$key_species_only != "NA"]), "\n")
 
 # ------------------------------------------------------------
-# STEP 7: Diversity counts three ways (demonstration)
+# STEP 6: Rank breakdown
 # ------------------------------------------------------------
-cat("\n--- DIVERSITY COUNTS (San Diego County) ---\n")
-cat("Taxon richness (full key):        ",
-    n_distinct(bee_reference$key_full), "\n")
-cat("Genus+species richness:           ",
-    n_distinct(bee_reference$key_genus_species), "\n")
-cat("Strict species richness:          ",
-    n_distinct(bee_reference$key_species_only[!is.na(bee_reference$key_species_only)]), "\n")
-
-cat("\n--- BREAKDOWN BY RANK ---\n")
-print(bee_reference %>% count(rank))
+cat("\n--- RANK BREAKDOWN ---\n")
+rank_summary <- bee_reference %>%
+  count(rank, sort = TRUE)
+print(rank_summary)
 
 # ------------------------------------------------------------
-# STEP 8: Save the master reference table
+# STEP 7: Save reference table
 # ------------------------------------------------------------
 write.csv(bee_reference,
-          "data/SD_bee_reference_table.csv",
+          "data/outputs/SD_bee_reference_table.csv",
           row.names = FALSE)
 
-cat("\nMaster reference table saved to data/SD_bee_reference_table.csv\n")
-
-# Preview
-print(head(bee_reference, 10))
-
+cat("\nReference table saved to data/outputs/SD_bee_reference_table.csv\n")

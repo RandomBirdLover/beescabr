@@ -6,132 +6,118 @@ editor_options:
 ---
 
 ###### LOAD PACKAGES AND LIBRARIES ######
-```{r}
-#TEST TEST TEST
-#install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg", "stringr", "lubridate", "rgbif", "gbifdb", "sf"))
+```{r setup, message=FALSE, warning=FALSE}
+# Run these ONCE to install, then leave commented out.
+# (install.packages re-downloads every run if left active, which is slow.)
+# install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg",
+#                    "stringr", "lubridate", "rgbif", "gbifdb", "sf", "httr2", "readxl"))
+# remotes::install_github("duckdb/duckdb")
 
-library(remotes)
-library(tidyverse) #data cleaning
-library(dplyr) # data cleaning
-library(ggplot2) #to make figures pretty
-library(writexl) #
-library(egg) #
-library(stringr) #
-library(lubridate) # to fix the date, and pull the month day and year as separate columns
-library(rgbif) #
-library(gbifdb) #
-library(sf)
-library()
-
-install_github("duckdb/duckdb")
-
-# Remote access without downloading data
-#gbif <- gbif_remote()
-#gbif %>%
-  #filter(phylum == "Chordata", year > 1990) %>%
-  #count(class, year)
-
-
+library(tidyverse)   # data cleaning + ggplot2, dplyr, stringr, etc.
+library(writexl)     # write Excel files
+library(readxl)      # read Excel files (CABR_specimens_V8.xlsx)
+library(egg)         # arranging ggplot figures
+library(lubridate)   # parse dates, pull month/day/year
+library(rgbif)       # GBIF access (optional, for later)
+library(gbifdb)      # GBIF remote database (optional, for later)
+library(sf)          # spatial data (shapefiles, transects)
+library(httr2)       # iNaturalist API calls (used by sourced scripts)
 ```
 
-###### DATA CLEANING ######
-```{r}
+###### BUILD THE SAN DIEGO REFERENCE TABLE ######
+```{r build-reference, message=FALSE}
+# This sources your pipeline scripts so the SD bee reference table is
+# always built from one source of truth (no rebuilding by hand here).
+#
+# native_bee_checklist.R makes ~430 iNaturalist API calls (~3-4 min),
+# so we only re-run it if the saved checklist CSV doesn't already exist.
+# Delete data/outputs/SD_native_bee_checklist.csv if you want to force a refresh.
+
+if (!file.exists("data/outputs/SD_native_bee_checklist.csv")) {
+  message("Checklist not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
+  source("scripts/native_bee_checklist.R")
+}
+
+# Build the master reference table (fast, no API calls).
+# This creates the `bee_reference` object with key_full, rank, etc.
+source("scripts/bee_reference_table.R")
+```
+
+###### DATA CLEANING (CABR SPECIMENS) ######
+```{r data-cleaning}
 getwd()
 
-raw_bee_data <- read.csv("./data/raw_data/CABR_specimens_V4.csv",header=TRUE)
+raw_bee_data <- readxl::read_excel("data/cabr_surveys/lethal/CABR_specimens_V8.xlsx")
 
-clean_bee_data <- raw_bee_data%>%
+clean_bee_data <- raw_bee_data %>%
   mutate(date_clean = mdy(Date),
-        month = month(date_clean),
-        day = day(date_clean), 
-        year = year(date_clean),
-        across(where(is.character), ~na_if(.x, "")))
+         month = month(date_clean),
+         day   = day(date_clean),
+         year  = year(date_clean),
+         across(where(is.character), ~ na_if(.x, "")))
 
-
-# Keep ONLY rows where either or NA
-#NO LAT OR LONG?
-##nolatlong <- clean_bee_data %>%   filter(is.na(Latitude) | is.na(Longitude)) <-- creates whole new data set
-
-##keeps it within the same data set of "clean_bee_data"
-clean_bee_data <- clean_bee_data %>% mutate(missinglatlong = is.na(Latitude) | is.na(Longitude))
-###filtering it here (filter is default true) will give you true, but best practice to write == True
+# Flag records missing coordinates
+# (filter default is TRUE, but best practice to write == TRUE explicitly)
+clean_bee_data <- clean_bee_data %>%
+  mutate(missinglatlong = is.na(Latitude) | is.na(Longitude))
 missinglatlong <- clean_bee_data %>% filter(missinglatlong == TRUE)
 
-#NO GENUS OR SPECIES?
-clean_bee_data <- clean_bee_data %>% mutate(missinggenusspecies = is.na(Genus) | is.na(Species))
+# Flag records missing genus or species
+clean_bee_data <- clean_bee_data %>%
+  mutate(missinggenusspecies = is.na(Genus) | is.na(Species))
 missinggenusspecies <- clean_bee_data %>% filter(missinggenusspecies == TRUE)
 
-clean_bee_data <- clean_bee_data %>% mutate(missingmethodplant = is.na(Method...Plant))
+# Flag records missing collection method / plant
+clean_bee_data <- clean_bee_data %>%
+  mutate(missingmethodplant = is.na(Method...Plant))
 missingmethodplant <- clean_bee_data %>% filter(missingmethodplant == TRUE)
 
-
-# SPECIES CHECKLIST
-clean_bee_data <- clean_bee_data %>% mutate(oldscientificname = paste0(Genus,"_",Subgenus,"_",Species))
+# CABR specimen checklist key (matches the genus_subgenus_species style
+# used in the SD reference table so the two can be joined later)
+clean_bee_data <- clean_bee_data %>%
+  mutate(oldscientificname = paste0(Genus, "_", Subgenus, "_", Species))
 
 unique_old_species_list <- unique(clean_bee_data$oldscientificname)
 
-view(unique_old_species_list)
-
-
+View(unique_old_species_list)
 ```
 
-###### SURVEYS ######
-```{r}
-transects <- st_read("U:/WILDLIFE/Bees/Bee_Analysis/Bee_Analysis_Project/Bee_Transects.shp")
-trails <- c("BST","UPMON","TP","OT")
-
+###### SURVEYS (TRANSECTS) ######
+```{r surveys}
+# Portable path: shapefiles live in the project's data/ folder,
+# so this works on any computer that has the repo.
+transects <- st_read("data/spatial/transects/Bee_Transects.shp")
+trails <- c("BST", "UPMON", "TP", "OT")
 ```
 
+###### BEES: DIVERSITY COMPARISON (SD COUNTY / POINT LOMA / CABR) ######
+```{r bee-diversity}
+# The 6 bee families found in San Diego County (Stenotritidae is
+# Australia-only and is not expected here - kept for reference).
+bee_family <- c("Andrenidae", "Apidae", "Colletidae",
+                "Halictidae", "Megachilidae", "Melittidae")
 
+# San Diego County reference table was built above via source().
+# `bee_reference` already has: key_full, key_genus_species,
+# key_species_only, rank, and full taxonomy.
 
-###### BEES ######
+# San Diego County taxon richness (all unique genus_subgenus_species)
+sd_taxon_richness <- n_distinct(bee_reference$key_full)
 
-##Making Bee Reference Table for SD County, Point Loma, and CABR
-```{r}
+cat("San Diego County taxon richness:", sd_taxon_richness, "\n")
 
-bee_family <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae", "Megachilidae", "Melittidae", "Stenotritidae")
-
-sd_county_bee_checklist <- read_csv("??")
-  # Keep only bee-relevant ranks 
-  filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>% 
-  # Get one row per unique taxon 
-  distinct(taxon_id, .keep_all = TRUE) %>% 
-  # Select taxonomic columns 
-  select( 
-    taxon_id,
-    taxon_rank, 
-    taxon_name,   # the identified name at whatever rank
-    taxon_family_name, 
-    taxon_genus_name
-  ) %>%
-arrange(taxon_family_name, taxon_genus_name, taxon_rank, taxon_name)
+# (Point Loma and CABR checklists will be added here once their
+#  data is prepared, then compared as a % of SD County diversity.)
 ```
-
-
-
 
 ###### PLANTS ######
-
-##Making Plant Reference Table for SD County, Point Loma, and CABR
-```{r}
-sd_county_plant_checklist <- read_csv("??")
-  # Keep only bee-relevant ranks 
-  filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>% 
-  # Get one row per unique taxon 
-  distinct(taxon_id, .keep_all = TRUE) %>% 
-  # Select taxonomic columns 
-  select( 
-    taxon_id,
-    taxon_rank, 
-    taxon_name,   # the identified name at whatever rank
-    taxon_family_name, 
-    taxon_genus_name
-  ) %>%
-arrange(taxon_family_name, taxon_genus_name, taxon_rank, taxon_name)
+```{r plant-checklist}
+# Placeholder: build the plant checklist from the SD plants export.
+# Update the path/columns once we confirm the plant CSV structure.
+# sd_county_plant_checklist <- read_csv("data/reference_exports/plants/SD_plants_11_june_2026.csv") %>%
+#   filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>%
+#   distinct(taxon_id, .keep_all = TRUE) %>%
+#   select(taxon_id, taxon_rank, scientific_name,
+#          taxon_family_name, taxon_genus_name) %>%
+#   arrange(taxon_family_name, taxon_genus_name, taxon_rank, scientific_name)
 ```
-
-
-```{r}
-
-```
-

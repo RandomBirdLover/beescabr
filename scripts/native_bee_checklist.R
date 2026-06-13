@@ -10,13 +10,15 @@
 #              using taxon_id as the stable key throughout.
 # =============================================================
 
+# Run once to install, then leave commented:
+# install.packages(c("tidyverse", "httr2"))
 library(tidyverse)
 library(httr2)
 
 # ------------------------------------------------------------
 # STEP 1: Load iNaturalist export
 # ------------------------------------------------------------
-bees <- read.csv("data/SD_native_bees_11_june_2026.csv")
+bees <- read.csv("data/reference_exports/bees/SD_native_bees_11_june_2026.csv")
 
 cat("Loaded", nrow(bees), "observations\n")
 
@@ -157,7 +159,7 @@ print(head(bee_checklist, 10))
 # STEP 7: Save checklist as CSV
 # ------------------------------------------------------------
 write.csv(bee_checklist,
-          "data/SD_native_bee_checklist.csv",
+          "data/outputs/SD_native_bee_checklist.csv",
           row.names = FALSE)
 
-cat("\nChecklist saved to data/SD_native_bee_checklist.csv\n")
+cat("\nChecklist saved to data/outputs/SD_native_bee_checklist.csv\n")
