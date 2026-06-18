@@ -190,3 +190,7 @@ CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 - [ ] Plant checklist script
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
+
+---
+
+*This README will be expanded further as the project progresses.*
