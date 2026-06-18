@@ -1,25 +1,47 @@
 # =============================================================
-# SD Native Bee Checklist with Subgenus
+# SD Native Bee Checklist with Subgenus and Complex
 # Created: June 11, 2026
 # Author: Brandi Sanchez
 # Data: iNaturalist export, San Diego County, all years,
 #       all quality grades, Anthophila (excl. Apis mellifera)
 # Description: Builds a unique checklist of all native bee
 #              taxa observed in San Diego County, pulling
-#              subgenus from the iNaturalist API automatically
-#              using taxon_id as the stable key throughout.
+#              subgenus, complex name, and complex taxon_id
+#              from the iNaturalist API automatically.
+#              taxon_id is the stable key throughout.
+#
+# Complex handling:
+#   - complex_name     : name of the complex (e.g. "Andrena osmioides")
+#   - complex_taxon_id : iNat taxon_id of the complex itself
+#   - Complexes are NOT excluded from richness counts
+#   - complex_name is the join key for matching against specimen data
 # =============================================================
 
 # Run once to install, then leave commented:
-# install.packages(c("tidyverse", "httr2"))
+# install.packages(c("tidyverse", "httr2", "stringr"))
 library(tidyverse)
 library(httr2)
+library(stringr)
 
 # ------------------------------------------------------------
-# STEP 1: Load iNaturalist export
+# UTILITY: Auto-detect newest dated export
 # ------------------------------------------------------------
-bees <- read.csv("data/reference_exports/bees/SD_native_bees_11_june_2026.csv")
+read_latest <- function(folder, pattern) {
+  files <- list.files(folder, pattern = pattern, full.names = TRUE)
+  if (length(files) == 0) stop("No files matching '", pattern, "' found in ", folder)
+  dates <- as.Date(str_extract(basename(files), "\\d{4}-\\d{2}-\\d{2}"))
+  files[which.max(dates)]
+}
 
+# ------------------------------------------------------------
+# STEP 1: Load iNaturalist export (auto-detects newest file)
+# ------------------------------------------------------------
+bees_path <- read_latest(
+  "data/reference_exports/native_bees",
+  "^inat_native_bees_sdcounty"
+)
+cat("Loading:", basename(bees_path), "\n")
+bees <- read.csv(bees_path)
 cat("Loaded", nrow(bees), "observations\n")
 
 # ------------------------------------------------------------
@@ -50,33 +72,63 @@ bee_checklist <- bees %>%
 cat("Found", nrow(bee_checklist), "unique taxa\n")
 
 # ------------------------------------------------------------
-# STEP 3: Pull subgenus from iNaturalist API (keyed on taxon_id)
-# Uses the /v1/taxa/{id} path endpoint which returns full
-# ranked ancestors including subgenus.
+# STEP 3: Pull subgenus, complex_name, and complex_taxon_id
+#         from iNaturalist API (keyed on taxon_id)
+#
+# Uses /v1/taxa/{id} — returns full ranked ancestors.
+# Complex handling:
+#   - If the taxon ITSELF has rank "complex", it is flagged directly
+#   - If a complex appears in the ancestors, it is captured there
+#   - subgenus and complex are kept in separate columns
 # ------------------------------------------------------------
-get_subgenus <- function(taxon_id) {
+get_subgenus_and_complex <- function(taxon_id) {
   Sys.sleep(0.5)  # be polite to the API
-  
+
   tryCatch({
     resp <- request(paste0("https://api.inaturalist.org/v1/taxa/", taxon_id)) %>%
       req_perform() %>%
       resp_body_json()
-    
-    ancestors <- resp$results[[1]]$ancestors
-    
-    # Find the ancestor whose rank is "subgenus"
-    subgenus_name <- NA_character_
+
+    taxon     <- resp$results[[1]]
+    ancestors <- taxon$ancestors
+
+    subgenus_name    <- NA_character_
+    complex_name     <- NA_character_
+    complex_taxon_id <- NA_integer_
+
+    # Check if the taxon ITSELF is a complex rank
+    if (!is.null(taxon$rank) && taxon$rank == "complex") {
+      complex_name     <- taxon$name
+      complex_taxon_id <- as.integer(taxon$id)
+    }
+
+    # Walk ancestors for subgenus and complex
     for (a in ancestors) {
-      if (!is.null(a$rank) && a$rank == "subgenus") {
-        subgenus_name <- a$name
-        break
+      if (!is.null(a$rank)) {
+        if (a$rank == "subgenus" && is.na(subgenus_name)) {
+          subgenus_name <- a$name
+        }
+        if (a$rank == "complex" && is.na(complex_name)) {
+          complex_name     <- a$name
+          complex_taxon_id <- as.integer(a$id)
+        }
       }
     }
-    
-    tibble(taxon_id = taxon_id, subgenus = subgenus_name)
-    
+
+    tibble(
+      taxon_id         = taxon_id,
+      subgenus         = subgenus_name,
+      complex_name     = complex_name,
+      complex_taxon_id = complex_taxon_id
+    )
+
   }, error = function(e) {
-    tibble(taxon_id = taxon_id, subgenus = NA_character_)
+    tibble(
+      taxon_id         = taxon_id,
+      subgenus         = NA_character_,
+      complex_name     = NA_character_,
+      complex_taxon_id = NA_integer_
+    )
   })
 }
 
@@ -84,28 +136,30 @@ get_subgenus <- function(taxon_id) {
 unique_ids <- unique(bee_checklist$taxon_id)
 unique_ids <- unique_ids[!is.na(unique_ids)]
 
-cat("\nFetching subgenus from iNaturalist API for", length(unique_ids), "taxa...\n")
+cat("\nFetching subgenus and complex from iNaturalist API for",
+    length(unique_ids), "taxa...\n")
 cat("Estimated time:", round(length(unique_ids) * 0.5 / 60, 1), "minutes\n\n")
 
 # Run with progress indicator
-subgenus_lookup <- map_dfr(
+taxonomy_lookup <- map_dfr(
   seq_along(unique_ids),
   function(i) {
     cat(sprintf("\r  Progress: %d / %d taxa (%.0f%%)",
                 i, length(unique_ids),
                 i / length(unique_ids) * 100))
     flush.console()
-    get_subgenus(unique_ids[[i]])
+    get_subgenus_and_complex(unique_ids[[i]])
   }
 )
 
-cat("\n\nDone fetching subgenus data!\n")
+cat("\n\nDone fetching taxonomy data!\n")
 
 # ------------------------------------------------------------
-# STEP 4: Join subgenus back to checklist (by taxon_id)
+# STEP 4: Join subgenus, complex_name, complex_taxon_id
+#         back to checklist (by taxon_id)
 # ------------------------------------------------------------
 bee_checklist <- bee_checklist %>%
-  left_join(subgenus_lookup, by = "taxon_id") %>%
+  left_join(taxonomy_lookup, by = "taxon_id") %>%
   select(
     taxon_id,
     scientific_name,
@@ -121,6 +175,8 @@ bee_checklist <- bee_checklist %>%
     taxon_subtribe_name,
     taxon_genus_name,
     subgenus,
+    complex_name,       # name of complex — join key for specimen matching
+    complex_taxon_id,   # iNat taxon_id of the complex — stable reference
     taxon_species_name,
     taxon_subspecies_name
   )
@@ -145,21 +201,35 @@ if (nrow(families) == 6) {
   cat("CHECK: Family count differs from expected 6\n")
 }
 
+# Flag any taxa where rank was complex (taxon itself = complex)
+complex_taxa <- bee_checklist %>%
+  filter(!is.na(complex_name) & scientific_name == complex_name)
+
+if (nrow(complex_taxa) > 0) {
+  cat("\nCHECK: The following taxa are complex-rank (not species-level IDs):\n")
+  print(complex_taxa %>% select(taxon_id, scientific_name, complex_name, taxon_family_name))
+}
+
 # ------------------------------------------------------------
 # STEP 6: Summary
 # ------------------------------------------------------------
 cat("\n--- CHECKLIST SUMMARY ---\n")
-cat("Total unique taxa:   ", nrow(bee_checklist), "\n")
-cat("Taxa with subgenus:  ", sum(!is.na(bee_checklist$subgenus)), "\n")
-cat("Genera represented:  ", n_distinct(bee_checklist$taxon_genus_name), "\n\n")
+cat("Total unique taxa:          ", nrow(bee_checklist), "\n")
+cat("Taxa with subgenus:         ", sum(!is.na(bee_checklist$subgenus)), "\n")
+cat("Taxa with complex_name:     ", sum(!is.na(bee_checklist$complex_name)), "\n")
+cat("Taxa that ARE complexes:    ", nrow(complex_taxa), "\n")
+cat("Taxa belonging to a complex:", sum(!is.na(bee_checklist$complex_name)) - nrow(complex_taxa), "\n")
+cat("Genera represented:         ", n_distinct(bee_checklist$taxon_genus_name), "\n\n")
 
 print(head(bee_checklist, 10))
 
 # ------------------------------------------------------------
 # STEP 7: Save checklist as CSV
 # ------------------------------------------------------------
-write.csv(bee_checklist,
-          "data/outputs/SD_native_bee_checklist.csv",
-          row.names = FALSE)
+write.csv(
+  bee_checklist,
+  "data/outputs/SD_native_bee_checklist.csv",
+  row.names = FALSE
+)
 
 cat("\nChecklist saved to data/outputs/SD_native_bee_checklist.csv\n")
