@@ -11,10 +11,10 @@
 #              taxon_id is the stable key throughout.
 #
 # Complex handling:
-#   - complex_name     : name of the complex (e.g. "Andrena osmioides")
+#   - complex     : name of the complex (e.g. "Andrena osmioides")
 #   - complex_taxon_id : iNat taxon_id of the complex itself
 #   - Complexes are NOT excluded from richness counts
-#   - complex_name is the join key for matching against specimen data
+#   - complex is the join key for matching against specimen data
 # =============================================================
 
 # Run once to install, then leave commented:
@@ -72,7 +72,7 @@ bee_checklist <- bees %>%
 cat("Found", nrow(bee_checklist), "unique taxa\n")
 
 # ------------------------------------------------------------
-# STEP 3: Pull subgenus, complex_name, and complex_taxon_id
+# STEP 3: Pull subgenus, complex, and complex_taxon_id
 #         from iNaturalist API (keyed on taxon_id)
 #
 # Uses /v1/taxa/{id} — returns full ranked ancestors.
@@ -83,50 +83,50 @@ cat("Found", nrow(bee_checklist), "unique taxa\n")
 # ------------------------------------------------------------
 get_subgenus_and_complex <- function(taxon_id) {
   Sys.sleep(0.5)  # be polite to the API
-
+  
   tryCatch({
     resp <- request(paste0("https://api.inaturalist.org/v1/taxa/", taxon_id)) %>%
       req_perform() %>%
       resp_body_json()
-
+    
     taxon     <- resp$results[[1]]
     ancestors <- taxon$ancestors
-
+    
     subgenus_name    <- NA_character_
-    complex_name     <- NA_character_
+    complex     <- NA_character_
     complex_taxon_id <- NA_integer_
-
+    
     # Check if the taxon ITSELF is a complex rank
     if (!is.null(taxon$rank) && taxon$rank == "complex") {
-      complex_name     <- taxon$name
+      complex     <- taxon$name
       complex_taxon_id <- as.integer(taxon$id)
     }
-
+    
     # Walk ancestors for subgenus and complex
     for (a in ancestors) {
       if (!is.null(a$rank)) {
         if (a$rank == "subgenus" && is.na(subgenus_name)) {
           subgenus_name <- a$name
         }
-        if (a$rank == "complex" && is.na(complex_name)) {
-          complex_name     <- a$name
+        if (a$rank == "complex" && is.na(complex)) {
+          complex     <- a$name
           complex_taxon_id <- as.integer(a$id)
         }
       }
     }
-
+    
     tibble(
       taxon_id         = taxon_id,
       subgenus         = subgenus_name,
-      complex_name     = complex_name,
+      complex     = complex,
       complex_taxon_id = complex_taxon_id
     )
-
+    
   }, error = function(e) {
     tibble(
       taxon_id         = taxon_id,
       subgenus         = NA_character_,
-      complex_name     = NA_character_,
+      complex     = NA_character_,
       complex_taxon_id = NA_integer_
     )
   })
@@ -155,7 +155,7 @@ taxonomy_lookup <- map_dfr(
 cat("\n\nDone fetching taxonomy data!\n")
 
 # ------------------------------------------------------------
-# STEP 4: Join subgenus, complex_name, complex_taxon_id
+# STEP 4: Join subgenus, complex, complex_taxon_id
 #         back to checklist (by taxon_id)
 # ------------------------------------------------------------
 bee_checklist <- bee_checklist %>%
@@ -175,7 +175,7 @@ bee_checklist <- bee_checklist %>%
     taxon_subtribe_name,
     taxon_genus_name,
     subgenus,
-    complex_name,       # name of complex — join key for specimen matching
+    complex,       # name of complex — join key for specimen matching
     complex_taxon_id,   # iNat taxon_id of the complex — stable reference
     taxon_species_name,
     taxon_subspecies_name
@@ -203,11 +203,11 @@ if (nrow(families) == 6) {
 
 # Flag any taxa where rank was complex (taxon itself = complex)
 complex_taxa <- bee_checklist %>%
-  filter(!is.na(complex_name) & scientific_name == complex_name)
+  filter(!is.na(complex) & scientific_name == complex)
 
 if (nrow(complex_taxa) > 0) {
   cat("\nCHECK: The following taxa are complex-rank (not species-level IDs):\n")
-  print(complex_taxa %>% select(taxon_id, scientific_name, complex_name, taxon_family_name))
+  print(complex_taxa %>% select(taxon_id, scientific_name, complex, taxon_family_name))
 }
 
 # ------------------------------------------------------------
@@ -216,9 +216,9 @@ if (nrow(complex_taxa) > 0) {
 cat("\n--- CHECKLIST SUMMARY ---\n")
 cat("Total unique taxa:          ", nrow(bee_checklist), "\n")
 cat("Taxa with subgenus:         ", sum(!is.na(bee_checklist$subgenus)), "\n")
-cat("Taxa with complex_name:     ", sum(!is.na(bee_checklist$complex_name)), "\n")
+cat("Taxa with complex:     ", sum(!is.na(bee_checklist$complex)), "\n")
 cat("Taxa that ARE complexes:    ", nrow(complex_taxa), "\n")
-cat("Taxa belonging to a complex:", sum(!is.na(bee_checklist$complex_name)) - nrow(complex_taxa), "\n")
+cat("Taxa belonging to a complex:", sum(!is.na(bee_checklist$complex)) - nrow(complex_taxa), "\n")
 cat("Genera represented:         ", n_distinct(bee_checklist$taxon_genus_name), "\n\n")
 
 print(head(bee_checklist, 10))
