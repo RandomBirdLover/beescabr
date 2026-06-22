@@ -38,6 +38,7 @@ A `complex` column will be added in V9 to support matching against iNat photo ob
 
 | Version | Date | Modified by | Row count | Cols | Changes |
 |---------|------|-------------|-----------|------|---------|
+| V9 | 2026-06-21 | Brandi Sanchez | 1,437 | 35 | All column names converted to snake_case for consistency with the rest of the pipeline. Taxonomic columns (`Order`, `Family`, `Subfamily`, `Tribe`, `Genus`, `Subgenus`, `Species`, `Subspecies`, `Old Genus`, `Old Species`) renamed to the `taxon_*_name` / `old_*_name` convention used in `native_bee_checklist.R`. `SDNHM`, `Correct SDNHM`, `Merged SDNHM` renamed to `sdnhm_id`, `correct_sdnhm_id`, `merged_sdnhm_id`. `Method / Plant` renamed to `method_or_plant`. Added `taxon_complex_name` column, populated via Genus+Species match against `SD_native_bee_checklist.csv` (104 of 1437 specimens matched to a known complex). |
 | V8 | 2026-06-08 | Brandi Sanchez | 1,437 | 34 | Added `Missing Specimen` column. Renamed to `CABR_bee_specimens_V8_2026-06-13.xlsx` on 2026-06-13 (first version with formal date attached; rows sorted by UCSD_ID ascending). |
 | V7 | 2026-06-08 | Brandi Sanchez | 1,437 | 33 | No structural changes from V6. |
 | V6 | 2026-06-05 | Brandi Sanchez | 1,437 | 33 | Added `Old Genus`, `Old Species`, `Subspecies` columns. |

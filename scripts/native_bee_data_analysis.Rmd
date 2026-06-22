@@ -1,120 +1,119 @@
 ---
-title: "bee_data_analysis"
+title: "native_bee_data_analysis"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
-###### LOAD PACKAGES AND LIBRARIES ######
+<!--
+STRUCTURE OF THIS DOC:
+  1. Setup
+  2. Reference table (SD County taxonomic source of truth)
+  3. Clean data (sources clean_specimens.R + clean_nonlethal_inat.R)
+  4. Spatial (transects + buffers, via spatial_utils.R)
+  5. ANALYSIS: taxon richness by geographic scale
+  6. ANALYSIS: method comparison (lethal vs non-lethal)
+  7. Plants (placeholder, TODO)
+
+This doc is for ANALYSIS only. All cleaning lives in dedicated
+scripts (scripts/clean_specimens.R, scripts/clean_nonlethal_inat.R)
+so this stays focused on comparison, not data wrangling.
+-->
+
+###### 1. SETUP ######
 ```{r setup, message=FALSE, warning=FALSE}
 # Run these ONCE to install, then leave commented out.
-# (install.packages re-downloads every run if left active, which is slow.)
 # install.packages(c("tidyverse", "dplyr", "ggplot2", "writexl", "egg",
 #                    "stringr", "lubridate", "rgbif", "gbifdb", "sf", "httr2", "readxl"))
 # remotes::install_github("duckdb/duckdb")
 
 library(tidyverse)   # data cleaning + ggplot2, dplyr, stringr, etc.
 library(writexl)     # write Excel files
-library(readxl)      # read Excel files (CABR_specimens_V8.xlsx)
+library(readxl)      # read Excel files
 library(egg)         # arranging ggplot figures
 library(lubridate)   # parse dates, pull month/day/year
 library(rgbif)       # GBIF access (optional, for later)
 library(gbifdb)      # GBIF remote database (optional, for later)
 library(sf)          # spatial data (shapefiles, transects)
 library(httr2)       # iNaturalist API calls (used by sourced scripts)
+
+source("scripts/utils.R")  # read_latest(), require_columns()
 ```
 
-###### BUILD THE SAN DIEGO REFERENCE TABLE ######
+###### 2. REFERENCE TABLE (SD County taxonomic source of truth) ######
 ```{r build-reference, message=FALSE}
-# This sources your pipeline scripts so the SD bee reference table is
-# always built from one source of truth (no rebuilding by hand here).
-#
 # native_bee_checklist.R makes ~430 iNaturalist API calls (~3-4 min),
 # so we only re-run it if the saved checklist CSV doesn't already exist.
-# Delete data/outputs/SD_native_bee_checklist.csv if you want to force a refresh.
+# Delete data/outputs/SD_native_bee_checklist.csv to force a refresh.
 
 if (!file.exists("data/outputs/SD_native_bee_checklist.csv")) {
   message("Checklist not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
   source("scripts/native_bee_checklist.R")
 }
 
-# Build the master reference table (fast, no API calls).
-# This creates the `bee_reference` object with key_full, rank, etc.
-source("scripts/bee_reference_table.R")
+# Builds the `bee_reference` object with key_full, rank, etc.
+source("scripts/native_bee_reference_table.R")
 ```
 
-###### DATA CLEANING (CABR SPECIMENS) ######
-```{r data-cleaning}
-getwd()
+###### 3. CLEAN DATA ######
+```{r clean-data, message=FALSE}
+# Produces clean_bee_data (lethal specimens).
+source("scripts/clean_specimens.R")
 
-raw_bee_data <- readxl::read_excel("data/cabr_surveys/lethal/CABR_specimens_V8.xlsx")
-
-clean_bee_data <- raw_bee_data %>%
-  mutate(date_clean = mdy(Date),
-         month = month(date_clean),
-         day   = day(date_clean),
-         year  = year(date_clean),
-         across(where(is.character), ~ na_if(.x, "")))
-
-# Flag records missing coordinates
-# (filter default is TRUE, but best practice to write == TRUE explicitly)
-clean_bee_data <- clean_bee_data %>%
-  mutate(missinglatlong = is.na(Latitude) | is.na(Longitude))
-missinglatlong <- clean_bee_data %>% filter(missinglatlong == TRUE)
-
-# Flag records missing genus or species
-clean_bee_data <- clean_bee_data %>%
-  mutate(missinggenusspecies = is.na(Genus) | is.na(Species))
-missinggenusspecies <- clean_bee_data %>% filter(missinggenusspecies == TRUE)
-
-# Flag records missing collection method / plant
-clean_bee_data <- clean_bee_data %>%
-  mutate(missingmethodplant = is.na(Method...Plant))
-missingmethodplant <- clean_bee_data %>% filter(missingmethodplant == TRUE)
-
-# CABR specimen checklist key (matches the genus_subgenus_species style
-# used in the SD reference table so the two can be joined later)
-clean_bee_data <- clean_bee_data %>%
-  mutate(oldscientificname = paste0(Genus, "_", Subgenus, "_", Species))
-
-unique_old_species_list <- unique(clean_bee_data$oldscientificname)
-
-View(unique_old_species_list)
+# Produces clean_intern_data, clean_beeple_data, and the combined
+# clean_nonlethal_data. Will report "no data found yet" until intern/
+# beeple iNat exports exist — that's expected, not an error.
+source("scripts/clean_nonlethal_inat.R")
 ```
 
-###### SURVEYS (TRANSECTS) ######
-```{r surveys}
-# Portable path: shapefiles live in the project's data/ folder,
-# so this works on any computer that has the repo.
-transects <- st_read("data/spatial/transects/Bee_Transects.shp")
+###### 4. SPATIAL (transects + buffers) ######
+```{r spatial}
+# Produces `transects` and `buffer_10m` in the environment.
+source("scripts/spatial_utils.R")
+
 trails <- c("BST", "UPMON", "TP", "OT")
 ```
 
-###### BEES: DIVERSITY COMPARISON (SD COUNTY / POINT LOMA / CABR) ######
-```{r bee-diversity}
+###### 5. ANALYSIS: TAXON RICHNESS BY GEOGRAPHIC SCALE ######
+```{r richness-by-scale}
 # The 6 bee families found in San Diego County (Stenotritidae is
 # Australia-only and is not expected here - kept for reference).
 bee_family <- c("Andrenidae", "Apidae", "Colletidae",
                 "Halictidae", "Megachilidae", "Melittidae")
 
-# San Diego County reference table was built above via source().
-# `bee_reference` already has: key_full, key_genus_species,
-# key_species_only, rank, and full taxonomy.
-
-# San Diego County taxon richness (all unique genus_subgenus_species)
+# `bee_reference` has key_full, key_genus_species, key_species_only,
+# rank, and full taxonomy — built in section 2.
 sd_taxon_richness <- n_distinct(bee_reference$key_full)
-
 cat("San Diego County taxon richness:", sd_taxon_richness, "\n")
 
-# (Point Loma and CABR checklists will be added here once their
-#  data is prepared, then compared as a % of SD County diversity.)
+# TODO: Point Loma and CABR richness — depends on the spatial join
+# (assigning observations to transects via buffer_10m), not yet built.
+# Once available, compare each as a % of SD County diversity.
 ```
 
-###### PLANTS ######
-```{r plant-checklist}
-# Placeholder: build the plant checklist from the SD plants export.
-# Update the path/columns once we confirm the plant CSV structure.
-# sd_county_plant_checklist <- read_csv("data/reference_exports/plants/SD_plants_11_june_2026.csv") %>%
+###### 6. ANALYSIS: METHOD COMPARISON (LETHAL VS NON-LETHAL) ######
+```{r method-comparison}
+lethal_richness <- n_distinct(clean_bee_data$oldscientificname)
+cat("Lethal (specimen) richness at CABR:", lethal_richness, "\n")
+
+if (exists("clean_nonlethal_data") && nrow(clean_nonlethal_data) > 0) {
+  nonlethal_richness <- n_distinct(clean_nonlethal_data$taxon_id)
+  cat("Non-lethal (photo) richness at CABR:", nonlethal_richness, "\n")
+} else {
+  cat("Non-lethal richness: pending intern/beeple data.\n")
+}
+
+# TODO: once non-lethal data exists, compare overlap using taxon_id
+# (exact match) first, falling back to taxon_complex_name for
+# complex-level photo IDs that can't be resolved to species
+# (see native_bee_checklist.R).
+```
+
+###### 7. PLANTS (placeholder) ######
+```{r plant-checklist, eval=FALSE}
+# TODO: build once plant checklist script (TODO #5) exists.
+# plants_path <- read_latest("data/reference_exports/plants", "^inat_plants_sdcounty")
+# sd_county_plant_checklist <- read_csv(plants_path) %>%
 #   filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>%
 #   distinct(taxon_id, .keep_all = TRUE) %>%
 #   select(taxon_id, taxon_rank, scientific_name,

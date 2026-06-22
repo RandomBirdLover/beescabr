@@ -185,11 +185,12 @@ CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 
 ## TODO
 
-- [ ] Integrate `read_latest()` into `native_bee_data_analysis.Rmd`
-- [ ] Add `complex` column to specimen sheet (V9)
+- [x] Integrate `read_latest()` into `native_bee_data_analysis.Rmd`
+- [x] Add `taxon_complex_name` column to specimen sheet (V9)
 - [ ] Plant checklist script
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
+- [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
 
 ---
 

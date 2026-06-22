@@ -1,9 +1,10 @@
 # =============================================================================
 # spatial_utils.R
-# Generates transect buffers in memory from Bee_Transects.shp
+# Generates transect buffers in memory from CABR_transects.shp
 #
 # DO NOT store output buffers as shapefiles in data/ — generate on the fly.
-# Source this script in bee_data_analysis.Rmd or any script that needs buffers.
+# Source this script in native_bee_data_analysis.Rmd or any script that
+# needs buffers.
 #
 # CRS: EPSG:26946 (NAD83 / California zone 6, meters) — already projected,
 #      so st_buffer dist is in meters directly.
@@ -16,7 +17,7 @@ buffer_dist_m <- 10  # meters
 
 # --- Load transects ---
 transects <- st_read(
-  "data/spatial/transects/Bee_Transects.shp",
+  "data/spatial/transects/CABR_transects.shp",
   quiet = TRUE
 )
 
