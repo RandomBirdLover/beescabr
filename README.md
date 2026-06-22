@@ -250,6 +250,7 @@ This is implemented as `cabr_survey_box` in `spatial_utils.R`: a bounding box an
   (2) `SD_bee_checklist` reserved for the actual merged/comprehensive county checklist once sources are combined, with `PL_bee_checklist` and `CABR_bee_checklist` as spatial subsets derived from it (boundary shapefiles now available, see Spatial analysis section).
   Separately, CABR survey checklists (lethal vs. intern iNat vs. beeple iNat) must stay strictly separated by method — never merged — broken out by year, to support the core lethal-vs-non-lethal comparison.
 - [ ] **CABR-specific checklist** (raised 2026-06-22 by Jess/Patricia): the existing `SD_inat_bee_checklist` is county-wide; a CABR-only checklist is needed as a quick, separate deliverable, not blocked on the full checklist-architecture merge above.
+- [ ] **ArcGIS project versioning** (raised 2026-06-22): `.aprx`/`.gdb` files aren't Git-friendly (binary, machine-specific paths, no meaningful diffs) — committing the live ArcGIS Pro project directly isn't a good fit for this repo. Decide on an approach: (a) keep committing only the shapefiles (current practice) plus a static map export (PDF/PNG) for visual reference, or (b) script the symbology/layout setup (e.g. via ArcPy) so the map can be rebuilt from scratch rather than version-controlling the binary project itself.
 
 ---
 
