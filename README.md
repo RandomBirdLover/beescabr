@@ -33,7 +33,7 @@ install.packages(c(
 # install.packages(c("rgbif", "gbifdb"))
 ```
 
-`BeeBDC` was added 2026-06-21 to cross-reference the Dorey et al. (2023) global bee occurrence dataset against our SD County checklist — see `data/reference_exports/Dorey_et_al_Data/`.
+`BeeBDC` was added 2026-06-21 to cross-reference the Dorey et al. (2023) global bee occurrence dataset against our SD County checklist — see `data/reference_exports/Dorey_et_al_Data/`. **Deprioritized 2026-06-22**: cross-referencing returned zero CABR records on first attempt; Jess flagged the Dorey iNat-sourced records as too old to be reliable for this project's purposes. Not actively worked on for now — the package install and downloaded data are left in place in case this gets revisited.
 
 ---
 
@@ -212,6 +212,28 @@ buffer_dist_m <- 5  # change this one line in spatial_utils.R
 
 CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 
+### Boundary layers (added 2026-06-22)
+
+Three boundary shapefiles now live in `data/spatial/boundaries/`:
+
+| File | Source | Notes |
+|------|--------|-------|
+| `cabr_boundary.shp` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. ~160 acres, matches NPS-published figure. |
+| `point_loma_boundary.shp` | City of San Diego Community Plan district `CPNAME == "PENINSULA"` (CPCODE 30) | **Renamed for this project.** "PENINSULA" is the city's official planning-district name for this area; we call it Point Loma here. Verified in ArcGIS to already cover the Navy-adjacent area south of CABR (where the BST transect begins) — no union with another district needed. This is a project naming convention, not a claim that the terms are interchangeable elsewhere. |
+| `sd_county_boundary.shp` | County of San Diego Open Data Portal | Single polygon, extent-verified against known county geography. Attribute table has no name field — identity confirmed by geometry only. |
+
+All three are reprojected to EPSG:26946 in `spatial_utils.R`, regardless of source CRS (none arrive natively in 26946 — `cabr_boundary` and `sd_county_boundary` are geographic/degrees, `Community_Plan_SD.shp` is NAD83 State Plane CA Zone VI in US feet).
+
+#### CABR survey area vs. official NPS boundary
+
+Per Taro (2026-06-22): the BST transect begins on Navy-owned land south of the official CABR boundary, but this area has historically been surveyed as part of CABR and should count as such going forward — anything south of CABR's northernmost border is in scope, regardless of ownership.
+
+This is implemented as `cabr_survey_box` in `spatial_utils.R`: a bounding box anchored at CABR's north edge, extended south by a buffer margin (currently 1000m — adjust `SOUTH_BUFFER_M` if BST or other transects still fall outside). This box, not `cabr_boundary`, is the actual inclusion geometry for CABR-tier spatial joins.
+
+`cabr_boundary` (the official NPS polygon) is retained and used to *label* points as `inside_nps_boundary == TRUE/FALSE` for provenance/transparency — e.g. so a reader can see what fraction of "CABR" observations are technically on Navy land. **This label is never used to exclude points.** Nothing south of CABR's north edge is dropped on the basis of ownership.
+
+`point_loma_boundary` ("PENINSULA") was visually verified in ArcGIS to already contain this CABR survey area, Navy portion included — no modification needed there. `spatial_utils.R` also runs an automated `st_contains(point_loma_boundary, cabr_boundary)` check on every run, so this containment relationship gets re-verified rather than silently assumed if either source file is ever updated upstream.
+
 ---
 
 ## TODO
@@ -222,10 +244,12 @@ CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
+- [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added)
 - [ ] **Conceptualize full checklist architecture** (raised 2026-06-21): Two tiers agreed —
-  (1) source-specific checklists as building blocks: `SD_inat_bee_checklist` (iNat-only, done), `Dorey_bee_checklist` (BeeBDC-derived, pending);
-  (2) `SD_bee_checklist` reserved for the actual merged/comprehensive county checklist once sources are combined (Darwin Core column mapping needed for Dorey data), with `PL_bee_checklist` and `CABR_bee_checklist` as spatial subsets derived from it later (needs Point Loma/CABR boundary shapefiles — `spatial/boundaries/` currently empty).
+  (1) source-specific checklists as building blocks: `SD_inat_bee_checklist` (iNat-only, done), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
+  (2) `SD_bee_checklist` reserved for the actual merged/comprehensive county checklist once sources are combined, with `PL_bee_checklist` and `CABR_bee_checklist` as spatial subsets derived from it (boundary shapefiles now available, see Spatial analysis section).
   Separately, CABR survey checklists (lethal vs. intern iNat vs. beeple iNat) must stay strictly separated by method — never merged — broken out by year, to support the core lethal-vs-non-lethal comparison.
+- [ ] **CABR-specific checklist** (raised 2026-06-22 by Jess/Patricia): the existing `SD_inat_bee_checklist` is county-wide; a CABR-only checklist is needed as a quick, separate deliverable, not blocked on the full checklist-architecture merge above.
 
 ---
 
