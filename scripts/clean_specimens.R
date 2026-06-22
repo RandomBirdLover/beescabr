@@ -1,6 +1,8 @@
 # =============================================================
 # Clean CABR Bee Specimens (Lethal Survey Data)
 # Created: June 21, 2026
+# Updated: June 21, 2026 — column names updated to match the V9
+#          snake_case schema (see SPECIMEN_CHANGELOG.md).
 # Author: Brandi Sanchez
 # Data: CABR_bee_specimens_V{n}_{YYYY-MM-DD}.xlsx
 #       (data/cabr_surveys/lethal/) — newest version auto-detected
@@ -9,6 +11,12 @@
 #              flags missing coordinates/genus/species/method, and
 #              builds an oldscientificname key for joining against
 #              the SD reference table (native_bee_reference_table.R).
+#
+# Note on taxon_complex_name: this column is now baked into the
+# specimen sheet itself (added in V9 via a one-time match against
+# SD_native_bee_checklist.csv). This script reads it as-is — it does
+# NOT re-derive it, since that matching is a data-prep step, not a
+# repeatable cleaning step.
 #
 # Output: clean_bee_data (data frame in environment), plus QC tables
 #         missing_latlong, missing_genus_species, missing_method_plant.
@@ -38,16 +46,18 @@ cat("Loaded", nrow(raw_bee_data), "specimen rows\n")
 # ------------------------------------------------------------
 require_columns(
   raw_bee_data,
-  c("Date", "Latitude", "Longitude", "Genus", "Species"),
+  c("date", "latitude", "longitude", "taxon_genus_name", "taxon_species_name"),
   "raw_bee_data"
 )
 
 # ------------------------------------------------------------
 # STEP 3: Parse dates
+# date is stored as a real date/datetime type as of V9 (not text),
+# so we use as_date() rather than mdy() string parsing.
 # ------------------------------------------------------------
 clean_bee_data <- raw_bee_data %>%
   mutate(
-    date_clean = mdy(Date),
+    date_clean = as_date(date),
     month = month(date_clean),
     day   = day(date_clean),
     year  = year(date_clean),
@@ -58,27 +68,13 @@ clean_bee_data <- raw_bee_data %>%
 # STEP 4: QC flags
 # ------------------------------------------------------------
 clean_bee_data <- clean_bee_data %>%
-  mutate(missing_latlong       = is.na(Latitude) | is.na(Longitude),
-         missing_genus_species = is.na(Genus) | is.na(Species))
+  mutate(missing_latlong       = is.na(latitude) | is.na(longitude),
+         missing_genus_species = is.na(taxon_genus_name) | is.na(taxon_species_name),
+         missing_method_plant  = is.na(method_or_plant))
 
 missing_latlong       <- clean_bee_data %>% filter(missing_latlong)
 missing_genus_species <- clean_bee_data %>% filter(missing_genus_species)
-
-# Method/Plant column name can shift depending on how Excel merges
-# headers between versions — find it by pattern, not a hardcoded
-# mangled name like "Method...Plant".
-method_plant_col <- names(clean_bee_data)[str_detect(names(clean_bee_data), "^Method")]
-
-if (length(method_plant_col) == 1) {
-  clean_bee_data <- clean_bee_data %>%
-    mutate(missing_method_plant = is.na(.data[[method_plant_col]]))
-  missing_method_plant <- clean_bee_data %>% filter(missing_method_plant)
-} else {
-  warning("Could not uniquely identify the Method/Plant column. Found: ",
-          paste(method_plant_col, collapse = ", "),
-          ". Check names(raw_bee_data) and update this script.")
-  missing_method_plant <- tibble()
-}
+missing_method_plant  <- clean_bee_data %>% filter(missing_method_plant)
 
 # ------------------------------------------------------------
 # STEP 5: Build join key
@@ -86,7 +82,7 @@ if (length(method_plant_col) == 1) {
 # table so lethal specimens can be joined against it later.
 # ------------------------------------------------------------
 clean_bee_data <- clean_bee_data %>%
-  mutate(oldscientificname = paste0(Genus, "_", Subgenus, "_", Species))
+  mutate(oldscientificname = paste0(taxon_genus_name, "_", taxon_subgenus_name, "_", taxon_species_name))
 
 # ------------------------------------------------------------
 # STEP 6: Summary and save
@@ -96,7 +92,9 @@ cat("Total specimens:          ", nrow(clean_bee_data), "\n")
 cat("Missing lat/long:         ", nrow(missing_latlong), "\n")
 cat("Missing genus/species:    ", nrow(missing_genus_species), "\n")
 cat("Missing method/plant:     ", nrow(missing_method_plant), "\n")
-cat("Unique old_scientificname:", n_distinct(clean_bee_data$oldscientificname), "\n\n")
+cat("Unique old_scientificname:", n_distinct(clean_bee_data$oldscientificname), "\n")
+cat("Specimens with a known complex (taxon_complex_name):",
+    sum(!is.na(clean_bee_data$taxon_complex_name)), "\n\n")
 
 write.csv(
   clean_bee_data,
