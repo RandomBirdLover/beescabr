@@ -32,16 +32,16 @@ library(tidyverse)
 # STEP 1: Load checklist (re-run native_bee_checklist.R first
 #         if the file is missing, to avoid the ~3 min API call)
 # ------------------------------------------------------------
-checklist_path <- "data/outputs/SD_native_bee_checklist.csv"
+checklist_path <- "data/outputs/SD_inat_bee_checklist.csv"
 
 if (!file.exists(checklist_path)) {
   message("Checklist not found -- running native_bee_checklist.R to build it...")
   source("scripts/native_bee_checklist.R")
 }
 
-bee_checklist <- read.csv(checklist_path)
+inat_bee_checklist <- read.csv(checklist_path)
 
-cat("Loaded checklist with", nrow(bee_checklist), "taxa\n")
+cat("Loaded checklist with", nrow(inat_bee_checklist), "taxa\n")
 
 # ------------------------------------------------------------
 # STEP 2: Determine the rank of each record
@@ -49,7 +49,7 @@ cat("Loaded checklist with", nrow(bee_checklist), "taxa\n")
 # species and subgenus: a taxon IS complex-rank when its own
 # taxon_id equals its taxon_complex_id (see native_bee_checklist.R).
 # ------------------------------------------------------------
-bee_reference <- bee_checklist %>%
+bee_reference <- inat_bee_checklist %>%
   mutate(
     # Clean up blanks to NA
     across(where(is.character), ~na_if(., "")),

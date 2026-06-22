@@ -19,20 +19,42 @@ Native bee biodiversity pipeline for Cabrillo National Monument (CABR), comparin
 
 ---
 
+## Setup
+
+One-time package installation for a new contributor. Each script also has its own commented-out `install.packages()` line at the top (so it's clear what that specific script needs), but this is the full list across the whole project — run once:
+
+```r
+install.packages(c(
+  "tidyverse", "httr2", "stringr", "sf", "readxl", "writexl",
+  "lubridate", "BeeBDC"
+))
+
+# Optional, for later GBIF work — not required for the current pipeline:
+# install.packages(c("rgbif", "gbifdb"))
+```
+
+`BeeBDC` was added 2026-06-21 to cross-reference the Dorey et al. (2023) global bee occurrence dataset against our SD County checklist — see `data/reference_exports/Dorey_et_al_Data/`.
+
+---
+
 ## Repository structure
 
 ```
 beescabr/
   scripts/
-    native_bee_checklist.R         # builds SD County native bee checklist from iNat export
-    native_bee_reference_table.R   # builds key_full (taxon richness reference); ~315 taxa
-    native_bee_data_analysis.Rmd   # main cleaning and analysis document
-    spatial_utils.R                # generates 10m transect buffers in memory
+    utils.R                          # shared read_latest(), require_columns()
+    native_bee_checklist.R           # builds SD County native bee checklist from iNat export
+    native_bee_reference_table.R     # builds key_full (taxon richness reference); rank breakdown
+    clean_specimens.R                # cleans lethal CABR specimen data
+    clean_nonlethal_inat.R           # cleans non-lethal iNat data (intern + beeple)
+    spatial_utils.R                  # generates 10m transect buffers in memory
+    native_bee_data_analysis.Rmd     # main analysis document — sources the above
   data/                            # gitignored — NOT on GitHub (see .gitignore)
     reference_exports/
       native_bees/                 # iNat SD County bee exports
       plants/                      # iNat SD County plant exports
       gbif/                        # GBIF regional reference exports
+      Dorey_et_al_Data/            # BeeBDC (Dorey et al. 2023) global dataset, filtered to SD County
     cabr_surveys/
       lethal/                      # all versions of specimen file live here
         CABR_bee_specimens_V1_2026-05-04.xlsx
@@ -141,21 +163,30 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
 
 ## Pipeline overview
 
-Run scripts in this order:
+`native_bee_data_analysis.Rmd` is the orchestrator — it sources everything below in order, so in practice you just run the Rmd chunk by chunk. Listed individually here for reference:
 
 ```
 1. native_bee_checklist.R          reads iNat export → builds SD County bee checklist
                                    (hits iNat API ~430 calls, ~3-4 min)
-                                   → writes data/outputs/SD_native_bee_checklist.csv
+                                   → writes data/outputs/SD_inat_bee_checklist.csv
+                                   (only re-run if that file doesn't already exist)
 
 2. native_bee_reference_table.R    reads checklist → builds key_full reference table
                                    → writes data/outputs/SD_bee_reference_table.csv
 
-3. spatial_utils.R                 reads CABR_transects.shp → generates buffer_10m in memory
-                                   (source this before any spatial analysis)
+3. clean_specimens.R               reads newest CABR_bee_specimens_V{n} → cleans lethal data
+                                   → writes data/outputs/CABR_bee_specimens_clean.csv
 
-4. native_bee_data_analysis.Rmd    main analysis; reads specimens + checklist + reference table
+4. clean_nonlethal_inat.R          reads intern + beeple iNat exports → cleans non-lethal data
+                                   → writes data/outputs/CABR_nonlethal_inat_clean.csv
+                                   (reports "no data found yet" until those folders are populated)
+
+5. spatial_utils.R                 reads CABR_transects.shp → generates buffer_10m in memory
+
+6. native_bee_data_analysis.Rmd    sources 1–5 above, then does the actual richness/method comparison
 ```
+
+`utils.R` (shared `read_latest()` and `require_columns()`) is sourced by every script above — not a standalone step.
 
 ---
 
@@ -163,11 +194,11 @@ Run scripts in this order:
 
 iNaturalist uses a taxonomic rank called **Complex** for cryptic species groups that cannot be reliably distinguished from photos (e.g. *Andrena osmioides*, *Diadasia australis*). The pipeline handles these as follows:
 
-- Each taxon has a `complex` column (complex name) and `complex_taxon_id` column in the checklist
+- Each taxon has a `taxon_complex_name` column (complex name) and `taxon_complex_id` column in the checklist
 - Complexes are **not excluded** from richness counts — each unique `taxon_id` counts as one taxon
-- `complex` is the join key for matching iNat photo observations against museum specimens
+- `taxon_complex_name` is the join key for matching iNat photo observations against museum specimens
 - Exact `taxon_id` match is preferred; complex-level matches are flagged separately
-- A `complex` column will be added to the specimen sheet in V9
+- `taxon_complex_name` was added to the specimen sheet in V9 (populated via Genus+Species match against the checklist — see `SPECIMEN_CHANGELOG.md`)
 
 ---
 
@@ -191,6 +222,10 @@ CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
+- [ ] **Conceptualize full checklist architecture** (raised 2026-06-21): Two tiers agreed —
+  (1) source-specific checklists as building blocks: `SD_inat_bee_checklist` (iNat-only, done), `Dorey_bee_checklist` (BeeBDC-derived, pending);
+  (2) `SD_bee_checklist` reserved for the actual merged/comprehensive county checklist once sources are combined (Darwin Core column mapping needed for Dorey data), with `PL_bee_checklist` and `CABR_bee_checklist` as spatial subsets derived from it later (needs Point Loma/CABR boundary shapefiles — `spatial/boundaries/` currently empty).
+  Separately, CABR survey checklists (lethal vs. intern iNat vs. beeple iNat) must stay strictly separated by method — never merged — broken out by year, to support the core lethal-vs-non-lethal comparison.
 
 ---
 

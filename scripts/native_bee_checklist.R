@@ -45,7 +45,7 @@ cat("Loaded", nrow(bees), "observations\n")
 # ------------------------------------------------------------
 # STEP 2: Build initial checklist of unique taxa (by taxon_id)
 # ------------------------------------------------------------
-bee_checklist <- bees %>%
+inat_bee_checklist <- bees %>%
   select(
     taxon_id,
     scientific_name,
@@ -67,7 +67,7 @@ bee_checklist <- bees %>%
   filter(!is.na(taxon_genus_name) | !is.na(taxon_species_name)) %>%
   arrange(taxon_family_name, taxon_genus_name, taxon_species_name)
 
-cat("Found", nrow(bee_checklist), "unique taxa\n")
+cat("Found", nrow(inat_bee_checklist), "unique taxa\n")
 
 # ------------------------------------------------------------
 # STEP 3: Pull taxon_subgenus_name, taxon_complex_name,
@@ -145,7 +145,7 @@ get_subgenus_and_complex <- function(taxon_id, max_retries = 3) {
 }
 
 # Get unique taxon IDs
-unique_ids <- unique(bee_checklist$taxon_id)
+unique_ids <- unique(inat_bee_checklist$taxon_id)
 unique_ids <- unique_ids[!is.na(unique_ids)]
 
 cat("\nFetching subgenus and complex from iNaturalist API for",
@@ -174,7 +174,7 @@ cat("\n\nDone fetching taxonomy data!\n")
 # taxon_species_name    → epithet only (e.g. "ribifloris")
 # taxon_subspecies_name → epithet only (e.g. "biedermannii")
 # ------------------------------------------------------------
-bee_checklist <- bee_checklist %>%
+inat_bee_checklist <- inat_bee_checklist %>%
   left_join(taxonomy_lookup, by = "taxon_id") %>%
   mutate(
     taxon_species_name    = word(taxon_species_name, -1),
@@ -183,17 +183,17 @@ bee_checklist <- bee_checklist %>%
 
 # Report any taxa that failed to fetch even after retries — these need
 # manual follow-up, NOT a silent NA that looks identical to "no subgenus exists"
-failed_fetches <- bee_checklist %>% filter(fetch_failed == TRUE)
+failed_fetches <- inat_bee_checklist %>% filter(fetch_failed == TRUE)
 if (nrow(failed_fetches) > 0) {
   cat("\n*** WARNING:", nrow(failed_fetches),
       "taxa failed to fetch from the API after retries. ***\n")
   cat("*** Results below are INCOMPLETE for these taxa — rerun or investigate. ***\n")
   print(failed_fetches %>% select(taxon_id, scientific_name))
 } else {
-  cat("\nAll", nrow(bee_checklist), "taxa fetched successfully — no API failures.\n")
+  cat("\nAll", nrow(inat_bee_checklist), "taxa fetched successfully — no API failures.\n")
 }
 
-bee_checklist <- bee_checklist %>%
+inat_bee_checklist <- inat_bee_checklist %>%
   select(
     taxon_id,
     scientific_name,
@@ -221,7 +221,7 @@ bee_checklist <- bee_checklist %>%
 cat("\n--- QUALITY CONTROL ---\n")
 
 # Family count (should be 6 for San Diego County)
-families <- bee_checklist %>%
+families <- inat_bee_checklist %>%
   filter(!is.na(taxon_family_name), taxon_family_name != "") %>%
   distinct(taxon_family_name) %>%
   arrange(taxon_family_name)
@@ -238,7 +238,7 @@ if (nrow(families) == 6) {
 # Flag taxa that ARE complexes (taxon_id == taxon_complex_id)
 # This correctly distinguishes complex-rank taxa from species that
 # merely belong to a complex (which share the name but differ in taxon_id)
-complex_taxa <- bee_checklist %>%
+complex_taxa <- inat_bee_checklist %>%
   filter(!is.na(taxon_complex_id) & taxon_id == taxon_complex_id)
 
 # Full list of distinct complexes represented in the data, regardless of
@@ -246,7 +246,7 @@ complex_taxa <- bee_checklist %>%
 # This will generally be LARGER than nrow(complex_taxa) — a complex can be
 # represented entirely by species-level observations within it, with no
 # observation ever IDed to the complex level itself.
-distinct_complexes <- bee_checklist %>%
+distinct_complexes <- inat_bee_checklist %>%
   filter(!is.na(taxon_complex_name)) %>%
   distinct(taxon_complex_name, taxon_complex_id) %>%
   arrange(taxon_complex_name)
@@ -266,27 +266,27 @@ if (nrow(distinct_complexes) > 0) {
 # STEP 6: Summary
 # ------------------------------------------------------------
 cat("\n--- CHECKLIST SUMMARY ---\n")
-cat("Total unique taxa:                  ", nrow(bee_checklist), "\n")
-cat("Taxa with taxon_subgenus_name:       ", sum(!is.na(bee_checklist$taxon_subgenus_name)), "\n")
-cat("Taxa with taxon_complex_name:        ", sum(!is.na(bee_checklist$taxon_complex_name)), "\n")
+cat("Total unique taxa:                  ", nrow(inat_bee_checklist), "\n")
+cat("Taxa with taxon_subgenus_name:       ", sum(!is.na(inat_bee_checklist$taxon_subgenus_name)), "\n")
+cat("Taxa with taxon_complex_name:        ", sum(!is.na(inat_bee_checklist$taxon_complex_name)), "\n")
 cat("Distinct complexes represented:      ", nrow(distinct_complexes),
     "(every unique complex appearing in this dataset, at any resolution)\n")
 cat("  - with a complex-rank observation: ", nrow(complex_taxa),
     "(complexes where at least one observation could not be resolved past complex)\n")
 cat("  - species-level only:              ", nrow(distinct_complexes) - nrow(complex_taxa),
     "(complexes only ever observed at full species resolution)\n")
-cat("Genera represented:                  ", n_distinct(bee_checklist$taxon_genus_name), "\n\n")
+cat("Genera represented:                  ", n_distinct(inat_bee_checklist$taxon_genus_name), "\n\n")
 
-print(head(bee_checklist, 10))
+print(head(inat_bee_checklist, 10))
 
 # ------------------------------------------------------------
 # STEP 7: Save checklist as CSV
 # ------------------------------------------------------------
 write.csv(
-  bee_checklist,
-  "data/outputs/SD_native_bee_checklist.csv",
+  inat_bee_checklist,
+  "data/outputs/SD_inat_bee_checklist.csv",
   row.names = FALSE
 )
 
-cat("\nChecklist saved to data/outputs/SD_native_bee_checklist.csv\n")
+cat("\nChecklist saved to data/outputs/SD_inat_bee_checklist.csv\n")
 

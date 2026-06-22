@@ -44,9 +44,9 @@ source("scripts/utils.R")  # read_latest(), require_columns()
 ```{r build-reference, message=FALSE}
 # native_bee_checklist.R makes ~430 iNaturalist API calls (~3-4 min),
 # so we only re-run it if the saved checklist CSV doesn't already exist.
-# Delete data/outputs/SD_native_bee_checklist.csv to force a refresh.
+# Delete data/outputs/SD_inat_bee_checklist.csv to force a refresh.
 
-if (!file.exists("data/outputs/SD_native_bee_checklist.csv")) {
+if (!file.exists("data/outputs/SD_inat_bee_checklist.csv")) {
   message("Checklist not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
   source("scripts/native_bee_checklist.R")
 }

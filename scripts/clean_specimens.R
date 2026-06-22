@@ -14,7 +14,7 @@
 #
 # Note on taxon_complex_name: this column is now baked into the
 # specimen sheet itself (added in V9 via a one-time match against
-# SD_native_bee_checklist.csv). This script reads it as-is — it does
+# SD_inat_bee_checklist.csv). This script reads it as-is — it does
 # NOT re-derive it, since that matching is a data-prep step, not a
 # repeatable cleaning step.
 #
