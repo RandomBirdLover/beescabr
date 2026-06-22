@@ -52,6 +52,17 @@ A `complex` column will be added in V9 to support matching against iNat photo ob
 
 ---
 
+## Known data notes
+
+**Missing genus/species (785 of 1437 as of V9):** Per Jess (2026-06-21), these are not necessarily data entry errors. Possible explanations:
+- Some specimens may have been taken by Jess for other purposes
+- Some records may never have had a specimen attached (placeholder rows)
+- Remaining unidentified specimens may still be physically in boxes at the Holway Lab, UCSD, awaiting identification
+
+This number should not be treated as a cleaning bug — it likely reflects real backlog/uncertainty in physical specimen processing, not a pipeline issue.
+
+---
+
 ## Planned Future Deposit
 
 | Deposit | Date | Version submitted | Notes |
