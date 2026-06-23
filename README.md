@@ -89,12 +89,12 @@ beescabr/
 ### iNat and GBIF exports
 
 ```
-inat_bees_sdcounty_YYYY-MM-DD.csv
+inat_native_bees_sdcounty_YYYY-MM-DD.csv
 inat_plants_sdcounty_YYYY-MM-DD.csv
 gbif_bees_sdcounty_YYYY-MM-DD.csv
 ```
 
-**Note on `inat_bees_sdcounty`:** as of 2026-06-22, this is one master export covering *all* bees (Anthophila) across the full San Diego County 25 Mile Buffer — see **iNat export instructions** below for why. It is not native-bee-only and not CABR- or Point Loma-specific; the Point Loma and CABR checklists are both derived from this same file via spatial subsetting (see **Pipeline overview**), not separate exports. (Filename kept as `inat_bees_sdcounty`, not `inat_native_bees_sdcounty`, to reflect that it's no longer native-only at the export stage.)
+**Note on `inat_native_bees_sdcounty`:** as of 2026-06-22, this is one master export covering all bees in San Diego County (25 Mile Buffer) except *Apis mellifera* (Western Honey Bee), excluded at export time for observation-volume reasons — see **iNat export instructions** below. "Native" here refers specifically to the honey-bee exclusion; no other non-native species are filtered. It is not CABR- or Point Loma-specific; the Point Loma and CABR checklists are both derived from this same file via spatial subsetting (see **Pipeline overview**), not separate exports.
 
 Date = download date, always YYYY-MM-DD. Drop the file directly into the correct subfolder — do not leave it in Downloads or rename it after the fact. Scripts auto-detect the newest file using `read_latest()`.
 
@@ -179,7 +179,7 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
 `native_bee_data_analysis.Rmd` is the orchestrator — it sources everything below in order, so in practice you just run the Rmd chunk by chunk. Listed individually here for reference:
 
 ```
-1. native_bee_checklist.R          reads ONE master iNat export (inat_bees_sdcounty, all of SD
+1. native_bee_checklist.R          reads ONE master iNat export (inat_native_bees_sdcounty, all of SD
                                    County 25mi buffer, Apis mellifera excluded — see iNat export
                                    instructions) → builds SD County bee checklist
                                    (hits iNat API ~430 calls, ~3-4 min)
@@ -246,6 +246,7 @@ Boundary shapefiles live in `data/spatial/boundaries/`, each in its own subfolde
 | `cabr_survey_box.shp` | `boundaries/cabr/` | Hand-drawn in ArcGIS Pro | The actual CABR-tier inclusion geometry — see below. Lives alongside `cabr_boundary.shp`, not in its own subfolder. |
 | `point_loma_boundary.shp` | `boundaries/point_loma/` | City of San Diego "PENINSULA" community plan district, hand-edited | Custom working boundary — see gap-resolution history below. Not an authoritative city/NPS polygon. |
 | `sd_county_boundary.shp` | `boundaries/san_diego_county/` | County of San Diego Open Data Portal, hand-edited | Custom working boundary, expanded by hand from the raw export — not the raw export itself. Treat as project-specific, not an authoritative county polygon. |
+| `cabr_nps_tracts.shp` | `boundaries/cabr/` | NPS Land Resources Division | 6 tract polygons. **Not yet used in `spatial_utils.R` or any checklist script.** Intended future use: distinguishing a strict NPS-tract-based checklist (`cabr_nps_native_bee_checklist`) from the current survey-box-based one (`cabr_survey_box_native_bee_checklist` or similar) — see TODO. |
 
 All are reprojected to EPSG:26946 in `spatial_utils.R` on load, since none of the source files arrive in that CRS natively.
 
@@ -285,12 +286,13 @@ Containment vs. `cabr_boundary` was tracked through several attempts:
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
 - [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added; CABR survey box + Point Loma gap resolution finalized 2026-06-22)
-- [x] **iNat export → spatial subset mechanism decided** (2026-06-22): one master `inat_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) feeds the county-wide checklist; Point Loma and CABR checklists are spatial subsets of it via `point_loma_boundary`/`cabr_survey_box`, not separate exports. See **iNat export instructions** and **Pipeline overview** above. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
+- [x] **iNat export → spatial subset mechanism decided** (2026-06-22): one master `inat_native_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) feeds the county-wide checklist; Point Loma and CABR checklists are spatial subsets of it via `point_loma_boundary`/`cabr_survey_box`, not separate exports. See **iNat export instructions** and **Pipeline overview** above. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
 - [ ] **Conceptualize full checklist architecture** (raised 2026-06-21): Two tiers agreed —
   (1) source-specific checklists as building blocks: `SD_inat_bee_checklist` (iNat-only, done), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
   (2) `SD_bee_checklist` reserved for the actual merged/comprehensive county checklist once sources are combined, with `PL_bee_checklist` and `CABR_bee_checklist` as spatial subsets derived from it (boundary shapefiles now available, see Spatial analysis section; export/subsetting mechanism now decided, see item above — still need to combine in Dorey/specimen sources).
   Separately, CABR survey checklists (lethal vs. intern iNat vs. beeple iNat) must stay strictly separated by method — never merged — broken out by year, to support the core lethal-vs-non-lethal comparison.
 - [ ] **CABR-specific checklist** (raised 2026-06-22 by Jess/Patricia): the existing `SD_inat_bee_checklist` is county-wide; a CABR-only checklist is needed as a quick, separate deliverable. The spatial-subset mechanism above now provides the path to this (filter the master checklist by `cabr_survey_box`) — implementing the actual subset script/step is still outstanding.
+- [ ] **NPS-tract vs. survey-box checklist split** (using `cabr_nps_tracts.shp`, see Spatial analysis table above): build a strict NPS-tract-based CABR checklist alongside the current `cabr_survey_box`-based one, so the two can be compared. Not yet implemented — `cabr_nps_tracts.shp` is loaded for reference only so far.
 - [ ] **ArcGIS project versioning** (raised 2026-06-22): `.aprx`/`.gdb` files aren't Git-friendly (binary, machine-specific paths, no meaningful diffs) — committing the live ArcGIS Pro project directly isn't a good fit for this repo. Decide on an approach: (a) keep committing only the shapefiles (current practice) plus a static map export (PDF/PNG) for visual reference, or (b) script the symbology/layout setup (e.g. via ArcPy) so the map can be rebuilt from scratch rather than version-controlling the binary project itself.
 
 ---
