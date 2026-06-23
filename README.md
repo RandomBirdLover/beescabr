@@ -214,25 +214,41 @@ CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 
 ### Boundary layers (added 2026-06-22)
 
-Three boundary shapefiles now live in `data/spatial/boundaries/`:
+Boundary shapefiles live in `data/spatial/boundaries/`, each in its own subfolder:
 
-| File | Source | Notes |
-|------|--------|-------|
-| `cabr_boundary.shp` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. ~160 acres, matches NPS-published figure. |
-| `point_loma_boundary.shp` | City of San Diego Community Plan district `CPNAME == "PENINSULA"` (CPCODE 30) | **Renamed for this project.** "PENINSULA" is the city's official planning-district name for this area; we call it Point Loma here. Verified in ArcGIS to already cover the Navy-adjacent area south of CABR (where the BST transect begins) — no union with another district needed. This is a project naming convention, not a claim that the terms are interchangeable elsewhere. |
-| `sd_county_boundary.shp` | County of San Diego Open Data Portal | Single polygon, extent-verified against known county geography. Attribute table has no name field — identity confirmed by geometry only. |
+| File | Location | Source | Notes |
+|------|----------|--------|-------|
+| `cabr_boundary.shp` | `boundaries/cabr/` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. 160.4 acres, matches NPS-published figure (~160 acres). Used as a provenance label only — see below, not a filter. |
+| `cabr_survey_box.shp` | `boundaries/cabr/` | Hand-drawn in ArcGIS Pro | The actual CABR-tier inclusion geometry — see below. Lives alongside `cabr_boundary.shp`, not in its own subfolder. |
+| `point_loma_boundary.shp` | `boundaries/point_loma/` | City of San Diego "PENINSULA" community plan district, hand-edited | Custom working boundary — see gap-resolution history below. Not an authoritative city/NPS polygon. |
+| `sd_county_boundary.shp` | `boundaries/san_diego_county/` | County of San Diego Open Data Portal, hand-edited | Custom working boundary, expanded by hand from the raw export — not the raw export itself. Treat as project-specific, not an authoritative county polygon. |
 
-All three are reprojected to EPSG:26946 in `spatial_utils.R`, regardless of source CRS (none arrive natively in 26946 — `cabr_boundary` and `sd_county_boundary` are geographic/degrees, `Community_Plan_SD.shp` is NAD83 State Plane CA Zone VI in US feet).
+All are reprojected to EPSG:26946 in `spatial_utils.R` on load, since none of the source files arrive in that CRS natively.
 
 #### CABR survey area vs. official NPS boundary
 
-Per Taro (2026-06-22): the BST transect begins on Navy-owned land south of the official CABR boundary, but this area has historically been surveyed as part of CABR and should count as such going forward — anything south of CABR's northernmost border is in scope, regardless of ownership.
+Per Taro (2026-06-22): the BST transect begins on Navy-owned land south of the official CABR (NPS) boundary, but this area has historically been surveyed as part of CABR and should be counted as such — regardless of official ownership.
 
-This is implemented as `cabr_survey_box` in `spatial_utils.R`: a bounding box anchored at CABR's north edge, extended south by a buffer margin (currently 1000m — adjust `SOUTH_BUFFER_M` if BST or other transects still fall outside). This box, not `cabr_boundary`, is the actual inclusion geometry for CABR-tier spatial joins.
+This is implemented via `cabr_survey_box`: a **hand-drawn polygon** (not a formula-based buffer) built in ArcGIS Pro to extend past `cabr_boundary` on the north, south, *and* southeast — generous on every side, since a uniform south-only buffer couldn't capture the irregular extension this required. `cabr_survey_box`, not `cabr_boundary`, is the actual inclusion geometry for CABR-tier spatial joins.
 
-`cabr_boundary` (the official NPS polygon) is retained and used to *label* points as `inside_nps_boundary == TRUE/FALSE` for provenance/transparency — e.g. so a reader can see what fraction of "CABR" observations are technically on Navy land. **This label is never used to exclude points.** Nothing south of CABR's north edge is dropped on the basis of ownership.
+`cabr_boundary` (the official NPS polygon) is retained purely as a *provenance label* — every point gets classified as `inside_nps_boundary == TRUE/FALSE`, but this label never excludes a point from being counted as CABR. This is intentionally a label, not a filter. Being inside `cabr_survey_box` doesn't by itself mean "CABR" either — points still get classified downstream (inside NPS boundary, Navy-but-CABR, or something else/Point Loma); the box's job is just to be generous enough that nothing relevant gets excluded before that classification happens.
 
-`point_loma_boundary` ("PENINSULA") was visually verified in ArcGIS to already contain this CABR survey area, Navy portion included — no modification needed there. `spatial_utils.R` also runs an automated `st_contains(point_loma_boundary, cabr_boundary)` check on every run, so this containment relationship gets re-verified rather than silently assumed if either source file is ever updated upstream.
+`spatial_utils.R` runs `st_contains(cabr_survey_box, cabr_boundary)` on every run to confirm the box still fully contains the official boundary, rather than assuming it.
+
+#### Point Loma boundary: gap resolution history
+
+`point_loma_boundary` started from the City of San Diego's "PENINSULA" community plan district, but didn't fully cover `cabr_boundary` — manual extension in ArcGIS was required over two gap areas (a northern tongue and a southern/BST-transect-spur area).
+
+Containment vs. `cabr_boundary` was tracked through several attempts:
+
+1. Original "PENINSULA" district: **4.69 acre gap**
+2. Automated Union+Dissolve attempt: **5.69 acre gap** — this made the gap *worse*, not better, and was abandoned
+3. Careful manual ArcGIS edit: **0.0105 acre gap** (~460 sq ft) — a genuine seam/precision artifact at this point, not a real missing area
+4. **5m buffer applied on load** (`POINT_LOMA_SEAM_BUFFER_M` in `spatial_utils.R`): gap fully resolved
+
+`spatial_utils.R` runs `st_contains(point_loma_boundary, cabr_boundary)` on every run to re-verify this rather than assuming it. If it ever fails, the script computes the exact gap via `st_difference()` and writes it to `boundaries/DIAGNOSTIC_cabr_gap.shp` (gitignored) for inspection in ArcGIS/QGIS.
+
+**Lesson learned:** automated Union+Dissolve is not a reliable fix for boundary gaps in this project — manual ArcGIS editing succeeded where the automated approach failed.
 
 ---
 
@@ -244,7 +260,7 @@ This is implemented as `cabr_survey_box` in `spatial_utils.R`: a bounding box an
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
-- [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added)
+- [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added; CABR survey box + Point Loma gap resolution finalized 2026-06-22)
 - [ ] **Conceptualize full checklist architecture** (raised 2026-06-21): Two tiers agreed —
   (1) source-specific checklists as building blocks: `SD_inat_bee_checklist` (iNat-only, done), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
   (2) `SD_bee_checklist` reserved for the actual merged/comprehensive county checklist once sources are combined, with `PL_bee_checklist` and `CABR_bee_checklist` as spatial subsets derived from it (boundary shapefiles now available, see Spatial analysis section).
