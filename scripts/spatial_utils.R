@@ -26,7 +26,7 @@
 #                       for spatial joins (NOT cabr_boundary itself).
 #                       Verified via st_contains() below to fully
 #                       contain cabr_boundary. File lives in
-#                       boundaries/cabr_survey_box/.
+#                       boundaries/cabr/ (alongside cabr_boundary).
 #
 # point_loma_boundary : CUSTOM hand-drawn boundary (2026-06-22), built
 #                       in ArcGIS Pro from the City of San Diego's
@@ -110,7 +110,8 @@ message(sprintf("cabr_boundary loaded: %.1f acres (NPS-published figure: ~160 ac
 # where BST begins. This is the actual CABR-tier inclusion geometry --
 # NOT cabr_boundary. Replaces an earlier formula-based south-only
 # bounding box, which couldn't capture the irregular (north + SE)
-# extension Taro wanted. File lives in boundaries/cabr_survey_box/.
+# extension Taro wanted. File lives in boundaries/cabr/ (alongside
+# cabr_boundary), not in its own subfolder.
 #
 # Being inside this box does NOT automatically mean "CABR" -- every
 # point still gets classified (inside_nps_boundary, Navy-but-CABR, or
@@ -119,7 +120,7 @@ message(sprintf("cabr_boundary loaded: %.1f acres (NPS-published figure: ~160 ac
 # classification happens, not to be a precise boundary itself.
 # ------------------------------------------------------------
 cabr_survey_box <- st_read(
-  file.path(boundary_dir, "cabr_survey_box", "cabr_survey_box.shp"),
+  file.path(boundary_dir, "cabr", "cabr_survey_box.shp"),
   quiet = TRUE
 ) |>
   st_transform(PROJECT_CRS)
