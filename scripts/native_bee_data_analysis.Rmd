@@ -40,18 +40,23 @@ library(httr2)       # iNaturalist API calls (used by sourced scripts)
 source("scripts/utils.R")  # read_latest(), require_columns()
 ```
 
-###### 2. REFERENCE TABLE (SD County taxonomic source of truth) ######
+###### 2. REFERENCE TABLE (SD County / Point Loma / CABR taxonomic source of truth) ######
 ```{r build-reference, message=FALSE}
 # native_bee_checklist.R makes ~430 iNaturalist API calls (~3-4 min),
-# so we only re-run it if the saved checklist CSV doesn't already exist.
-# Delete data/outputs/SD_inat_bee_checklist.csv to force a refresh.
+# so we only re-run it if the saved checklist CSVs don't already exist.
+# Delete any of the three data/outputs/*_inat_native_bee_checklist.csv
+# files to force a refresh of all three (they're built together,
+# from one shared API pass over the union of taxa).
 
-if (!file.exists("data/outputs/SD_inat_bee_checklist.csv")) {
-  message("Checklist not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
+if (!file.exists("data/outputs/SD_county_inat_native_bee_checklist.csv") ||
+    !file.exists("data/outputs/PL_inat_native_bee_checklist.csv") ||
+    !file.exists("data/outputs/CABR_inat_native_bee_checklist.csv")) {
+  message("One or more tiered checklists not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
   source("scripts/native_bee_checklist.R")
 }
 
-# Builds the `bee_reference` object with key_full, rank, etc.
+# Builds bee_reference_sd_county, bee_reference_point_loma, and
+# bee_reference_cabr (each with key_full, rank, etc.)
 source("scripts/native_bee_reference_table.R")
 ```
 
@@ -81,14 +86,22 @@ trails <- c("BST", "UPMON", "TP", "OT")
 bee_family <- c("Andrenidae", "Apidae", "Colletidae",
                 "Halictidae", "Megachilidae", "Melittidae")
 
-# `bee_reference` has key_full, key_genus_species, key_species_only,
-# rank, and full taxonomy — built in section 2.
-sd_taxon_richness <- n_distinct(bee_reference$key_full)
-cat("San Diego County taxon richness:", sd_taxon_richness, "\n")
+# bee_reference_sd_county / _point_loma / _cabr each have key_full,
+# key_genus_species, key_species_only, rank, and full taxonomy --
+# built in section 2, one per geographic tier.
+sd_taxon_richness         <- n_distinct(bee_reference_sd_county$key_full)
+point_loma_taxon_richness <- n_distinct(bee_reference_point_loma$key_full)
+cabr_taxon_richness       <- n_distinct(bee_reference_cabr$key_full)
 
-# TODO: Point Loma and CABR richness — depends on the spatial join
-# (assigning observations to transects via buffer_10m), not yet built.
-# Once available, compare each as a % of SD County diversity.
+cat("San Diego County taxon richness:", sd_taxon_richness, "\n")
+cat("Point Loma taxon richness:      ", point_loma_taxon_richness,
+    sprintf(" (%.1f%% of SD County)\n", 100 * point_loma_taxon_richness / sd_taxon_richness))
+cat("CABR taxon richness:            ", cabr_taxon_richness,
+    sprintf(" (%.1f%% of SD County)\n", 100 * cabr_taxon_richness / sd_taxon_richness))
+
+# NOTE: these are TIER 1 (iNat-only) richness figures. They will
+# change once TIER 2 (merged with specimen + Dorey data) checklists
+# exist -- see README "checklist architecture" TODO.
 ```
 
 ###### 6. ANALYSIS: METHOD COMPARISON (LETHAL VS NON-LETHAL) ######

@@ -29,9 +29,11 @@
 # possible on smaller machines.
 #
 # Per project data rules: this is REFERENCE CONTEXT ONLY (same
-# category as GBIF). It does NOT merge into SD_inat_bee_checklist.csv
-# or any CABR survey checklist — see README "Conceptualize full
-# checklist architecture" TODO for the planned future merge.
+# category as GBIF). It does NOT merge into any of the three
+# *_inat_native_bee_checklist.csv tier files (SD County / Point Loma /
+# CABR, as of 2026-06-23) or any CABR survey checklist — see README
+# "Conceptualize full checklist architecture" TODO for the planned
+# future merge.
 #
 # Output: dorey_bees_sdcounty_filtered.csv in this same folder.
 # After this runs successfully, the large raw 05_cleaned_database.csv

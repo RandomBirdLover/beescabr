@@ -1,12 +1,17 @@
 # =============================================================
-# SD Bee Reference / Master Pivot Table
+# SD County / Point Loma / CABR Bee Reference / Master Pivot Tables
 # Created: June 11, 2026
 # Updated: June 21, 2026 — fixed column names after taxon_*_name
 #          rename in native_bee_checklist.R; added complex handling.
+# Updated: June 23, 2026 — split into three geographic tiers
+#          (SD County, Point Loma, CABR), matching the three-tier
+#          split in native_bee_checklist.R. Builds one reference
+#          table per tier instead of a single county-wide table.
 # Author: Brandi Sanchez
-# Description: Builds a master reference table from the native
-#              bee checklist. Creates three counting keys so the
-#              counting method can be switched with one line:
+# Description: Builds master reference tables from each of the three
+#              tiered native bee checklists. For each tier, creates
+#              three counting keys so the counting method can be
+#              switched with one line:
 #                key_full          = genus_subgenus_complex_species (TAXON RICHNESS)
 #                key_genus_species = genus_species
 #                key_species_only  = species
@@ -28,77 +33,85 @@
 # install.packages("tidyverse")
 library(tidyverse)
 
-# ------------------------------------------------------------
-# STEP 1: Load checklist (re-run native_bee_checklist.R first
-#         if the file is missing, to avoid the ~3 min API call)
-# ------------------------------------------------------------
-checklist_path <- "data/outputs/SD_inat_bee_checklist.csv"
+source("scripts/utils.R")  # read_latest(), require_columns()
 
-if (!file.exists(checklist_path)) {
-  message("Checklist not found -- running native_bee_checklist.R to build it...")
+# ------------------------------------------------------------
+# STEP 1: Load all three checklists (re-run native_bee_checklist.R
+#         first if any are missing, to avoid the ~4 min API call)
+# ------------------------------------------------------------
+checklist_paths <- c(
+  sd_county  = "data/outputs/SD_county_inat_native_bee_checklist.csv",
+  point_loma = "data/outputs/PL_inat_native_bee_checklist.csv",
+  cabr       = "data/outputs/CABR_inat_native_bee_checklist.csv"
+)
+
+if (any(!file.exists(checklist_paths))) {
+  message("One or more tiered checklists not found -- running native_bee_checklist.R to build them...")
   source("scripts/native_bee_checklist.R")
 }
 
-inat_bee_checklist <- read.csv(checklist_path)
-
-cat("Loaded checklist with", nrow(inat_bee_checklist), "taxa\n")
-
 # ------------------------------------------------------------
-# STEP 2: Determine the rank of each record
-# Ordered most-resolved to least-resolved. "complex" sits between
-# species and subgenus: a taxon IS complex-rank when its own
-# taxon_id equals its taxon_complex_id (see native_bee_checklist.R).
+# STEP 2-6 wrapped into one function, applied to each tier so the
+# same logic runs three times with no duplicated code.
 # ------------------------------------------------------------
-bee_reference <- inat_bee_checklist %>%
-  mutate(
-    # Clean up blanks to NA
-    across(where(is.character), ~na_if(., "")),
-    rank = case_when(
-      !is.na(taxon_subspecies_name)                              ~ "subspecies",
-      !is.na(taxon_species_name)                                 ~ "species",
-      !is.na(taxon_complex_id) & taxon_id == taxon_complex_id    ~ "complex",
-      !is.na(taxon_subgenus_name)                                ~ "subgenus",
-      !is.na(taxon_genus_name)                                   ~ "genus",
-      TRUE                                                        ~ "higher"
+build_reference_table <- function(checklist_path, label) {
+  checklist <- read.csv(checklist_path)
+  cat(sprintf("\n=== %s: loaded checklist with %d taxa ===\n", label, nrow(checklist)))
+
+  # Determine the rank of each record. Ordered most-resolved to
+  # least-resolved. "complex" sits between species and subgenus: a
+  # taxon IS complex-rank when its own taxon_id equals its
+  # taxon_complex_id (see native_bee_checklist.R).
+  bee_reference <- checklist %>%
+    mutate(
+      across(where(is.character), ~na_if(., "")),
+      rank = case_when(
+        !is.na(taxon_subspecies_name)                           ~ "subspecies",
+        !is.na(taxon_species_name)                              ~ "species",
+        !is.na(taxon_complex_id) & taxon_id == taxon_complex_id  ~ "complex",
+        !is.na(taxon_subgenus_name)                              ~ "subgenus",
+        !is.na(taxon_genus_name)                                 ~ "genus",
+        TRUE                                                     ~ "higher"
+      )
     )
-  )
 
-# ------------------------------------------------------------
-# STEP 3: Build the three counting keys
-# ------------------------------------------------------------
-bee_reference <- bee_reference %>%
-  mutate(
-    key_full = paste(
-      coalesce(taxon_genus_name, "NA"),
-      coalesce(taxon_subgenus_name, "NA"),
-      coalesce(taxon_complex_name, "NA"),
-      coalesce(taxon_species_name, "NA"),
-      sep = "_"
-    ),
-    key_genus_species = paste(
-      coalesce(taxon_genus_name, "NA"),
-      coalesce(taxon_species_name, "NA"),
-      sep = "_"
-    ),
-    key_species_only = coalesce(taxon_species_name, "NA")
-  )
+  # Build the three counting keys
+  bee_reference <- bee_reference %>%
+    mutate(
+      key_full = paste(
+        coalesce(taxon_genus_name, "NA"),
+        coalesce(taxon_subgenus_name, "NA"),
+        coalesce(taxon_complex_name, "NA"),
+        coalesce(taxon_species_name, "NA"),
+        sep = "_"
+      ),
+      key_genus_species = paste(
+        coalesce(taxon_genus_name, "NA"),
+        coalesce(taxon_species_name, "NA"),
+        sep = "_"
+      ),
+      key_species_only = coalesce(taxon_species_name, "NA")
+    )
 
-# ------------------------------------------------------------
-# STEP 4: Dedupe on the full key and drop empty records
-# ------------------------------------------------------------
-bee_reference <- bee_reference %>%
-  filter(key_full != "NA_NA_NA_NA") %>%
-  distinct(key_full, .keep_all = TRUE) %>%
-  arrange(taxon_family_name, taxon_genus_name, taxon_subgenus_name, taxon_species_name)
+  # Dedupe on the full key and drop empty records
+  bee_reference <- bee_reference %>%
+    filter(key_full != "NA_NA_NA_NA") %>%
+    distinct(key_full, .keep_all = TRUE) %>%
+    arrange(taxon_family_name, taxon_genus_name, taxon_subgenus_name, taxon_species_name)
 
-# ------------------------------------------------------------
-# STEP 5: Diversity counts under each method
-# ------------------------------------------------------------
-cat("\n--- DIVERSITY COUNTS ---\n")
-cat("Taxon richness (genus_subgenus_complex_species):", n_distinct(bee_reference$key_full), "\n")
-cat("Genus + species:                                ", n_distinct(bee_reference$key_genus_species), "\n")
-cat("Strict species only:                            ",
-    n_distinct(bee_reference$key_species_only[bee_reference$key_species_only != "NA"]), "\n")
+  # Diversity counts under each method
+  cat("--- DIVERSITY COUNTS ---\n")
+  cat("Taxon richness (genus_subgenus_complex_species):", n_distinct(bee_reference$key_full), "\n")
+  cat("Genus + species:                                ", n_distinct(bee_reference$key_genus_species), "\n")
+  cat("Strict species only:                            ",
+      n_distinct(bee_reference$key_species_only[bee_reference$key_species_only != "NA"]), "\n")
+
+  # Rank breakdown
+  cat("\n--- RANK BREAKDOWN ---\n")
+  print(bee_reference %>% count(rank, sort = TRUE))
+
+  bee_reference
+}
 
 cat("\nNOTE: 'Strict species only' collapses species epithets across\n")
 cat("different genera (e.g. Diadasia australis and Dufourea australis\n")
@@ -106,19 +119,30 @@ cat("would count as ONE unit, since both have species_name 'australis').\n")
 cat("This is a known limitation of that counting method — use key_full\n")
 cat("or key_genus_species for accurate richness.\n")
 
-# ------------------------------------------------------------
-# STEP 6: Rank breakdown
-# ------------------------------------------------------------
-cat("\n--- RANK BREAKDOWN ---\n")
-rank_summary <- bee_reference %>%
-  count(rank, sort = TRUE)
-print(rank_summary)
+bee_reference_sd_county  <- build_reference_table(checklist_paths["sd_county"],  "SD County")
+bee_reference_point_loma <- build_reference_table(checklist_paths["point_loma"], "Point Loma")
+bee_reference_cabr       <- build_reference_table(checklist_paths["cabr"],       "CABR")
 
 # ------------------------------------------------------------
-# STEP 7: Save reference table
+# STEP 7: Save all three reference tables.
+#
+# These are TIER 1 (iNat-only) reference tables. The old single
+# SD_bee_reference_table.csv from before 2026-06-23 was built from
+# the now-removed county-wide-only inat_bee_checklist -- the
+# SD County file below replaces it directly (same logic, same name);
+# Point Loma and CABR reference tables are new.
 # ------------------------------------------------------------
-write.csv(bee_reference,
+write.csv(bee_reference_sd_county,
           "data/outputs/SD_bee_reference_table.csv",
           row.names = FALSE)
+write.csv(bee_reference_point_loma,
+          "data/outputs/PL_bee_reference_table.csv",
+          row.names = FALSE)
+write.csv(bee_reference_cabr,
+          "data/outputs/CABR_bee_reference_table.csv",
+          row.names = FALSE)
 
-cat("\nReference table saved to data/outputs/SD_bee_reference_table.csv\n")
+cat("\nThree reference tables saved to data/outputs/:\n")
+cat("  SD_bee_reference_table.csv\n")
+cat("  PL_bee_reference_table.csv\n")
+cat("  CABR_bee_reference_table.csv\n")

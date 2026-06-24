@@ -14,9 +14,10 @@
 #
 # Note on taxon_complex_name: this column is now baked into the
 # specimen sheet itself (added in V9 via a one-time match against
-# SD_inat_bee_checklist.csv). This script reads it as-is — it does
-# NOT re-derive it, since that matching is a data-prep step, not a
-# repeatable cleaning step.
+# the SD County tier checklist, now SD_county_inat_native_bee_checklist.csv
+# as of 2026-06-23 -- formerly SD_inat_bee_checklist.csv). This script
+# reads it as-is — it does NOT re-derive it, since that matching is a
+# data-prep step, not a repeatable cleaning step.
 #
 # Output: clean_bee_data (data frame in environment), plus QC tables
 #         missing_latlong, missing_genus_species, missing_method_plant.
