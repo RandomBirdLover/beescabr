@@ -88,6 +88,28 @@ clean_bee_data <- raw_bee_data %>%
   )
 
 # ------------------------------------------------------------
+# STEP 2b: Standardize genus/species/subspecies capitalization
+# (2026-06-25). Per standard scientific naming convention: genus
+# capitalized first letter (e.g. "Andrena"), species and subspecies
+# all-lowercase (e.g. "cerasifolii"). Source data has been seen with
+# inconsistent casing (e.g. "ANDRENA", "andrena") -- this was the root
+# cause of a duplicate-detection bug downstream in
+# native_bee_checklist.R (distinct() is case-sensitive, so two
+# differently-cased copies of the same genus survived as "unique" rows
+# and silently multiplied a join). Fixing casing here, at the source,
+# means the saved CSV itself is consistent -- not just an in-memory
+# workaround applied later in the pipeline.
+# str_to_title() on genus handles any casing (ANDRENA, andrena,
+# AnDrEnA) -> "Andrena" in one step.
+# ------------------------------------------------------------
+clean_bee_data <- clean_bee_data %>%
+  mutate(
+    genus      = str_to_title(genus),
+    species    = str_to_lower(species),
+    subspecies = str_to_lower(subspecies)
+  )
+
+# ------------------------------------------------------------
 # STEP 3: QC flags -- see header note on scope.
 # ------------------------------------------------------------
 clean_bee_data <- clean_bee_data %>%
@@ -177,6 +199,40 @@ clean_bee_data <- clean_bee_data %>%
            .after = tribe)
 
 # ------------------------------------------------------------
+# STEP 7b: Defensive guard against embedded null bytes (2026-06-24).
+# A previous run hit "duplicate 'row.names' are not allowed" /
+# "embedded nul(s) found in input" when re-reading this exact CSV back
+# in with read.csv() in native_bee_checklist.R. A direct scan of the
+# V10 source xlsx (openpyxl) found NO null bytes or control characters
+# in any cell, so the source file itself is clean -- this strip is
+# just a cheap, harmless guard in case something gets introduced
+# between read_excel() and write.csv() (e.g. by an OS/locale quirk),
+# not a fix targeting a known bad cell.
+# ------------------------------------------------------------
+clean_bee_data <- clean_bee_data %>%
+  mutate(across(where(is.character), ~ str_replace_all(.x, "[\\x00-\\x1F]", "")))
+
+# ------------------------------------------------------------
+# STEP 7c: Build old_scientific_name from old_genus_name +
+# old_species_name (2026-06-24, for advisor-facing name-change
+# tracking). Same blank-handling care as the rest of the pipeline:
+#   - both blank        -> blank (no prior ID was ever revised)
+#   - genus only        -> just the genus (not "Andrena NA")
+#   - genus + species   -> full "Genus species" binomial
+# Placed right after the two source columns, before STEP 8.
+# ------------------------------------------------------------
+clean_bee_data <- clean_bee_data %>%
+  mutate(
+    old_scientific_name = case_when(
+      (is.na(old_genus_name) | old_genus_name == "") &
+        (is.na(old_species_name) | old_species_name == "")     ~ NA_character_,
+      (is.na(old_species_name) | old_species_name == "")       ~ old_genus_name,
+      TRUE                                                     ~ paste(old_genus_name, old_species_name)
+    )
+  ) %>%
+  relocate(old_scientific_name, .after = old_species_name)
+
+# ------------------------------------------------------------
 # STEP 8: Summary and save
 # ------------------------------------------------------------
 cat("\n--- SPECIMEN CLEANING SUMMARY ---\n")
@@ -187,6 +243,28 @@ cat("Missing sdnhm_id:   ", nrow(missing_sdnhm_id), "\n")
 cat("Missing ucsd_id:    ", nrow(missing_ucsd_id), "\n")
 cat("Missing genus:      ", nrow(missing_genus), "\n")
 cat("Physically missing: ", nrow(missing_specimens_list), "\n")
+
+# ------------------------------------------------------------
+# STEP 8b: Name-change tracking list (2026-06-24) -- a quick reference
+# of every unique old_scientific_name found in this version, each with
+# the ucsd_id(s) of the specimen(s) it appeared on, so this can be
+# handed to advisors as a running list of names that have changed.
+# Specimens with no old_scientific_name (never revised) are excluded.
+# ------------------------------------------------------------
+old_name_changes <- clean_bee_data %>%
+  filter(!is.na(old_scientific_name)) %>%
+  group_by(old_scientific_name) %>%
+  summarise(ucsd_ids = paste(unique(ucsd_id), collapse = ", "),
+            n_specimens = n(),
+            .groups = "drop") %>%
+  arrange(old_scientific_name)
+
+cat(sprintf("\n--- OLD NAME CHANGES (%d unique old name(s) found) ---\n", nrow(old_name_changes)))
+if (nrow(old_name_changes) > 0) {
+  print(old_name_changes)
+} else {
+  cat("None -- no specimens have an old_genus_name/old_species_name on file.\n")
+}
 
 write.csv(
   clean_bee_data,

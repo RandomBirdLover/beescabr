@@ -91,6 +91,35 @@ cat("Loading:", basename(bees_path), "\n")
 bees <- read.csv(bees_path)
 cat("Loaded", nrow(bees), "observations\n")
 
+# RENAME RAW iNAT EXPORT COLUMNS (2026-06-24): the raw CSV from
+# iNaturalist always arrives with their fixed native column names
+# (taxon_kingdom_name, taxon_genus_name, etc.) -- that's iNat's export
+# format, not something this project controls or can change at the
+# source. Per the pipeline-wide bare-name decision, everything
+# DOWNSTREAM of this point uses bare names instead, so this one
+# explicit rename converts the raw export immediately on load. Without
+# this step, build_checklist() below would fail with "Column `kingdom`
+# doesn't exist" (the raw data never had that name to begin with).
+# taxon_id is deliberately NOT renamed -- stays as taxon_id throughout
+# (see header notes on why). subgenus/complex/complex_taxon_id aren't
+# part of the raw export at all -- those come later from the
+# iNaturalist API (STEP 4 below), not from this CSV.
+bees <- bees %>%
+  rename(
+    kingdom     = taxon_kingdom_name,
+    phylum      = taxon_phylum_name,
+    class       = taxon_class_name,
+    order       = taxon_order_name,
+    superfamily = taxon_superfamily_name,
+    family      = taxon_family_name,
+    subfamily   = taxon_subfamily_name,
+    tribe       = taxon_tribe_name,
+    subtribe    = taxon_subtribe_name,
+    genus       = taxon_genus_name,
+    species     = taxon_species_name,
+    subspecies  = taxon_subspecies_name
+  )
+
 # ------------------------------------------------------------
 # STEP 2: Spatially split observations into the three tiers.
 #
@@ -517,7 +546,7 @@ if (!file.exists(specimens_path)) {
   source("scripts/clean_specimens.R")
 }
 
-cabr_specimens <- read.csv(specimens_path)
+cabr_specimens <- read_csv(specimens_path, show_col_types = FALSE)
 require_columns(cabr_specimens,
                  c("order", "family", "subfamily",
                    "tribe", "genus", "subgenus",
@@ -532,6 +561,8 @@ require_columns(cabr_specimens,
 # Recent survey evidence join below.
 cabr_specimen_species <- cabr_specimens %>%
   filter(!is.na(genus), genus != "") %>%
+  mutate(genus = str_to_lower(genus), species = str_to_lower(species)) %>%
+  distinct(genus, species) %>%
   distinct(genus, species) %>%
   mutate(has_cabr_specimen = TRUE)
 
@@ -585,9 +616,19 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
   # evidence of Colletes at this site) and must NOT be silently dropped
   # just because Tier 2 mirrors Holway's column layout. PART A already
   # enforces genus-required; PART B adds no further row-level filtering.
+  # MATCH_KEY FIX (2026-06-24): only build a real match_key when species
+  # is actually populated. paste() turns a missing species into the
+  # literal text "_na" (not a true NA), so every genus-only row across
+  # every genus would otherwise collapse to the same fake key (e.g.
+  # "colletes_na") and could spuriously "match" an unrelated genus-only
+  # specimen of the same genus. Leaving match_key as NA for genus-only
+  # rows means NA never matches NA in the left_join below, so genus-only
+  # rows correctly get no specimen match instead of a false one.
   checklist <- tier1_checklist %>%
     mutate(
-      match_key = paste(str_to_lower(genus), str_to_lower(species), sep = "_")
+      match_key = ifelse(!is.na(species) & species != "",
+                          paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
+                          NA_character_)
     )
 
   # Recent survey: CABR-specific specimen evidence. For tiers with no
@@ -596,7 +637,9 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
     checklist <- checklist %>%
       left_join(
         specimen_species %>%
-          mutate(match_key = paste(str_to_lower(genus), str_to_lower(species), sep = "_")) %>%
+          mutate(match_key = ifelse(!is.na(species) & species != "",
+                                     paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
+                                     NA_character_)) %>%
           select(match_key, has_cabr_specimen),
         by = "match_key"
       )
