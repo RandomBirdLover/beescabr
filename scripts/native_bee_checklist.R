@@ -546,7 +546,7 @@ if (!file.exists(specimens_path)) {
   source("scripts/clean_specimens.R")
 }
 
-cabr_specimens <- read_csv(specimens_path, show_col_types = FALSE)
+cabr_specimens <- read.csv(specimens_path)
 require_columns(cabr_specimens,
                  c("order", "family", "subfamily",
                    "tribe", "genus", "subgenus",
@@ -559,10 +559,22 @@ require_columns(cabr_specimens,
 # genus-only checklist row. Previously this also required species,
 # which would have silently excluded genus-only specimens from the
 # Recent survey evidence join below.
+# CASE-SENSITIVITY FIX (2026-06-25): distinct(genus, species) only
+# catches EXACT text duplicates. If the specimen sheet has the same
+# genus/species typed with inconsistent capitalization anywhere (e.g.
+# "Andrena" on one row, "andrena" on another), both survive distinct()
+# as separate "unique" rows -- but the match_key built further down in
+# build_tier2_checklist() lowercases everything before matching, so
+# those two rows look IDENTICAL at join time. The result: one checklist
+# row matches multiple specimen rows, and left_join() multiplies it
+# (this is exactly what caused cabr_full_bee_checklist_clean.csv to
+# balloon from 111 to 461 rows in this session's run, with the
+# "many-to-many relationship" warning as the tell). Fix: lowercase
+# genus/species BEFORE distinct(), so true duplicates are caught here,
+# at the source, instead of surviving to silently multiply the join.
 cabr_specimen_species <- cabr_specimens %>%
   filter(!is.na(genus), genus != "") %>%
   mutate(genus = str_to_lower(genus), species = str_to_lower(species)) %>%
-  distinct(genus, species) %>%
   distinct(genus, species) %>%
   mutate(has_cabr_specimen = TRUE)
 
@@ -633,6 +645,29 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
 
   # Recent survey: CABR-specific specimen evidence. For tiers with no
   # specimen data, specimen_species is NULL and this column is all NA.
+  #
+  # NA_MATCHES = "never" (2026-06-25, ROOT-CAUSE FIX): dplyr's left_join
+  # defaults to na_matches = "na", which means NA in `x` matches NA in
+  # `y`. That's catastrophic here: when a specimen has unknown species
+  # (read.csv() reads the literal text "NA" in the spreadsheet as a true
+  # R NA), its match_key becomes NA. Meanwhile, every genus-only
+  # checklist row (50 of them in CABR, e.g. "Andrena" with no species ID
+  # in iNat) also has match_key = NA. With the default na_matches="na",
+  # every one of those 50 checklist rows gets a Cartesian-joined to every
+  # one of the 8 NA-keyed specimen rows -> 50 * 8 = 400 spurious extra
+  # rows, plus the 61 normally-joining rows = 461 rows in
+  # cabr_full_bee_checklist_clean.csv when it should be 111.
+  #
+  # This is the actual root cause of the row multiplication seen across
+  # several debugging passes (case-sensitivity and the "_na" paste
+  # collision turned out to be smaller, non-explaining symptoms; the real
+  # cause is dplyr's NA-matching default, which only matters once the
+  # match_key fix correctly produces NAs in the first place). Setting
+  # na_matches = "never" tells dplyr that NA never matches anything, not
+  # even another NA -- which is the semantically correct behavior for
+  # this join: a genus-only checklist row should not be "confirmed by
+  # specimen" just because some specimen of unknown species exists in
+  # the same genus.
   if (!is.null(specimen_species)) {
     checklist <- checklist %>%
       left_join(
@@ -641,7 +676,8 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
                                      paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
                                      NA_character_)) %>%
           select(match_key, has_cabr_specimen),
-        by = "match_key"
+        by = "match_key",
+        na_matches = "never"
       )
   } else {
     checklist$has_cabr_specimen <- NA
