@@ -60,10 +60,18 @@ if (!is.null(transects)) {
   transects_buffer_10m <- st_buffer(transects, dist = 10)
 }
 
-# Apply the same 5m seam buffer used in spatial_utils.R, so this plot
+# Apply the same 1m noise buffer spatial_utils.R applies to
+# sd_county_boundary (SD_COUNTY_NOISE_BUFFER_M), so this plot/check
 # matches what the actual pipeline uses for containment checks.
-if (!is.null(point_loma_boundary)) {
-  point_loma_boundary <- st_buffer(point_loma_boundary, dist = 5)
+#
+# UPDATED 2026-06-24: this used to be a 5m buffer on point_loma_boundary
+# instead -- that approach was dropped entirely (point_loma_boundary is
+# now a clean, unmodified, re-downloaded file with no buffer applied).
+# The buffer moved to sd_county_boundary, and shrank to 1m, to absorb
+# topological noise left by that layer's Union+Dissolve construction.
+# See README "Spatial analysis" section for the full history.
+if (!is.null(sd_county_boundary)) {
+  sd_county_boundary <- st_buffer(sd_county_boundary, dist = 1)
 }
 
 # ------------------------------------------------------------
@@ -98,7 +106,7 @@ if (!is.null(transects)) {
 p <- p +
   labs(
     title = "beescabr boundary + transect layers — visual check",
-    subtitle = "grey = SD County | blue = Point Loma (+5m buffer) | orange dashed = CABR survey box |\ngreen = CABR boundary (NPS) | purple dotted = cabr_nps_tracts (undocumented role) | red = transects (+10m buffer)",
+    subtitle = "grey = SD County (+1m noise buffer) | blue = Point Loma (unmodified) | orange dashed = CABR survey box |\ngreen = CABR boundary (NPS) | purple dotted = cabr_nps_tracts (undocumented role) | red = transects (+10m buffer)",
     caption = paste("Reprojected to EPSG:", PROJECT_CRS, "via sf::st_transform()")
   ) +
   theme_minimal()
@@ -125,17 +133,19 @@ cat("\n--- Containment checks (numeric, same logic as spatial_utils.R) ---\n")
 
 if (!is.null(cabr_survey_box) && !is.null(cabr_boundary)) {
   ok <- st_contains(cabr_survey_box, cabr_boundary, sparse = FALSE)[1, 1]
-  cat("cabr_survey_box contains cabr_boundary:", ok, "\n")
+  cat("cabr_survey_box contains cabr_boundary:", ok, "(expected: TRUE)\n")
 }
 
 if (!is.null(point_loma_boundary) && !is.null(cabr_boundary)) {
   ok <- st_contains(point_loma_boundary, cabr_boundary, sparse = FALSE)[1, 1]
-  cat("point_loma_boundary contains cabr_boundary:", ok, "\n")
+  cat("point_loma_boundary contains cabr_boundary:", ok,
+      "(expected: FALSE -- known coastal discrepancy, not a bug; see README)\n")
 }
 
 if (!is.null(sd_county_boundary) && !is.null(point_loma_boundary)) {
   ok <- st_contains(sd_county_boundary, point_loma_boundary, sparse = FALSE)[1, 1]
-  cat("sd_county_boundary contains point_loma_boundary:", ok, "\n")
+  cat("sd_county_boundary contains point_loma_boundary:", ok,
+      "(expected: TRUE -- true by construction, sd_county_boundary was unioned from this layer; see README)\n")
 }
 
 if (!is.null(cabr_survey_box) && !is.null(transects)) {

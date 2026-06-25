@@ -50,7 +50,8 @@ source("scripts/utils.R")  # read_latest(), require_columns()
 
 if (!file.exists("data/outputs/SD_county_inat_native_bee_checklist.csv") ||
     !file.exists("data/outputs/PL_inat_native_bee_checklist.csv") ||
-    !file.exists("data/outputs/CABR_inat_native_bee_checklist.csv")) {
+    # RENAMED 2026-06-24 (was CABR_inat_native_bee_checklist.csv)
+    !file.exists("data/outputs/cabr_inat_bee_checklist_clean.csv")) {
   message("One or more tiered checklists not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
   source("scripts/native_bee_checklist.R")
 }
@@ -117,7 +118,7 @@ if (exists("clean_nonlethal_data") && nrow(clean_nonlethal_data) > 0) {
 }
 
 # TODO: once non-lethal data exists, compare overlap using taxon_id
-# (exact match) first, falling back to taxon_complex_name for
+# (exact match) first, falling back to complex for
 # complex-level photo IDs that can't be resolved to species
 # (see native_bee_checklist.R).
 ```
@@ -125,11 +126,15 @@ if (exists("clean_nonlethal_data") && nrow(clean_nonlethal_data) > 0) {
 ###### 7. PLANTS (placeholder) ######
 ```{r plant-checklist, eval=FALSE}
 # TODO: build once plant checklist script (TODO #5) exists.
+# Column naming note: follows the same bare-name convention as the
+# bee pipeline (2026-06-24 decision) -- family/genus, not
+# taxon_family_name/taxon_genus_name. taxon_id and taxon_rank are
+# untouched -- different fields, not part of that rename.
 # plants_path <- read_latest("data/reference_exports/plants", "^inat_plants_sdcounty")
 # sd_county_plant_checklist <- read_csv(plants_path) %>%
 #   filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>%
 #   distinct(taxon_id, .keep_all = TRUE) %>%
 #   select(taxon_id, taxon_rank, scientific_name,
-#          taxon_family_name, taxon_genus_name) %>%
-#   arrange(taxon_family_name, taxon_genus_name, taxon_rank, scientific_name)
+#          family, genus) %>%
+#   arrange(family, genus, taxon_rank, scientific_name)
 ```

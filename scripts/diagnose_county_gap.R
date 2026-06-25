@@ -1,4 +1,13 @@
 # diagnose_county_gap.R
+# STATUS (2026-06-24): the gap this script was built to diagnose is
+# resolved -- spatial_utils.R now applies a 1m buffer to
+# sd_county_boundary specifically to absorb it (see README "Spatial
+# analysis" section). Running this script today should report "No gap
+# detected." Kept as a VERIFICATION/regression-check tool: re-run it
+# any time boundary shapefiles are re-sourced or re-downloaded, to
+# confirm point_loma_boundary is still fully contained before assuming
+# it.
+#
 # Computes exactly which part(s) of point_loma_boundary fall OUTSIDE
 # sd_county_boundary, and writes that gap geometry to a shapefile so
 # it can be loaded directly in ArcGIS Pro to see exactly where the

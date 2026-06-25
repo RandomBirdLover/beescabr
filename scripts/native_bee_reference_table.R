@@ -20,7 +20,7 @@
 #              unit. Genus-only records DO count as their own unit.
 #
 # Complex handling:
-#   taxon_complex_name is now part of key_full. Without it, a
+#   complex is now part of key_full. Without it, a
 #   complex-rank taxon (e.g. "Andrena osmioides complex", which has
 #   no species name) would produce the same key as a plain genus-only
 #   record ("Andrena_NA_NA") and incorrectly collapse into it during
@@ -42,7 +42,9 @@ source("scripts/utils.R")  # read_latest(), require_columns()
 checklist_paths <- c(
   sd_county  = "data/outputs/SD_county_inat_native_bee_checklist.csv",
   point_loma = "data/outputs/PL_inat_native_bee_checklist.csv",
-  cabr       = "data/outputs/CABR_inat_native_bee_checklist.csv"
+  # RENAMED 2026-06-24 (was CABR_inat_native_bee_checklist.csv) -- see
+  # native_bee_checklist.R PART B header for the full CABR naming set.
+  cabr       = "data/outputs/cabr_inat_bee_checklist_clean.csv"
 )
 
 if (any(!file.exists(checklist_paths))) {
@@ -61,16 +63,16 @@ build_reference_table <- function(checklist_path, label) {
   # Determine the rank of each record. Ordered most-resolved to
   # least-resolved. "complex" sits between species and subgenus: a
   # taxon IS complex-rank when its own taxon_id equals its
-  # taxon_complex_id (see native_bee_checklist.R).
+  # complex_taxon_id (see native_bee_checklist.R).
   bee_reference <- checklist %>%
     mutate(
       across(where(is.character), ~na_if(., "")),
       rank = case_when(
-        !is.na(taxon_subspecies_name)                           ~ "subspecies",
-        !is.na(taxon_species_name)                              ~ "species",
-        !is.na(taxon_complex_id) & taxon_id == taxon_complex_id  ~ "complex",
-        !is.na(taxon_subgenus_name)                              ~ "subgenus",
-        !is.na(taxon_genus_name)                                 ~ "genus",
+        !is.na(subspecies)                           ~ "subspecies",
+        !is.na(species)                              ~ "species",
+        !is.na(complex_taxon_id) & taxon_id == complex_taxon_id  ~ "complex",
+        !is.na(subgenus)                              ~ "subgenus",
+        !is.na(genus)                                 ~ "genus",
         TRUE                                                     ~ "higher"
       )
     )
@@ -79,25 +81,25 @@ build_reference_table <- function(checklist_path, label) {
   bee_reference <- bee_reference %>%
     mutate(
       key_full = paste(
-        coalesce(taxon_genus_name, "NA"),
-        coalesce(taxon_subgenus_name, "NA"),
-        coalesce(taxon_complex_name, "NA"),
-        coalesce(taxon_species_name, "NA"),
+        coalesce(genus, "NA"),
+        coalesce(subgenus, "NA"),
+        coalesce(complex, "NA"),
+        coalesce(species, "NA"),
         sep = "_"
       ),
       key_genus_species = paste(
-        coalesce(taxon_genus_name, "NA"),
-        coalesce(taxon_species_name, "NA"),
+        coalesce(genus, "NA"),
+        coalesce(species, "NA"),
         sep = "_"
       ),
-      key_species_only = coalesce(taxon_species_name, "NA")
+      key_species_only = coalesce(species, "NA")
     )
 
   # Dedupe on the full key and drop empty records
   bee_reference <- bee_reference %>%
     filter(key_full != "NA_NA_NA_NA") %>%
     distinct(key_full, .keep_all = TRUE) %>%
-    arrange(taxon_family_name, taxon_genus_name, taxon_subgenus_name, taxon_species_name)
+    arrange(family, genus, subgenus, species)
 
   # Diversity counts under each method
   cat("--- DIVERSITY COUNTS ---\n")
