@@ -27,13 +27,16 @@
 #
 # Geographic tier definitions (see spatial_utils.R for full
 # provenance/history on each boundary):
-#   SD County : sd_county_boundary (San Diego County 25 Mile Buffer,
-#               same extent as the iNat export itself -- this tier
-#               is effectively "no spatial filter," kept as its own
-#               output for naming/architecture consistency with the
-#               other two tiers)
-#   Point Loma: point_loma_boundary, with the same 5m seam buffer
-#               applied in spatial_utils.R
+#   SD County : sd_county_boundary -- as of 2026-06-24 this is a
+#               dissolved Union of the original county boundary +
+#               point_loma_boundary, NOT the raw county extent alone.
+#               See spatial_utils.R provenance notes before assuming
+#               this tier is "no spatial filter."
+#   Point Loma: point_loma_boundary -- unmodified City of San Diego
+#               "PENINSULA" district (CPCODE 30), re-downloaded fresh
+#               2026-06-24. No buffer applied (an earlier version used
+#               a 5m seam buffer; that approach was dropped -- see
+#               spatial_utils.R provenance notes).
 #   CABR      : cabr_survey_box (NOT cabr_boundary -- the survey box
 #               is the actual CABR-tier inclusion geometry; see
 #               spatial_utils.R header notes)

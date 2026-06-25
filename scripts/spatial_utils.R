@@ -6,17 +6,21 @@
 # transect buffers. Sourced by native_bee_data_analysis.Rmd.
 #
 # Project working CRS: EPSG:26946 (NAD83 / California zone 6, meters)
-# All boundary layers below are reprojected to this CRS on load, since
-# none of their source files arrive in it natively.
+# All boundary layers below are reprojected to this CRS on load. As of
+# 2026-06-24, the underlying shapefiles on disk are ALSO already saved
+# natively in EPSG:26946 (confirmed in ArcGIS Pro Layer Properties for
+# every file below) -- the st_transform() calls are kept as a defensive
+# no-op in case that ever changes, not because they're doing real work
+# right now.
 #
 # ============================================================
 # Boundary layer provenance
 # ============================================================
-# cabr_boundary      : NPS Land Resources Division tract/boundary data,
-#                       UNIT_CODE == "CABR". Source CRS: NAD83 geographic
-#                       (degrees). Single dissolved polygon, ~160 acres,
-#                       matches NPS-published CABR acreage.
-#                       File lives in boundaries/cabr/.
+# cabr_boundary       : NPS Land Resources Division tract/boundary data,
+#                       UNIT_CODE == "CABR". Single dissolved polygon,
+#                       ~160 acres, matches NPS-published CABR acreage.
+#                       Unmodified authoritative source. File lives in
+#                       boundaries/cabr/.
 #
 # cabr_survey_box     : CUSTOM hand-drawn rectangle (2026-06-22), built
 #                       in ArcGIS Pro to extend past cabr_boundary on
@@ -28,57 +32,84 @@
 #                       contain cabr_boundary. File lives in
 #                       boundaries/cabr/ (alongside cabr_boundary).
 #
-# point_loma_boundary : CUSTOM hand-drawn boundary (2026-06-22), built
-#                       in ArcGIS Pro from the City of San Diego's
-#                       "PENINSULA" community plan district, manually
-#                       extended to fully cover cabr_boundary (an
-#                       earlier automated Union+Dissolve attempt at
-#                       this actually made the gap worse, not better --
-#                       see RESOLVED note below). Not sourced directly
-#                       from a single official dataset -- treat as a
-#                       project-specific working boundary, not an
-#                       authoritative city/NPS polygon. File lives in
-#                       boundaries/point_loma/.
+# point_loma_boundary : City of San Diego Community Plan district
+#                       "PENINSULA" (CPCODE 30), re-downloaded fresh
+#                       from the City's open data portal on 2026-06-24.
+#                       Unmodified authoritative source -- this REPLACES
+#                       an earlier hand-edited + 5m-buffered version
+#                       used in prior sessions (see superseded note
+#                       below). File lives in boundaries/point_loma/.
 #
-#                       RESOLVED 2026-06-22: containment vs.
-#                       cabr_boundary went 4.69 acre gap (original
-#                       PENINSULA) -> 5.69 acre gap (failed automated
-#                       Union+Dissolve) -> 0.0105 acre gap (careful
-#                       manual edit) -> fully resolved with a 5m
-#                       buffer (genuine seam/precision artifact at
-#                       that point, not a real missing area). Verified
-#                       via st_contains() below on every run.
+#                       SUPERSEDED 2026-06-22 approach: that version
+#                       hand-edited the city's PENINSULA polygon and
+#                       added a 5m seam buffer to force full containment
+#                       of cabr_boundary. As of 2026-06-24 we no longer
+#                       do this -- see "Known issue" section below for
+#                       why, and for the current, non-destructive
+#                       handling of the same underlying discrepancy.
 #
-# sd_county_boundary  : CUSTOM hand-drawn boundary (2026-06-22), built
-#                       in ArcGIS Pro from the County of San Diego open
-#                       data portal export, expanded by hand. Not the
-#                       raw county export as originally pulled -- treat
-#                       as a project-specific working boundary,
-#                       not an authoritative county polygon. File lives
-#                       in boundaries/san_diego_county/.
+# sd_county_boundary  : NOTE -- this is NOT the raw County of San Diego
+#                       boundary on its own. As of 2026-06-24 this file
+#                       is a DISSOLVED UNION of the original SD County
+#                       boundary + point_loma_boundary, built in ArcGIS
+#                       Pro (Union, then Dissolve with no fields
+#                       selected, producing a single coverage polygon).
+#                       The original county-only polygon was not
+#                       preserved separately. A 1m buffer is applied on
+#                       load (see load section below) to absorb ~0.0001
+#                       acres of topological noise left by the dissolve
+#                       -- not a real gap, confirmed via
+#                       diagnose_county_gap.R.
+#
+#                       Practical effect: because point_loma_boundary
+#                       is now literally unioned into sd_county_boundary,
+#                       "point_loma_boundary completely within
+#                       sd_county_boundary" is true by construction, not
+#                       a fact about two independently-sourced
+#                       boundaries. Keep this in mind if this check is
+#                       ever used to validate something else -- it
+#                       won't catch a real future county/Point Loma
+#                       mismatch the way it would have when
+#                       sd_county_boundary was the raw county file.
+#                       File lives in boundaries/san_diego_county/.
 #
 # ============================================================
-# Known issue: CABR survey area vs. official NPS boundary
+# Known issue: CABR boundary extends beyond Point Loma / SD County
 # ============================================================
-# Per Taro (2026-06-22): the BST transect begins on Navy-owned land
-# south of the official CABR (NPS) boundary, but this area has
-# historically been surveyed as part of CABR and should be counted as
-# such. Decision: do NOT exclude anything that falls within Taro's
-# understanding of CABR's true survey footprint, regardless of
-# official ownership.
+# Confirmed 2026-06-24 in ArcGIS Pro (Select By Location, "Completely
+# within", all layers standardized to EPSG:26946 first):
 #
-# Implementation: cabr_survey_box is a hand-drawn polygon (see
-# provenance section above) used as the actual inclusion boundary for
-# CABR-tier spatial joins -- generous on every side, not just south.
-# cabr_boundary (the official NPS polygon) is layered on top purely as
-# a provenance label -- every point gets classified as
-# inside_nps_boundary == TRUE/FALSE, but this label never excludes a
-# point from being counted as CABR. This is intentionally a label,
-# not a filter.
+#   point_loma_boundary WITHIN sd_county_boundary  -> PASS
+#     (true by construction -- see provenance note above)
+#   cabr_boundary       WITHIN point_loma_boundary -> FAIL
+#   cabr_boundary       WITHIN sd_county_boundary  -> FAIL
 #
-# point_loma_boundary (custom-drawn) fully contains this CABR survey
-# area as of 2026-06-22, confirmed via st_contains() below -- see the
-# RESOLVED note in the provenance section above for the fix history.
+# Both failures trace to the same cause: cabr_boundary (NPS authoritative
+# source) extends slightly into the water/coastline beyond where
+# point_loma_boundary and sd_county_boundary (City/County authoritative
+# sources) draw the coastline. This is treated as an EXPECTED feature of
+# independently-digitized boundary data, not an error.
+#
+# Decision (2026-06-24): do NOT edit point_loma_boundary or
+# sd_county_boundary to force containment of cabr_boundary, and do NOT
+# clip cabr_boundary to fit inside them. All three are kept as
+# unmodified authoritative sources (sd_county_boundary's Point-Loma-union
+# status aside -- see provenance note). If acreage totals across
+# CABR/Point Loma/County tiers don't reconcile exactly, this coastal
+# discrepancy is the expected explanation, not a data error.
+#
+# This supersedes the 2026-06-22 approach of hand-editing
+# point_loma_boundary + applying a 5m seam buffer to force containment.
+# The three checks below are informational (message(), not warning())
+# because failing is the known, correct state for two of them.
+#
+# Separately, per Taro (2026-06-22): the BST transect begins on
+# Navy-owned land south of the official CABR (NPS) boundary, but this
+# area has historically been surveyed as part of CABR and should be
+# counted as such. cabr_survey_box (see provenance above) is the actual
+# CABR-tier inclusion geometry for this reason -- generous on every
+# side, not just south. cabr_boundary is layered on top purely as a
+# provenance label (inside_nps_boundary TRUE/FALSE), never as a filter.
 
 library(sf)
 
@@ -87,6 +118,7 @@ library(sf)
 # ------------------------------------------------------------
 PROJECT_CRS <- 26946  # NAD83 / California zone 6 (meters)
 boundary_dir <- "data/spatial/boundaries"
+ACRES_PER_SQM <- 1 / 4046.8564224
 
 # ------------------------------------------------------------
 # Load + reproject: CABR boundary (NPS, authoritative)
@@ -100,7 +132,7 @@ cabr_boundary <- st_read(
 stopifnot(nrow(cabr_boundary) == 1)
 stopifnot(cabr_boundary$UNIT_CODE[1] == "CABR")
 
-cabr_area_acres <- as.numeric(st_area(cabr_boundary)) / 4046.8564224
+cabr_area_acres <- as.numeric(st_area(cabr_boundary)) * ACRES_PER_SQM
 message(sprintf("cabr_boundary loaded: %.1f acres (NPS-published figure: ~160 acres)", cabr_area_acres))
 
 # ------------------------------------------------------------
@@ -108,9 +140,7 @@ message(sprintf("cabr_boundary loaded: %.1f acres (NPS-published figure: ~160 ac
 # past cabr_boundary on the north, south, and southeast to comfortably
 # catch obscured/noisy iNat coordinates and the Navy-administered area
 # where BST begins. This is the actual CABR-tier inclusion geometry --
-# NOT cabr_boundary. Replaces an earlier formula-based south-only
-# bounding box, which couldn't capture the irregular (north + SE)
-# extension Taro wanted. File lives in boundaries/cabr/ (alongside
+# NOT cabr_boundary. File lives in boundaries/cabr/ (alongside
 # cabr_boundary), not in its own subfolder.
 #
 # Being inside this box does NOT automatically mean "CABR" -- every
@@ -139,16 +169,10 @@ if (!contains_cabr_in_box) {
 
 # ------------------------------------------------------------
 # Load + reproject: Point Loma boundary
-# Custom hand-drawn boundary (2026-06-22), manually extended in
-# ArcGIS over two gap areas (a northern tongue and a southern/
-# BST-transect-spur area of CABR not covered by the original
-# "PENINSULA" district). Lives in boundaries/point_loma/.
-#
-# History: an earlier Union+Dissolve attempt made the gap WORSE
-# (5.69 acres vs. the original 4.69), but a subsequent careful manual
-# edit brought it down to ~0.0105 acres (~460 sq ft) -- a genuine
-# seam/precision artifact at this point, not a real missing area.
-# A small buffer is the appropriate fix for a gap this size.
+# City of San Diego Community Plan district "PENINSULA" (CPCODE 30),
+# re-downloaded fresh and unmodified as of 2026-06-24. See provenance
+# section above -- this replaces the prior hand-edited + buffered
+# version. Lives in boundaries/point_loma/.
 # ------------------------------------------------------------
 point_loma_boundary <- st_read(
   file.path(boundary_dir, "point_loma", "point_loma_boundary.shp"),
@@ -158,48 +182,58 @@ point_loma_boundary <- st_read(
 
 stopifnot(nrow(point_loma_boundary) == 1)
 
-POINT_LOMA_SEAM_BUFFER_M <- 5
-point_loma_boundary <- st_buffer(point_loma_boundary, dist = POINT_LOMA_SEAM_BUFFER_M)
-
-# Sanity check: point_loma_boundary should fully contain cabr_boundary
-contains_cabr <- st_contains(point_loma_boundary, cabr_boundary, sparse = FALSE)[1, 1]
-if (!contains_cabr) {
-  warning("point_loma_boundary does NOT fully contain cabr_boundary, even after ",
-          POINT_LOMA_SEAM_BUFFER_M, "m buffer -- re-check DIAGNOSTIC_cabr_gap.shp.")
-
-  # Diagnostic: compute exactly which part of CABR falls outside Point Loma
-  cabr_gap <- st_difference(cabr_boundary, st_union(point_loma_boundary))
-  gap_area_acres <- as.numeric(st_area(cabr_gap)) / 4046.8564224
-  message(sprintf(
-    "DIAGNOSTIC: %.4f acres of cabr_boundary fall OUTSIDE point_loma_boundary.",
-    gap_area_acres
-  ))
-
-  # Write out just the gap polygon so it can be loaded in ArcGIS/QGIS to see exactly where it is
-  st_write(
-    cabr_gap,
-    file.path(boundary_dir, "DIAGNOSTIC_cabr_gap.shp"),
-    delete_layer = TRUE,
-    quiet = TRUE
-  )
-  message("DIAGNOSTIC: gap polygon written to boundaries/DIAGNOSTIC_cabr_gap.shp -- load this in ArcGIS to see exactly where it is.")
-} else {
-  message(sprintf("point_loma_boundary fully contains cabr_boundary (with %dm seam buffer applied).",
-                   POINT_LOMA_SEAM_BUFFER_M))
-}
-
 # ------------------------------------------------------------
 # Load + reproject: SD County boundary
-# Custom hand-drawn boundary (2026-06-22). Lives in its own
-# subfolder per project convention: boundaries/san_diego_county/
+# NOTE: as of 2026-06-24 this is a dissolved Union of the original SD
+# County boundary + point_loma_boundary, not the raw county file alone.
+# See provenance section above for why, and what this means for
+# downstream containment checks. Lives in boundaries/san_diego_county/.
+#
+# 1m buffer applied below: diagnose_county_gap.R confirmed the dissolved
+# Union leaves 576 microscopic topological slivers along the Point Loma
+# coastline, totaling 0.0001 acres (~4 sq ft) -- floating-point/rounding
+# noise from the dissolve operation, not a real missing area. This was
+# enough to make st_contains() return FALSE for "point_loma_boundary
+# within sd_county_boundary" even though the two boundaries are
+# coincident by construction, and even though ArcGIS's "Completely
+# Within" tool (which has its own internal XY tolerance) reported PASS
+# on the same data. A 1m buffer is ~10,000x larger than the actual gap
+# and fully absorbs it, while remaining ecologically negligible at this
+# project's scale.
 # ------------------------------------------------------------
+SD_COUNTY_NOISE_BUFFER_M <- 1
+
 sd_county_boundary <- st_read(
   file.path(boundary_dir, "san_diego_county", "sd_county_boundary.shp"),
   quiet = TRUE
 ) |>
-  st_transform(PROJECT_CRS)
+  st_transform(PROJECT_CRS) |>
+  st_buffer(dist = SD_COUNTY_NOISE_BUFFER_M)
 
 stopifnot(nrow(sd_county_boundary) == 1)
+
+# ------------------------------------------------------------
+# Containment checks (informational, 2026-06-24)
+# ------------------------------------------------------------
+# These three checks document the known boundary relationships -- see
+# "Known issue" section above. FAIL is the expected, correct result for
+# the two CABR checks; it reflects a real (and accepted) discrepancy
+# between independently-digitized boundary sources, not a bug. Using
+# message() rather than warning() throughout for this reason.
+# ------------------------------------------------------------
+check_containment <- function(inner, inner_label, outer, outer_label) {
+  result <- st_contains(outer, inner, sparse = FALSE)[1, 1]
+  message(sprintf(
+    "%s completely within %s: %s",
+    inner_label, outer_label, ifelse(result, "PASS", "FAIL (expected -- see Known issue notes)")
+  ))
+  result
+}
+
+message("\n--- Boundary containment checks ---")
+check_containment(point_loma_boundary, "point_loma_boundary", sd_county_boundary, "sd_county_boundary")
+check_containment(cabr_boundary, "cabr_boundary", point_loma_boundary, "point_loma_boundary")
+check_containment(cabr_boundary, "cabr_boundary", sd_county_boundary, "sd_county_boundary")
 
 # ------------------------------------------------------------
 # Transect buffers (existing functionality)
@@ -217,4 +251,4 @@ buffer_10m <- st_buffer(transects, dist = buffer_dist_m)
 # buffer_10m is generated in-memory only -- per project convention,
 # do not write this (or any derived buffer) to disk.
 
-message("spatial_utils.R: boundaries and buffer_10m ready in environment.")
+message("\nspatial_utils.R: boundaries and buffer_10m ready in environment.")

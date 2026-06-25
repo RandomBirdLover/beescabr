@@ -113,6 +113,12 @@ deposit/CABR_bee_deposit_{taxon}_{recipient}.xlsx
 loans/CABR_bee_loan_{taxon}_{recipient}.xlsx
 ```
 
+### Column naming: `taxon_*_name` convention (decision, 2026-06-24)
+
+All pipeline code and data outputs (checklists, reference tables, specimen sheets, cleaned iNat data) keep iNaturalist's native `taxon_kingdom_name` / `taxon_genus_name` / `taxon_complex_name` / etc. column naming throughout — **this is intentional, not an oversight.** The supervisor flagged this naming as unwieldy, but we decided against renaming it project-wide: this naming is shared across iNat data, specimens, and (eventually) Dorey/GBIF data, and keeping it identical everywhere means joins between those sources (e.g. matching `taxon_complex_id` from iNat onto specimens) work directly on shared column names with no translation step. Renaming would mean either maintaining two naming systems, or adding rename steps before every join just to get back to a shared key.
+
+**Deliverable exception:** when producing a one-off polished output for someone outside the pipeline (a report, a presentation, an export specifically for the supervisor), it's fine to clean up the column names on *that specific exported copy* — drop the `taxon_`/`_name` wrapping (e.g. `taxon_genus_name` → `genus`), drop internal version numbers, simplify wording — without touching the underlying pipeline data or any script's working naming convention. This cleanup happens only at the point of export for that one deliverable, never upstream.
+
 ---
 
 ## Specimen version management
@@ -247,19 +253,22 @@ buffer_dist_m <- 5  # change this one line in spatial_utils.R
 
 CRS: EPSG:26946 (NAD83 / California zone 6, meters) — no reprojection needed.
 
-### Boundary layers (added 2026-06-22)
+### Boundary layers (added 2026-06-22, re-sourced 2026-06-24)
 
 Boundary shapefiles live in `data/spatial/boundaries/`, each in its own subfolder:
 
 | File | Location | Source | Notes |
 |------|----------|--------|-------|
-| `cabr_boundary.shp` | `boundaries/cabr/` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. 160.4 acres, matches NPS-published figure (~160 acres). Used as a provenance label only — see below, not a filter. |
+| `cabr_boundary.shp` | `boundaries/cabr/` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. 160.4 acres, matches NPS-published figure (~160 acres). Unmodified. Used as a provenance label only — see below, not a filter. |
 | `cabr_survey_box.shp` | `boundaries/cabr/` | Hand-drawn in ArcGIS Pro | The actual CABR-tier inclusion geometry — see below. Lives alongside `cabr_boundary.shp`, not in its own subfolder. |
-| `point_loma_boundary.shp` | `boundaries/point_loma/` | City of San Diego "PENINSULA" community plan district, hand-edited | Custom working boundary — see gap-resolution history below. Not an authoritative city/NPS polygon. |
-| `sd_county_boundary.shp` | `boundaries/san_diego_county/` | County of San Diego Open Data Portal, hand-edited | Custom working boundary, expanded by hand from the raw export — not the raw export itself. Treat as project-specific, not an authoritative county polygon. |
-| `cabr_nps_tracts.shp` | `boundaries/cabr/` | NPS Land Resources Division | 6 tract polygons. **Not yet used in `spatial_utils.R` or any checklist script.** Intended future use: distinguishing a strict NPS-tract-based checklist (`cabr_nps_native_bee_checklist`) from the current survey-box-based one (`cabr_survey_box_native_bee_checklist` or similar) — see TODO. |
+| `point_loma_boundary.shp` | `boundaries/point_loma/` | City of San Diego "PENINSULA" community plan district (CPCODE 30), re-downloaded fresh 2026-06-24 | **Unmodified** authoritative source. Replaces the prior hand-edited + 5m-buffered version — see superseded history below. |
+| `sd_county_boundary.shp` | `boundaries/san_diego_county/` | County of San Diego Open Data Portal, unioned with `point_loma_boundary` then dissolved (ArcGIS Pro, 2026-06-24) | **Not the raw county boundary alone** — this is a single dissolved polygon covering County + Point Loma combined. The original county-only file was not preserved separately. See note below. |
 
-All are reprojected to EPSG:26946 in `spatial_utils.R` on load, since none of the source files arrive in that CRS natively.
+All boundary shapefiles are saved natively in EPSG:26946 as of 2026-06-24 (confirmed in ArcGIS Pro); `spatial_utils.R` still calls `st_transform()` on load as a defensive no-op.
+
+**Important note on `sd_county_boundary.shp`:** because this file is now a Union+Dissolve of the original county boundary with `point_loma_boundary`, "Point Loma is within SD County" is true by construction, not an independently-verifiable fact. If this layer is ever used for a check that needs the *actual, unmodified* county boundary on its own, that file no longer exists in this project and would need to be re-downloaded separately.
+
+**1m buffer applied in `spatial_utils.R`:** the Union+Dissolve left 576 microscopic disconnected slivers along the Point Loma coastline, totaling 0.0001 acres (~4 sq ft) — confirmed via `diagnose_county_gap.R`. This is floating-point/rounding noise from the dissolve operation, not a real gap, but it was enough to make R's `st_contains()` return `FALSE` for "point_loma_boundary within sd_county_boundary" even though ArcGIS's "Completely Within" tool (which has its own internal XY tolerance) reported PASS on the identical data. `spatial_utils.R` applies a 1m buffer to `sd_county_boundary` on load (`SD_COUNTY_NOISE_BUFFER_M`) — about 10,000x larger than the actual gap, fully absorbing it while remaining ecologically negligible at this project's scale.
 
 #### CABR survey area vs. official NPS boundary
 
@@ -271,20 +280,23 @@ This is implemented via `cabr_survey_box`: a **hand-drawn polygon** (not a formu
 
 `spatial_utils.R` runs `st_contains(cabr_survey_box, cabr_boundary)` on every run to confirm the box still fully contains the official boundary, rather than assuming it.
 
-#### Point Loma boundary: gap resolution history
+#### CABR vs. Point Loma / SD County: known coastal discrepancy (current approach, 2026-06-24)
 
-`point_loma_boundary` started from the City of San Diego's "PENINSULA" community plan district, but didn't fully cover `cabr_boundary` — manual extension in ArcGIS was required over two gap areas (a northern tongue and a southern/BST-transect-spur area).
+A CRS mismatch (some boundary layers in feet-based StatePlane, others in WGS84 degrees) was causing `Select By Location` containment checks to silently return zero results. All boundary layers were re-standardized to **EPSG:26946 (NAD83 / California Zone VI, meters)**, confirmed individually in ArcGIS Layer Properties.
 
-Containment vs. `cabr_boundary` was tracked through several attempts:
+After fixing the CRS, three containment checks were run in ArcGIS Pro (`Select By Location`, "Completely within"):
 
-1. Original "PENINSULA" district: **4.69 acre gap**
-2. Automated Union+Dissolve attempt: **5.69 acre gap** — this made the gap *worse*, not better, and was abandoned
-3. Careful manual ArcGIS edit: **0.0105 acre gap** (~460 sq ft) — a genuine seam/precision artifact at this point, not a real missing area
-4. **5m buffer applied on load** (`POINT_LOMA_SEAM_BUFFER_M` in `spatial_utils.R`): gap fully resolved
+| Check | Result |
+|---|---|
+| `point_loma_boundary` within `sd_county_boundary` | **PASS** (true by construction — see note above) |
+| `cabr_boundary` within `point_loma_boundary` | **FAIL** |
+| `cabr_boundary` within `sd_county_boundary` | **FAIL** |
 
-`spatial_utils.R` runs `st_contains(point_loma_boundary, cabr_boundary)` on every run to re-verify this rather than assuming it. If it ever fails, the script computes the exact gap via `st_difference()` and writes it to `boundaries/DIAGNOSTIC_cabr_gap.shp` (gitignored) for inspection in ArcGIS/QGIS.
+Both failures trace to the same cause: `cabr_boundary` (NPS authoritative source) extends slightly into the water/coastline beyond where `point_loma_boundary` and the original county boundary draw the coastline. **This is treated as an expected feature of independently-digitized boundary data, not an error.** Decision: do not edit `point_loma_boundary` or the county boundary to force containment, and do not clip `cabr_boundary` to fit inside them — all are kept as unmodified authoritative sources. If acreage totals across CABR/Point Loma/County tiers don't reconcile exactly, this coastal discrepancy is the expected explanation.
 
-**Lesson learned:** automated Union+Dissolve is not a reliable fix for boundary gaps in this project — manual ArcGIS editing succeeded where the automated approach failed.
+`spatial_utils.R` runs all three checks on every load and reports PASS/FAIL via `message()` (not `warning()`), since FAIL is the known, correct state for two of the three.
+
+**Superseded approach (2026-06-22, no longer used):** an earlier attempt at this same underlying discrepancy hand-edited `point_loma_boundary` in ArcGIS and added a 5m seam buffer (`POINT_LOMA_SEAM_BUFFER_M` in `spatial_utils.R`) to force full containment of `cabr_boundary`. That tracked through several attempts (4.69 acre gap → 5.69 acre gap after a failed automated Union+Dissolve → 0.0105 acre gap after manual editing → resolved with the buffer). As of 2026-06-24, `point_loma_boundary` is a clean, unmodified, re-downloaded file with no buffer applied, and this gap-forcing approach has been dropped in favor of documenting the discrepancy instead of editing around it.
 
 ---
 
@@ -297,12 +309,12 @@ Containment vs. `cabr_boundary` was tracked through several attempts:
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
 - [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added; CABR survey box + Point Loma gap resolution finalized 2026-06-22)
-- [x] **iNat export → spatial subset mechanism IMPLEMENTED** (2026-06-23): one master `inat_native_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) is spatially split by `native_bee_checklist.R` into three geographic tiers — SD County (`sd_county_boundary`), Point Loma (`point_loma_boundary`, +5m buffer), and CABR (`cabr_survey_box`, not `cabr_boundary`) — BEFORE deduplicating to unique taxa per tier. This replaced the old single-file `inat_bee_checklist` / `SD_inat_bee_checklist.csv` entirely; see **Pipeline overview** above for the three output filenames. `native_bee_reference_table.R` likewise now builds one reference table per tier. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
+- [x] **iNat export → spatial subset mechanism IMPLEMENTED** (2026-06-23): one master `inat_native_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) is spatially split by `native_bee_checklist.R` into three geographic tiers — SD County (`sd_county_boundary`), Point Loma (`point_loma_boundary`), and CABR (`cabr_survey_box`, not `cabr_boundary`) — BEFORE deduplicating to unique taxa per tier. This replaced the old single-file `inat_bee_checklist` / `SD_inat_bee_checklist.csv` entirely; see **Pipeline overview** above for the three output filenames. `native_bee_reference_table.R` likewise now builds one reference table per tier. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
 - [ ] **Conceptualize full checklist architecture** (raised 2026-06-21, mechanism implemented 2026-06-23): Two tiers —
   (1) source-specific checklists as building blocks: `SD_county_inat_native_bee_checklist` / `PL_inat_native_bee_checklist` / `CABR_inat_native_bee_checklist` (iNat-only, **done** — see item above), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
   (2) `SD_county_native_bee_checklist` / `PL_native_bee_checklist` / `CABR_native_bee_checklist` (no "inat" in the name) reserved for the actual merged/comprehensive checklists once specimen + Dorey sources are folded in. **Target format for this merged tier** (per Jess/Dr. Holway, 2026-06-23): species-level rows only (no genus-only/higher-rank placeholder rows), columns Family/Subfamily/Tribe/Genus/Subgenus/Species/Authority, plus boolean evidence-source columns (Recent Survey, Museum Collection, Literature, iNaturalist) marking which source(s) documented each species — see their example workbook, "San Diego County Bee Species Checklist v3." That workbook also splits into Described/Tentative/Unpublished sheets by taxonomic certainty (using `aff.`/`cf.`/`MSN` qualifiers for uncertain or undescribed species) — not yet decided whether our merged tier adopts that same three-sheet split. The iNat-only tier 1 checklists stay in their current taxon_id-based format; they're an input to the "iNaturalist" evidence column, not the final shape.
   Separately, CABR survey checklists (lethal vs. intern iNat vs. beeple iNat) must stay strictly separated by method — never merged — broken out by year, to support the core lethal-vs-non-lethal comparison.
-- [ ] **NPS-tract vs. survey-box checklist split** (using `cabr_nps_tracts.shp`, see Spatial analysis table above): build a strict NPS-tract-based CABR checklist alongside the current `cabr_survey_box`-based one, so the two can be compared. Not yet implemented — `cabr_nps_tracts.shp` is loaded for reference only so far.
+- [ ] **NPS-tract vs. survey-box checklist split** (using `cabr_boundary.shp`, see Spatial analysis table above): build a strict NPS-based CABR checklist alongside the current `cabr_survey_box`-based one, so the two can be compared. Not yet implemented — `cabr_boundary.shp` is loaded for reference only so far.
 - [ ] **ArcGIS project versioning** (raised 2026-06-22): `.aprx`/`.gdb` files aren't Git-friendly (binary, machine-specific paths, no meaningful diffs) — committing the live ArcGIS Pro project directly isn't a good fit for this repo. Decide on an approach: (a) keep committing only the shapefiles (current practice) plus a static map export (PDF/PNG) for visual reference, or (b) script the symbology/layout setup (e.g. via ArcPy) so the map can be rebuilt from scratch rather than version-controlling the binary project itself.
 
 ---
