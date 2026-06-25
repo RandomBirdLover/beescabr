@@ -250,6 +250,24 @@ get_subgenus_and_complex <- function(taxon_id, max_retries = 3) {
         complex_taxon_id   <- as.integer(taxon$id)
       }
 
+      # Check if the taxon ITSELF is a subgenus rank (2026-06-25 fix):
+      # An observation identified directly to a subgenus (e.g.
+      # "Onagrandrena", "Simandrena", "Diandrena" -- subgenera of
+      # Andrena; "Dialictus" -- subgenus of Lasioglossum) has rank
+      # "subgenus" at the taxon level itself. The ancestor-walking
+      # loop below only finds subgenera in the ANCESTOR chain, so
+      # without this check the subgenus name was silently dropped
+      # for any taxon identified at exactly subgenus rank.
+      # Symptom: 4+ Andrena and 5+ Lasioglossum genus-only rows in
+      # cabr_full_bee_checklist_clean.csv that looked identical in
+      # Tier 2 (all Genus="Andrena", blank Species, blank Subgenus)
+      # because the actual differentiator (subgenus) was being lost
+      # at the API-fetch stage. This mirrors the existing complex
+      # check above for the same reason.
+      if (!is.null(taxon$rank) && taxon$rank == "subgenus") {
+        subgenus <- taxon$name
+      }
+
       # Walk ancestors for subgenus and complex
       for (a in ancestors) {
         if (!is.null(a$rank)) {
@@ -423,7 +441,7 @@ write.csv(checklist_point_loma,
 # specimen-only, and merged CABR checklists can be directly compared:
 #   cabr_inat_bee_checklist_clean.csv     (this file -- iNat only)
 #   cabr_specimen_bee_checklist_clean.csv (specimen only -- built in PART B)
-#   cabr_full_bee_checklist_clean.csv     (merged -- built in PART B)
+#   CABR_native_bee_checklist.csv         (merged -- built in PART B; renamed 2026-06-25 to match PL/SD_county tier naming)
 write.csv(checklist_cabr,
           "data/outputs/cabr_inat_bee_checklist_clean.csv",
           row.names = FALSE)
@@ -523,7 +541,7 @@ cat("  cabr_inat_bee_checklist_clean.csv (renamed 2026-06-24, was CABR_inat_nati
 #   breakdown, so a Point-Loma- or CABR-only absence wouldn't be a
 #   meaningful gap to flag at that geographic scale.
 #
-# Output: data/outputs/cabr_full_bee_checklist_clean.csv      (renamed 2026-06-24, was CABR_native_bee_checklist.csv)
+# Output: data/outputs/CABR_native_bee_checklist.csv           (renamed 2026-06-25, was cabr_full_bee_checklist_clean.csv)
 #         data/outputs/cabr_specimen_bee_checklist_clean.csv  (NEW 2026-06-24, specimen-only, see STEP 3b)
 #         data/outputs/PL_native_bee_checklist.csv
 #         data/outputs/SD_county_native_bee_checklist.csv
@@ -546,7 +564,7 @@ if (!file.exists(specimens_path)) {
   source("scripts/clean_specimens.R")
 }
 
-cabr_specimens <- read.csv(specimens_path)
+cabr_specimens <- read_csv(specimens_path, show_col_types = FALSE)
 require_columns(cabr_specimens,
                  c("order", "family", "subfamily",
                    "tribe", "genus", "subgenus",
@@ -802,13 +820,15 @@ checklist_sd_county_v2 <- build_tier2_checklist(
 # ------------------------------------------------------------
 # STEP 5: Save.
 # ------------------------------------------------------------
-# RENAMED 2026-06-24 (was CABR_native_bee_checklist.csv) -- part of the
-# same 3-file CABR naming set as cabr_inat_bee_checklist_clean.csv and
-# cabr_specimen_bee_checklist_clean.csv above. "full" here means merged
-# (iNat + specimen evidence combined), not "complete"/"final" in any
-# other sense.
+# RENAMED 2026-06-25 (was cabr_full_bee_checklist_clean.csv): now
+# CABR_native_bee_checklist.csv to match the PL_native_bee_checklist.csv
+# and SD_county_native_bee_checklist.csv naming pattern for the other
+# two tiers. The earlier rename to cabr_full_bee_checklist_clean.csv
+# (2026-06-24, was originally CABR_native_bee_checklist.csv) is reversed
+# here; the "full" / "_clean" suffixes added no information that the
+# tier name didn't already convey.
 write.csv(checklist_cabr_v2,
-          "data/outputs/cabr_full_bee_checklist_clean.csv",
+          "data/outputs/CABR_native_bee_checklist.csv",
           row.names = FALSE, na = "")
 write.csv(checklist_point_loma_v2,
           "data/outputs/PL_native_bee_checklist.csv",
@@ -820,10 +840,11 @@ write.csv(checklist_sd_county_v2,
 cat("\nTier 2 + specimen checklists saved to data/outputs/:\n")
 cat("  cabr_inat_bee_checklist_clean.csv     (", nrow(checklist_cabr), "rows -- iNat only, see PART A )\n")
 cat("  cabr_specimen_bee_checklist_clean.csv (", nrow(cabr_specimen_checklist), "rows -- specimen only )\n")
-cat("  cabr_full_bee_checklist_clean.csv     (", nrow(checklist_cabr_v2), "rows -- merged, renamed 2026-06-24, was CABR_native_bee_checklist.csv )\n")
+cat("  CABR_native_bee_checklist.csv         (", nrow(checklist_cabr_v2), "rows -- merged, renamed 2026-06-25, was cabr_full_bee_checklist_clean.csv )\n")
 cat("  PL_native_bee_checklist.csv        (", nrow(checklist_point_loma_v2), "rows, includes any genus-only entries )\n")
 cat("  SD_county_native_bee_checklist.csv (", nrow(checklist_sd_county_v2), "rows, includes any genus-only entries; includes Holway cross-check )\n")
 
 cat("\nREMINDER: Museum Collection is blank across all Tier 2 outputs --\n")
 cat("this is 'not yet checked', not a confirmed absence of specimens.\n")
 cat("See PART B header notes before treating blank as a negative result.\n")
+
