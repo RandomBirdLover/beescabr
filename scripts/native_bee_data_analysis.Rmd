@@ -9,14 +9,14 @@ editor_options:
 STRUCTURE OF THIS DOC:
   1. Setup
   2. Reference table (SD County taxonomic source of truth)
-  3. Clean data (sources clean_specimens.R + clean_nonlethal_inat.R)
+  3. Clean data (sources bee_specimen_clean.R + bee_inat_clean.R)
   4. Spatial (transects + buffers, via spatial_utils.R)
   5. ANALYSIS: taxon richness by geographic scale
   6. ANALYSIS: method comparison (lethal vs non-lethal)
   7. Plants (placeholder, TODO)
 
 This doc is for ANALYSIS only. All cleaning lives in dedicated
-scripts (scripts/clean_specimens.R, scripts/clean_nonlethal_inat.R)
+scripts (scripts/bee_specimen_clean.R, scripts/bee_inat_clean.R)
 so this stays focused on comparison, not data wrangling.
 -->
 
@@ -40,8 +40,8 @@ library(httr2)       # iNaturalist API calls (used by sourced scripts)
 source("scripts/utils.R")  # read_latest(), require_columns()
 ```
 
-###### 2. REFERENCE TABLE (SD County / Point Loma / CABR taxonomic source of truth) ######
-```{r build-reference, message=FALSE}
+###### 2. TIERED CHECKLISTS (build if missing — calls iNat API, ~3-4 min) ######
+```{r build-checklists, message=FALSE}
 # native_bee_checklist.R makes ~430 iNaturalist API calls (~3-4 min),
 # so we only re-run it if the saved checklist CSVs don't already exist.
 # Delete any of the three data/outputs/*_inat_native_bee_checklist.csv
@@ -56,20 +56,17 @@ if (!file.exists("data/outputs/SD_county_inat_native_bee_checklist.csv") ||
   source("scripts/native_bee_checklist.R")
 }
 
-# Builds bee_reference_sd_county, bee_reference_point_loma, and
-# bee_reference_cabr (each with key_full, rank, etc.)
-source("scripts/native_bee_reference_table.R")
 ```
 
 ###### 3. CLEAN DATA ######
 ```{r clean-data, message=FALSE}
 # Produces clean_bee_data (lethal specimens).
-source("scripts/clean_specimens.R")
+source("scripts/bee_specimen_clean.R")
 
 # Produces clean_intern_data, clean_beeple_data, and the combined
 # clean_nonlethal_data. Will report "no data found yet" until intern/
 # beeple iNat exports exist — that's expected, not an error.
-source("scripts/clean_nonlethal_inat.R")
+source("scripts/bee_inat_clean.R")
 ```
 
 ###### 4. SPATIAL (transects + buffers) ######

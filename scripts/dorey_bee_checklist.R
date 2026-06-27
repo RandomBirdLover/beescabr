@@ -6,7 +6,7 @@
 # *** THIS IS A ONE-TIME / MANUAL ACQUISITION SCRIPT ***
 # *** NOT part of the automatic native_bee_data_analysis.Rmd pipeline ***
 #
-# Unlike native_bee_checklist.R, clean_specimens.R, etc. (which re-run
+# Unlike native_bee_checklist.R, bee_specimen_clean.R, etc. (which re-run
 # automatically whenever their source data changes), this script
 # processes a STATIC, published global dataset that won't change
 # unless Dorey et al. release a new dataset version. Re-run this

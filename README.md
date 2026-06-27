@@ -45,9 +45,8 @@ beescabr/
     utils.R                          # shared read_latest(), require_columns()
     native_bee_checklist.R           # PART A: TIER 1 (iNat-only) checklists, SD County/Point Loma/CABR
                                       # PART B: TIER 2 (merged) checklists + CABR specimen checklist
-    native_bee_reference_table.R     # builds key_full (taxon richness reference); rank breakdown
-    clean_specimens.R                # cleans lethal CABR specimen data; QC flags; complex match
-    clean_nonlethal_inat.R           # cleans non-lethal iNat data (intern + beeple)
+    bee_specimen_clean.R             # cleans lethal CABR specimen data; QC flags; complex match
+    bee_inat_clean.R                 # cleans non-lethal iNat data (intern + beeple)
     spatial_utils.R                  # loads + reprojects boundaries; containment checks; 10m
                                       # transect buffers in memory
     check_boundaries.R                # standalone diagnostic: plots all boundaries overlaid together
@@ -135,7 +134,7 @@ All pipeline code and data outputs (checklists, reference tables, specimen sheet
 - `taxon_id` — kept exactly as-is, NOT shortened to bare `id`. The raw iNaturalist export already has its own `id` column (the *observation's* ID, a completely different thing from the *taxon's* ID), so bare `id` would collide with that.
 - `taxon_complex_name` → `complex`, and `taxon_complex_id` → `complex_taxon_id` (not bare `complex_id`) — named this way specifically so it reads unambiguously as "the complex's own taxon ID," distinct from the species' own `taxon_id`. When written into a Title-Case checklist column (e.g. Tier 2 / Holway-format outputs), the `complex` value itself is prefixed `"(Complex) "` (e.g. `"(Complex) Diadasia australis"`) — some complex names look exactly like a normal species binomial, so without the marker a complex-level ID could be misread as a confirmed species.
 
-**History:** an earlier decision the same day (2026-06-24) chose to KEEP `taxon_*_name` everywhere, reasoning that shared column names across iNat data and specimens made joins (e.g. matching `taxon_complex_id` from iNat onto specimens) work without a translation step. That reasoning was sound, but the supervisor's naming concern outweighed it once specimens were re-sourced (V10) with bare names already in place — rather than maintain two conventions, the bare-name convention was extended to the iNat side too (`native_bee_checklist.R`, `native_bee_reference_table.R`, `native_bee_data_analysis.Rmd`), preserving the original cross-source join benefit under the new naming instead of the old one.
+**History:** an earlier decision the same day (2026-06-24) chose to KEEP `taxon_*_name` everywhere, reasoning that shared column names across iNat data and specimens made joins (e.g. matching `taxon_complex_id` from iNat onto specimens) work without a translation step. That reasoning was sound, but the supervisor's naming concern outweighed it once specimens were re-sourced (V10) with bare names already in place — rather than maintain two conventions, the bare-name convention was extended to the iNat side too (`native_bee_checklist.R`, `native_bee_data_analysis.Rmd`), preserving the original cross-source join benefit under the new naming instead of the old one.
 
 **Deliverable exception still applies:** when producing a one-off polished output for someone outside the pipeline (a report, a presentation), it's fine to further simplify column headers or drop internal version numbers on *that specific exported copy* — without touching the underlying pipeline data or any script's working naming convention.
 
@@ -237,22 +236,16 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
                                    → writes data/outputs/SD_county_native_bee_checklist.csv
 
                                    DEPENDENCY NOTE: Part B needs data/outputs/cabr_bee_specimens_clean.csv
-                                   to exist — it auto-sources clean_specimens.R if that file is
-                                   missing (see step 4). But clean_specimens.R itself needs
+                                   to exist — it auto-sources bee_specimen_clean.R if that file is
+                                   missing (see step 3). But bee_specimen_clean.R itself needs
                                    SD_county_inat_native_bee_checklist.csv (written by Part A above)
                                    to populate the complex match. This resolves correctly as long as
                                    native_bee_checklist.R is run as one whole script — Part A always
                                    finishes writing that file before Part B's auto-source check runs.
-                                   Do NOT run clean_specimens.R standalone before
+                                   Do NOT run bee_specimen_clean.R standalone before
                                    native_bee_checklist.R has been run at least once.
 
-3. native_bee_reference_table.R    reads all three TIER 1 checklists → builds one key_full
-                                   reference table per tier
-                                   → writes data/outputs/SD_bee_reference_table.csv
-                                   → writes data/outputs/PL_bee_reference_table.csv
-                                   → writes data/outputs/CABR_bee_reference_table.csv
-
-4. clean_specimens.R               reads newest CABR_bee_specimens_V{n} → QC-flags missing
+3. bee_specimen_clean.R            reads newest CABR_bee_specimens_V{n} → QC-flags missing
                                    lat/long, date, sdnhm_id, ucsd_id, genus → matches complex/
                                    complex_taxon_id against the SD County TIER 1 checklist
                                    (genus+species, gated on species-level ID)
@@ -261,13 +254,13 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
                                    See dependency note under step 2 — normally runs automatically
                                    as part of native_bee_checklist.R Part B, not standalone first.
 
-5. clean_nonlethal_inat.R          reads intern + beeple iNat exports → cleans non-lethal data
+4. bee_inat_clean.R                reads intern + beeple iNat exports → cleans non-lethal data
                                    → writes data/outputs/CABR_nonlethal_inat_clean.csv
                                    (reports "no data found yet" until those folders are populated)
                                    (kept strictly separate by method — intern vs. beeple — never
                                    merged; see TODO: checklist architecture)
 
-6. native_bee_data_analysis.Rmd    sources 2–5 above (which in turn sources 1), then does the
+5. native_bee_data_analysis.Rmd    sources 2–4 above (which in turn sources 1), then does the
                                    actual richness/method comparison
 ```
 ```
@@ -355,7 +348,7 @@ Both failures trace to the same cause: `cabr_boundary` (NPS authoritative source
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
 - [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added; CABR survey box + Point Loma gap resolution finalized 2026-06-22)
-- [x] **iNat export → spatial subset mechanism IMPLEMENTED** (2026-06-23): one master `inat_native_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) is spatially split by `native_bee_checklist.R` into three geographic tiers — SD County (`sd_county_boundary`), Point Loma (`point_loma_boundary`), and CABR (`cabr_survey_box`, not `cabr_boundary`) — BEFORE deduplicating to unique taxa per tier. This replaced the old single-file `inat_bee_checklist` / `SD_inat_bee_checklist.csv` entirely; see **Pipeline overview** above for the three output filenames. `native_bee_reference_table.R` likewise now builds one reference table per tier. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
+- [x] **iNat export → spatial subset mechanism IMPLEMENTED** (2026-06-23): one master `inat_native_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) is spatially split by `native_bee_checklist.R` into three geographic tiers — SD County (`sd_county_boundary`), Point Loma (`point_loma_boundary`), and CABR (`cabr_survey_box`, not `cabr_boundary`) — BEFORE deduplicating to unique taxa per tier. This replaced the old single-file `inat_bee_checklist` / `SD_inat_bee_checklist.csv` entirely; see **Pipeline overview** above for the three output filenames. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
 - [x] **Conceptualize full checklist architecture** (raised 2026-06-21, mechanism implemented 2026-06-23, TIER 2 implemented 2026-06-24) — Two tiers:
   (1) source-specific checklists as building blocks: `SD_county_inat_native_bee_checklist` / `PL_inat_native_bee_checklist` / `cabr_inat_bee_checklist_clean` (iNat-only, **done**), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
   (2) `SD_county_native_bee_checklist` / `PL_native_bee_checklist` / `CABR_native_bee_checklist` (no "inat" in the name) — **done 2026-06-24** for iNat + CABR specimen evidence (Dorey integration still open, since Dorey itself remains deprioritized). Built in `native_bee_checklist.R` PART B. Actual decisions made, differing slightly from the original target format above:

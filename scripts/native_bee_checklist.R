@@ -121,6 +121,94 @@ bees <- bees %>%
   )
 
 # ------------------------------------------------------------
+# STEP 1b: Backfill missing higher-rank taxonomy on iNat observations,
+# using a genus-level lookup derived from Holway's v3 checklist.
+#
+# WHY THIS EXISTS (2026-06-25): iNat's CSV export sometimes leaves the
+# tribe (and occasionally subfamily) column blank for certain genera,
+# even when iNat itself "knows" the answer -- it's a quirk of which
+# columns iNat populates in the export, not missing taxonomic
+# information. Concrete example: every Colletes/Hylaeus/Dufourea
+# observation in the SD County export arrives with tribe blank,
+# but Colletini/Hylaeini/Rophitini are well-established tribe
+# assignments documented in Holway v3.
+#
+# Before this step existed, those blanks flowed straight through the
+# pipeline into the final Tier 2 outputs (e.g. blank Tribe for every
+# Colletes/Hylaeus/Dufourea row in CABR_native_bee_checklist.csv).
+# Backfilling here fixes the problem at the source, so every
+# downstream consumer (Tier 1, Tier 2, the plant pipeline if it ever
+# uses similar logic, etc.) gets correct taxonomy for free.
+#
+# Genus-level scope: family/subfamily/tribe are guaranteed constant
+# within a genus (genera don't span tribes), so a genus-level lookup
+# is the right granularity. Subgenus/complex/subspecies are NOT
+# backfilled here -- those come from the iNat API in STEP 4 below,
+# because they vary WITHIN a genus.
+#
+# Authority: Holway v3 (data/reference_exports/holway_2026/
+# holway_v3_combined.csv) is used as the genus-to-tribe authority.
+# iNat values are preserved when present (left_join + coalesce);
+# Holway only fills blanks, never overwrites. If iNat and Holway
+# disagree on tribe for a genus they both cover, iNat wins -- this
+# is intentionally conservative.
+# ------------------------------------------------------------
+holway_for_genus_lookup <- read.csv(
+  "data/reference_exports/holway_2026/holway_v3_combined.csv"
+)
+
+# Build genus-level lookup: one row per genus, with its family/subfamily/tribe.
+# Holway can have a genus under multiple tribes (e.g. Protandrena appears as
+# both Panurgini and Protandrenini -- the latter for described species, the
+# former for MSN unpublished names; this is an inconsistency in Holway, not a
+# real biological split). To prevent the left_join below from multiplying
+# observations, we collapse to ONE row per genus and warn loudly when a genus
+# has conflicting tribe assignments so the conflict is visible, not silent.
+holway_genus_taxonomy_raw <- holway_for_genus_lookup %>%
+  filter(!is.na(genus), genus != "") %>%
+  distinct(genus, family, subfamily, tribe)
+
+genus_conflicts <- holway_genus_taxonomy_raw %>%
+  group_by(genus) %>%
+  summarise(n_combos = n(), .groups = "drop") %>%
+  filter(n_combos > 1)
+
+if (nrow(genus_conflicts) > 0) {
+  cat("\nNOTE: Holway has conflicting higher-rank assignments for the following genus/genera:\n")
+  print(holway_genus_taxonomy_raw %>%
+          filter(genus %in% genus_conflicts$genus) %>%
+          arrange(genus, tribe))
+  cat("Taking the first (alphabetical) tribe per genus for backfill. Verify this is acceptable.\n\n")
+}
+
+holway_genus_taxonomy <- holway_genus_taxonomy_raw %>%
+  arrange(genus, family, subfamily, tribe) %>%
+  group_by(genus) %>%
+  slice(1) %>%
+  ungroup() %>%
+  rename(
+    family_holway    = family,
+    subfamily_holway = subfamily,
+    tribe_holway     = tribe
+  )
+
+n_before_blank_tribe <- sum(is.na(bees$tribe) | bees$tribe == "")
+
+bees <- bees %>%
+  left_join(holway_genus_taxonomy, by = "genus") %>%
+  mutate(
+    family    = coalesce(ifelse(family    == "", NA_character_, family),    family_holway),
+    subfamily = coalesce(ifelse(subfamily == "", NA_character_, subfamily), subfamily_holway),
+    tribe     = coalesce(ifelse(tribe     == "", NA_character_, tribe),     tribe_holway)
+  ) %>%
+  select(-family_holway, -subfamily_holway, -tribe_holway)
+
+n_after_blank_tribe <- sum(is.na(bees$tribe) | bees$tribe == "")
+cat(sprintf("\nTaxonomy backfill from Holway v3: %d observation(s) had blank tribe before, %d after (%d filled).\n",
+            n_before_blank_tribe, n_after_blank_tribe,
+            n_before_blank_tribe - n_after_blank_tribe))
+
+# ------------------------------------------------------------
 # STEP 2: Spatially split observations into the three tiers.
 #
 # Uses public latitude/longitude (not private_*) -- same fields the
@@ -451,6 +539,224 @@ cat("  SD_county_inat_native_bee_checklist.csv\n")
 cat("  PL_inat_native_bee_checklist.csv\n")
 cat("  cabr_inat_bee_checklist_clean.csv (renamed 2026-06-24, was CABR_inat_native_bee_checklist.csv)\n")
 
+# ------------------------------------------------------------
+# STEP 8: Build native_bee_taxonomy_lookup.csv
+#
+# Purpose: a single reference file listing every taxonomic entry
+# currently known to this pipeline -- one row per unique
+# genus / subgenus / complex / species / subspecies -- with EVERY
+# rank above it populated. Saved as a deliverable
+# (data/outputs/native_bee_taxonomy_lookup.csv) so advisors and
+# downstream tools can see the full taxonomic universe the pipeline
+# is working with, without having to reconstruct it from multiple
+# files.
+#
+# Each row has an explicit `rank` column (one of: "genus", "subgenus",
+# "complex", "species", "subspecies") so the file is self-describing
+# and easy to filter -- you don't have to infer row type from which
+# columns happen to be populated.
+#
+# Sources:
+#   - genus + species rows: Holway v3 (all 72 genera, 715 species
+#     after qualifier stripping). Includes genera/species that may not
+#     yet appear in the SD County iNat data -- this is intentional, so
+#     the reference reflects the full known taxonomic context for SD
+#     County bees, not just what's been observed so far.
+#   - subgenus + complex rows: from taxonomy_lookup (the in-memory
+#     iNat API fetch built in STEP 4 above). Limited to taxa actually
+#     present in the current SD County iNat export.
+#   - subspecies rows: from the current SD County iNat export
+#     (checklist_sd_county above). Limited to subspecies actually
+#     observed in the data.
+#
+# Regenerated every run -- not a versioned/hand-edited file. If you
+# want to add a row that none of the sources above provides, edit
+# whichever source covers that rank, not this file.
+# ------------------------------------------------------------
+cat("\n--- Building native_bee_taxonomy_lookup.csv ---\n")
+
+# Higher-rank constants for all native bees in this pipeline
+# (Anthophila within Hymenoptera within Insecta etc.)
+BEE_KINGDOM     <- "Animalia"
+BEE_PHYLUM      <- "Arthropoda"
+BEE_CLASS       <- "Insecta"
+BEE_ORDER       <- "Hymenoptera"
+BEE_SUPERFAMILY <- "Apoidea"
+
+# Re-load Holway for taxonomy purposes (already loaded above as
+# holway_for_genus_lookup, but re-reading here keeps this step
+# self-contained and easy to lift out if it ever moves into its own
+# script). Strip qualifiers ("CF ", "MSN ", " sp. nov.") so the
+# species column matches what we use elsewhere.
+holway_taxonomy <- read.csv(
+  "data/reference_exports/holway_2026/holway_v3_combined.csv"
+) %>%
+  mutate(
+    species = species_raw %>%
+      str_remove("^CF\\s+") %>%
+      str_remove("^MSN\\s+") %>%
+      str_remove("\\s+sp\\.\\s*nov\\.$") %>%
+      str_trim()
+  )
+
+# --- GENUS ROWS (from Holway) ---
+# Same conflict-collapse logic as STEP 1b above: take the first
+# (alphabetical) tribe per genus when Holway disagrees with itself.
+genus_rows <- holway_taxonomy %>%
+  filter(!is.na(genus), genus != "") %>%
+  distinct(family, subfamily, tribe, genus) %>%
+  arrange(genus, family, subfamily, tribe) %>%
+  group_by(genus) %>%
+  slice(1) %>%
+  ungroup() %>%
+  mutate(
+    kingdom     = BEE_KINGDOM,
+    phylum      = BEE_PHYLUM,
+    class       = BEE_CLASS,
+    order       = BEE_ORDER,
+    superfamily = BEE_SUPERFAMILY,
+    subtribe    = NA_character_,
+    subgenus    = NA_character_,
+    complex     = NA_character_,
+    species     = NA_character_,
+    subspecies  = NA_character_,
+    rank        = "genus"
+  )
+
+# --- SPECIES ROWS (from Holway) ---
+# Strip parens from subgenus (2026-06-25): Holway writes subgenera in
+# the standard taxonomic convention with parentheses (e.g.
+# "(Pygoperdita)"), but iNat returns them plain ("Pygoperdita"). We
+# strip Holway's parens here so subgenus values from the two sources
+# are notationally identical -- otherwise the same subgenus would
+# appear in the lookup under two visually-different forms, breaking
+# group_by / distinct / left_join operations downstream.
+species_rows <- holway_taxonomy %>%
+  filter(!is.na(genus), genus != "", !is.na(species), species != "") %>%
+  mutate(
+    subgenus = str_remove(subgenus, "^\\("),
+    subgenus = str_remove(subgenus, "\\)$")
+  ) %>%
+  distinct(family, subfamily, tribe, genus, subgenus, species) %>%
+  mutate(
+    kingdom     = BEE_KINGDOM,
+    phylum      = BEE_PHYLUM,
+    class       = BEE_CLASS,
+    order       = BEE_ORDER,
+    superfamily = BEE_SUPERFAMILY,
+    subtribe    = NA_character_,
+    complex     = NA_character_,
+    subspecies  = NA_character_,
+    rank        = "species"
+  ) %>%
+  # Holway uses "" for "no subgenus assignment", which we want as NA
+  # for consistency with the rest of the pipeline
+  mutate(subgenus = ifelse(subgenus == "", NA_character_, subgenus))
+
+# --- SUBGENUS ROWS (from iNat API via taxonomy_lookup) ---
+# Each unique subgenus encountered in the SD County iNat data,
+# paired with its genus's higher ranks (from genus_rows above).
+subgenus_rows <- checklist_sd_county %>%
+  filter(!is.na(subgenus), subgenus != "") %>%
+  distinct(genus, subgenus) %>%
+  left_join(
+    genus_rows %>% select(genus, family, subfamily, tribe),
+    by = "genus"
+  ) %>%
+  mutate(
+    kingdom     = BEE_KINGDOM,
+    phylum      = BEE_PHYLUM,
+    class       = BEE_CLASS,
+    order       = BEE_ORDER,
+    superfamily = BEE_SUPERFAMILY,
+    subtribe    = NA_character_,
+    complex     = NA_character_,
+    species     = NA_character_,
+    subspecies  = NA_character_,
+    rank        = "subgenus"
+  )
+
+# --- COMPLEX ROWS (from iNat API via taxonomy_lookup) ---
+complex_rows <- checklist_sd_county %>%
+  filter(!is.na(complex), complex != "") %>%
+  distinct(genus, subgenus, complex) %>%
+  left_join(
+    genus_rows %>% select(genus, family, subfamily, tribe),
+    by = "genus"
+  ) %>%
+  mutate(
+    kingdom     = BEE_KINGDOM,
+    phylum      = BEE_PHYLUM,
+    class       = BEE_CLASS,
+    order       = BEE_ORDER,
+    superfamily = BEE_SUPERFAMILY,
+    subtribe    = NA_character_,
+    species     = NA_character_,
+    subspecies  = NA_character_,
+    rank        = "complex"
+  )
+
+# --- SUBSPECIES ROWS (from current SD County iNat export) ---
+subspecies_rows <- checklist_sd_county %>%
+  filter(!is.na(subspecies), subspecies != "") %>%
+  distinct(genus, subgenus, species, subspecies) %>%
+  left_join(
+    genus_rows %>% select(genus, family, subfamily, tribe),
+    by = "genus"
+  ) %>%
+  mutate(
+    kingdom     = BEE_KINGDOM,
+    phylum      = BEE_PHYLUM,
+    class       = BEE_CLASS,
+    order       = BEE_ORDER,
+    superfamily = BEE_SUPERFAMILY,
+    subtribe    = NA_character_,
+    complex     = NA_character_,
+    rank        = "subspecies"
+  )
+
+# --- COMBINE ALL ROWS ---
+taxonomy_column_order <- c(
+  "kingdom", "phylum", "class", "order", "superfamily",
+  "family", "subfamily", "tribe", "subtribe",
+  "genus", "subgenus", "complex", "species", "subspecies",
+  "rank"
+)
+
+native_bee_taxonomy_lookup <- bind_rows(
+  genus_rows      %>% select(all_of(taxonomy_column_order)),
+  subgenus_rows   %>% select(all_of(taxonomy_column_order)),
+  complex_rows    %>% select(all_of(taxonomy_column_order)),
+  species_rows    %>% select(all_of(taxonomy_column_order)),
+  subspecies_rows %>% select(all_of(taxonomy_column_order))
+) %>%
+  arrange(family, genus, rank, subgenus, complex, species, subspecies)
+
+# Final deduplication pass (2026-06-25): after stripping parens from
+# Holway subgenera, some rows may have become identical to iNat-derived
+# rows. Run distinct() across all columns to collapse any true
+# duplicates while preserving meaningful differences. Reports how many
+# rows were removed so the impact is visible, not silent.
+n_before_dedup <- nrow(native_bee_taxonomy_lookup)
+native_bee_taxonomy_lookup <- native_bee_taxonomy_lookup %>% distinct()
+n_removed_dedup <- n_before_dedup - nrow(native_bee_taxonomy_lookup)
+if (n_removed_dedup > 0) {
+  cat(sprintf("Deduplication: removed %d duplicate row(s) after paren-stripping.\n", n_removed_dedup))
+}
+
+# Per-rank summary printed for QC
+rank_summary <- native_bee_taxonomy_lookup %>%
+  count(rank) %>%
+  arrange(match(rank, c("genus", "subgenus", "complex", "species", "subspecies")))
+cat("Taxonomy lookup row counts by rank:\n")
+print(rank_summary)
+cat(sprintf("Total rows: %d\n", nrow(native_bee_taxonomy_lookup)))
+
+write.csv(native_bee_taxonomy_lookup,
+          "data/outputs/native_bee_taxonomy_lookup.csv",
+          row.names = FALSE, na = "")
+cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
+
 
 # =============================================================
 # PART B: TIER 2 (merged) checklists
@@ -555,16 +861,17 @@ cat("  cabr_inat_bee_checklist_clean.csv (renamed 2026-06-24, was CABR_inat_nati
 # STEP 1: Load CABR intern specimens (CABR ONLY -- no specimen data
 # exists for Point Loma or SD County in this pipeline).
 # RENAMED 2026-06-24 (was data/outputs/CABR_bee_specimens_clean.csv,
-# capital CABR) -- clean_specimens.R now saves lowercase, matching the
+# capital CABR) -- bee_specimen_clean.R now saves lowercase, matching the
 # other renamed cabr_*_clean.csv files.
 # ------------------------------------------------------------
 specimens_path <- "data/outputs/cabr_bee_specimens_clean.csv"
 if (!file.exists(specimens_path)) {
-  message("cabr_bee_specimens_clean.csv not found -- running clean_specimens.R to build it...")
-  source("scripts/clean_specimens.R")
+  message("cabr_bee_specimens_clean.csv not found -- running bee_specimen_clean.R to build it...")
+  source("scripts/bee_specimen_clean.R")
 }
 
-cabr_specimens <- read_csv(specimens_path, show_col_types = FALSE)
+cabr_specimens <- read_csv("data/outputs/cabr_bee_specimens_clean.csv", show_col_types = FALSE)
+# only use this read to do read_csv for cabr_specimens, it needs the exact path or it won't show
 require_columns(cabr_specimens,
                  c("order", "family", "subfamily",
                    "tribe", "genus", "subgenus",
@@ -771,7 +1078,7 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
 # superfamily, or subtribe (confirmed directly against the V10 specimen
 # workbook column headers, 2026-06-24), so those columns are not
 # fabricated here. complex_taxon_id IS included as of 2026-06-24 --
-# clean_specimens.R now populates this via a match against the iNat
+# bee_specimen_clean.R now populates this via a match against the iNat
 # checklist (previously the specimen sheet had no ID column at all,
 # only the complex name). Kept in the native taxon_*_name convention
 # (not Holway/Title Case) so it lines up cleanly, column-for-column,
