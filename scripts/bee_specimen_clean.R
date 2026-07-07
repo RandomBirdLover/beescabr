@@ -138,7 +138,7 @@ missing_specimens_list <- clean_bee_data %>%
 cat(sprintf("\nSpecimens flagged as physically missing (missing_specimen == 'Y'): %d\n",
             nrow(missing_specimens_list)))
 
-write.csv(
+write_fresh(
   missing_specimens_list,
   "data/outputs/cabr_missing_specimens_list.csv",
   row.names = FALSE
@@ -266,7 +266,7 @@ if (nrow(old_name_changes) > 0) {
   cat("None -- no specimens have an old_genus_name/old_species_name on file.\n")
 }
 
-write.csv(
+write_fresh(
   clean_bee_data,
   "data/outputs/cabr_bee_specimens_clean.csv",
   row.names = FALSE

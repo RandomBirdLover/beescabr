@@ -40,3 +40,17 @@ require_columns <- function(df, required, df_name = "data") {
     )
   }
 }
+
+# ------------------------------------------------------------
+# write_fresh()
+# Always overwrite on re-run. Clears whatever is sitting at `path`
+# first -- an old file OR a stray folder that would block the write
+# (write.csv cannot write a file over a folder) -- then writes fresh.
+# Use in place of write.csv() for every output so re-running a script
+# reliably replaces its old outputs.
+# ------------------------------------------------------------
+write_fresh <- function(x, path, row.names = FALSE, ...) {
+  if (dir.exists(path)) unlink(path, recursive = TRUE, force = TRUE)
+  else if (file.exists(path)) unlink(path, force = TRUE)
+  write.csv(x, path, row.names = row.names, ...)
+}

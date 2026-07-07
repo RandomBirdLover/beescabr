@@ -518,10 +518,10 @@ run_qc(checklist_cabr,       "CABR")
 # 2026-06-23 no longer exists -- anything downstream referencing
 # that name needs to point at one of the three files below instead.
 # ------------------------------------------------------------
-write.csv(checklist_sd_county,
+write_fresh(checklist_sd_county,
           "data/outputs/SD_county_inat_native_bee_checklist.csv",
           row.names = FALSE)
-write.csv(checklist_point_loma,
+write_fresh(checklist_point_loma,
           "data/outputs/PL_inat_native_bee_checklist.csv",
           row.names = FALSE)
 # RENAMED 2026-06-24 (was CABR_inat_native_bee_checklist.csv) -- part of
@@ -530,7 +530,7 @@ write.csv(checklist_point_loma,
 #   cabr_inat_bee_checklist_clean.csv     (this file -- iNat only)
 #   cabr_specimen_bee_checklist_clean.csv (specimen only -- built in PART B)
 #   CABR_native_bee_checklist.csv         (merged -- built in PART B; renamed 2026-06-25 to match PL/SD_county tier naming)
-write.csv(checklist_cabr,
+write_fresh(checklist_cabr,
           "data/outputs/cabr_inat_bee_checklist_clean.csv",
           row.names = FALSE)
 
@@ -752,7 +752,7 @@ cat("Taxonomy lookup row counts by rank:\n")
 print(rank_summary)
 cat(sprintf("Total rows: %d\n", nrow(native_bee_taxonomy_lookup)))
 
-write.csv(native_bee_taxonomy_lookup,
+write_fresh(native_bee_taxonomy_lookup,
           "data/outputs/native_bee_taxonomy_lookup.csv",
           row.names = FALSE, na = "")
 cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
@@ -1103,7 +1103,7 @@ cabr_specimen_checklist <- build_specimen_checklist(cabr_specimens)
 cat(sprintf("\ncabr_specimen_bee_checklist_clean: %d unique taxa (genus required, species optional) from CABR specimens.\n",
             nrow(cabr_specimen_checklist)))
 
-write.csv(cabr_specimen_checklist,
+write_fresh(cabr_specimen_checklist,
           "data/outputs/cabr_specimen_bee_checklist_clean.csv",
           row.names = FALSE, na = "")
 
@@ -1134,13 +1134,13 @@ checklist_sd_county_v2 <- build_tier2_checklist(
 # (2026-06-24, was originally CABR_native_bee_checklist.csv) is reversed
 # here; the "full" / "_clean" suffixes added no information that the
 # tier name didn't already convey.
-write.csv(checklist_cabr_v2,
+write_fresh(checklist_cabr_v2,
           "data/outputs/CABR_native_bee_checklist.csv",
           row.names = FALSE, na = "")
-write.csv(checklist_point_loma_v2,
+write_fresh(checklist_point_loma_v2,
           "data/outputs/PL_native_bee_checklist.csv",
           row.names = FALSE, na = "")
-write.csv(checklist_sd_county_v2,
+write_fresh(checklist_sd_county_v2,
           "data/outputs/SD_county_native_bee_checklist.csv",
           row.names = FALSE, na = "")
 

@@ -4,6 +4,20 @@ Native bee biodiversity pipeline for Cabrillo National Monument (CABR), comparin
 
 ---
 
+## Quickstart — run order
+
+New here? Do the one-time **Setup** below, then run the pipeline. In normal use you just open `native_bee_data_analysis.Rmd` and run it chunk by chunk — it sources everything else in the right order. The individual scripts, in dependency order:
+
+1. `native_bee_checklist.R` — sources `spatial_utils.R` + `utils.R` automatically; writes the Tier 1 and Tier 2 checklists. Auto-sources `bee_specimen_clean.R` when needed — **do not run `bee_specimen_clean.R` standalone first**, as it depends on a file Part A of this script writes.
+2. `bee_inat_clean.R` — cleans the non-lethal iNat data (intern + beeple).
+3. `native_bee_data_analysis.Rmd` — the orchestrator; sources the above and runs the actual richness/method analysis.
+
+Standalone tools (run only when needed, not part of the sequence above): `discover_inat_fields_cabr_clip.R` (iNat field-discovery QC), `check_boundaries.R` / `plot_boundaries_individually.R` / `diagnose_county_gap.R` (spatial diagnostics), `dorey_bee_checklist.R` (one-time Dorey filter).
+
+Full detail with inputs, outputs, and dependency notes: see **Pipeline overview** below.
+
+---
+
 ## People
 
 | Name | Role |
@@ -47,6 +61,11 @@ beescabr/
                                       # PART B: TIER 2 (merged) checklists + CABR specimen checklist
     bee_specimen_clean.R             # cleans lethal CABR specimen data; QC flags; complex match
     bee_inat_clean.R                 # cleans non-lethal iNat data (intern + beeple)
+    discover_inat_fields_cabr_clip.R # QC/DISCOVERY (standalone, not orchestrated): crawls the iNat
+                                      # API (v1) for CABR-box bee obs by the roster's observers, then
+                                      # lists every observation field used — incl. fields never used
+                                      # locally, which the CSV export omits — to verify the obs_field
+                                      # rows of project_tags_fields.csv before bee_inat_clean.R
     spatial_utils.R                  # loads + reprojects boundaries; containment checks; 10m
                                       # transect buffers in memory
     check_boundaries.R                # standalone diagnostic: plots all boundaries overlaid together
@@ -58,6 +77,9 @@ beescabr/
                                       # dataset to SD County; not part of the automatic pipeline
     native_bee_data_analysis.Rmd     # main analysis document — sources the above
   data/                            # gitignored — NOT on GitHub (see .gitignore)
+    project_info/                  # survey roster + tag/field crosswalk (project metadata)
+      observers_by_year.csv        # per-year observer roster: username, role, method, technique
+      project_tags_fields.csv      # iNat tag / observation-field → keep/flag/exclude crosswalk
     reference_exports/
       native_bees/                 # iNat SD County bee exports
       plants/                      # iNat SD County plant exports
@@ -199,6 +221,37 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
 
 ---
 
+## iNaturalist API
+
+Two scripts pull directly from the iNaturalist API rather than from the CSV export above:
+
+- `discover_inat_fields_cabr_clip.R` — observation-field discovery, via the `/v1/observations` endpoint (see below for why the API, not the export, is used for this).
+- `native_bee_checklist.R` — per-taxon taxonomy/ancestry lookups (the ~400-call fetch noted in **Pipeline overview**), via the v1 taxa endpoints.
+
+Both use **API v1**.
+
+**Endpoint / version**
+
+```
+https://api.inaturalist.org/v1/observations
+```
+
+- **v1** is the Node-based API. Read-only for our purposes — no authentication or API key required.
+- **Pagination:** max `per_page = 200`. `discover_inat_fields_cabr_clip.R` pages with an `id_above` cursor (no 10,000-record ceiling) rather than page numbers.
+- **Rate limits (per iNat's [recommended practices](https://www.inaturalist.org/pages/api+recommended+practices)):** ~1 request/second, ~10,000 requests/day. Scripts include a `Sys.sleep(1)` between pages. The API is intended for small-to-medium pulls, not bulk download.
+
+**Why the API and not the export (for field discovery):** iNat's CSV export only includes an observation-field column for fields the *exporter* has personally used. A field another observer attached but the exporter never has is invisible to the export — so the export can confirm known fields but can never *discover* an unknown one. The API returns every field attached to every observation (`ofvs`), regardless of who used it, which is exactly what `discover_inat_fields_cabr_clip.R` needs to verify the crosswalk is complete. (This is the blind spot flagged in the iNat-cleanup TODO item.)
+
+**Why v1, not v2 (as of 2026-07-06):** v1 is the version iNaturalist's own website and mobile apps run on, so it is the best-supported and most stable choice. A v2 API exists but is still stabilizing and has returned incomplete results on some queries — so v1 is currently the *safer* option here, not the outdated one. iNat currently treats the older v0 (Rails) API as the deprecated one; there is no announced retirement date for v1.
+
+**Migrating to v2 later (if/when v1 is retired):** the change is small and localized to the request:
+1. Swap `/v1/` → `/v2/` in the endpoint URL.
+2. Add a `fields` parameter naming the fields to return — v2 sends a minimal response by default and requires explicitly requesting the observation fields (`ofvs`), whereas v1 returns everything by default (which is why no `fields` parameter is needed now).
+
+Watch iNaturalist's forum (News & Updates) for any v1 sunset notice; a maintained API is not removed silently.
+
+---
+
 ## Pipeline overview
 
 `native_bee_data_analysis.Rmd` is the orchestrator — it sources everything below in order, so in practice you just run the Rmd chunk by chunk. Listed individually here for reference:
@@ -254,11 +307,20 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
                                    See dependency note under step 2 — normally runs automatically
                                    as part of native_bee_checklist.R Part B, not standalone first.
 
-4. bee_inat_clean.R                reads intern + beeple iNat exports → cleans non-lethal data
+4. bee_inat_clean.R                fetches non-lethal survey observations straight from the
+                                   iNaturalist API (v1) — roster observers, CABR box, bees minus
+                                   Apis mellifera — because the CSV export drops the tags and
+                                   observation fields the crosswalk triages on. Then: fills any
+                                   "fill in" field options from the API, clips to cabr_survey_box,
+                                   cleans (dates/missing flags/data_source), and TRIAGES every
+                                   observation against project_tags_fields.csv into keep / flag /
+                                   exclude. Reads the crosswalk as its spec, so adding rows/variants
+                                   there changes behavior with no code edit.
                                    → writes data/outputs/CABR_nonlethal_inat_clean.csv
-                                   (reports "no data found yet" until those folders are populated)
-                                   (kept strictly separate by method — intern vs. beeple — never
-                                   merged; see TODO: checklist architecture)
+                                   → writes data/outputs/CABR_inat_unknown_fields.csv  (review — see below)
+                                   → writes data/outputs/CABR_inat_unknown_tags.csv    (review — see below)
+                                   (kept strictly separate by method — intern vs. beeple — via the
+                                   roster role column; see TODO: checklist architecture)
 
 5. native_bee_data_analysis.Rmd    sources 2–4 above (which in turn sources 1), then does the
                                    actual richness/method comparison
@@ -266,6 +328,40 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
 ```
 
 `utils.R` (shared `read_latest()` and `require_columns()`) is sourced by every script above — not a standalone step.
+
+---
+
+## Reviewing unknown fields and tags (after every `bee_inat_clean.R` run)
+
+`bee_inat_clean.R` triages observations against the crosswalk
+(`project_tags_fields.csv`). Anything the crosswalk doesn't recognize is
+**ignored** — so the script writes two "unknown" files as an early-warning
+system, and the console prints an **ACTION NEEDED** block when either has rows.
+Check them after each run so nothing important slips past silently.
+
+**`CABR_inat_unknown_fields.csv` — observation fields not in the crosswalk.**
+This should trend to **zero** (it means the crosswalk covers every field in the
+data). If rows appear, someone used a new observation field. For each one,
+decide:
+- **Keep** it as its own field → add a row to `project_tags_fields.csv` with its
+  `field_id` (set `allowed_values` to `fill in` and the next run fetches its
+  options).
+- **Fold** it into an existing field that means the same thing → add its
+  `field_id` to that row's `;`-separated `field_id` list.
+- **Ignore** it → do nothing; it stays out of the crosswalk and out of the data.
+
+Then re-run; the field clears from the list.
+
+**`CABR_inat_unknown_tags.csv` — tags not in the crosswalk.**
+This list is normally **long and mostly harmless** — camera/lens tags (`D500`,
+`300mm f/4`), species names, photo filenames, `City Nature Challenge`, etc.
+Ignore those. You are scanning for **one thing only**: a tag that looks like a
+**survey tag we missed** — a new typo of a Cabrillo survey tag, or a new survey
+year. If you spot one, add it as an `inat_variant` on the matching survey row in
+the crosswalk, re-run, and those observations move from `flag` to `keep`.
+
+**Rule of thumb:** `unknown_fields` should go to zero; `unknown_tags` won't (and
+shouldn't) — you're just skimming it for missed survey tags.
 
 ---
 
@@ -369,6 +465,7 @@ Both failures trace to the same cause: `cabr_boundary` (NPS authoritative source
   - Open question, flagged but not yet resolved: what to do about observations where the missing piece (date/location) can only realistically be supplied by the original observer, not a reviewer.
 - [x] **Subgenus rank now populated correctly for taxa identified directly to subgenus** (2026-06-25): the iNat API fetch in `native_bee_checklist.R` STEP 4 (`get_subgenus_and_complex`) was only walking the ANCESTOR chain for subgenus names — so when a taxon was identified directly to a subgenus (e.g. `Onagrandrena`, `Simandrena`, `Diandrena` — subgenera of *Andrena*; `Dialictus` — subgenus of *Lasioglossum*), the subgenus name was silently lost (rank "subgenus" doesn't appear in the ancestor chain when the taxon itself IS the subgenus). Symptom: 4 Andrena and 5 Lasioglossum "duplicate" genus-only rows in `CABR_native_bee_checklist.csv` that all looked identical (Genus="Andrena", blank Species, blank Subgenus) because their actual differentiator was being dropped. Added a parallel "is the taxon itself a subgenus?" check, mirroring the existing complex check on the same code path. Re-running the pipeline now correctly distinguishes these as separate rows with their subgenus name populated.
 - [x] **Rename `cabr_full_bee_checklist_clean.csv` → `CABR_native_bee_checklist.csv`** (2026-06-25): aligned with the `PL_native_bee_checklist.csv` / `SD_county_native_bee_checklist.csv` naming pattern used by the other two tiers. The earlier "full_..._clean" suffix added no information that the tier name didn't already convey; this rename reverses an earlier 2026-06-24 rename in the other direction. Anything downstream referencing `cabr_full_bee_checklist_clean.csv` needs to point at `CABR_native_bee_checklist.csv` instead.
+- [x] **iNat observation-field discovery via API** (2026-07-06): added `discover_inat_fields_cabr_clip.R` to enumerate every observation field actually used in CABR-box bee observations by the roster's observers, by crawling the iNaturalist API (v1) directly. This works around the CSV-export blind spot flagged in the iNat-cleanup item above — the export's "Observation fields" column only includes fields the exporter has personally used, so a field another observer used but the exporter never has is invisible to the export, but not to the API. The script filters to the 21 non-lethal roster observers, pulls all their non-*Apis mellifera* bee observations, clips to `cabr_survey_box` via `st_within()`, and writes `data/outputs/cabr_inat_fields_discovered_clipped.csv` plus a console list of fields not yet in `project_tags_fields.csv`. Feeds verification of that crosswalk's `obs_field` rows before `bee_inat_clean.R` consumes them. See **iNaturalist API** above for version/endpoint details.
 
 ---
 
