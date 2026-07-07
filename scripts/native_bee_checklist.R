@@ -264,9 +264,9 @@ build_checklist <- function(obs_df, label) {
       subspecies
     ) %>%
     distinct(taxon_id, .keep_all = TRUE)
-
+  
   n_before <- nrow(before_genus_filter)
-
+  
   # GENUS REQUIRED (2026-06-24 fix): a row only belongs in the
   # checklist if genus is populated. Previously this used
   # !is.na(genus) | !is.na(species) (genus OR
@@ -279,11 +279,11 @@ build_checklist <- function(obs_df, label) {
   result <- before_genus_filter %>%
     filter(!is.na(genus), genus != "") %>%
     arrange(family, genus, species)
-
+  
   n_dropped <- n_before - nrow(result)
   cat(sprintf("%-12s: %d unique taxa before genus filter, %d dropped (no genus -- identified no further than family/tribe/order/etc.), %d remain\n",
               label, n_before, n_dropped, nrow(result)))
-
+  
   result
 }
 
@@ -315,29 +315,29 @@ cat("CABR      :", nrow(checklist_cabr), "\n")
 #   - If a complex appears in ancestors, it is captured there
 #   - subgenus and complex are kept in separate columns
 # ------------------------------------------------------------
-get_subgenus_and_complex <- function(taxon_id, max_retries = 3) {
+get_subgenus_and_complex <- function(taxon_id, max_retries = 5) {
   for (attempt in 1:max_retries) {
-    Sys.sleep(0.5)  # be polite to the API
-
+    Sys.sleep(1)  # ~1 request/sec baseline -- stays under iNat's rate limit
+    
     result <- tryCatch({
       resp <- request(paste0("https://api.inaturalist.org/v1/taxa/", taxon_id)) %>%
         req_timeout(10) %>%  # if the API doesn't respond within 10s, fail and retry
         req_perform() %>%
         resp_body_json()
-
+      
       taxon     <- resp$results[[1]]
       ancestors <- taxon$ancestors
-
+      
       subgenus <- NA_character_
       complex  <- NA_character_
       complex_taxon_id    <- NA_integer_
-
+      
       # Check if the taxon ITSELF is a complex rank
       if (!is.null(taxon$rank) && taxon$rank == "complex") {
         complex <- taxon$name
         complex_taxon_id   <- as.integer(taxon$id)
       }
-
+      
       # Check if the taxon ITSELF is a subgenus rank (2026-06-25 fix):
       # An observation identified directly to a subgenus (e.g.
       # "Onagrandrena", "Simandrena", "Diandrena" -- subgenera of
@@ -355,7 +355,7 @@ get_subgenus_and_complex <- function(taxon_id, max_retries = 3) {
       if (!is.null(taxon$rank) && taxon$rank == "subgenus") {
         subgenus <- taxon$name
       }
-
+      
       # Walk ancestors for subgenus and complex
       for (a in ancestors) {
         if (!is.null(a$rank)) {
@@ -368,7 +368,7 @@ get_subgenus_and_complex <- function(taxon_id, max_retries = 3) {
           }
         }
       }
-
+      
       tibble(
         taxon_id            = taxon_id,
         subgenus = subgenus,
@@ -376,16 +376,18 @@ get_subgenus_and_complex <- function(taxon_id, max_retries = 3) {
         complex_taxon_id    = complex_taxon_id,
         fetch_failed        = FALSE
       )
-
+      
     }, error = function(e) NULL)  # NULL signals failure, triggers retry
-
+    
     if (!is.null(result)) return(result)
-
+    
     if (attempt < max_retries) {
-      Sys.sleep(2)  # back off longer before retrying
+      # progressive backoff: 5s, 10s, 15s, 20s -- long enough to clear a
+      # short iNat rate-limit window (429) before the next attempt.
+      Sys.sleep(attempt * 5)
     }
   }
-
+  
   # All retries exhausted — log this taxon_id as a real failure
   cat(sprintf("\n  WARNING: taxon_id %s failed after %d attempts\n", taxon_id, max_retries))
   tibble(
@@ -475,22 +477,22 @@ checklist_cabr       <- finalize_checklist(checklist_cabr)
 # ------------------------------------------------------------
 run_qc <- function(checklist, label) {
   cat(sprintf("\n--- QUALITY CONTROL: %s ---\n", label))
-
+  
   families <- checklist %>%
     filter(!is.na(family), family != "") %>%
     distinct(family) %>%
     arrange(family)
-
+  
   cat("Families found:", nrow(families), "\n")
   print(families$family)
-
+  
   complex_taxa <- checklist %>%
     filter(!is.na(complex_taxon_id) & taxon_id == complex_taxon_id)
-
+  
   distinct_complexes <- checklist %>%
     filter(!is.na(complex)) %>%
     distinct(complex, complex_taxon_id)
-
+  
   cat("Total unique taxa:             ", nrow(checklist), "\n")
   cat("Taxa with subgenus: ", sum(!is.na(checklist$subgenus)), "\n")
   cat("Taxa with complex:  ", sum(!is.na(checklist$complex)), "\n")
@@ -519,11 +521,11 @@ run_qc(checklist_cabr,       "CABR")
 # that name needs to point at one of the three files below instead.
 # ------------------------------------------------------------
 write_fresh(checklist_sd_county,
-          "data/outputs/SD_county_inat_native_bee_checklist.csv",
-          row.names = FALSE)
+            "data/outputs/SD_county_inat_native_bee_checklist.csv",
+            row.names = FALSE)
 write_fresh(checklist_point_loma,
-          "data/outputs/PL_inat_native_bee_checklist.csv",
-          row.names = FALSE)
+            "data/outputs/PL_inat_native_bee_checklist.csv",
+            row.names = FALSE)
 # RENAMED 2026-06-24 (was CABR_inat_native_bee_checklist.csv) -- part of
 # a 3-file CABR-specific naming set (see PART B) so the iNat-only,
 # specimen-only, and merged CABR checklists can be directly compared:
@@ -531,8 +533,8 @@ write_fresh(checklist_point_loma,
 #   cabr_specimen_bee_checklist_clean.csv (specimen only -- built in PART B)
 #   CABR_native_bee_checklist.csv         (merged -- built in PART B; renamed 2026-06-25 to match PL/SD_county tier naming)
 write_fresh(checklist_cabr,
-          "data/outputs/cabr_inat_bee_checklist_clean.csv",
-          row.names = FALSE)
+            "data/outputs/cabr_inat_bee_checklist_clean.csv",
+            row.names = FALSE)
 
 cat("\nThree checklists saved to data/outputs/:\n")
 cat("  SD_county_inat_native_bee_checklist.csv\n")
@@ -753,8 +755,8 @@ print(rank_summary)
 cat(sprintf("Total rows: %d\n", nrow(native_bee_taxonomy_lookup)))
 
 write_fresh(native_bee_taxonomy_lookup,
-          "data/outputs/native_bee_taxonomy_lookup.csv",
-          row.names = FALSE, na = "")
+            "data/outputs/native_bee_taxonomy_lookup.csv",
+            row.names = FALSE, na = "")
 cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
 
 
@@ -873,10 +875,10 @@ if (!file.exists(specimens_path)) {
 cabr_specimens <- read_csv("data/outputs/cabr_bee_specimens_clean.csv", show_col_types = FALSE)
 # only use this read to do read_csv for cabr_specimens, it needs the exact path or it won't show
 require_columns(cabr_specimens,
-                 c("order", "family", "subfamily",
-                   "tribe", "genus", "subgenus",
-                   "complex", "complex_taxon_id", "species", "subspecies"),
-                 "cabr_specimens")
+                c("order", "family", "subfamily",
+                  "tribe", "genus", "subgenus",
+                  "complex", "complex_taxon_id", "species", "subspecies"),
+                "cabr_specimens")
 
 # GENUS-MINIMUM (2026-06-24): only genus is required here, matching the
 # same rule applied throughout PART A/B -- a specimen identified only to
@@ -942,7 +944,7 @@ cat(sprintf("Holway reference: %d distinct genus+species match keys after qualif
 # run_holway_check are the only things that vary by tier.
 # ------------------------------------------------------------
 build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_check, label) {
-
+  
   # GENUS-ONLY ROWS KEPT (2026-06-24 fix): an earlier version of this
   # function required species too, dropping genus-only rows
   # (e.g. a "Colletes" record with no species ID) under the assumption
@@ -964,10 +966,10 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
   checklist <- tier1_checklist %>%
     mutate(
       match_key = ifelse(!is.na(species) & species != "",
-                          paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
-                          NA_character_)
+                         paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
+                         NA_character_)
     )
-
+  
   # Recent survey: CABR-specific specimen evidence. For tiers with no
   # specimen data, specimen_species is NULL and this column is all NA.
   #
@@ -998,8 +1000,8 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
       left_join(
         specimen_species %>%
           mutate(match_key = ifelse(!is.na(species) & species != "",
-                                     paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
-                                     NA_character_)) %>%
+                                    paste(str_to_lower(genus), str_to_lower(species), sep = "_"),
+                                    NA_character_)) %>%
           select(match_key, has_cabr_specimen),
         by = "match_key",
         na_matches = "never"
@@ -1007,7 +1009,7 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
   } else {
     checklist$has_cabr_specimen <- NA
   }
-
+  
   checklist <- checklist %>%
     mutate(
       Family            = family,
@@ -1021,8 +1023,8 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
       # ID could be misread as a confirmed species ID. The prefix makes
       # that distinction visible directly in the cell.
       Complex           = ifelse(!is.na(complex) & complex != "",
-                                  paste0("(Complex) ", complex),
-                                  NA_character_),
+                                 paste0("(Complex) ", complex),
+                                 NA_character_),
       Species           = species,
       Subspecies        = subspecies,
       Authority         = NA_character_,  # not available from iNat/specimen data
@@ -1032,7 +1034,7 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
       iNaturalist       = "X",  # every row here came from the PART A / Tier 1 checklist, so always present
       Notes             = NA_character_
     )
-
+  
   # Holway cross-check -- SD County only, per project decision.
   #
   # Genus-only rows (no species) are now KEPT (see note above), but a
@@ -1047,17 +1049,17 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
         match_key %in% holway_match_keys                      ~ "Yes",
         TRUE                                                   ~ "No"
       ))
-
+    
     n_missing <- sum(checklist$`Found in Holway checklist?` == "No", na.rm = TRUE)
     n_not_applicable <- sum(is.na(checklist$`Found in Holway checklist?`))
     cat(sprintf("%s: %d of %d species NOT found in Holway's combined v3 list (flagged for investigation); %d genus-only row(s) left blank (not applicable).\n",
                 label, n_missing, nrow(checklist), n_not_applicable))
   }
-
+  
   output_cols <- c("Family", "Subfamily", "Tribe", "Genus", "Subgenus", "Complex", "Species", "Subspecies",
-                    "Authority", "Recent survey", "Museum Collection", "Literature", "iNaturalist", "Notes")
+                   "Authority", "Recent survey", "Museum Collection", "Literature", "iNaturalist", "Notes")
   if (run_holway_check) output_cols <- c(output_cols, "Found in Holway checklist?")
-
+  
   checklist %>%
     select(all_of(output_cols)) %>%
     arrange(Family, Genus, Subgenus, Species)
@@ -1089,9 +1091,9 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
 # ------------------------------------------------------------
 build_specimen_checklist <- function(specimens_df) {
   specimen_cols <- c("order", "family", "subfamily",
-                      "tribe", "genus", "subgenus",
-                      "complex", "complex_taxon_id", "species", "subspecies")
-
+                     "tribe", "genus", "subgenus",
+                     "complex", "complex_taxon_id", "species", "subspecies")
+  
   specimens_df %>%
     select(all_of(specimen_cols)) %>%
     distinct() %>%
@@ -1104,8 +1106,8 @@ cat(sprintf("\ncabr_specimen_bee_checklist_clean: %d unique taxa (genus required
             nrow(cabr_specimen_checklist)))
 
 write_fresh(cabr_specimen_checklist,
-          "data/outputs/cabr_specimen_bee_checklist_clean.csv",
-          row.names = FALSE, na = "")
+            "data/outputs/cabr_specimen_bee_checklist_clean.csv",
+            row.names = FALSE, na = "")
 
 # ------------------------------------------------------------
 # STEP 4: Build all three tiers.
@@ -1135,14 +1137,14 @@ checklist_sd_county_v2 <- build_tier2_checklist(
 # here; the "full" / "_clean" suffixes added no information that the
 # tier name didn't already convey.
 write_fresh(checklist_cabr_v2,
-          "data/outputs/CABR_native_bee_checklist.csv",
-          row.names = FALSE, na = "")
+            "data/outputs/CABR_native_bee_checklist.csv",
+            row.names = FALSE, na = "")
 write_fresh(checklist_point_loma_v2,
-          "data/outputs/PL_native_bee_checklist.csv",
-          row.names = FALSE, na = "")
+            "data/outputs/PL_native_bee_checklist.csv",
+            row.names = FALSE, na = "")
 write_fresh(checklist_sd_county_v2,
-          "data/outputs/SD_county_native_bee_checklist.csv",
-          row.names = FALSE, na = "")
+            "data/outputs/SD_county_native_bee_checklist.csv",
+            row.names = FALSE, na = "")
 
 cat("\nTier 2 + specimen checklists saved to data/outputs/:\n")
 cat("  cabr_inat_bee_checklist_clean.csv     (", nrow(checklist_cabr), "rows -- iNat only, see PART A )\n")
@@ -1154,4 +1156,3 @@ cat("  SD_county_native_bee_checklist.csv (", nrow(checklist_sd_county_v2), "row
 cat("\nREMINDER: Museum Collection is blank across all Tier 2 outputs --\n")
 cat("this is 'not yet checked', not a confirmed absence of specimens.\n")
 cat("See PART B header notes before treating blank as a negative result.\n")
-
