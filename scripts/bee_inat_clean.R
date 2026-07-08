@@ -84,7 +84,7 @@ TAXON_HONEY <- 47219    # Apis mellifera (excluded)
 UA          <- "beescabr bee_inat_clean (brandirenesanchez16@gmail.com)"
 
 # helpers: normalize a tag/field string for matching; safe snake_case for columns
-norm_key <- function(x) tolower(trimws(gsub("^#", "", x)))
+norm_key <- function(x) tolower(gsub("^#", "", trimws(x)))  # trim FIRST, then strip # (leading space was blocking ^#)
 snake    <- function(x) { x <- tolower(x); x <- gsub("[^a-z0-9]+", "_", x); gsub("^_|_$", "", x) }
 
 # always overwrite: clear an old file OR a stray folder at `path`, then write fresh
@@ -130,7 +130,11 @@ if (all(c("datatype", "allowed_values") %in% names(crosswalk))) {
       pid <- trimws(strsplit(crosswalk$field_id[i], ";")[[1]][1])   # primary id
       def <- tryCatch(
         request(sprintf("https://www.inaturalist.org/observation_fields/%s.json", pid)) |>
-          req_user_agent(UA) |> req_perform() |> resp_body_json(),
+          req_user_agent(UA) |>
+          req_retry(max_tries = 4,
+                    is_transient = ~ resp_status(.x) %in% c(429, 500, 502, 503, 504),
+                    backoff = ~ min(30, 3 * 2^(.x - 1))) |>
+          req_perform() |> resp_body_json(),
         error = function(e) NULL)
       if (is.null(def)) next
       av <- def$allowed_values %||% ""
@@ -162,6 +166,11 @@ repeat {
   page <- page + 1
   resp <- request("https://api.inaturalist.org/v1/observations") |>
     req_user_agent(UA) |>
+    # pause + back off on 429 (rate limit) / 5xx instead of crashing;
+    # honors any Retry-After the API sends. backoff: 5,10,20,40,60s (capped).
+    req_retry(max_tries = 6,
+              is_transient = ~ resp_status(.x) %in% c(429, 500, 502, 503, 504),
+              backoff = ~ min(60, 5 * 2^(.x - 1))) |>
     req_url_query(!!!params, id_above = id_above) |>
     req_perform() |> resp_body_json()
 
