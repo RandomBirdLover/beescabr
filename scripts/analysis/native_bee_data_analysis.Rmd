@@ -37,7 +37,7 @@ library(gbifdb)      # GBIF remote database (optional, for later)
 library(sf)          # spatial data (shapefiles, transects)
 library(httr2)       # iNaturalist API calls (used by sourced scripts)
 
-source("scripts/utils.R")  # read_latest(), require_columns()
+source("scripts/utils/utils.R")  # read_latest(), require_columns()
 ```
 
 ###### 2. TIERED CHECKLISTS (build if missing — calls iNat API, ~3-4 min) ######
@@ -48,12 +48,12 @@ source("scripts/utils.R")  # read_latest(), require_columns()
 # files to force a refresh of all three (they're built together,
 # from one shared API pass over the union of taxa).
 
-if (!file.exists("data/outputs/SD_county_inat_native_bee_checklist.csv") ||
-    !file.exists("data/outputs/PL_inat_native_bee_checklist.csv") ||
+if (!file.exists("data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv") ||
+    !file.exists("data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv") ||
     # RENAMED 2026-06-24 (was CABR_inat_native_bee_checklist.csv)
-    !file.exists("data/outputs/cabr_inat_bee_checklist_clean.csv")) {
+    !file.exists("data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv")) {
   message("One or more tiered checklists not found - running native_bee_checklist.R (this calls the API, ~3-4 min)...")
-  source("scripts/native_bee_checklist.R")
+  source("scripts/checklists/native_bee_checklist.R")
 }
 
 ```
@@ -61,18 +61,18 @@ if (!file.exists("data/outputs/SD_county_inat_native_bee_checklist.csv") ||
 ###### 3. CLEAN DATA ######
 ```{r clean-data, message=FALSE}
 # Produces clean_bee_data (lethal specimens).
-source("scripts/bee_specimen_clean.R")
+source("scripts/clean/specimen_bee_clean.R")
 
 # Produces clean_intern_data, clean_beeple_data, and the combined
 # clean_nonlethal_data. Will report "no data found yet" until intern/
 # beeple iNat exports exist — that's expected, not an error.
-source("scripts/bee_inat_clean.R")
+source("scripts/clean/inat_bee_clean.R")
 ```
 
 ###### 4. SPATIAL (transects + buffers) ######
 ```{r spatial}
 # Produces `transects` and `buffer_10m` in the environment.
-source("scripts/spatial_utils.R")
+source("scripts/spatial/spatial_utils.R")
 
 trails <- c("BST", "UPMON", "TP", "OT")
 ```

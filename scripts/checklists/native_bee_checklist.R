@@ -77,15 +77,15 @@ library(httr2)
 library(stringr)
 library(sf)
 
-source("scripts/utils.R")        # read_latest()
-source("scripts/spatial_utils.R") # cabr_survey_box, point_loma_boundary, sd_county_boundary
+source("scripts/utils/utils.R")        # read_latest()
+source("scripts/spatial/spatial_utils.R") # cabr_survey_box, point_loma_boundary, sd_county_boundary
 
 # ------------------------------------------------------------
 # STEP 1: Load iNaturalist export (auto-detects newest file)
 # ------------------------------------------------------------
 bees_path <- read_latest(
   "data/reference_exports/native_bees",
-  "^inat_native_bees_sdcounty"
+  "^inat_native_bees_sdcounty_25_mi_buffer"
 )
 cat("Loading:", basename(bees_path), "\n")
 bees <- read.csv(bees_path)
@@ -521,34 +521,34 @@ run_qc(checklist_cabr,       "CABR")
 # that name needs to point at one of the three files below instead.
 # ------------------------------------------------------------
 write_fresh(checklist_sd_county,
-            "data/outputs/SD_county_inat_native_bee_checklist.csv",
+            "data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
             row.names = FALSE)
 write_fresh(checklist_point_loma,
-            "data/outputs/PL_inat_native_bee_checklist.csv",
+            "data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv",
             row.names = FALSE)
 # RENAMED 2026-06-24 (was CABR_inat_native_bee_checklist.csv) -- part of
 # a 3-file CABR-specific naming set (see PART B) so the iNat-only,
 # specimen-only, and merged CABR checklists can be directly compared:
-#   cabr_inat_bee_checklist_clean.csv     (this file -- iNat only)
-#   cabr_specimen_bee_checklist_clean.csv (specimen only -- built in PART B)
+#   cabr_inat_bee_checklist.csv     (this file -- iNat only)
+#   cabr_specimen_bee_checklist.csv (specimen only -- built in PART B)
 #   CABR_native_bee_checklist.csv         (merged -- built in PART B; renamed 2026-06-25 to match PL/SD_county tier naming)
 write_fresh(checklist_cabr,
-            "data/outputs/cabr_inat_bee_checklist_clean.csv",
+            "data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv",
             row.names = FALSE)
 
 cat("\nThree checklists saved to data/outputs/:\n")
 cat("  SD_county_inat_native_bee_checklist.csv\n")
 cat("  PL_inat_native_bee_checklist.csv\n")
-cat("  cabr_inat_bee_checklist_clean.csv (renamed 2026-06-24, was CABR_inat_native_bee_checklist.csv)\n")
+cat("  cabr_inat_bee_checklist.csv (renamed 2026-06-24, was CABR_inat_native_bee_checklist.csv)\n")
 
 # ------------------------------------------------------------
-# STEP 8: Build native_bee_taxonomy_lookup.csv
+# STEP 8: Build bee_taxonomy_lookup.csv
 #
 # Purpose: a single reference file listing every taxonomic entry
 # currently known to this pipeline -- one row per unique
 # genus / subgenus / complex / species / subspecies -- with EVERY
 # rank above it populated. Saved as a deliverable
-# (data/outputs/native_bee_taxonomy_lookup.csv) so advisors and
+# (data/outputs/reference/bee_taxonomy_lookup.csv) so advisors and
 # downstream tools can see the full taxonomic universe the pipeline
 # is working with, without having to reconstruct it from multiple
 # files.
@@ -575,7 +575,7 @@ cat("  cabr_inat_bee_checklist_clean.csv (renamed 2026-06-24, was CABR_inat_nati
 # want to add a row that none of the sources above provides, edit
 # whichever source covers that rank, not this file.
 # ------------------------------------------------------------
-cat("\n--- Building native_bee_taxonomy_lookup.csv ---\n")
+cat("\n--- Building bee_taxonomy_lookup.csv ---\n")
 
 # Higher-rank constants for all native bees in this pipeline
 # (Anthophila within Hymenoptera within Insecta etc.)
@@ -725,7 +725,7 @@ taxonomy_column_order <- c(
   "rank"
 )
 
-native_bee_taxonomy_lookup <- bind_rows(
+bee_taxonomy_lookup <- bind_rows(
   genus_rows      %>% select(all_of(taxonomy_column_order)),
   subgenus_rows   %>% select(all_of(taxonomy_column_order)),
   complex_rows    %>% select(all_of(taxonomy_column_order)),
@@ -739,25 +739,25 @@ native_bee_taxonomy_lookup <- bind_rows(
 # rows. Run distinct() across all columns to collapse any true
 # duplicates while preserving meaningful differences. Reports how many
 # rows were removed so the impact is visible, not silent.
-n_before_dedup <- nrow(native_bee_taxonomy_lookup)
-native_bee_taxonomy_lookup <- native_bee_taxonomy_lookup %>% distinct()
-n_removed_dedup <- n_before_dedup - nrow(native_bee_taxonomy_lookup)
+n_before_dedup <- nrow(bee_taxonomy_lookup)
+bee_taxonomy_lookup <- bee_taxonomy_lookup %>% distinct()
+n_removed_dedup <- n_before_dedup - nrow(bee_taxonomy_lookup)
 if (n_removed_dedup > 0) {
   cat(sprintf("Deduplication: removed %d duplicate row(s) after paren-stripping.\n", n_removed_dedup))
 }
 
 # Per-rank summary printed for QC
-rank_summary <- native_bee_taxonomy_lookup %>%
+rank_summary <- bee_taxonomy_lookup %>%
   count(rank) %>%
   arrange(match(rank, c("genus", "subgenus", "complex", "species", "subspecies")))
 cat("Taxonomy lookup row counts by rank:\n")
 print(rank_summary)
-cat(sprintf("Total rows: %d\n", nrow(native_bee_taxonomy_lookup)))
+cat(sprintf("Total rows: %d\n", nrow(bee_taxonomy_lookup)))
 
-write_fresh(native_bee_taxonomy_lookup,
-            "data/outputs/native_bee_taxonomy_lookup.csv",
+write_fresh(bee_taxonomy_lookup,
+            "data/outputs/reference/bee_taxonomy_lookup.csv",
             row.names = FALSE, na = "")
-cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
+cat("Saved to data/outputs/reference/bee_taxonomy_lookup.csv\n")
 
 
 # =============================================================
@@ -792,7 +792,7 @@ cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
 # Evidence sources currently wired in:
 #   iNaturalist   : from the PART A / Tier 1 checklists above.
 #   Recent survey : CABR ONLY -- intern-collected specimens
-#                   (cabr_bee_specimens_clean.csv). NOT museum
+#                   (cabr_specimen_bee_record_clean.csv). NOT museum
 #                   specimens -- these have not been deposited at
 #                   SDNHM yet (see README TODO: formal specimen
 #                   deposit, Pam Horsley).
@@ -849,14 +849,14 @@ cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
 #   breakdown, so a Point-Loma- or CABR-only absence wouldn't be a
 #   meaningful gap to flag at that geographic scale.
 #
-# Output: data/outputs/CABR_native_bee_checklist.csv           (renamed 2026-06-25, was cabr_full_bee_checklist_clean.csv)
-#         data/outputs/cabr_specimen_bee_checklist_clean.csv  (NEW 2026-06-24, specimen-only, see STEP 3b)
-#         data/outputs/PL_native_bee_checklist.csv
-#         data/outputs/SD_county_native_bee_checklist.csv
+# Output: data/outputs/checklists/cabr/cabr_combined_native_bee_checklist.csv           (renamed 2026-06-25, was cabr_full_bee_checklist_clean.csv)
+#         data/outputs/checklists/cabr/cabr_specimen_bee_checklist.csv  (NEW 2026-06-24, specimen-only, see STEP 3b)
+#         data/outputs/checklists/point_loma/pl_native_bee_checklist.csv
+#         data/outputs/checklists/sd_county/sd_county_native_bee_checklist.csv
 #         (SD County only) includes "Found in Holway checklist?" column
 #
 # Related CABR-specific file, built in PART A, renamed alongside these:
-#         data/outputs/cabr_inat_bee_checklist_clean.csv (was CABR_inat_native_bee_checklist.csv)
+#         data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv (was CABR_inat_native_bee_checklist.csv)
 # =============================================================
 
 # ------------------------------------------------------------
@@ -866,13 +866,13 @@ cat("Saved to data/outputs/native_bee_taxonomy_lookup.csv\n")
 # capital CABR) -- bee_specimen_clean.R now saves lowercase, matching the
 # other renamed cabr_*_clean.csv files.
 # ------------------------------------------------------------
-specimens_path <- "data/outputs/cabr_bee_specimens_clean.csv"
+specimens_path <- "data/outputs/specimens/cabr_specimen_bee_record_clean.csv"
 if (!file.exists(specimens_path)) {
-  message("cabr_bee_specimens_clean.csv not found -- running bee_specimen_clean.R to build it...")
-  source("scripts/bee_specimen_clean.R")
+  message("cabr_specimen_bee_record_clean.csv not found -- running bee_specimen_clean.R to build it...")
+  source("scripts/clean/specimen_bee_clean.R")
 }
 
-cabr_specimens <- read_csv("data/outputs/cabr_bee_specimens_clean.csv", show_col_types = FALSE)
+cabr_specimens <- read_csv("data/outputs/specimens/cabr_specimen_bee_record_clean.csv", show_col_types = FALSE)
 # only use this read to do read_csv for cabr_specimens, it needs the exact path or it won't show
 require_columns(cabr_specimens,
                 c("order", "family", "subfamily",
@@ -1067,7 +1067,7 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
 
 # ------------------------------------------------------------
 # STEP 3b: Build a SPECIMEN-only checklist (unique taxa, not raw
-# specimens) -- cabr_specimen_bee_checklist_clean.csv. Added 2026-06-24 so
+# specimens) -- cabr_specimen_bee_checklist.csv. Added 2026-06-24 so
 # the iNat-derived and specimen-derived checklists can be directly
 # diffed against each other (e.g. "what species do we have a specimen
 # for that iNat hasn't recorded, or vice versa"). Previously specimen
@@ -1084,7 +1084,7 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
 # checklist (previously the specimen sheet had no ID column at all,
 # only the complex name). Kept in the native taxon_*_name convention
 # (not Holway/Title Case) so it lines up cleanly, column-for-column,
-# against cabr_inat_bee_checklist_clean.csv for comparison.
+# against cabr_inat_bee_checklist.csv for comparison.
 #
 # Same genus-minimum rule as everywhere else: only genus is
 # required; rows with no species survive as genus-only entries.
@@ -1102,11 +1102,11 @@ build_specimen_checklist <- function(specimens_df) {
 }
 
 cabr_specimen_checklist <- build_specimen_checklist(cabr_specimens)
-cat(sprintf("\ncabr_specimen_bee_checklist_clean: %d unique taxa (genus required, species optional) from CABR specimens.\n",
+cat(sprintf("\ncabr_specimen_bee_checklist: %d unique taxa (genus required, species optional) from CABR specimens.\n",
             nrow(cabr_specimen_checklist)))
 
 write_fresh(cabr_specimen_checklist,
-            "data/outputs/cabr_specimen_bee_checklist_clean.csv",
+            "data/outputs/checklists/cabr/cabr_specimen_bee_checklist.csv",
             row.names = FALSE, na = "")
 
 # ------------------------------------------------------------
@@ -1137,18 +1137,18 @@ checklist_sd_county_v2 <- build_tier2_checklist(
 # here; the "full" / "_clean" suffixes added no information that the
 # tier name didn't already convey.
 write_fresh(checklist_cabr_v2,
-            "data/outputs/CABR_native_bee_checklist.csv",
+            "data/outputs/checklists/cabr/cabr_combined_native_bee_checklist.csv",
             row.names = FALSE, na = "")
 write_fresh(checklist_point_loma_v2,
-            "data/outputs/PL_native_bee_checklist.csv",
+            "data/outputs/checklists/point_loma/pl_native_bee_checklist.csv",
             row.names = FALSE, na = "")
 write_fresh(checklist_sd_county_v2,
-            "data/outputs/SD_county_native_bee_checklist.csv",
+            "data/outputs/checklists/sd_county/sd_county_native_bee_checklist.csv",
             row.names = FALSE, na = "")
 
 cat("\nTier 2 + specimen checklists saved to data/outputs/:\n")
-cat("  cabr_inat_bee_checklist_clean.csv     (", nrow(checklist_cabr), "rows -- iNat only, see PART A )\n")
-cat("  cabr_specimen_bee_checklist_clean.csv (", nrow(cabr_specimen_checklist), "rows -- specimen only )\n")
+cat("  cabr_inat_bee_checklist.csv     (", nrow(checklist_cabr), "rows -- iNat only, see PART A )\n")
+cat("  cabr_specimen_bee_checklist.csv (", nrow(cabr_specimen_checklist), "rows -- specimen only )\n")
 cat("  CABR_native_bee_checklist.csv         (", nrow(checklist_cabr_v2), "rows -- merged, renamed 2026-06-25, was cabr_full_bee_checklist_clean.csv )\n")
 cat("  PL_native_bee_checklist.csv        (", nrow(checklist_point_loma_v2), "rows, includes any genus-only entries )\n")
 cat("  SD_county_native_bee_checklist.csv (", nrow(checklist_sd_county_v2), "rows, includes any genus-only entries; includes Holway cross-check )\n")

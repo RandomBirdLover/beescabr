@@ -4,7 +4,7 @@
 # Author: Brandi Sanchez
 # Description: Helper functions shared across the beescabr pipeline.
 #              Source this at the top of any script that needs them:
-#                source("scripts/utils.R")
+#                source("scripts/utils/utils.R")
 # =============================================================
 
 library(stringr)

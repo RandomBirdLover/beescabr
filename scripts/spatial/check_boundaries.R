@@ -6,7 +6,7 @@
 #
 # Run this from the beescabr project root in RStudio.
 # Expects the same folder layout as spatial_utils.R:
-#   data/spatial/boundaries/cabr/cabr_boundary.shp
+#   data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp
 #   data/spatial/boundaries/cabr/cabr_survey_box.shp
 #   data/spatial/boundaries/point_loma/point_loma_boundary.shp
 #   data/spatial/boundaries/san_diego_county/sd_county_boundary.shp
@@ -38,7 +38,7 @@ safe_load <- function(label, path) {
   })
 }
 
-cabr_boundary      <- safe_load("cabr_boundary",      file.path(boundary_dir, "cabr", "cabr_boundary.shp"))
+cabr_boundary      <- safe_load("cabr_boundary",      file.path(boundary_dir, "cabr", "nps_official", "cabr_boundary_nps_official.shp"))
 cabr_survey_box    <- safe_load("cabr_survey_box",    file.path(boundary_dir, "cabr", "cabr_survey_box.shp"))
 point_loma_boundary<- safe_load("point_loma_boundary",file.path(boundary_dir, "point_loma", "point_loma_boundary.shp"))
 sd_county_boundary <- safe_load("sd_county_boundary", file.path(boundary_dir, "san_diego_county", "sd_county_boundary.shp"))

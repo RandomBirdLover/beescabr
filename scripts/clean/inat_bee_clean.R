@@ -39,9 +39,9 @@
 # tables to a dated file and read that instead -- easy to add later.
 #
 # Outputs:
-#   data/outputs/CABR_nonlethal_inat_clean.csv   -- cleaned + triaged observations
-#   data/outputs/CABR_inat_unknown_fields.csv    -- fields seen but not in crosswalk
-#   data/outputs/CABR_inat_unknown_tags.csv      -- tags seen but not in crosswalk
+#   data/outputs/inat_clean/cabr_inat_bee_clean.csv   -- cleaned + triaged observations
+#   data/outputs/inat_clean/qc/cabr_inat_bee_unknown_fields.csv    -- fields seen but not in crosswalk
+#   data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv      -- tags seen but not in crosswalk
 #
 # REVIEWING THE TWO "unknown" FILES (do this after each run):
 #   These are the pipeline's early-warning system. The crosswalk
@@ -71,17 +71,17 @@ library(httr2)
 library(sf)
 
 # ---- Config / paths ---------------------------------------------------------
-spatial_utils_path <- "scripts/spatial_utils.R"   # provides cabr_survey_box (EPSG:26946)
+spatial_utils_path <- "scripts/spatial/spatial_utils.R"   # provides cabr_survey_box (EPSG:26946)
 info_dir           <- "data/project_info"
-roster_path        <- list.files(info_dir, pattern = "^observers_by_year.*\\.csv$",   full.names = TRUE)[1]
+roster_path        <- list.files(info_dir, pattern = "^surveyors_by_year.*\\.csv$",   full.names = TRUE)[1]
 crosswalk_path     <- list.files(info_dir, pattern = "^project_tags_fields.*\\.csv$", full.names = TRUE)[1]
-out_clean          <- "data/outputs/CABR_nonlethal_inat_clean.csv"
-out_unknown        <- "data/outputs/CABR_inat_unknown_fields.csv"
-out_unknown_tags   <- "data/outputs/CABR_inat_unknown_tags.csv"
+out_clean          <- "data/outputs/inat_clean/cabr_inat_bee_clean.csv"
+out_unknown        <- "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_fields.csv"
+out_unknown_tags   <- "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv"
 
 TAXON_BEES  <- 630955   # Bees (Anthophila)
 TAXON_HONEY <- 47219    # Apis mellifera (excluded)
-UA          <- "beescabr bee_inat_clean (brandirenesanchez16@gmail.com)"
+UA          <- "beescabr inat_bee_clean (brandirenesanchez16@gmail.com)"
 
 # helpers: normalize a tag/field string for matching; safe snake_case for columns
 norm_key <- function(x) tolower(gsub("^#", "", trimws(x)))  # trim FIRST, then strip # (leading space was blocking ^#)
@@ -306,8 +306,17 @@ ofv_mapped <- ofv_long |>
   select(-canonical_nm, -key)
 
 # 4a. Fields NOT in the crosswalk -> built-in discovery report
+# Exclude field_ids explicitly marked type="ignore" in the crosswalk
+ignore_ids <- crosswalk |>
+  filter(type == "ignore", !is.na(field_id), trimws(field_id) != "") |>
+  transmute(field_id = as.character(field_id)) |>
+  separate_rows(field_id, sep = ";") |>
+  mutate(field_id = suppressWarnings(as.integer(trimws(field_id)))) |>
+  filter(!is.na(field_id)) |>
+  pull(field_id)
+
 unknown_fields <- ofv_mapped |>
-  filter(is.na(canonical)) |>
+  filter(is.na(canonical), !field_id %in% ignore_ids) |>
   group_by(field_id, field_name, datatype) |>
   summarise(n_obs = n_distinct(obs_id), .groups = "drop") |>
   arrange(desc(n_obs))

@@ -5,7 +5,7 @@
 #            QC-flag specific fields, match complex/complex_taxon_id
 #            from the SD County iNat checklist, save.
 # Author: Brandi Sanchez
-# Data: CABR_bee_specimens_V{n}_{YYYY-MM-DD}.xlsx
+# Data: cabr_bee_specimens_record_V{n}_{YYYY-MM-DD}.xlsx
 #       (data/cabr_surveys/lethal/) — newest version auto-detected
 #
 # Column naming: as of V10, the specimen sheet uses bare rank names
@@ -25,7 +25,7 @@
 # complex_taxon_id are only ever populated when BOTH genus and species
 # are present, since complex is metadata about a confirmed species,
 # not an independent identification claim. Match source is
-# data/outputs/SD_county_inat_native_bee_checklist.csv (SD-County-wide
+# data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv (SD-County-wide
 # -- broadest tier, guaranteed to contain every CABR taxon). The
 # checklist has two kinds of complex-tagged rows: complex-LEVEL taxon
 # entries (species blank -- the row IS the complex, e.g.
@@ -44,8 +44,8 @@
 #         missing_latlong, missing_date, missing_sdnhm_id,
 #         missing_ucsd_id, missing_genus, and missing_specimens_list
 #         (specimens where missing_specimen == "Y").
-#         Written to data/outputs/cabr_bee_specimens_clean.csv and
-#         data/outputs/cabr_missing_specimens_list.csv
+#         Written to data/outputs/specimens/cabr_specimen_bee_record_clean.csv and
+#         data/outputs/specimens/cabr_specimen_bee_missing.csv
 #         Column order enforces genus, subgenus, complex,
 #         complex_taxon_id, species, subspecies in that exact sequence.
 # =============================================================
@@ -54,13 +54,13 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 
-source("scripts/utils.R")
+source("scripts/utils/utils.R")
 
 # ------------------------------------------------------------
 # STEP 1: Load newest specimen file
 # All versions live together in lethal/ — see SPECIMEN_CHANGELOG.md.
 # ------------------------------------------------------------
-specimens_path <- read_latest("data/cabr_surveys/lethal", "^CABR_bee_specimens_V")
+specimens_path <- read_latest("data/cabr_surveys/lethal", "^cabr_bee_specimens_record_V")
 cat("Loading specimens:", basename(specimens_path), "\n")
 
 raw_bee_data <- read_excel(specimens_path)
@@ -140,10 +140,10 @@ cat(sprintf("\nSpecimens flagged as physically missing (missing_specimen == 'Y')
 
 write_fresh(
   missing_specimens_list,
-  "data/outputs/cabr_missing_specimens_list.csv",
+  "data/outputs/specimens/cabr_specimen_bee_missing.csv",
   row.names = FALSE
 )
-cat("Missing-specimens list saved to data/outputs/cabr_missing_specimens_list.csv\n")
+cat("Missing-specimens list saved to data/outputs/specimens/cabr_specimen_bee_missing.csv\n")
 
 # ------------------------------------------------------------
 # STEP 5: Load the checklist and build the complex match lookup --
@@ -151,7 +151,7 @@ cat("Missing-specimens list saved to data/outputs/cabr_missing_specimens_list.cs
 # complex-tagged rows). distinct() guards against any duplicate
 # genus+species keys silently multiplying specimen rows in the join.
 # ------------------------------------------------------------
-checklist_path <- "data/outputs/SD_county_inat_native_bee_checklist.csv"
+checklist_path <- "data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv"
 checklist <- read.csv(checklist_path)
 require_columns(checklist,
                  c("genus", "species", "complex", "complex_taxon_id"),
@@ -268,7 +268,7 @@ if (nrow(old_name_changes) > 0) {
 
 write_fresh(
   clean_bee_data,
-  "data/outputs/cabr_bee_specimens_clean.csv",
+  "data/outputs/specimens/cabr_specimen_bee_record_clean.csv",
   row.names = FALSE
 )
-cat("\nCleaned specimens saved to data/outputs/cabr_bee_specimens_clean.csv\n")
+cat("\nCleaned specimens saved to data/outputs/specimens/cabr_specimen_bee_record_clean.csv\n")

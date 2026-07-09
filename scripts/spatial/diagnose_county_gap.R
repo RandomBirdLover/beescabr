@@ -43,11 +43,11 @@ if (length(gap) == 0 || all(st_is_empty(gap))) {
 
   st_write(
     st_sf(geometry = gap),
-    "data/spatial/boundaries/DIAGNOSTIC_county_gap.shp",
+    "data/spatial/boundaries/san_diego_county/DIAGNOSTIC_county_gap.shp",
     delete_layer = TRUE,
     quiet = TRUE
   )
-  cat("\nWritten to data/spatial/boundaries/DIAGNOSTIC_county_gap.shp\n")
+  cat("\nWritten to data/spatial/boundaries/san_diego_county/DIAGNOSTIC_county_gap.shp\n")
   cat("Load this directly in ArcGIS Pro on top of sd_county_boundary and\n")
   cat("point_loma_boundary to see exactly where the remaining gap(s) are.\n")
 }

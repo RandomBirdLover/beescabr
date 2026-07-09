@@ -124,7 +124,7 @@ ACRES_PER_SQM <- 1 / 4046.8564224
 # Load + reproject: CABR boundary (NPS, authoritative)
 # ------------------------------------------------------------
 cabr_boundary <- st_read(
-  file.path(boundary_dir, "cabr", "cabr_boundary.shp"),
+  file.path(boundary_dir, "cabr", "nps_official", "cabr_boundary_nps_official.shp"),
   quiet = TRUE
 ) |>
   st_transform(PROJECT_CRS)
