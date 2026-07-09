@@ -135,7 +135,7 @@ bees <- bees %>%
 #
 # Before this step existed, those blanks flowed straight through the
 # pipeline into the final Tier 2 outputs (e.g. blank Tribe for every
-# Colletes/Hylaeus/Dufourea row in CABR_native_bee_checklist.csv).
+# Colletes/Hylaeus/Dufourea row in cabr_combined_native_bee_checklist.csv).
 # Backfilling here fixes the problem at the source, so every
 # downstream consumer (Tier 1, Tier 2, the plant pipeline if it ever
 # uses similar logic, etc.) gets correct taxonomy for free.
@@ -531,15 +531,15 @@ write_fresh(checklist_point_loma,
 # specimen-only, and merged CABR checklists can be directly compared:
 #   cabr_inat_bee_checklist.csv     (this file -- iNat only)
 #   cabr_specimen_bee_checklist.csv (specimen only -- built in PART B)
-#   CABR_native_bee_checklist.csv         (merged -- built in PART B; renamed 2026-06-25 to match PL/SD_county tier naming)
+#   cabr_combined_native_bee_checklist.csv (merged -- built in PART B)
 write_fresh(checklist_cabr,
             "data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv",
             row.names = FALSE)
 
-cat("\nThree checklists saved to data/outputs/:\n")
-cat("  SD_county_inat_native_bee_checklist.csv\n")
-cat("  PL_inat_native_bee_checklist.csv\n")
-cat("  cabr_inat_bee_checklist.csv (renamed 2026-06-24, was CABR_inat_native_bee_checklist.csv)\n")
+cat("\nThree Tier 1 checklists saved to data/outputs/checklists/:\n")
+cat("  sd_county/sd_county_inat_native_bee_checklist.csv\n")
+cat("  point_loma/pl_inat_native_bee_checklist.csv\n")
+cat("  cabr/cabr_inat_bee_checklist.csv\n")
 
 # ------------------------------------------------------------
 # STEP 8: Build bee_taxonomy_lookup.csv
@@ -1129,13 +1129,9 @@ checklist_sd_county_v2 <- build_tier2_checklist(
 # ------------------------------------------------------------
 # STEP 5: Save.
 # ------------------------------------------------------------
-# RENAMED 2026-06-25 (was cabr_full_bee_checklist_clean.csv): now
-# CABR_native_bee_checklist.csv to match the PL_native_bee_checklist.csv
-# and SD_county_native_bee_checklist.csv naming pattern for the other
-# two tiers. The earlier rename to cabr_full_bee_checklist_clean.csv
-# (2026-06-24, was originally CABR_native_bee_checklist.csv) is reversed
-# here; the "full" / "_clean" suffixes added no information that the
-# tier name didn't already convey.
+# cabr_combined_native_bee_checklist.csv: merged iNat + specimen checklist,
+# parallel to pl_native_bee_checklist.csv and sd_county_native_bee_checklist.csv.
+# "combined" distinguishes it from the iNat-only and specimen-only CABR files.
 write_fresh(checklist_cabr_v2,
             "data/outputs/checklists/cabr/cabr_combined_native_bee_checklist.csv",
             row.names = FALSE, na = "")
@@ -1146,12 +1142,12 @@ write_fresh(checklist_sd_county_v2,
             "data/outputs/checklists/sd_county/sd_county_native_bee_checklist.csv",
             row.names = FALSE, na = "")
 
-cat("\nTier 2 + specimen checklists saved to data/outputs/:\n")
-cat("  cabr_inat_bee_checklist.csv     (", nrow(checklist_cabr), "rows -- iNat only, see PART A )\n")
-cat("  cabr_specimen_bee_checklist.csv (", nrow(cabr_specimen_checklist), "rows -- specimen only )\n")
-cat("  CABR_native_bee_checklist.csv         (", nrow(checklist_cabr_v2), "rows -- merged, renamed 2026-06-25, was cabr_full_bee_checklist_clean.csv )\n")
-cat("  PL_native_bee_checklist.csv        (", nrow(checklist_point_loma_v2), "rows, includes any genus-only entries )\n")
-cat("  SD_county_native_bee_checklist.csv (", nrow(checklist_sd_county_v2), "rows, includes any genus-only entries; includes Holway cross-check )\n")
+cat("\nTier 2 + specimen checklists saved to data/outputs/checklists/:\n")
+cat("  cabr/cabr_inat_bee_checklist.csv             (", nrow(checklist_cabr), "rows -- iNat only, see PART A )\n")
+cat("  cabr/cabr_specimen_bee_checklist.csv         (", nrow(cabr_specimen_checklist), "rows -- specimen only )\n")
+cat("  cabr/cabr_combined_native_bee_checklist.csv  (", nrow(checklist_cabr_v2), "rows -- merged iNat + specimens )\n")
+cat("  point_loma/pl_native_bee_checklist.csv       (", nrow(checklist_point_loma_v2), "rows, includes any genus-only entries )\n")
+cat("  sd_county/sd_county_native_bee_checklist.csv (", nrow(checklist_sd_county_v2), "rows, includes any genus-only entries; includes Holway cross-check )\n")
 
 cat("\nREMINDER: Museum Collection is blank across all Tier 2 outputs --\n")
 cat("this is 'not yet checked', not a confirmed absence of specimens.\n")

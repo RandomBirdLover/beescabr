@@ -241,7 +241,7 @@ check_containment(cabr_boundary, "cabr_boundary", sd_county_boundary, "sd_county
 buffer_dist_m <- 10  # change this one line to adjust buffer width
 
 transects <- st_read(
-  file.path("data/spatial/transects", "Bee_Transects.shp"),
+  file.path("data/spatial/transects", "cabr_bee_transects.shp"),
   quiet = TRUE
 ) |>
   st_transform(PROJECT_CRS)

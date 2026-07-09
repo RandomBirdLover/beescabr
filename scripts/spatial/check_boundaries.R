@@ -52,7 +52,7 @@ cabr_nps_tracts <- safe_load("cabr_nps_tracts", file.path(boundary_dir, "cabr", 
 
 # Transects: lines, not polygons -- loaded the same way sf handles it
 # automatically based on the shapefile's own geometry type.
-transects <- safe_load("transects", file.path("data/spatial/transects", "Bee_Transects.shp"))
+transects <- safe_load("transects", file.path("data/spatial/transects", "cabr_bee_transects.shp"))
 
 # 10m buffer around transects, same buffer_dist_m used in spatial_utils.R
 transects_buffer_10m <- NULL

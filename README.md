@@ -6,13 +6,14 @@ Native bee biodiversity pipeline for Cabrillo National Monument (CABR), comparin
 
 ## Quickstart — run order
 
-New here? Do the one-time **Setup** below, then run the pipeline. In normal use you just open `native_bee_data_analysis.Rmd` and run it chunk by chunk — it sources everything else in the right order. The individual scripts, in dependency order:
+New here? Do the one-time **Setup** below, then run the pipeline. In normal use you just open `scripts/analysis/native_bee_data_analysis.Rmd` and run it chunk by chunk — it sources everything else in the right order. The individual scripts, in dependency order:
 
-1. `native_bee_checklist.R` — sources `spatial_utils.R` + `utils.R` automatically; writes the Tier 1 and Tier 2 checklists. Auto-sources `bee_specimen_clean.R` when needed — **do not run `bee_specimen_clean.R` standalone first**, as it depends on a file Part A of this script writes.
-2. `bee_inat_clean.R` — cleans the non-lethal iNat data (intern + beeple).
-3. `native_bee_data_analysis.Rmd` — the orchestrator; sources the above and runs the actual richness/method analysis.
+1. `scripts/clean/inat_bee_clean.R` — cleans the non-lethal bee iNat data (intern + beeple); writes `data/outputs/inat_clean/cabr_inat_bee_clean.csv`.
+2. `scripts/clean/inat_plant_clean.R` — cleans the non-lethal plant iNat data; writes `data/outputs/inat_clean/cabr_inat_plant_clean.csv`.
+3. `scripts/checklists/native_bee_checklist.R` — sources `scripts/spatial/spatial_utils.R` + `scripts/utils/utils.R` automatically; writes the Tier 1 and Tier 2 checklists. Auto-sources `scripts/clean/specimen_bee_clean.R` when needed — **do not run `specimen_bee_clean.R` standalone first**, as it depends on a file Part A of this script writes.
+4. `scripts/analysis/native_bee_data_analysis.Rmd` — the orchestrator; sources the above and runs the actual richness/method analysis.
 
-Standalone tools (run only when needed, not part of the sequence above): `discover_inat_fields_cabr_clip.R` (iNat field-discovery QC), `check_boundaries.R` / `plot_boundaries_individually.R` / `diagnose_county_gap.R` (spatial diagnostics), `dorey_bee_checklist.R` (one-time Dorey filter).
+Standalone tools (run only when needed, not part of the sequence above): `scripts/spatial/check_boundaries.R` / `scripts/spatial/plot_boundaries_individually.R` / `scripts/spatial/diagnose_county_gap.R` (spatial diagnostics), `scripts/checklists/dorey_bee_checklist.R` (one-time Dorey filter).
 
 Full detail with inputs, outputs, and dependency notes: see **Pipeline overview** below.
 
@@ -56,32 +57,33 @@ install.packages(c(
 ```
 beescabr/
   scripts/
-    utils.R                          # shared read_latest(), require_columns()
-    native_bee_checklist.R           # PART A: TIER 1 (iNat-only) checklists, SD County/Point Loma/CABR
+    utils/
+      utils.R                        # shared read_latest(), require_columns()
+    clean/
+      inat_bee_clean.R               # cleans non-lethal bee iNat data (intern + beeple)
+      inat_plant_clean.R             # cleans non-lethal plant iNat data
+      specimen_bee_clean.R           # cleans lethal CABR specimen data; QC flags; complex match
+    checklists/
+      native_bee_checklist.R         # PART A: TIER 1 (iNat-only) checklists, SD County/Point Loma/CABR
                                       # PART B: TIER 2 (merged) checklists + CABR specimen checklist
-    bee_specimen_clean.R             # cleans lethal CABR specimen data; QC flags; complex match
-    bee_inat_clean.R                 # cleans non-lethal iNat data (intern + beeple)
-    discover_inat_fields_cabr_clip.R # QC/DISCOVERY (standalone, not orchestrated): crawls the iNat
-                                      # API (v1) for CABR-box bee obs by the roster's observers, then
-                                      # lists every observation field used — incl. fields never used
-                                      # locally, which the CSV export omits — to verify the obs_field
-                                      # rows of project_tags_fields.csv before bee_inat_clean.R
-    spatial_utils.R                  # loads + reprojects boundaries; containment checks; 10m
+      dorey_bee_checklist.R          # ONE-TIME/MANUAL: filters the Dorey et al. (2023) global
+                                      # dataset to SD County; not part of the automatic pipeline
+    analysis/
+      native_bee_data_analysis.Rmd   # main analysis document — sources the above
+    spatial/
+      spatial_utils.R                # loads + reprojects boundaries; containment checks; 10m
                                       # transect buffers in memory
-    check_boundaries.R                # standalone diagnostic: plots all boundaries overlaid together
-    plot_boundaries_individually.R    # companion to check_boundaries.R: one map per boundary layer
-    diagnose_county_gap.R             # verification tool: computes any gap between point_loma_boundary
+      check_boundaries.R             # standalone diagnostic: plots all boundaries overlaid together
+      plot_boundaries_individually.R # companion to check_boundaries.R: one map per boundary layer
+      diagnose_county_gap.R          # verification tool: computes any gap between point_loma_boundary
                                       # and sd_county_boundary; re-run after any future boundary
                                       # re-sourcing to confirm containment still holds
-    dorey_bee_checklist.R            # ONE-TIME/MANUAL: filters the Dorey et al. (2023) global
-                                      # dataset to SD County; not part of the automatic pipeline
-    native_bee_data_analysis.Rmd     # main analysis document — sources the above
   data/                            # gitignored — NOT on GitHub (see .gitignore)
     project_info/                  # survey roster + tag/field crosswalk (project metadata)
-      observers_by_year.csv        # per-year observer roster: username, role, method, technique
+      surveyors_by_year.csv        # per-year surveyor roster: username, role, method, technique
       project_tags_fields.csv      # iNat tag / observation-field → keep/flag/exclude crosswalk
     reference_exports/
-      native_bees/                 # iNat SD County bee exports
+      native_bees/                 # iNat SD County bee exports (inat_native_bees_sdcounty_25_mi_buffer_*)
       plants/                      # iNat SD County plant exports
       gbif/                        # GBIF regional reference exports
       dorey_2023/                  # BeeBDC (Dorey et al. 2023) global dataset, filtered to SD County
@@ -89,21 +91,49 @@ beescabr/
                                     # one combined reference CSV for the Tier 2 cross-check
     cabr_surveys/
       lethal/                      # all versions of specimen file live here
-        CABR_bee_specimens_V1_2026-05-04.xlsx
-        CABR_bee_specimens_V2_2026-05-29.xlsx
+        cabr_bee_specimens_record_V1_2026-05-04.xlsx
+        cabr_bee_specimens_record_V2_2026-05-29.xlsx
         ...
-        CABR_bee_specimens_V{n}_{YYYY-MM-DD}.xlsx   ← newest = authoritative
+        cabr_bee_specimens_record_V{n}_{YYYY-MM-DD}.xlsx   ← newest = authoritative
         deposit/                   # permanent specimen transfers
         loans/                     # temporary specimen transfers
       nonlethal_inat_intern/       # intern iNat photo observations
       nonlethal_inat_beeple/       # beeple iNat photo observations
     spatial/
-      transects/                   # Bee_Transects.shp — source of truth for buffers
+      transects/
+        cabr_bee_transects.shp     # source of truth for transect buffers
       boundaries/
-        cabr/                      # cabr_boundary.shp, cabr_survey_box.shp
+        cabr/
+          nps_official/            # NPS-authoritative shapefiles
+            cabr_boundary_nps_official.shp
+            cabr_tracts_nps_official.shp
+          cabr_survey_box.shp      # hand-drawn survey inclusion polygon (see Spatial analysis)
         point_loma/                # point_loma_boundary.shp
         san_diego_county/          # sd_county_boundary.shp (Union+Dissolve, see Spatial analysis)
+                                    # DIAGNOSTIC_county_gap.shp (diagnostic output)
     outputs/                       # generated by scripts — do not edit manually
+      inat_clean/
+        cabr_inat_bee_clean.csv
+        cabr_inat_plant_clean.csv
+        qc/
+          cabr_inat_bee_unknown_tags.csv
+          cabr_inat_plant_unknown_tags.csv
+      checklists/
+        cabr/
+          cabr_combined_native_bee_checklist.csv   # TIER 2 merged (iNat + specimens)
+          cabr_inat_bee_checklist.csv              # TIER 1 iNat-only
+          cabr_specimen_bee_checklist.csv          # specimen-only
+        point_loma/
+          pl_inat_native_bee_checklist.csv         # TIER 1
+          pl_native_bee_checklist.csv              # TIER 2
+        sd_county/
+          sd_county_inat_native_bee_checklist.csv  # TIER 1
+          sd_county_native_bee_checklist.csv       # TIER 2
+      specimens/
+        cabr_specimen_bee_record_clean.csv
+        cabr_specimen_bee_missing.csv
+      reference/
+        bee_taxonomy_lookup.csv
   SPECIMEN_CHANGELOG.md            # version history for specimen spreadsheet
   README.md
 ```
@@ -124,19 +154,19 @@ beescabr/
 ### iNat and GBIF exports
 
 ```
-inat_native_bees_sdcounty_YYYY-MM-DD.csv
+inat_native_bees_sdcounty_25_mi_buffer_YYYY-MM-DD.csv
 inat_plants_sdcounty_YYYY-MM-DD.csv
 gbif_bees_sdcounty_YYYY-MM-DD.csv
 ```
 
-**Note on `inat_native_bees_sdcounty`:** as of 2026-06-22, this is one master export covering all bees in San Diego County (25 Mile Buffer) except *Apis mellifera* (Western Honey Bee), excluded at export time for observation-volume reasons — see **iNat export instructions** below. "Native" here refers specifically to the honey-bee exclusion; no other non-native species are filtered. As of 2026-06-23, `native_bee_checklist.R` spatially splits these raw observations into three geographic tiers (SD County / Point Loma / CABR) BEFORE deriving each tier's checklist — Point Loma and CABR checklists are not built from the SD County checklist; all three are independently derived from this one export (see **Pipeline overview**).
+**Note on `inat_native_bees_sdcounty_25_mi_buffer`:** as of 2026-06-22, this is one master export covering all bees in San Diego County (25 Mile Buffer) except *Apis mellifera* (Western Honey Bee), excluded at export time for observation-volume reasons — see **iNat export instructions** below. "Native" here refers specifically to the honey-bee exclusion; no other non-native species are filtered. As of 2026-06-23, `scripts/checklists/native_bee_checklist.R` spatially splits these raw observations into three geographic tiers (SD County / Point Loma / CABR) BEFORE deriving each tier's checklist — Point Loma and CABR checklists are not built from the SD County checklist; all three are independently derived from this one export (see **Pipeline overview**).
 
-Date = download date, always YYYY-MM-DD. Drop the file directly into the correct subfolder — do not leave it in Downloads or rename it after the fact. Scripts auto-detect the newest file using `read_latest()`.
+Date = download date, always YYYY-MM-DD. Drop the file directly into `data/reference_exports/native_bees/` — do not leave it in Downloads or rename it after the fact. Scripts auto-detect the newest file using `read_latest()`.
 
 ### Specimen file
 
 ```
-CABR_bee_specimens_V{n}_{YYYY-MM-DD}.xlsx
+cabr_bee_specimens_record_V{n}_{YYYY-MM-DD}.xlsx
 ```
 
 All versions live in `data/cabr_surveys/lethal/`. The pipeline always reads the newest one. See **Specimen version management** below.
@@ -144,8 +174,8 @@ All versions live in `data/cabr_surveys/lethal/`. The pipeline always reads the 
 ### Deposit and loan tracking files
 
 ```
-deposit/CABR_bee_deposit_{taxon}_{recipient}.xlsx
-loans/CABR_bee_loan_{taxon}_{recipient}.xlsx
+deposit/cabr_bee_specimen_record_deposit_{taxon}_{recipient}.xlsx
+loans/cabr_bee_loan_{taxon}_{recipient}.xlsx
 ```
 
 ### Column naming: bare rank names (decision, 2026-06-24, supersedes an earlier same-day decision)
@@ -169,7 +199,7 @@ All versions of the specimen Excel file live together in `data/cabr_surveys/leth
 **When you update the specimen file:**
 1. Open the current version in Excel
 2. Make your changes
-3. **Save As** → `CABR_bee_specimens_V{n+1}_{YYYY-MM-DD}.xlsx` in the same `lethal/` folder
+3. **Save As** → `cabr_bee_specimens_record_V{n+1}_{YYYY-MM-DD}.xlsx` in the same `lethal/` folder
 4. Add a row to `SPECIMEN_CHANGELOG.md` describing what changed
 5. Commit and push `SPECIMEN_CHANGELOG.md`
 
@@ -225,8 +255,8 @@ Rename to the convention above and drop into the correct subfolder. Do not keep 
 
 Two scripts pull directly from the iNaturalist API rather than from the CSV export above:
 
-- `discover_inat_fields_cabr_clip.R` — observation-field discovery, via the `/v1/observations` endpoint (see below for why the API, not the export, is used for this).
-- `native_bee_checklist.R` — per-taxon taxonomy/ancestry lookups (the ~400-call fetch noted in **Pipeline overview**), via the v1 taxa endpoints.
+- `scripts/clean/inat_bee_clean.R` — fetches non-lethal bee survey observations, tags, and observation fields directly via the `/v1/observations` endpoint (see below for why the API, not the export, is used for this).
+- `scripts/checklists/native_bee_checklist.R` — per-taxon taxonomy/ancestry lookups (the ~400-call fetch noted in **Pipeline overview**), via the v1 taxa endpoints.
 
 Both use **API v1**.
 
@@ -237,10 +267,10 @@ https://api.inaturalist.org/v1/observations
 ```
 
 - **v1** is the Node-based API. Read-only for our purposes — no authentication or API key required.
-- **Pagination:** max `per_page = 200`. `discover_inat_fields_cabr_clip.R` pages with an `id_above` cursor (no 10,000-record ceiling) rather than page numbers.
+- **Pagination:** max `per_page = 200`. `inat_bee_clean.R` pages with an `id_above` cursor (no 10,000-record ceiling) rather than page numbers.
 - **Rate limits (per iNat's [recommended practices](https://www.inaturalist.org/pages/api+recommended+practices)):** ~1 request/second, ~10,000 requests/day. Scripts include a `Sys.sleep(1)` between pages. The API is intended for small-to-medium pulls, not bulk download.
 
-**Why the API and not the export (for field discovery):** iNat's CSV export only includes an observation-field column for fields the *exporter* has personally used. A field another observer attached but the exporter never has is invisible to the export — so the export can confirm known fields but can never *discover* an unknown one. The API returns every field attached to every observation (`ofvs`), regardless of who used it, which is exactly what `discover_inat_fields_cabr_clip.R` needs to verify the crosswalk is complete. (This is the blind spot flagged in the iNat-cleanup TODO item.)
+**Why the API and not the export (for inat_bee_clean.R):** iNat's CSV export only includes an observation-field column for fields the *exporter* has personally used. A field another observer attached but the exporter never has is invisible to the export — so the export can confirm known fields but can never *discover* an unknown one. The API returns every field attached to every observation (`ofvs`), regardless of who used it, which is exactly what `inat_bee_clean.R` needs to triage observations against the crosswalk. (This is the blind spot flagged in the iNat-cleanup TODO item.)
 
 **Why v1, not v2 (as of 2026-07-06):** v1 is the version iNaturalist's own website and mobile apps run on, so it is the best-supported and most stable choice. A v2 API exists but is still stabilizing and has returned incomplete results on some queries — so v1 is currently the *safer* option here, not the outdated one. iNat currently treats the older v0 (Rails) API as the deprecated one; there is no announced retirement date for v1.
 
@@ -254,27 +284,50 @@ Watch iNaturalist's forum (News & Updates) for any v1 sunset notice; a maintaine
 
 ## Pipeline overview
 
-`native_bee_data_analysis.Rmd` is the orchestrator — it sources everything below in order, so in practice you just run the Rmd chunk by chunk. Listed individually here for reference:
+`scripts/analysis/native_bee_data_analysis.Rmd` is the orchestrator — it sources everything below in order, so in practice you just run the Rmd chunk by chunk. Listed individually here for reference:
 
 ```
-1. spatial_utils.R                 reads boundary shapefiles (CABR, Point Loma, SD County) +
-                                   Bee_Transects.shp → generates buffer_10m in memory; also
-                                   provides cabr_survey_box / point_loma_boundary / sd_county_boundary
-                                   used to spatially split observations into tiers in step 2 below.
-                                   Sourced automatically BY native_bee_checklist.R — you don't need
-                                   to run this separately first.
+1. scripts/spatial/spatial_utils.R      reads boundary shapefiles (CABR, Point Loma, SD County)
+                                         + cabr_bee_transects.shp → generates buffer_10m in memory;
+                                         also provides cabr_survey_box / point_loma_boundary /
+                                         sd_county_boundary used to spatially split observations
+                                         into tiers in step 3 below.
+                                         Sourced automatically BY native_bee_checklist.R — you
+                                         don't need to run this separately first.
 
-2. native_bee_checklist.R          PART A: reads ONE master iNat export (inat_native_bees_sdcounty,
-                                   all of SD County 25mi buffer, Apis mellifera excluded — see iNat
-                                   export instructions), then SPATIALLY SPLITS those observations
-                                   into three geographic tiers (SD County / Point Loma / CABR) using
+2. scripts/clean/inat_bee_clean.R        fetches non-lethal bee survey observations straight from
+                                         the iNaturalist API (v1) — roster observers, CABR box,
+                                         bees minus Apis mellifera — because the CSV export drops
+                                         the tags and observation fields the crosswalk triages on.
+                                         Then: fills any "fill in" field options from the API,
+                                         clips to cabr_survey_box, cleans (dates/missing
+                                         flags/data_source), and TRIAGES every observation against
+                                         project_tags_fields.csv into keep / flag / exclude.
+                                         Reads the crosswalk as its spec, so adding rows/variants
+                                         there changes behavior with no code edit.
+                                         → writes data/outputs/inat_clean/cabr_inat_bee_clean.csv
+                                         → writes data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv
+                                         (review — see below)
+                                         (kept strictly separate by method — intern vs. beeple —
+                                         via the roster role column)
+
+   scripts/clean/inat_plant_clean.R      same pipeline for non-lethal plant survey observations.
+                                         → writes data/outputs/inat_clean/cabr_inat_plant_clean.csv
+                                         → writes data/outputs/inat_clean/qc/cabr_inat_plant_unknown_tags.csv
+
+3. scripts/checklists/native_bee_checklist.R
+                                   PART A: reads ONE master iNat export
+                                   (inat_native_bees_sdcounty_25_mi_buffer_*, all of SD County
+                                   25mi buffer, Apis mellifera excluded — see iNat export
+                                   instructions), then SPATIALLY SPLITS those observations into
+                                   three geographic tiers (SD County / Point Loma / CABR) using
                                    the boundaries from spatial_utils.R, BEFORE deduplicating each
                                    subset to unique taxa. This is a genuine spatial split of
                                    observations, not three separate exports.
                                    (hits iNat API ~400 calls ONCE total across all 3 tiers, ~3-4 min)
-                                   → writes data/outputs/SD_county_inat_native_bee_checklist.csv
-                                   → writes data/outputs/PL_inat_native_bee_checklist.csv
-                                   → writes data/outputs/cabr_inat_bee_checklist_clean.csv
+                                   → writes data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv
+                                   → writes data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv
+                                   → writes data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv
                                    (only re-run if any of the three files is missing)
                                    These are TIER 1 (iNat-only) checklists.
 
@@ -283,76 +336,50 @@ Watch iNaturalist's forum (News & Updates) for any v1 sunset notice; a maintaine
                                    columns (Family/Subfamily/Tribe/Genus/Subgenus/Complex/Species/
                                    Subspecies + evidence columns), folding in CABR specimen
                                    evidence and a Holway-checklist cross-check for SD County.
-                                   → writes data/outputs/CABR_native_bee_checklist.csv          (merged)
-                                   → writes data/outputs/cabr_specimen_bee_checklist_clean.csv (specimen-only)
-                                   → writes data/outputs/PL_native_bee_checklist.csv
-                                   → writes data/outputs/SD_county_native_bee_checklist.csv
+                                   → writes data/outputs/checklists/cabr/cabr_combined_native_bee_checklist.csv  (merged)
+                                   → writes data/outputs/checklists/cabr/cabr_specimen_bee_checklist.csv         (specimen-only)
+                                   → writes data/outputs/checklists/point_loma/pl_native_bee_checklist.csv
+                                   → writes data/outputs/checklists/sd_county/sd_county_native_bee_checklist.csv
 
-                                   DEPENDENCY NOTE: Part B needs data/outputs/cabr_bee_specimens_clean.csv
-                                   to exist — it auto-sources bee_specimen_clean.R if that file is
-                                   missing (see step 3). But bee_specimen_clean.R itself needs
-                                   SD_county_inat_native_bee_checklist.csv (written by Part A above)
+                                   DEPENDENCY NOTE: Part B needs
+                                   data/outputs/specimens/cabr_specimen_bee_record_clean.csv
+                                   to exist — it auto-sources specimen_bee_clean.R if that file is
+                                   missing (see step 4). But specimen_bee_clean.R itself needs
+                                   sd_county_inat_native_bee_checklist.csv (written by Part A above)
                                    to populate the complex match. This resolves correctly as long as
                                    native_bee_checklist.R is run as one whole script — Part A always
                                    finishes writing that file before Part B's auto-source check runs.
-                                   Do NOT run bee_specimen_clean.R standalone before
+                                   Do NOT run specimen_bee_clean.R standalone before
                                    native_bee_checklist.R has been run at least once.
 
-3. bee_specimen_clean.R            reads newest CABR_bee_specimens_V{n} → QC-flags missing
-                                   lat/long, date, sdnhm_id, ucsd_id, genus → matches complex/
-                                   complex_taxon_id against the SD County TIER 1 checklist
-                                   (genus+species, gated on species-level ID)
-                                   → writes data/outputs/cabr_bee_specimens_clean.csv
-                                   → writes data/outputs/cabr_missing_specimens_list.csv
-                                   See dependency note under step 2 — normally runs automatically
-                                   as part of native_bee_checklist.R Part B, not standalone first.
+4. scripts/clean/specimen_bee_clean.R    reads newest cabr_bee_specimens_record_V{n} → QC-flags
+                                         missing lat/long, date, sdnhm_id, ucsd_id, genus →
+                                         matches complex/complex_taxon_id against the SD County
+                                         TIER 1 checklist (genus+species, gated on species-level ID)
+                                         → writes data/outputs/specimens/cabr_specimen_bee_record_clean.csv
+                                         → writes data/outputs/specimens/cabr_specimen_bee_missing.csv
+                                         See dependency note under step 3 — normally runs
+                                         automatically as part of native_bee_checklist.R Part B,
+                                         not standalone first.
 
-4. bee_inat_clean.R                fetches non-lethal survey observations straight from the
-                                   iNaturalist API (v1) — roster observers, CABR box, bees minus
-                                   Apis mellifera — because the CSV export drops the tags and
-                                   observation fields the crosswalk triages on. Then: fills any
-                                   "fill in" field options from the API, clips to cabr_survey_box,
-                                   cleans (dates/missing flags/data_source), and TRIAGES every
-                                   observation against project_tags_fields.csv into keep / flag /
-                                   exclude. Reads the crosswalk as its spec, so adding rows/variants
-                                   there changes behavior with no code edit.
-                                   → writes data/outputs/CABR_nonlethal_inat_clean.csv
-                                   → writes data/outputs/CABR_inat_unknown_fields.csv  (review — see below)
-                                   → writes data/outputs/CABR_inat_unknown_tags.csv    (review — see below)
-                                   (kept strictly separate by method — intern vs. beeple — via the
-                                   roster role column; see TODO: checklist architecture)
-
-5. native_bee_data_analysis.Rmd    sources 2–4 above (which in turn sources 1), then does the
-                                   actual richness/method comparison
-```
+5. scripts/analysis/native_bee_data_analysis.Rmd
+                                         sources 2–4 above (which in turn sources 1), then does
+                                         the actual richness/method comparison
 ```
 
-`utils.R` (shared `read_latest()` and `require_columns()`) is sourced by every script above — not a standalone step.
+`scripts/utils/utils.R` (shared `read_latest()` and `require_columns()`) is sourced by every script above — not a standalone step.
 
 ---
 
-## Reviewing unknown fields and tags (after every `bee_inat_clean.R` run)
+## Reviewing unknown tags (after every `inat_bee_clean.R` run)
 
-`bee_inat_clean.R` triages observations against the crosswalk
-(`project_tags_fields.csv`). Anything the crosswalk doesn't recognize is
-**ignored** — so the script writes two "unknown" files as an early-warning
-system, and the console prints an **ACTION NEEDED** block when either has rows.
-Check them after each run so nothing important slips past silently.
+`scripts/clean/inat_bee_clean.R` triages observations against the crosswalk
+(`data/project_info/project_tags_fields.csv`). Anything the crosswalk doesn't
+recognize is **ignored** — so the script writes an "unknown tags" file as an
+early-warning system, and the console prints an **ACTION NEEDED** block when it
+has rows. Check it after each run so nothing important slips past silently.
 
-**`CABR_inat_unknown_fields.csv` — observation fields not in the crosswalk.**
-This should trend to **zero** (it means the crosswalk covers every field in the
-data). If rows appear, someone used a new observation field. For each one,
-decide:
-- **Keep** it as its own field → add a row to `project_tags_fields.csv` with its
-  `field_id` (set `allowed_values` to `fill in` and the next run fetches its
-  options).
-- **Fold** it into an existing field that means the same thing → add its
-  `field_id` to that row's `;`-separated `field_id` list.
-- **Ignore** it → do nothing; it stays out of the crosswalk and out of the data.
-
-Then re-run; the field clears from the list.
-
-**`CABR_inat_unknown_tags.csv` — tags not in the crosswalk.**
+**`data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv` — tags not in the crosswalk.**
 This list is normally **long and mostly harmless** — camera/lens tags (`D500`,
 `300mm f/4`), species names, photo filenames, `City Nature Challenge`, etc.
 Ignore those. You are scanning for **one thing only**: a tag that looks like a
@@ -360,8 +387,11 @@ Ignore those. You are scanning for **one thing only**: a tag that looks like a
 year. If you spot one, add it as an `inat_variant` on the matching survey row in
 the crosswalk, re-run, and those observations move from `flag` to `keep`.
 
-**Rule of thumb:** `unknown_fields` should go to zero; `unknown_tags` won't (and
-shouldn't) — you're just skimming it for missed survey tags.
+The same applies to `data/outputs/inat_clean/qc/cabr_inat_plant_unknown_tags.csv`
+after a `scripts/clean/inat_plant_clean.R` run.
+
+**Rule of thumb:** `unknown_tags` won't trend to zero (and shouldn't) — you're
+just skimming it for missed survey tags.
 
 ---
 
@@ -380,7 +410,7 @@ iNaturalist uses a taxonomic rank called **Complex** for cryptic species groups 
 
 ## Spatial analysis
 
-Transect buffers are generated in R via `spatial_utils.R`. Default = 10m. To change:
+Transect buffers are generated in R via `scripts/spatial/spatial_utils.R`. Default = 10m. To change:
 
 ```r
 buffer_dist_m <- 5  # change this one line in spatial_utils.R
@@ -394,8 +424,9 @@ Boundary shapefiles live in `data/spatial/boundaries/`, each in its own subfolde
 
 | File | Location | Source | Notes |
 |------|----------|--------|-------|
-| `cabr_boundary.shp` | `boundaries/cabr/` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. 160.4 acres, matches NPS-published figure (~160 acres). Unmodified. Used as a provenance label only — see below, not a filter. |
-| `cabr_survey_box.shp` | `boundaries/cabr/` | Hand-drawn in ArcGIS Pro | The actual CABR-tier inclusion geometry — see below. Lives alongside `cabr_boundary.shp`, not in its own subfolder. |
+| `cabr_boundary_nps_official.shp` | `boundaries/cabr/nps_official/` | NPS Land Resources Division (UNIT_CODE = CABR) | Official monument boundary. 160.4 acres, matches NPS-published figure (~160 acres). Unmodified. Used as a provenance label only — see below, not a filter. |
+| `cabr_tracts_nps_official.shp` | `boundaries/cabr/nps_official/` | NPS Land Resources Division | Official NPS tract boundaries. |
+| `cabr_survey_box.shp` | `boundaries/cabr/` | Hand-drawn in ArcGIS Pro | The actual CABR-tier inclusion geometry — see below. Lives at the `cabr/` level, not in `nps_official/`. |
 | `point_loma_boundary.shp` | `boundaries/point_loma/` | City of San Diego "PENINSULA" community plan district (CPCODE 30), re-downloaded fresh 2026-06-24 | **Unmodified** authoritative source. Replaces the prior hand-edited + 5m-buffered version — see superseded history below. |
 | `sd_county_boundary.shp` | `boundaries/san_diego_county/` | County of San Diego Open Data Portal, unioned with `point_loma_boundary` then dissolved (ArcGIS Pro, 2026-06-24) | **Not the raw county boundary alone** — this is a single dissolved polygon covering County + Point Loma combined. The original county-only file was not preserved separately. See note below. |
 
@@ -437,35 +468,35 @@ Both failures trace to the same cause: `cabr_boundary` (NPS authoritative source
 
 ## TODO
 
-- [x] Integrate `read_latest()` into `native_bee_data_analysis.Rmd`
+- [x] Integrate `read_latest()` into `scripts/analysis/native_bee_data_analysis.Rmd`
 - [x] Add `complex` column to specimen sheet (V9)
 - [ ] Plant checklist script
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] Formal specimen deposit to SDNHM (Pam Horsley)
 - [ ] Verify whether *Andrena cerasifolii* and *Andrena impolita* are genuinely both members of the same iNat species complex (same kind of check done for *Agapostemon subtilior*/*texanus* — see SPECIMEN_CHANGELOG.md V9), before treating that complex grouping as settled
 - [x] Point Loma/CABR boundary shapefiles (`spatial/boundaries/` — see Spatial analysis section above; SD County boundary also added; CABR survey box + Point Loma gap resolution finalized 2026-06-22)
-- [x] **iNat export → spatial subset mechanism IMPLEMENTED** (2026-06-23): one master `inat_native_bees_sdcounty` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) is spatially split by `native_bee_checklist.R` into three geographic tiers — SD County (`sd_county_boundary`), Point Loma (`point_loma_boundary`), and CABR (`cabr_survey_box`, not `cabr_boundary`) — BEFORE deduplicating to unique taxa per tier. This replaced the old single-file `inat_bee_checklist` / `SD_inat_bee_checklist.csv` entirely; see **Pipeline overview** above for the three output filenames. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
+- [x] **iNat export → spatial subset mechanism IMPLEMENTED** (2026-06-23): one master `inat_native_bees_sdcounty_25_mi_buffer` export (all Anthophila except *Apis mellifera*, San Diego County 25 Mile Buffer) is spatially split by `scripts/checklists/native_bee_checklist.R` into three geographic tiers — SD County (`sd_county_boundary`), Point Loma (`point_loma_boundary`), and CABR (`cabr_survey_box`, not `cabr_boundary_nps_official`) — BEFORE deduplicating to unique taxa per tier. This replaced the old single-file `inat_bee_checklist` / `SD_inat_bee_checklist.csv` entirely; see **Pipeline overview** above for the three output filenames. This resolves the *mechanism* for tier 2 below — the *merge with other sources* (Dorey/specimens) is still open.
 - [x] **Conceptualize full checklist architecture** (raised 2026-06-21, mechanism implemented 2026-06-23, TIER 2 implemented 2026-06-24) — Two tiers:
-  (1) source-specific checklists as building blocks: `SD_county_inat_native_bee_checklist` / `PL_inat_native_bee_checklist` / `cabr_inat_bee_checklist_clean` (iNat-only, **done**), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
-  (2) `SD_county_native_bee_checklist` / `PL_native_bee_checklist` / `CABR_native_bee_checklist` (no "inat" in the name) — **done 2026-06-24** for iNat + CABR specimen evidence (Dorey integration still open, since Dorey itself remains deprioritized). Built in `native_bee_checklist.R` PART B. Actual decisions made, differing slightly from the original target format above:
+  (1) source-specific checklists as building blocks: `sd_county_inat_native_bee_checklist` / `pl_inat_native_bee_checklist` / `cabr_inat_bee_checklist` (iNat-only, **done**), `Dorey_bee_checklist` (BeeBDC-derived — **deprioritized 2026-06-22**, see note below);
+  (2) `sd_county_native_bee_checklist` / `pl_native_bee_checklist` / `cabr_combined_native_bee_checklist` (no "inat" in the name) — **done 2026-06-24** for iNat + CABR specimen evidence (Dorey integration still open, since Dorey itself remains deprioritized). Built in `scripts/checklists/native_bee_checklist.R` PART B. Actual decisions made, differing slightly from the original target format above:
     - Holway's column layout (Family/Subfamily/Tribe/Genus/Subgenus/Species/Authority + evidence columns) is followed, but with TWO additions: `Complex` (between Subgenus and Species) and `Subspecies` (after Species) — dropping these just to match Holway's exact columns would throw away real taxonomic resolution we already have.
     - Species-level-only was the original target, but this was revised: genus-only rows ARE kept (genus-minimum rule applies pipeline-wide), with Species/Subspecies/Complex simply blank for those rows.
     - Holway's Described/Tentative/Unpublished three-sheet split is **not** adopted — out of scope. Instead, all three of his sheets are flattened into one 717-name combined reference for a single cross-check column ("Found in Holway checklist?", SD County tier only).
-    - A separate `cabr_specimen_bee_checklist_clean.csv` (specimen-only, unique taxa) was also added so the iNat-derived and specimen-derived checklists can be directly diffed against each other.
+    - A separate `cabr_specimen_bee_checklist.csv` (specimen-only, unique taxa) was also added so the iNat-derived and specimen-derived checklists can be directly diffed against each other.
   Separately, CABR survey checklists (lethal vs. intern iNat vs. beeple iNat) must stay strictly separated by method — never merged — broken out by year, to support the core lethal-vs-non-lethal comparison.
-- [ ] **NPS-tract vs. survey-box checklist split** (using `cabr_boundary.shp`, see Spatial analysis table above): build a strict NPS-based CABR checklist alongside the current `cabr_survey_box`-based one, so the two can be compared. Not yet implemented — `cabr_boundary.shp` is loaded for reference only so far.
+- [ ] **NPS-tract vs. survey-box checklist split** (using `cabr_boundary_nps_official.shp`, see Spatial analysis table above): build a strict NPS-based CABR checklist alongside the current `cabr_survey_box`-based one, so the two can be compared. Not yet implemented — `cabr_boundary_nps_official.shp` is loaded for reference only so far.
 - [ ] **ArcGIS project versioning** (raised 2026-06-22): `.aprx`/`.gdb` files aren't Git-friendly (binary, machine-specific paths, no meaningful diffs) — committing the live ArcGIS Pro project directly isn't a good fit for this repo. Decide on an approach: (a) keep committing only the shapefiles (current practice) plus a static map export (PDF/PNG) for visual reference, or (b) script the symbology/layout setup (e.g. via ArcPy) so the map can be rebuilt from scratch rather than version-controlling the binary project itself.
-- [ ] **Verify whether "Quality Grade = Any" actually includes Casual-grade observations** (raised 2026-06-25): iNat has a known issue where "Any" quality grade does not reliably return Casual-grade observations in all parts of the site/export system — "Any" is not actually "any" (see iNaturalist GitHub issue #4186 and linked forum thread). If this affects the `inat_native_bees_sdcounty` export specifically, an unknown number of CABR-area observations — likely overlapping with the ones missing date/location flagged for the iNat cleanup effort below — could be silently absent from the entire pipeline.
-  - How to check: pick 1-2 known Casual-grade CABR observations (e.g. ones with missing date/location) → check if they appear in the latest `inat_native_bees_sdcounty_YYYY-MM-DD.csv` export.
+- [ ] **Verify whether "Quality Grade = Any" actually includes Casual-grade observations** (raised 2026-06-25): iNat has a known issue where "Any" quality grade does not reliably return Casual-grade observations in all parts of the site/export system — "Any" is not actually "any" (see iNaturalist GitHub issue #4186 and linked forum thread). If this affects the `inat_native_bees_sdcounty_25_mi_buffer` export specifically, an unknown number of CABR-area observations — likely overlapping with the ones missing date/location flagged for the iNat cleanup effort below — could be silently absent from the entire pipeline.
+  - How to check: pick 1-2 known Casual-grade CABR observations (e.g. ones with missing date/location) → check if they appear in the latest `inat_native_bees_sdcounty_25_mi_buffer_YYYY-MM-DD.csv` export.
   - If missing: the export needs a second pass with `quality_grade = Casual` explicitly selected, combined with the existing "Any" export, to actually capture everything.
   - If present: no pipeline change needed — just document here that "Any" was verified to work as expected for this project, so the question doesn't resurface later.
 - [ ] **iNat observation cleanup project** (raised 2026-06-25, planning meeting 2026-06-25): separate, larger effort from the R pipeline above — cleaning up CABR-area iNat observations (bees and plants) directly on iNaturalist itself, across all years (2022 and 2025 flagged as worst), with Jess, Patricia, James Hung, John Ascher, and possibly other iNat-affiliated scientists doing the identification work. Goal: get observations to the closest possible identification level, with observation fields (location, date, "visited what flower?", "flowering?") filled in from surveyor (intern/beeple) records. Open sub-items:
   - R-assisted audit: pull all SD County bee + plant data, sort by location (CABR survey box / Point Loma / SD County) and by user, surface observations missing tags (grouped by date), observations with no/weak ID, and — separately, since this requires re-enabling the "Observation fields" export column normally unchecked for file size — observations missing the "visited what flower?" / "flowering?" fields.
   - Coordination problem (not a code problem): with multiple people independently reviewing, need a way to avoid duplicate/conflicting work on the same observations (e.g. claimed batches via a shared tracker or iNat Project filters), and an informal process for resolving ID disagreements between reviewers.
   - Open question, flagged but not yet resolved: what to do about observations where the missing piece (date/location) can only realistically be supplied by the original observer, not a reviewer.
-- [x] **Subgenus rank now populated correctly for taxa identified directly to subgenus** (2026-06-25): the iNat API fetch in `native_bee_checklist.R` STEP 4 (`get_subgenus_and_complex`) was only walking the ANCESTOR chain for subgenus names — so when a taxon was identified directly to a subgenus (e.g. `Onagrandrena`, `Simandrena`, `Diandrena` — subgenera of *Andrena*; `Dialictus` — subgenus of *Lasioglossum*), the subgenus name was silently lost (rank "subgenus" doesn't appear in the ancestor chain when the taxon itself IS the subgenus). Symptom: 4 Andrena and 5 Lasioglossum "duplicate" genus-only rows in `CABR_native_bee_checklist.csv` that all looked identical (Genus="Andrena", blank Species, blank Subgenus) because their actual differentiator was being dropped. Added a parallel "is the taxon itself a subgenus?" check, mirroring the existing complex check on the same code path. Re-running the pipeline now correctly distinguishes these as separate rows with their subgenus name populated.
-- [x] **Rename `cabr_full_bee_checklist_clean.csv` → `CABR_native_bee_checklist.csv`** (2026-06-25): aligned with the `PL_native_bee_checklist.csv` / `SD_county_native_bee_checklist.csv` naming pattern used by the other two tiers. The earlier "full_..._clean" suffix added no information that the tier name didn't already convey; this rename reverses an earlier 2026-06-24 rename in the other direction. Anything downstream referencing `cabr_full_bee_checklist_clean.csv` needs to point at `CABR_native_bee_checklist.csv` instead.
-- [x] **iNat observation-field discovery via API** (2026-07-06): added `discover_inat_fields_cabr_clip.R` to enumerate every observation field actually used in CABR-box bee observations by the roster's observers, by crawling the iNaturalist API (v1) directly. This works around the CSV-export blind spot flagged in the iNat-cleanup item above — the export's "Observation fields" column only includes fields the exporter has personally used, so a field another observer used but the exporter never has is invisible to the export, but not to the API. The script filters to the 21 non-lethal roster observers, pulls all their non-*Apis mellifera* bee observations, clips to `cabr_survey_box` via `st_within()`, and writes `data/outputs/cabr_inat_fields_discovered_clipped.csv` plus a console list of fields not yet in `project_tags_fields.csv`. Feeds verification of that crosswalk's `obs_field` rows before `bee_inat_clean.R` consumes them. See **iNaturalist API** above for version/endpoint details.
+- [x] **Subgenus rank now populated correctly for taxa identified directly to subgenus** (2026-06-25): the iNat API fetch in `scripts/checklists/native_bee_checklist.R` STEP 4 (`get_subgenus_and_complex`) was only walking the ANCESTOR chain for subgenus names — so when a taxon was identified directly to a subgenus (e.g. `Onagrandrena`, `Simandrena`, `Diandrena` — subgenera of *Andrena*; `Dialictus` — subgenus of *Lasioglossum*), the subgenus name was silently lost (rank "subgenus" doesn't appear in the ancestor chain when the taxon itself IS the subgenus). Symptom: 4 Andrena and 5 Lasioglossum "duplicate" genus-only rows in `cabr_combined_native_bee_checklist.csv` that all looked identical (Genus="Andrena", blank Species, blank Subgenus) because their actual differentiator was being dropped. Added a parallel "is the taxon itself a subgenus?" check, mirroring the existing complex check on the same code path. Re-running the pipeline now correctly distinguishes these as separate rows with their subgenus name populated.
+- [x] **Rename `cabr_full_bee_checklist_clean.csv` → `cabr_combined_native_bee_checklist.csv`** (2026-06-25 + 2026-07-09): aligned naming across all three geographic tiers and added `combined` to clarify this is the merged iNat + specimen checklist.
+- [x] **iNat observation-field discovery via API** (2026-07-06): API field discovery integrated into `scripts/clean/inat_bee_clean.R` — the script fetches observations directly from the iNat API (v1), which returns every field attached to every observation (`ofvs`) regardless of who used it, working around the CSV-export blind spot where fields only appear if the exporter has personally used them. Unknown tags are written to `data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv` for review. See **iNaturalist API** above for version/endpoint details.
 
 ---
 
