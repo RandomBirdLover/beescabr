@@ -127,7 +127,7 @@ if (exists("clean_nonlethal_data") && nrow(clean_nonlethal_data) > 0) {
 # bee pipeline (2026-06-24 decision) -- family/genus, not
 # taxon_family_name/taxon_genus_name. taxon_id and taxon_rank are
 # untouched -- different fields, not part of that rename.
-# plants_path <- read_latest("data/reference_exports/plants", "^inat_plants_sdcounty")
+# plants_path <- read_latest("data/cabr_surveys/nonlethal/inat_plant", "^inat_plants_point_loma_peninsula")
 # sd_county_plant_checklist <- read_csv(plants_path) %>%
 #   filter(taxon_rank %in% c("genus", "subgenus", "species", "subspecies")) %>%
 #   distinct(taxon_id, .keep_all = TRUE) %>%

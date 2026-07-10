@@ -388,7 +388,94 @@ if (nrow(clean) == 0) {
           "       add it as an inat_variant on the matching survey row, then re-run.\n", sep = "")
     cat("Re-run after editing the crosswalk; these counts should shrink.\n")
     cat("================================================\n")
+
+    # Prompt to review and rerun -- only when running interactively in RStudio.
+    # When sourced from the Rmd (non-interactive), this block is skipped.
+    # NOTE: ask Mitchell Nuckols whether this prompt should stay or be removed
+    # depending on how Taro wants to run the pipeline (single button vs. manual steps).
+    if (interactive()) {
+      answer <- readline("Have you reviewed and updated project_tags_fields.csv? (y/n): ")
+      if (tolower(answer) == "y") {
+        cat("Re-running triage with updated crosswalk...\n")
+        source("scripts/clean/inat_bee_clean.R")
+      } else {
+        stop("Stopped. Update project_tags_fields.csv first, then re-run this script.")
+      }
+    }
   } else {
     cat("\nNo new tags or fields to review -- crosswalk fully covers this export.\n")
+  }
+
+  # ---- 7. Date-based recovery (optional) -------------------------------------
+  # Runs only if survey_dates.R has already been run and produced official files.
+  # Adds an on_survey_date flag to every observation, and recovers any obs that
+  # fell on a confirmed survey date but were missing the survey tag (triage != "keep").
+  # These get triage = "recovered_by_date" so you can see exactly what was rescued.
+  # If someone tagged a personal visit on a survey day, it'll show up as
+  # triage == "keep" but on_survey_date == FALSE -- worth reviewing.
+
+  beeple_official_path <- "data/project_info/beeple_survey_dates_official.csv"
+  intern_official_path <- "data/project_info/intern_survey_dates_official.csv"
+
+  if (file.exists(beeple_official_path) && file.exists(intern_official_path)) {
+    cat("\n--- STEP 7: Date-based recovery ---\n")
+
+    # Build confirmed (username, date) pairs from beeple official file
+    beeple_dates <- read_csv(beeple_official_path, show_col_types = FALSE) |>
+      filter(status %in% c("confirmed", "manual")) |>
+      select(date, any_of(c("OT", "TP1", "TP2", "UPMON", "BST"))) |>
+      pivot_longer(-date, names_to = "transect", values_to = "username") |>
+      filter(!is.na(username), !is.na(date)) |>
+      select(username, date = date) |>
+      mutate(date = as.Date(date)) |>
+      distinct()
+
+    # Build confirmed (username, date) pairs from intern official file
+    intern_dates <- read_csv(intern_official_path, show_col_types = FALSE) |>
+      filter(status == "confirmed") |>
+      select(date, any_of(c("username_1", "username_2"))) |>
+      pivot_longer(-date, names_to = NULL, values_to = "username") |>
+      filter(!is.na(username)) |>
+      mutate(date = as.Date(date)) |>
+      distinct()
+
+    confirmed_events <- bind_rows(beeple_dates, intern_dates) |> distinct()
+
+    # Add on_survey_date flag to all obs
+    clean <- clean |>
+      left_join(
+        confirmed_events |> mutate(on_survey_date = TRUE),
+        by = c("observer" = "username", "observed_date" = "date")
+      ) |>
+      mutate(on_survey_date = coalesce(on_survey_date, FALSE))
+
+    # Recover obs that were on confirmed survey dates but not tagged
+    n_recovered <- sum(clean$triage != "keep" & clean$on_survey_date)
+    if (n_recovered > 0) {
+      clean <- clean |>
+        mutate(triage = if_else(triage != "keep" & on_survey_date,
+                                "recovered_by_date", triage))
+      cat(sprintf("  Recovered %d obs that were on confirmed survey dates but lacked survey tags.\n",
+                  n_recovered))
+    } else {
+      cat("  No untagged obs found on confirmed survey dates.\n")
+    }
+
+    # Flag tagged obs that fall OUTSIDE any known survey date (possible personal visits)
+    n_offdate <- sum(clean$triage == "keep" & !clean$on_survey_date)
+    if (n_offdate > 0) {
+      cat(sprintf("  %d obs have triage='keep' but fall outside confirmed survey dates.\n",
+                  n_offdate))
+      cat("  These may be personal visits that were accidentally tagged -- worth reviewing.\n")
+    }
+
+    cat(sprintf("  on_survey_date: %d confirmed, %d not on known survey date\n",
+                sum(clean$on_survey_date), sum(!clean$on_survey_date)))
+
+    # Re-write with updated triage + new on_survey_date column
+    write_fresh(clean, out_clean)
+    cat("  Updated clean file with on_survey_date flag -> ", out_clean, "\n", sep = "")
+  } else {
+    cat("\nSkipping date-based recovery: run survey_dates.R first to generate official files.\n")
   }
 }

@@ -146,6 +146,42 @@ write_fresh(
 cat("Missing-specimens list saved to data/outputs/specimens/cabr_specimen_bee_missing.csv\n")
 
 # ------------------------------------------------------------
+# STEP 4b: Duplicate detection -- ID fields only
+#   (1) Duplicate ucsd_id -- should never happen; each row has a unique ID.
+#   (2) Duplicate sdnhm_id (excluding 0 and NA) -- means two specimen rows
+#       share the same SDNHM tag, which is a physical labeling error.
+#       Note: sdnhm_id was intentionally zeroed on some rows in V13 where
+#       the tag was a duplicate and needs a new SDNHM_ID from Shahan.
+# All flagged rows are written to cabr_specimen_bee_duplicates.csv with a
+# `duplicate_reason` column explaining which check triggered the flag.
+# ------------------------------------------------------------
+dup_ucsd <- clean_bee_data %>%
+  filter(duplicated(ucsd_id) | duplicated(ucsd_id, fromLast = TRUE)) %>%
+  mutate(duplicate_reason = "duplicate ucsd_id")
+
+dup_sdnhm <- clean_bee_data %>%
+  filter(!is.na(sdnhm_id), sdnhm_id != 0, sdnhm_id != "") %>%
+  filter(duplicated(sdnhm_id) | duplicated(sdnhm_id, fromLast = TRUE)) %>%
+  mutate(duplicate_reason = "duplicate sdnhm_id")
+
+duplicates_list <- bind_rows(dup_ucsd, dup_sdnhm) %>%
+  distinct(ucsd_id, .keep_all = TRUE) %>%
+  arrange(ucsd_id)
+
+cat(sprintf("\nDuplicate IDs detected: %d rows\n", nrow(duplicates_list)))
+if (nrow(duplicates_list) > 0) {
+  cat("  -- review data/outputs/specimens/cabr_specimen_bee_duplicates.csv\n")
+  cat(sprintf("    duplicate ucsd_id:   %d\n", nrow(dup_ucsd)))
+  cat(sprintf("    duplicate sdnhm_id:  %d\n", nrow(dup_sdnhm)))
+}
+
+write_fresh(
+  duplicates_list,
+  "data/outputs/specimens/cabr_specimen_bee_duplicates.csv",
+  row.names = FALSE
+)
+
+# ------------------------------------------------------------
 # STEP 5: Load the checklist and build the complex match lookup --
 # species-level rows only (see header note on the two kinds of
 # complex-tagged rows). distinct() guards against any duplicate
@@ -243,6 +279,7 @@ cat("Missing sdnhm_id:   ", nrow(missing_sdnhm_id), "\n")
 cat("Missing ucsd_id:    ", nrow(missing_ucsd_id), "\n")
 cat("Missing genus:      ", nrow(missing_genus), "\n")
 cat("Physically missing: ", nrow(missing_specimens_list), "\n")
+cat("Potential dupes:    ", nrow(duplicates_list), "\n")
 
 # ------------------------------------------------------------
 # STEP 8b: Name-change tracking list (2026-06-24) -- a quick reference

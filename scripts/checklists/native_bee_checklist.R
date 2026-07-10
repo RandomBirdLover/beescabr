@@ -84,7 +84,7 @@ source("scripts/spatial/spatial_utils.R") # cabr_survey_box, point_loma_boundary
 # STEP 1: Load iNaturalist export (auto-detects newest file)
 # ------------------------------------------------------------
 bees_path <- read_latest(
-  "data/reference_exports/native_bees",
+  "data/cabr_surveys/nonlethal/inat_bee",
   "^inat_native_bees_sdcounty_25_mi_buffer"
 )
 cat("Loading:", basename(bees_path), "\n")

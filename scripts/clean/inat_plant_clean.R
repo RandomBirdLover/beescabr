@@ -368,6 +368,20 @@ if (nrow(clean) == 0) {
           "    -> Ignore camera/species/filename tags. Act only on missed survey tags.\n", sep = "")
     cat("Re-run after editing the crosswalk; these counts should shrink.\n")
     cat("================================================\n")
+
+    # Prompt to review and rerun -- only when running interactively in RStudio.
+    # When sourced from the Rmd (non-interactive), this block is skipped.
+    # NOTE: ask Mitchell Nuckols whether this prompt should stay or be removed
+    # depending on how Taro wants to run the pipeline (single button vs. manual steps).
+    if (interactive()) {
+      answer <- readline("Have you reviewed and updated project_tags_fields.csv? (y/n): ")
+      if (tolower(answer) == "y") {
+        cat("Re-running triage with updated crosswalk...\n")
+        source("scripts/clean/inat_plant_clean.R")
+      } else {
+        stop("Stopped. Update project_tags_fields.csv first, then re-run this script.")
+      }
+    }
   } else {
     cat("\nNo new tags or fields to review -- crosswalk fully covers this export.\n")
   }

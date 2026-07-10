@@ -15,8 +15,7 @@ Requirements:
     pip install pdfplumber
 
 To add a new year:
-    1. Drop the new PDF into data/cabr_surveys/nonlethal_inat_beeple/ or anywhere
-       accessible, then update CALENDAR_FILES below with its path and year.
+    1. Drop the new PDF into data/project_info/beeple_calendar/.
     2. Re-run this script -- it rewrites the full CSV from scratch.
 """
 
@@ -35,17 +34,24 @@ except ImportError:
 # Config: add new years here
 # ---------------------------------------------------------------------------
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT  = Path(__file__).resolve().parents[2]
+CALENDAR_DIR  = PROJECT_ROOT / "data/project_info/beeple_calendar"
+OUTPUT_FILE   = PROJECT_ROOT / "data/project_info/beeple_calendar_windows.csv"
 
-CALENDAR_FILES = [
-    (PROJECT_ROOT / "data/cabr_surveys/nonlethal_inat_beeple/2022 Cabrillo Bee Survey Calendar.pdf", 2022),
-    (PROJECT_ROOT / "data/cabr_surveys/nonlethal_inat_beeple/2023 Cabrillo Bee Survey Calendar.pdf", 2023),
-    (PROJECT_ROOT / "data/cabr_surveys/nonlethal_inat_beeple/2024 Cabrillo Bee Survey Calendar.pdf", 2024),
-    (PROJECT_ROOT / "data/cabr_surveys/nonlethal_inat_beeple/2025 Cabrillo Bee Survey Calendar.pdf", 2025),
-    (PROJECT_ROOT / "data/cabr_surveys/nonlethal_inat_beeple/2026 Cabrillo Bee Survey Calendar.pdf", 2026),
-]
+# Auto-detect all calendar PDFs in CALENDAR_DIR.
+# Expected filename format: "YYYY Cabrillo Bee Survey Calendar.pdf"
+# To add a new year: drop the PDF into data/project_info/beeple_calendar/ and re-run.
+def find_calendar_files(folder: Path) -> list[tuple[Path, int]]:
+    results = []
+    for pdf in sorted(folder.glob("*.pdf")):
+        m = re.match(r"(\d{4})\s+Cabrillo Bee Survey Calendar\.pdf", pdf.name)
+        if m:
+            results.append((pdf, int(m.group(1))))
+        else:
+            print(f"WARNING: skipping unrecognized filename: {pdf.name}")
+    return results
 
-OUTPUT_FILE = PROJECT_ROOT / "data/project_info/beeple_calendar_windows.csv"
+CALENDAR_FILES = find_calendar_files(CALENDAR_DIR)
 
 # ---------------------------------------------------------------------------
 

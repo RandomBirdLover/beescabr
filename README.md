@@ -60,7 +60,7 @@ beescabr/
     utils/
       utils.R                        # shared read_latest(), require_columns()
       parse_beeple_calendars.py      # parses annual calendar PDFs → beeple_calendar_windows.csv
-      infer_beeple_survey_dates.R    # infers actual survey dates from iNat obs within calendar windows
+      survey_dates.R                 # infers beeple survey dates from iNat obs → beeple_survey_dates_official.csv + intern_survey_dates_official.csv
     clean/
       inat_bee_clean.R               # cleans non-lethal bee iNat data (intern + beeple)
       inat_plant_clean.R             # cleans non-lethal plant iNat data
@@ -81,10 +81,14 @@ beescabr/
       surveyors_by_year.csv        # per-year surveyor roster: username, role, method, technique
       project_tags_fields.csv      # iNat tag / observation-field → keep/flag/exclude crosswalk
       beeple_calendar_windows.csv  # parsed from annual calendar PDFs: one row per (year, person, transect, window)
-      beeple_survey_dates.csv      # inferred actual survey dates per beeple window (output of infer_beeple_survey_dates.R)
+      beeple_calendar/             # annual calendar PDFs: "YYYY Cabrillo Bee Survey Calendar.pdf"
+                                   # drop new year's PDF here and re-run parse_beeple_calendars.py
+      intern_survey_dates.csv               # raw intern dates input (one row per person per date)
+      beeple_survey_dates_official.csv      # PERMANENT beeple record; one row per window, transects as username columns
+                                            # rows marked "manual" or "skipped" are never overwritten
+      intern_survey_dates_official.csv      # PERMANENT intern record; one row per date, full names + usernames
+      survey_dates_needs_review.csv         # ambiguous/no_obs beeple windows needing manual attention (auto-deleted when resolved)
     reference_exports/
-      native_bees/                 # iNat SD County bee exports (inat_native_bees_sdcounty_25_mi_buffer_*)
-      plants/                      # iNat SD County plant exports
       gbif/                        # GBIF regional reference exports
       dorey_2023/                  # BeeBDC (Dorey et al. 2023) global dataset, filtered to SD County
       holway_2026/                 # Dr. Holway's SD County Bee Species Checklist v3, flattened to CSV
@@ -96,10 +100,9 @@ beescabr/
         cabr_bee_specimens_record_V{n}_{YYYY-MM-DD}.xlsx   ← newest = authoritative
         deposit/                   # permanent specimen transfers
         loans/                     # temporary specimen transfers
-      nonlethal_inat_intern/       # intern iNat photo observations
-      nonlethal_inat_beeple/       # beeple iNat photo observations
-                                   # also holds the annual calendar PDFs:
-                                   # "YYYY Cabrillo Bee Survey Calendar.pdf"
+      nonlethal/
+        inat_bee/                  # iNat SD County bee exports (inat_native_bees_sdcounty_25_mi_buffer_*)
+        inat_plant/                # iNat Point Loma Peninsula plant exports (inat_plants_point_loma_peninsula_*)
     spatial/
       transects/
         cabr_bee_transects.shp     # source of truth for transect buffers
@@ -133,6 +136,7 @@ beescabr/
       specimens/
         cabr_specimen_bee_record_clean.csv
         cabr_specimen_bee_missing.csv
+        cabr_specimen_bee_duplicates.csv
       reference/
         bee_taxonomy_lookup.csv
   SPECIMEN_CHANGELOG.md            # version history for specimen spreadsheet
@@ -156,13 +160,13 @@ beescabr/
 
 ```
 inat_native_bees_sdcounty_25_mi_buffer_YYYY-MM-DD.csv
-inat_plants_sdcounty_YYYY-MM-DD.csv
+inat_plants_point_loma_peninsula_YYYY-MM-DD.csv
 gbif_bees_sdcounty_YYYY-MM-DD.csv
 ```
 
 `inat_native_bees_sdcounty_25_mi_buffer` is one master export covering all SD County bees except *Apis mellifera* (excluded at export time — see **iNat export instructions**). "Native" refers only to this honey-bee exclusion; no other non-native species are filtered. `native_bee_checklist.R` spatially splits this export into three tiers (SD County / Point Loma / CABR) — the three tier checklists are all derived independently from this one file, not nested.
 
-Date = download date, YYYY-MM-DD. Drop directly into `data/reference_exports/native_bees/`. Scripts auto-detect the newest file via `read_latest()`.
+Date = download date, YYYY-MM-DD. Drop directly into `data/cabr_surveys/nonlethal/inat_bee/`. Scripts auto-detect the newest file via `read_latest()`.
 
 ### Specimen file
 
@@ -479,11 +483,17 @@ Both failures occur because `cabr_boundary` (NPS source) extends slightly into t
 
 - [ ] **Dr. Doug Yanega (UCR):** (a) 4 specimens to add to the official checklist — Jess says don't add to physical collection, add as "x" (museum specimen record only). (b) Needs to identify 70 *Colletes*, 10 *Hylaeus*, 15 *Perdita*, and 1 *Andrena* to species — requires an in-person trip to UCR.
 - [ ] **Physical specimen box audit:** check boxes for duplicate specimens and remove any physical error flags. Identify any unidentified specimens still in box.
+- [ ] **Get new SDNHM IDs from Shahan** to replace the 29 sdnhm_ids zeroed out in V13 (duplicate tags that need new labels).
 - [ ] Formal specimen deposit to SDNHM (Shahan Derkarabetian)
+
+### Pipeline design
+
+- [ ] **Ask Mitchell Nuckols:** does the interactive "did you review tags/fields?" prompt in `inat_bee_clean.R` conflict with how Taro wants to use this? If Taro just wants one button that runs everything and produces outputs (which is what the Rmd suggests), then stopping mid-run for user input breaks that. May need a different approach — e.g. always output the QC files and let the Rmd surface a warning instead of stopping.
 
 ### Spatial / infrastructure
 
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
+- [ ] **Infer `end_transect` for non-lethal intern surveys:** use iNat obs timestamps + spatial join with transect shapefiles to determine which transect each intern finished on. Update `cabr_bee_survey_dates.csv` once inferred.
 - [ ] **Casual-grade observations missing from export:** "Quality Grade = Any" does not appear to include Casual obs in the downloaded CSV (known iNat issue #4186). Need a second export pass with `quality_grade = Casual` and merge with main export.
 
 ### Analysis
