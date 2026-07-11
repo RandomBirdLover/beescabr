@@ -1,6 +1,6 @@
 # beescabr
 
-Native bee biodiversity pipeline for Cabrillo National Monument (CABR), comparing lethal (museum specimen) and non-lethal (iNaturalist photo) survey methods across CABR → Point Loma → San Diego County.
+Native bee biodiversity pipeline for Cabrillo National Monument (CABR), comparing lethal (museum specimen) and non-lethal (iNaturalist photo) survey methods.
 
 ---
 
