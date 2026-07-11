@@ -717,42 +717,97 @@ subspecies_rows <- checklist_sd_county %>%
     rank        = "subspecies"
   )
 
-# --- COMBINE ALL ROWS ---
+# --- COMBINE ALL ROWS (genus and below, from Holway + iNat API) ---
 taxonomy_column_order <- c(
+  "taxon_id",
+  "scientific_name", "common_name",
   "kingdom", "phylum", "class", "order", "superfamily",
   "family", "subfamily", "tribe", "subtribe",
-  "genus", "subgenus", "complex", "species", "subspecies",
+  "genus", "subgenus", "complex", "complex_taxon_id",
+  "species", "subspecies",
   "rank"
 )
 
-bee_taxonomy_lookup <- bind_rows(
-  genus_rows      %>% select(all_of(taxonomy_column_order)),
-  subgenus_rows   %>% select(all_of(taxonomy_column_order)),
-  complex_rows    %>% select(all_of(taxonomy_column_order)),
-  species_rows    %>% select(all_of(taxonomy_column_order)),
-  subspecies_rows %>% select(all_of(taxonomy_column_order))
+# Add taxon_id, scientific_name, common_name to genus-and-below rows by
+# joining from checklist_sd_county (which has taxon_id for every taxon
+# observed in the SD County iNat data). Holway-only taxa (not yet observed
+# on iNat) get taxon_id = NA -- they stay in the lookup for completeness
+# but won't match any observation join until someone records them on iNat.
+genus_below_rows <- bind_rows(
+  genus_rows      %>% mutate(complex_taxon_id = NA_integer_),
+  subgenus_rows   %>% mutate(complex_taxon_id = NA_integer_),
+  complex_rows,
+  species_rows    %>% mutate(complex_taxon_id = NA_integer_),
+  subspecies_rows %>% mutate(complex_taxon_id = NA_integer_)
 ) %>%
+  left_join(
+    checklist_sd_county %>%
+      select(taxon_id, scientific_name, common_name, genus, subgenus,
+             complex, complex_taxon_id, species, subspecies),
+    by = c("genus", "subgenus", "complex", "species", "subspecies"),
+    relationship = "many-to-many"
+  ) %>%
+  # coalesce: iNat taxon_id wins; Holway-only rows keep NA
+  mutate(
+    complex_taxon_id = coalesce(complex_taxon_id.y, complex_taxon_id.x)
+  ) %>%
+  select(-complex_taxon_id.x, -complex_taxon_id.y) %>%
+  distinct()
+
+# --- HIGHER-RANK ROWS (epifamily, family, subfamily, tribe, subtribe) ---
+# Observations identified above genus level have a taxon_id pointing to
+# that higher rank in iNat. They never appear in the genus-and-below rows,
+# so without this step a join on taxon_id in inat_bee_clean.R would return
+# no match and leave all taxonomy columns blank.
+# Built directly from the SD County export (bees): every unique taxon_id
+# where genus is blank. Rank is inferred from the most specific non-blank
+# rank column.
+higher_rank_rows <- bees %>%
+  filter(is.na(genus) | genus == "") %>%
+  select(taxon_id, scientific_name, common_name,
+         family, subfamily, tribe, subtribe) %>%
+  distinct(taxon_id, .keep_all = TRUE) %>%
+  filter(!is.na(taxon_id)) %>%
+  mutate(
+    rank = case_when(
+      !is.na(subtribe)  & subtribe  != "" ~ "subtribe",
+      !is.na(tribe)     & tribe     != "" ~ "tribe",
+      !is.na(subfamily) & subfamily != "" ~ "subfamily",
+      !is.na(family)    & family    != "" ~ "family",
+      TRUE                                 ~ "epifamily"
+    ),
+    kingdom          = BEE_KINGDOM,
+    phylum           = BEE_PHYLUM,
+    class            = BEE_CLASS,
+    order            = BEE_ORDER,
+    superfamily      = BEE_SUPERFAMILY,
+    genus            = NA_character_,
+    subgenus         = NA_character_,
+    complex          = NA_character_,
+    complex_taxon_id = NA_integer_,
+    species          = NA_character_,
+    subspecies       = NA_character_
+  )
+
+# --- COMBINE AND SAVE ---
+bee_taxonomy_lookup <- bind_rows(
+  genus_below_rows %>% select(any_of(taxonomy_column_order)),
+  higher_rank_rows %>% select(any_of(taxonomy_column_order))
+) %>%
+  distinct(taxon_id, .keep_all = TRUE) %>%   # one row per taxon_id (stable iNat key)
   arrange(family, genus, rank, subgenus, complex, species, subspecies)
 
-# Final deduplication pass (2026-06-25): after stripping parens from
-# Holway subgenera, some rows may have become identical to iNat-derived
-# rows. Run distinct() across all columns to collapse any true
-# duplicates while preserving meaningful differences. Reports how many
-# rows were removed so the impact is visible, not silent.
-n_before_dedup <- nrow(bee_taxonomy_lookup)
-bee_taxonomy_lookup <- bee_taxonomy_lookup %>% distinct()
-n_removed_dedup <- n_before_dedup - nrow(bee_taxonomy_lookup)
-if (n_removed_dedup > 0) {
-  cat(sprintf("Deduplication: removed %d duplicate row(s) after paren-stripping.\n", n_removed_dedup))
-}
-
-# Per-rank summary printed for QC
+# Per-rank summary for QC
 rank_summary <- bee_taxonomy_lookup %>%
   count(rank) %>%
-  arrange(match(rank, c("genus", "subgenus", "complex", "species", "subspecies")))
-cat("Taxonomy lookup row counts by rank:\n")
+  arrange(match(rank, c("epifamily", "family", "subfamily", "tribe", "subtribe",
+                         "genus", "subgenus", "complex", "species", "subspecies")))
+cat("Taxonomy lookup rows by rank:\n")
 print(rank_summary)
-cat(sprintf("Total rows: %d\n", nrow(bee_taxonomy_lookup)))
+cat(sprintf("Total: %d rows  |  %d with taxon_id  |  %d Holway-only (no taxon_id yet)\n",
+            nrow(bee_taxonomy_lookup),
+            sum(!is.na(bee_taxonomy_lookup$taxon_id)),
+            sum(is.na(bee_taxonomy_lookup$taxon_id))))
 
 write_fresh(bee_taxonomy_lookup,
             "data/outputs/reference/bee_taxonomy_lookup.csv",

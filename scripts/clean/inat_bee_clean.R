@@ -1,112 +1,85 @@
 # =============================================================
-# Clean Non-Lethal iNaturalist Survey Data (Intern + Beeple)
-# beescabr pipeline
-# Author: Brandi Sanchez  |  Rewritten: 2026-07-06
+# inat_bee_clean.R
+# beescabr pipeline — non-lethal iNat bee data cleaning
+# Author: Brandi Sanchez  |  Rewritten: 2026-07-10
 #
-# WHAT THIS DOES (one script, end to end):
-#   0. FIELDMETA for any field row marked "fill in", fetch its datatype and
-#              dropdown options from the iNat field-definition endpoint and
-#              write them back into the crosswalk (one-time per field).
-#   1. FETCH   non-lethal survey observations straight from the iNaturalist
-#              API (v1) -- NOT the CSV export. The standard export drops tags
-#              and observation fields (both unchecked to save size), and those
-#              are exactly what the crosswalk triages on, so the API is the
-#              only source that carries them. See README > iNaturalist API.
-#              Scope = roster observers, CABR box, bees minus Apis mellifera,
-#              any grade.
-#   2. CLIP    to the real cabr_survey_box polygon (st_within, EPSG:26946),
-#              same spatial logic as native_bee_checklist.R.
-#   3. CLEAN   dates, missing-data flags, and data_source (intern vs beeple,
-#              read from the roster's role column).
-#   4. TRIAGE  every observation against project_tags_fields.csv:
-#                keep    = carries a valid Cabrillo survey tag
-#                exclude = carries an exclude tag (other project / pilot) --
-#                          retained WITH a reason, never silently dropped
-#                flag    = no recognized survey tag (personal/untagged) -> review
-#              Tags are normalized via the crosswalk's inat_variants; the
-#              TP-family transects fold to TP.
-#   5. FIELDS  pull each observation's observation fields, mapped to their
-#              crosswalk canonical by field_id (name is a fallback for rows
-#              without an id yet). Folded synonyms share one canonical via a
-#              ;-separated field_id list. Any field NOT in the crosswalk is
-#              reported (built-in field discovery) so it can't silently fall behind.
+# PRIMARY SOURCE: iNat export CSV (data/cabr_surveys/nonlethal/inat_bee/)
+#   Has tag_list (comma-separated), all obs_field columns, lat/lng, and
+#   full taxon_*_name hierarchy. Script filters to roster surveyors and
+#   clips to the CABR survey box.
 #
-# The crosswalk IS the spec: this script READS it. As you fill in field
-# variants / add rows, the triage and field-folding improve with NO code change.
+# LIVE SUPPLEMENT: iNat API
+#   Fetches obs_ids NOT yet in the export (posted since last download).
+#   Gives tags + basic obs data only. Obs_fields for taxon-type fields
+#   (e.g. flower visited) are unreliable from the API and stay blank
+#   until the next export. The export is the ground truth for obs_fields.
 #
-# NOTE: this is a live crawl each run. If you need a frozen dataset (so results
-# don't shift when someone adds an observation between runs), save the fetched
-# tables to a dated file and read that instead -- easy to add later.
+# TAXONOMY: data/outputs/reference/bee_taxonomy_lookup.csv
+#   Built by native_bee_checklist.R. One row per taxon_id, all ranks
+#   from epifamily through subspecies (including subgenus and complex
+#   which the iNat export does not include). Run the checklist first.
+#
+# RUN ORDER (full pipeline):
+#   1. native_bee_checklist.R  →  bee_taxonomy_lookup.csv
+#   2. inat_bee_clean.R        →  cabr_inat_bee_clean.csv  (triage pass)
+#   3. survey_dates.R          →  beeple/intern official date files
+#   4. inat_bee_clean.R        →  cabr_inat_bee_clean.csv  (date recovery)
 #
 # Outputs:
-#   data/outputs/inat_clean/cabr_inat_bee_clean.csv   -- cleaned + triaged observations
-#   data/outputs/inat_clean/qc/cabr_inat_bee_unknown_fields.csv    -- fields seen but not in crosswalk
-#   data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv      -- tags seen but not in crosswalk
-#
-# REVIEWING THE TWO "unknown" FILES (do this after each run):
-#   These are the pipeline's early-warning system. The crosswalk
-#   (project_tags_fields.csv) only triages tags/fields it knows about; anything
-#   it doesn't recognize is IGNORED. These two files list what got ignored, so
-#   nothing important slips by silently.
-#
-#   unknown_fields.csv -- an observation field not in the crosswalk. If empty,
-#     the crosswalk covers every field in the data (the goal). If rows appear,
-#     someone used a new field: decide keep / fold / ignore, then (if keeping)
-#     add a row to the crosswalk with its field_id. Re-run and it clears.
-#
-#   unknown_tags.csv -- a tag not in the crosswalk. This list is normally LONG
-#     and mostly harmless (camera/lens tags like "D500", species names, photo
-#     filenames, "City Nature Challenge", etc.) -- ignore those. You are scanning
-#     for one thing only: a tag that looks like a SURVEY tag we missed -- a new
-#     typo of a Cabrillo survey tag, or a new survey year. If you spot one, add
-#     it as an inat_variant on the matching survey row in the crosswalk, re-run,
-#     and those observations move from "flag" to "keep".
-#
-#   Rule of thumb: unknown_fields should trend to zero; unknown_tags won't (and
-#   shouldn't) -- you're just skimming it for missed survey tags.
+#   data/outputs/inat_clean/cabr_inat_bee_clean.csv
+#   data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv
 # =============================================================
 
 library(tidyverse)
 library(httr2)
 library(sf)
 
-# ---- Config / paths ---------------------------------------------------------
-spatial_utils_path <- "scripts/spatial/spatial_utils.R"   # provides cabr_survey_box (EPSG:26946)
-info_dir           <- "data/project_info"
-roster_path        <- list.files(info_dir, pattern = "^surveyors_by_year.*\\.csv$",   full.names = TRUE)[1]
-crosswalk_path     <- list.files(info_dir, pattern = "^project_tags_fields.*\\.csv$", full.names = TRUE)[1]
-out_clean          <- "data/outputs/inat_clean/cabr_inat_bee_clean.csv"
-out_unknown        <- "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_fields.csv"
-out_unknown_tags   <- "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv"
+source("scripts/utils/utils.R")
+source("scripts/spatial/spatial_utils.R")
 
-TAXON_BEES  <- 630955   # Bees (Anthophila)
-TAXON_HONEY <- 47219    # Apis mellifera (excluded)
-UA          <- "beescabr inat_bee_clean (brandirenesanchez16@gmail.com)"
+# ---- Config -----------------------------------------------------------------
+info_dir       <- "data/project_info"
+roster_path    <- list.files(info_dir, pattern = "^surveyors_by_year.*\\.csv$",   full.names = TRUE)[1]
+crosswalk_path <- list.files(info_dir, pattern = "^project_tags_fields.*\\.csv$", full.names = TRUE)[1]
+export_dir     <- "data/cabr_surveys/nonlethal/inat_bee"
 
-# helpers: normalize a tag/field string for matching; safe snake_case for columns
-norm_key <- function(x) tolower(gsub("^#", "", trimws(x)))  # trim FIRST, then strip # (leading space was blocking ^#)
-snake    <- function(x) { x <- tolower(x); x <- gsub("[^a-z0-9]+", "_", x); gsub("^_|_$", "", x) }
+taxonomy_path    <- "data/outputs/reference/bee_taxonomy_lookup.csv"
+out_clean        <- "data/outputs/inat_clean/cabr_inat_bee_clean.csv"
+out_unknown_tags <- "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv"
 
-# always overwrite: clear an old file OR a stray folder at `path`, then write fresh
-write_fresh <- function(x, path, ...) {
-  if (dir.exists(path)) unlink(path, recursive = TRUE, force = TRUE)
+TAXON_BEES <- 630955   # Anthophila (all bees)
+UA         <- "beescabr inat_bee_clean (brandirenesanchez16@gmail.com)"
+
+# ---- Helpers ----------------------------------------------------------------
+
+# Normalize a tag for matching: strip leading #, trim whitespace, lowercase.
+norm_key <- function(x) tolower(gsub("^#", "", trimws(x)))
+
+# write_csv version of write_fresh (overrides utils.R's write.csv version).
+write_fresh_csv <- function(x, path, ...) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  if (dir.exists(path))       unlink(path, recursive = TRUE, force = TRUE)
   else if (file.exists(path)) unlink(path, force = TRUE)
   write_csv(x, path, ...)
 }
 
-# ---- 0. Boundary + roster + crosswalk --------------------------------------
-source(spatial_utils_path)
 if (!exists("cabr_survey_box"))
-  stop("cabr_survey_box not found after sourcing ", spatial_utils_path)
+  stop("cabr_survey_box not found after sourcing spatial_utils.R")
 
+
+# =============================================================
+# 1. ROSTER + CROSSWALK
+# =============================================================
 roster <- read_csv(roster_path, show_col_types = FALSE)
 
+# All non-lethal surveyors with an iNat username.
 usernames <- roster |>
-  filter(method == "non-lethal", !is.na(inaturalist_username),
-         trimws(inaturalist_username) != "") |>
-  pull(inaturalist_username) |> unique()
+  filter(method == "non-lethal",
+         !is.na(inaturalist_username), trimws(inaturalist_username) != "") |>
+  pull(inaturalist_username) |>
+  unique()
 
-# username -> data_source (intern / beeple) from the roster's role column
+# Role lookup: intern / beeple / staff per username. Used as data_source.
 role_lookup <- roster |>
   filter(inaturalist_username %in% usernames) |>
   distinct(inaturalist_username, role) |>
@@ -114,368 +87,612 @@ role_lookup <- roster |>
   summarise(data_source = paste(sort(unique(role)), collapse = "/"), .groups = "drop")
 
 crosswalk <- read_csv(crosswalk_path, show_col_types = FALSE)
-message(length(usernames), " observers | crosswalk rows: ", nrow(crosswalk))
 
-# ---- 0c. Fill field metadata (datatype + allowed_values) from the API --------
-# For any field row still marked "fill in", look up its definition at
-# inaturalist.org/observation_fields/{id}.json and record its datatype and
-# dropdown options (blank if it's a free-text field). Idempotent: only fetches
-# rows that still need it, then writes the filled-in crosswalk back to disk.
-if (all(c("datatype", "allowed_values") %in% names(crosswalk))) {
-  need <- which(crosswalk$allowed_values == "fill in" &
-                !is.na(crosswalk$field_id) & trimws(crosswalk$field_id) != "")
-  if (length(need) > 0) {
-    message("Fetching field definitions for ", length(need), " field(s)...")
-    for (i in need) {
-      pid <- trimws(strsplit(crosswalk$field_id[i], ";")[[1]][1])   # primary id
-      def <- tryCatch(
-        request(sprintf("https://www.inaturalist.org/observation_fields/%s.json", pid)) |>
-          req_user_agent(UA) |>
-          req_retry(max_tries = 4,
-                    is_transient = ~ resp_status(.x) %in% c(429, 500, 502, 503, 504),
-                    backoff = ~ min(30, 3 * 2^(.x - 1))) |>
-          req_perform() |> resp_body_json(),
-        error = function(e) NULL)
-      if (is.null(def)) next
-      av <- def$allowed_values %||% ""
-      av <- if (nzchar(av)) paste(trimws(strsplit(av, "\\|")[[1]]), collapse = " | ") else ""
-      crosswalk$datatype[i]       <- def$datatype %||% crosswalk$datatype[i]
-      crosswalk$allowed_values[i] <- av           # dropdown options, or blank if free text
-      Sys.sleep(1)                                 # be polite to the API
-    }
-    write_csv(crosswalk, crosswalk_path, na = "")   # keep blank cells blank, not "NA"
-    message("Updated field metadata -> ", crosswalk_path)
-  }
-}
+message(length(usernames), " surveyors in roster | ", nrow(crosswalk), " crosswalk rows")
 
-# ---- 1. Fetch from the iNaturalist API (v1) --------------------------------
-bb <- cabr_survey_box |> st_transform(4326) |> st_bbox()   # API needs WGS84; polygon clip is Step 2
 
-params <- list(
-  user_id = paste(usernames, collapse = ","),
-  swlat = bb[["ymin"]], swlng = bb[["xmin"]],
-  nelat = bb[["ymax"]], nelng = bb[["xmax"]],
-  taxon_id = TAXON_BEES, without_taxon_id = TAXON_HONEY,
-  per_page = 200, order_by = "id", order = "asc"
-)
-
-obs_base <- list(); tags_long <- list(); ofv_long <- list()
-id_above <- 0; page <- 0
-
-repeat {
-  page <- page + 1
-  resp <- request("https://api.inaturalist.org/v1/observations") |>
-    req_user_agent(UA) |>
-    # pause + back off on 429 (rate limit) / 5xx instead of crashing;
-    # honors any Retry-After the API sends. backoff: 5,10,20,40,60s (capped).
-    req_retry(max_tries = 6,
-              is_transient = ~ resp_status(.x) %in% c(429, 500, 502, 503, 504),
-              backoff = ~ min(60, 5 * 2^(.x - 1))) |>
-    req_url_query(!!!params, id_above = id_above) |>
-    req_perform() |> resp_body_json()
-
-  results <- resp$results
-  if (length(results) == 0) break
-
-  obs_base[[page]] <- map_dfr(results, function(o) {
-    coord <- o$geojson$coordinates
-    tibble(
-      obs_id          = o$id,
-      observer        = o$user$login %||% NA_character_,
-      lng             = if (is.null(coord)) NA_real_ else coord[[1]],
-      lat             = if (is.null(coord)) NA_real_ else coord[[2]],
-      observed_on     = o$observed_on %||% NA_character_,
-      taxon_id        = o$taxon$id %||% NA_integer_,
-      scientific_name = o$taxon$name %||% NA_character_,
-      quality_grade   = o$quality_grade %||% NA_character_
-    )
-  })
-
-  tags_long[[page]] <- map_dfr(results, function(o) {
-    tg <- o$tags %||% list()
-    if (length(tg) == 0) return(NULL)
-    tibble(obs_id = o$id, tag = unlist(tg))
-  })
-
-  ofv_long[[page]] <- map_dfr(results, function(o) {
-    if (length(o$ofvs) == 0) return(NULL)
-    map_dfr(o$ofvs, function(f) tibble(
-      obs_id     = o$id,
-      field_id   = f$field_id %||% NA_integer_,
-      field_name = f$name     %||% NA_character_,
-      datatype   = f$datatype %||% NA_character_,
-      value      = as.character(f$value %||% NA_character_)
-    ))
-  })
-
-  last_id <- results[[length(results)]]$id
-  message(sprintf("page %d: %d obs (through id %d)", page, length(results), last_id))
-  id_above <- last_id
-  if (length(results) < params$per_page) break
-  Sys.sleep(1)   # be polite to the API
-}
-
-obs_base  <- bind_rows(obs_base)
-tags_long <- bind_rows(tags_long)
-ofv_long  <- bind_rows(ofv_long)
-
-# ---- 2. Clip to cabr_survey_box (precise polygon) --------------------------
-pts <- obs_base |>
-  filter(!is.na(lng), !is.na(lat)) |>
-  st_as_sf(coords = c("lng", "lat"), crs = 4326) |>
-  st_transform(st_crs(cabr_survey_box))
-
-kept <- pts$obs_id[lengths(st_within(pts, cabr_survey_box)) > 0]
-message(sprintf("kept %d of %d located obs inside cabr_survey_box", length(kept), nrow(pts)))
-
-obs_base  <- filter(obs_base, obs_id %in% kept)
-tags_long <- filter(tags_long, obs_id %in% kept)
-ofv_long  <- filter(ofv_long, obs_id %in% kept)
-
-# ---- 3. Tag triage (crosswalk-driven) --------------------------------------
-# Build a variant -> canonical/category map from every tag row (name + inat_variants).
+# =============================================================
+# 2. BUILD TAG MAP FROM CROSSWALK
+# =============================================================
+# Maps every known tag variant (including misspellings, case variants,
+# # prefix variants) to its canonical name and category.
+# Categories used in triage: Beeple, Intern, General → has_survey = TRUE
+#                            Exclude                  → is_exclude = TRUE
+#                            Transect                 → populates transect column
+#                            Location                 → location hint only (not survey)
 tag_map <- crosswalk |>
   filter(type == "tag") |>
-  transmute(canonical = name, category, variants = paste(name, inat_variants, sep = "; ")) |>
-  separate_rows(variants, sep = ";") |>
-  mutate(key = norm_key(variants)) |>
-  filter(key != "", !grepl("^\\(", key)) |>          # drop "(none found...)" placeholders
-  distinct(key, canonical, category)
-
-tagged <- tags_long |>
-  mutate(key = norm_key(tag)) |>
-  left_join(tag_map, by = "key")
-
-# 3a. Tags NOT in the crosswalk -> safety net, same idea as unknown fields.
-# Lists any tag the crosswalk doesn't recognize so new/typo tags can't slip past.
-unknown_tags <- tagged |>
-  filter(is.na(canonical)) |>
-  count(tag, sort = TRUE, name = "n_obs")
-
-if (nrow(unknown_tags) > 0) {
-  warning(nrow(unknown_tags), " tag(s) not in the crosswalk -- see ", out_unknown_tags)
-  write_fresh(unknown_tags, out_unknown_tags)
-}
-
-obs_tags <- tagged |>
-  group_by(obs_id) |>
-  summarise(
-    is_exclude  = any(category == "Exclude", na.rm = TRUE),
-    exclude_tag = paste(unique(canonical[category == "Exclude"]), collapse = "; "),
-    survey_tags = paste(unique(canonical[category %in% c("Beeple","Intern","General")]), collapse = "; "),
-    has_survey  = any(category %in% c("Beeple","Intern","General"), na.rm = TRUE),
-    survey_year = { yr <- str_extract(canonical[category %in% c("Beeple","Intern")], "\\d{4}")
-                    yr <- yr[!is.na(yr)]; if (length(yr)) paste(unique(yr), collapse = "; ") else NA_character_ },
-    survey_type = { st <- if_else(str_detect(canonical[category %in% c("Beeple","Intern")], "Intern"),
-                                  "intern", "beeple")
-                    st <- st[!is.na(st)]; if (length(st)) paste(unique(st), collapse = "; ") else NA_character_ },
-    transect    = { tr <- canonical[category == "Transect"]
-                    tr <- if_else(str_starts(tr, "TP"), "TP", tr)   # fold TP1/TP2/... -> TP
-                    tr <- tr[!is.na(tr)]; if (length(tr)) paste(sort(unique(tr)), collapse = "; ") else NA_character_ },
-    is_10min      = any(canonical == "CabrilloBee10MinuteSurvey", na.rm = TRUE),
-    location_hint = any(category == "Location", na.rm = TRUE),
-    .groups = "drop"
-  )
-
-# ---- 4. Field extraction (crosswalk-driven) --------------------------------
-field_rows <- crosswalk |> filter(type %in% c("obs_field", "notes_field"))
-
-# (a) primary match: by field_id. The field_id cell may hold a ;-separated list
-#     (folded synonyms all mapping to one canonical), so explode it to one id/row.
-id_map <- field_rows |>
-  filter(!is.na(field_id), trimws(field_id) != "") |>
-  transmute(canonical = name, field_id = as.character(field_id)) |>
-  separate_rows(field_id, sep = ";") |>
-  mutate(field_id = suppressWarnings(as.integer(trimws(field_id)))) |>
-  filter(!is.na(field_id)) |>
-  distinct(field_id, canonical)
-
-# (b) fallback: by name/variant, for field rows that don't have an id yet
-name_map <- field_rows |>
-  transmute(canonical = name, variants = paste(name, inat_variants, sep = "; ")) |>
-  separate_rows(variants, sep = ";") |>
-  mutate(key = norm_key(variants)) |>
-  filter(key != "", !grepl("^\\(", key)) |>
-  distinct(key, canonical)
-
-ofv_mapped <- ofv_long |>
-  left_join(id_map, by = "field_id") |>                       # try field_id first
-  mutate(key = norm_key(field_name)) |>
-  left_join(name_map, by = "key", suffix = c("", "_nm")) |>
-  mutate(canonical = coalesce(canonical, canonical_nm)) |>    # else fall back to name
-  select(-canonical_nm, -key)
-
-# 4a. Fields NOT in the crosswalk -> built-in discovery report
-# Exclude field_ids explicitly marked type="ignore" in the crosswalk
-ignore_ids <- crosswalk |>
-  filter(type == "ignore", !is.na(field_id), trimws(field_id) != "") |>
-  transmute(field_id = as.character(field_id)) |>
-  separate_rows(field_id, sep = ";") |>
-  mutate(field_id = suppressWarnings(as.integer(trimws(field_id)))) |>
-  filter(!is.na(field_id)) |>
-  pull(field_id)
-
-unknown_fields <- ofv_mapped |>
-  filter(is.na(canonical), !field_id %in% ignore_ids) |>
-  group_by(field_id, field_name, datatype) |>
-  summarise(n_obs = n_distinct(obs_id), .groups = "drop") |>
-  arrange(desc(n_obs))
-
-if (nrow(unknown_fields) > 0) {
-  warning(nrow(unknown_fields), " observation field(s) not in the crosswalk -- see ", out_unknown)
-  write_fresh(unknown_fields, out_unknown)
-}
-
-# 4b. Known fields -> one column per canonical field (f_<snake_name>)
-known_wide <- ofv_mapped |>
-  filter(!is.na(canonical)) |>
-  mutate(col = paste0("f_", snake(canonical))) |>
-  group_by(obs_id, col) |>
-  summarise(value = first(value), .groups = "drop") |>
-  pivot_wider(id_cols = obs_id, names_from = col, values_from = value)
-
-# ---- 5. Assemble clean table + triage decision -----------------------------
-clean <- obs_base |>
-  left_join(role_lookup, by = c("observer" = "inaturalist_username")) |>
-  left_join(obs_tags,  by = "obs_id") |>
-  left_join(known_wide, by = "obs_id") |>
-  mutate(
-    observed_date  = as.Date(observed_on),
-    missing_coords = is.na(lng) | is.na(lat),
-    missing_taxon  = is.na(taxon_id),
-    is_exclude     = coalesce(is_exclude, FALSE),
-    has_survey     = coalesce(has_survey, FALSE),
-    triage = case_when(
-      is_exclude ~ "exclude",
-      has_survey ~ "keep",
-      TRUE       ~ "flag"
-    ),
-    triage_reason = case_when(
-      is_exclude ~ paste0("exclude tag: ", exclude_tag),
-      has_survey ~ "valid Cabrillo survey tag",
-      TRUE       ~ "no recognized survey tag (personal/untagged) -- review"
+  transmute(
+    canonical = name,
+    category,
+    variants  = if_else(
+      is.na(inat_variants) | trimws(inat_variants) == "",
+      name,
+      paste(name, inat_variants, sep = "; ")
     )
   ) |>
-  relocate(obs_id, observer, data_source, observed_date, scientific_name,
-           triage, triage_reason, survey_year, survey_type, transect, is_10min)
+  separate_rows(variants, sep = ";\\s*") |>
+  mutate(key = norm_key(variants)) |>
+  # Drop empty, placeholder, and NA-string variants
+  filter(
+    nchar(key) > 0,
+    !grepl("^\\(", key),          # "(none found in data)"
+    !(key %in% c("n/a", "na"))    # literal "n/a" or NA coerced to string
+  ) |>
+  distinct(key, canonical, category)
 
-# ---- 6. Write + summary -----------------------------------------------------
-if (nrow(clean) == 0) {
-  cat("No non-lethal iNat observations returned for the current scope.\n")
+
+# =============================================================
+# 3. LOAD EXPORT → FILTER TO ROSTER → CLIP TO SURVEY BOX
+# =============================================================
+export_path <- read_latest(export_dir, "^inat_native_bees_sdcounty_25_mi_buffer")
+message("\nLoading export: ", basename(export_path))
+
+export_raw <- read_csv(export_path, show_col_types = FALSE, na = c("", "NA"))
+message(sprintf("  %d total obs in export", nrow(export_raw)))
+
+# Filter to roster surveyors only.
+export_roster <- export_raw |> filter(user_login %in% usernames)
+message(sprintf("  %d obs from roster surveyors", nrow(export_roster)))
+
+# Clip to the precise CABR survey box polygon (see spatial_utils.R for details).
+pts <- export_roster |>
+  filter(!is.na(latitude), !is.na(longitude)) |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  st_transform(st_crs(cabr_survey_box))
+
+in_box <- lengths(st_within(pts, cabr_survey_box)) > 0
+
+export_cabr <- pts |>
+  filter(in_box) |>
+  st_drop_geometry() |>
+  rename(obs_id = id, observer = user_login) |>
+  mutate(
+    observed_date = as.Date(observed_on),
+    # Fold all plant-association obs_fields → flower_visited (primary first).
+    # field:interaction->visited flower of is the authoritative source;
+    # older/alternative plant fields used as fallback only.
+    flower_visited  = coalesce(
+      `field:interaction->visited flower of`,
+      `field:name of associated plant`,
+      `field:nectar / pollen delivering plant`,
+      `field:nectar plant`
+    ),
+    bee_behavior    = `field:bee behavior`,
+    mating_behavior = `field:behavior: mating`,
+    on_ground       = `field:on ground?`,
+    # Fold nest/nesting into one column (field_ids 4837 and 988).
+    nesting         = coalesce(`field:nest`, `field:nesting`),
+    nesting_bee     = `field:nesting bee`,
+    # Tags obs_field (field_id 20521): manual correction tool.
+    # When Brandi needs to fix an obs with the wrong survey hashtag
+    # (e.g. intern who used the beeple tag), she adds the correct tag
+    # as the Tags obs_field value to override triage. Not the standard
+    # method -- standard is always the hashtag.
+    tags_override   = `field:tags`,
+    data_from       = "export"
+  )
+
+message(sprintf("  %d obs inside CABR survey box", nrow(export_cabr)))
+
+
+# =============================================================
+# 4. TRIAGE FROM tag_list
+# =============================================================
+# tag_list in the export is comma-separated, e.g.:
+#   "CabrilloBee10MinuteSurvey, Cabrillo2021BeeSurvey, UPMON"
+# Split, normalize each tag, look up in tag_map.
+
+# Reusable triage function used for both export and API obs.
+# Input:  data frame with columns obs_id (integer) and tag_list (character)
+# Output: list(triage = per-obs summary, unknown = unrecognized tags)
+triage_from_tag_list <- function(id_tags_df, tmap) {
+
+  # Expand comma-separated tag_list into one row per tag
+  tags_long <- id_tags_df |>
+    filter(!is.na(tag_list), nchar(trimws(tag_list)) > 0) |>
+    mutate(tag = str_split(tag_list, ",\\s*")) |>
+    unnest(tag) |>
+    mutate(
+      tag = trimws(tag),
+      key = norm_key(tag)
+    ) |>
+    filter(nchar(key) > 0) |>
+    left_join(tmap, by = "key")
+
+  # Per-obs summary: survey membership, transect, year, type
+  triage_summary <- tags_long |>
+    group_by(obs_id) |>
+    summarise(
+      is_exclude  = any(category == "Exclude", na.rm = TRUE),
+      exclude_tag = paste(sort(unique(na.omit(canonical[category == "Exclude"]))), collapse = "; "),
+
+      has_survey  = any(category %in% c("Beeple", "Intern", "General"), na.rm = TRUE),
+      survey_tags = paste(sort(unique(na.omit(canonical[category %in% c("Beeple","Intern","General")]))), collapse = "; "),
+
+      # survey_year: extract 4-digit year from Beeple/Intern canonical names
+      survey_year = {
+        yr_names <- na.omit(canonical[category %in% c("Beeple", "Intern")])
+        yr <- str_extract(yr_names, "\\d{4}")
+        yr <- yr[!is.na(yr)]
+        if (length(yr)) paste(sort(unique(yr)), collapse = "; ") else NA_character_
+      },
+
+      # survey_type: use category column (Intern -> "intern", Beeple -> "beeple")
+      survey_type = {
+        cats <- na.omit(category[category %in% c("Beeple", "Intern")])
+        if (length(cats)) paste(sort(unique(tolower(cats))), collapse = "/") else NA_character_
+      },
+
+      # transect: canonical names for Transect-category tags
+      transect = {
+        tr <- sort(unique(na.omit(canonical[category == "Transect"])))
+        if (length(tr)) paste(tr, collapse = "; ") else NA_character_
+      },
+
+      # 10-minute survey flag
+      is_10min = any(canonical == "CabrilloBee10MinuteSurvey", na.rm = TRUE),
+
+      .groups = "drop"
+    )
+
+  # Obs with empty/NA tag_list get no row in triage_summary.
+  # Add those back in as "flag" so every obs gets a triage value.
+  all_ids <- tibble(obs_id = id_tags_df$obs_id)
+  triage_complete <- all_ids |>
+    left_join(triage_summary, by = "obs_id") |>
+    mutate(
+      is_exclude  = coalesce(is_exclude, FALSE),
+      has_survey  = coalesce(has_survey, FALSE),
+      is_10min    = coalesce(is_10min,   FALSE)
+    )
+
+  # Tags not recognized by the crosswalk -- QC file to scan for typos/new years
+  unknown <- tags_long |>
+    filter(is.na(canonical), !is.na(tag), nchar(tag) > 0) |>
+    count(tag, sort = TRUE, name = "n_obs")
+
+  list(triage = triage_complete, unknown = unknown)
+}
+
+# Run triage on export
+export_triage_result <- triage_from_tag_list(
+  export_cabr |> select(obs_id, tag_list),
+  tag_map
+)
+obs_triage   <- export_triage_result$triage
+unknown_tags <- export_triage_result$unknown
+
+# Write unknown tags QC file for review
+dir.create(dirname(out_unknown_tags), recursive = TRUE, showWarnings = FALSE)
+if (nrow(unknown_tags) > 0) {
+  message(sprintf("\n%d tag(s) not in crosswalk -> %s", nrow(unknown_tags), out_unknown_tags))
+  message("Scan for misspelled Cabrillo survey tags. Add to crosswalk inat_variants, then re-run.")
+  write_fresh_csv(unknown_tags, out_unknown_tags, na = "")
 } else {
-  write_fresh(clean, out_clean)
-  cat("\n--- NON-LETHAL CLEANING SUMMARY ---\n")
-  cat("Observations kept in box:", nrow(clean), "\n\n")
-  cat("By triage:\n");        print(count(clean, triage))
-  cat("\nBy data_source:\n"); print(count(clean, data_source))
-  cat("\nBy survey_year:\n"); print(count(clean, survey_year))
-  cat("\nSaved cleaned data -> ", out_clean, "\n", sep = "")
+  message("All tags recognized by crosswalk.")
+}
 
-  # ---- Action nudge: tell the person what needs reviewing --------------------
-  nf <- nrow(unknown_fields); nt <- nrow(unknown_tags)
-  if (nf > 0 || nt > 0) {
-    cat("\n================= ACTION NEEDED =================\n")
-    if (nf > 0)
-      cat(sprintf("* %d new FIELD(S) in this export are not in the crosswalk.\n", nf),
-          "    -> Review ", out_unknown, "\n",
-          "    -> For each: keep as a new field, fold into an existing one, or ignore.\n",
-          "       If keeping, add a row to project_tags_fields.csv with its field_id.\n", sep = "")
-    if (nt > 0)
-      cat(sprintf("* %d new TAG(S) in this export are not in the crosswalk.\n", nt),
-          "    -> Review ", out_unknown_tags, "\n",
-          "    -> Most are harmless (camera/species/filename tags) -- ignore those.\n",
-          "       Only act on ones that look like a MISSED SURVEY TAG (new typo or year):\n",
-          "       add it as an inat_variant on the matching survey row, then re-run.\n", sep = "")
-    cat("Re-run after editing the crosswalk; these counts should shrink.\n")
-    cat("================================================\n")
 
-    # Prompt to review and rerun -- only when running interactively in RStudio.
-    # When sourced from the Rmd (non-interactive), this block is skipped.
-    # NOTE: ask Mitchell Nuckols whether this prompt should stay or be removed
-    # depending on how Taro wants to run the pipeline (single button vs. manual steps).
-    if (interactive()) {
-      answer <- readline("Have you reviewed and updated project_tags_fields.csv? (y/n): ")
-      if (tolower(answer) == "y") {
-        cat("Re-running triage with updated crosswalk...\n")
-        source("scripts/clean/inat_bee_clean.R")
-      } else {
-        stop("Stopped. Update project_tags_fields.csv first, then re-run this script.")
-      }
-    }
-  } else {
-    cat("\nNo new tags or fields to review -- crosswalk fully covers this export.\n")
-  }
+# =============================================================
+# 4a. TAGS OBS_FIELD OVERRIDE (field_id 20521)
+# =============================================================
+# When someone used the wrong survey hashtag (e.g. Jillian's beeple tag
+# on what should be an intern obs), Brandi adds the correct tag as the
+# "Tags" obs_field value on iNat. This block reads that field and uses
+# it to override survey_type / survey_year / has_survey for the affected
+# obs. Manual correction tool only -- NOT the standard survey method.
+tags_override_triage <- export_cabr |>
+  filter(!is.na(tags_override), nchar(trimws(tags_override)) > 0) |>
+  select(obs_id, tags_override) |>
+  mutate(key = norm_key(tags_override)) |>
+  left_join(
+    tag_map |> filter(category %in% c("Beeple", "Intern", "General")),
+    by = "key"
+  ) |>
+  filter(!is.na(canonical)) |>
+  transmute(
+    obs_id,
+    ov_has_survey  = TRUE,
+    ov_survey_type = tolower(category),   # "beeple" or "intern" or "general"
+    ov_survey_year = str_extract(canonical, "\\d{4}"),
+    ov_survey_tags = canonical
+  )
 
-  # ---- 7. Date-based recovery (optional) -------------------------------------
-  # Runs only if survey_dates.R has already been run and produced official files.
-  # Adds an on_survey_date flag to every observation, and recovers any obs that
-  # fell on a confirmed survey date but were missing the survey tag (triage != "keep").
-  # These get triage = "recovered_by_date" so you can see exactly what was rescued.
-  # If someone tagged a personal visit on a survey day, it'll show up as
-  # triage == "keep" but on_survey_date == FALSE -- worth reviewing.
+# Apply overrides: Tags obs_field wins for survey_type and survey_year.
+obs_triage <- obs_triage |>
+  left_join(tags_override_triage, by = "obs_id") |>
+  mutate(
+    has_survey_from_tags_field = coalesce(ov_has_survey, FALSE),
+    has_survey  = has_survey | has_survey_from_tags_field,
+    survey_type = if_else(!is.na(ov_survey_type), ov_survey_type, survey_type),
+    survey_year = if_else(!is.na(ov_survey_year), ov_survey_year, survey_year),
+    survey_tags = case_when(
+      !is.na(ov_survey_tags) & (is.na(survey_tags) | survey_tags == "") ~
+        ov_survey_tags,
+      !is.na(ov_survey_tags) ~
+        paste(survey_tags, ov_survey_tags, sep = "; "),
+      TRUE ~ survey_tags
+    )
+  ) |>
+  select(-starts_with("ov_"))
 
-  beeple_official_path <- "data/project_info/beeple_survey_dates_official.csv"
-  intern_official_path <- "data/project_info/intern_survey_dates_official.csv"
+# Assign triage values now that overrides are folded in.
+obs_triage <- obs_triage |>
+  mutate(
+    triage = case_when(
+      is_exclude                 ~ "exclude",
+      has_survey                 ~ "keep",
+      TRUE                       ~ "flag"
+    ),
+    triage_reason = case_when(
+      is_exclude                 ~ paste0("exclude tag: ", exclude_tag),
+      has_survey_from_tags_field ~ paste0(
+                                      "valid survey tag via Tags obs_field override: ",
+                                      coalesce(survey_tags, "")
+                                    ),
+      has_survey                 ~ "valid Cabrillo survey tag",
+      TRUE                       ~ "no recognized survey tag -- review"
+    )
+  )
 
-  if (file.exists(beeple_official_path) && file.exists(intern_official_path)) {
-    cat("\n--- STEP 7: Date-based recovery ---\n")
 
-    # Build confirmed (username, date) pairs from beeple official file
-    beeple_dates <- read_csv(beeple_official_path, show_col_types = FALSE) |>
-      filter(status %in% c("confirmed", "manual")) |>
-      select(date, any_of(c("OT", "TP1", "TP2", "UPMON", "BST"))) |>
-      pivot_longer(-date, names_to = "transect", values_to = "username") |>
-      filter(!is.na(username), !is.na(date)) |>
-      select(username, date = date) |>
-      mutate(date = as.Date(date)) |>
-      distinct()
+# =============================================================
+# 5. iNAT API: LIVE SUPPLEMENT
+# =============================================================
+# Fetch all non-lethal roster obs within the CABR bounding box, then
+# keep only obs_ids NOT already in the export. These are observations
+# posted since the last export download -- typically very few or none
+# if the export is recent.
+message("\n--- API fetch (supplement to export) ---")
 
-    # Build confirmed (username, date) pairs from intern official file
-    intern_dates <- read_csv(intern_official_path, show_col_types = FALSE) |>
-      filter(status == "confirmed") |>
-      select(date, any_of(c("username_1", "username_2"))) |>
-      pivot_longer(-date, names_to = NULL, values_to = "username") |>
-      filter(!is.na(username)) |>
-      mutate(date = as.Date(date)) |>
-      distinct()
+bb <- cabr_survey_box |> st_transform(4326) |> st_bbox()
 
-    confirmed_events <- bind_rows(beeple_dates, intern_dates) |> distinct()
+api_params <- list(
+  user_id  = paste(usernames, collapse = ","),
+  swlat    = unname(bb["ymin"]),
+  swlng    = unname(bb["xmin"]),
+  nelat    = unname(bb["ymax"]),
+  nelng    = unname(bb["xmax"]),
+  taxon_id = TAXON_BEES,
+  per_page = 200,
+  order_by = "id",
+  order    = "asc"
+)
 
-    # Add on_survey_date flag to all obs
-    clean <- clean |>
-      left_join(
-        confirmed_events |> mutate(on_survey_date = TRUE),
-        by = c("observer" = "username", "observed_date" = "date")
-      ) |>
-      mutate(on_survey_date = coalesce(on_survey_date, FALSE))
+api_raw_obs  <- list()
+api_raw_tags <- list()
+id_above <- 0L
+page     <- 0L
 
-    # Recover obs that were on confirmed survey dates but not tagged
-    n_recovered <- sum(clean$triage != "keep" & clean$on_survey_date)
-    if (n_recovered > 0) {
-      clean <- clean |>
-        mutate(triage = if_else(triage != "keep" & on_survey_date,
-                                "recovered_by_date", triage))
-      cat(sprintf("  Recovered %d obs that were on confirmed survey dates but lacked survey tags.\n",
-                  n_recovered))
-    } else {
-      cat("  No untagged obs found on confirmed survey dates.\n")
-    }
+repeat {
+  page <- page + 1L
+  resp <- request("https://api.inaturalist.org/v1/observations") |>
+    req_user_agent(UA) |>
+    req_retry(
+      max_tries    = 6,
+      is_transient = \(r) resp_status(r) %in% c(429L, 500L, 502L, 503L, 504L),
+      backoff      = \(i) min(60, 5 * 2^(i - 1))
+    ) |>
+    req_url_query(!!!api_params, id_above = id_above) |>
+    req_perform() |>
+    resp_body_json()
 
-    # Flag tagged obs that fall OUTSIDE any known survey date (possible personal visits)
-    n_offdate <- sum(clean$triage == "keep" & !clean$on_survey_date)
-    if (n_offdate > 0) {
-      cat(sprintf("  %d obs have triage='keep' but fall outside confirmed survey dates.\n",
-                  n_offdate))
-      cat("  These may be personal visits that were accidentally tagged -- worth reviewing.\n")
-    }
+  results <- resp$results
+  if (length(results) == 0L) break
 
-    cat(sprintf("  on_survey_date: %d confirmed, %d not on known survey date\n",
-                sum(clean$on_survey_date), sum(!clean$on_survey_date)))
+  api_raw_obs[[page]] <- map_dfr(results, function(o) {
+    coord <- o$geojson$coordinates
+    tibble(
+      obs_id               = as.integer(o$id),
+      observer             = o$user$login %||% NA_character_,
+      url                  = paste0("https://www.inaturalist.org/observations/", o$id),
+      observed_on          = o$observed_on %||% NA_character_,
+      latitude             = if (is.null(coord)) NA_real_ else coord[[2L]],
+      longitude            = if (is.null(coord)) NA_real_ else coord[[1L]],
+      quality_grade        = o$quality_grade %||% NA_character_,
+      captive_cultivated   = isTRUE(o$captive),
+      coordinates_obscured = isTRUE(o$obscured),
+      taxon_id             = as.integer(o$taxon$id %||% NA_integer_),
+      scientific_name      = o$taxon$name %||% NA_character_,
+      common_name          = o$taxon$preferred_common_name %||% NA_character_
+    )
+  })
 
-    # Re-write with updated triage + new on_survey_date column
-    write_fresh(clean, out_clean)
-    cat("  Updated clean file with on_survey_date flag -> ", out_clean, "\n", sep = "")
-  } else {
-    cat("\nSkipping date-based recovery: run survey_dates.R first to generate official files.\n")
-  }
+  api_raw_tags[[page]] <- map_dfr(results, function(o) {
+    tg <- o$tags %||% list()
+    if (length(tg) == 0L) return(NULL)
+    tibble(
+      obs_id = as.integer(o$id),
+      # API tags can be plain strings OR list objects with a $name field
+      tag = map_chr(tg, \(t) if (is.list(t)) (t$name %||% "") else as.character(t))
+    )
+  })
+
+  last_id <- as.integer(results[[length(results)]]$id)
+  message(sprintf("  page %d: %d obs (id up to %d)", page, length(results), last_id))
+  id_above <- last_id
+  if (length(results) < api_params$per_page) break
+  Sys.sleep(1)
+}
+
+api_all_obs  <- if (length(api_raw_obs))  bind_rows(api_raw_obs)  else tibble()
+api_all_tags <- if (length(api_raw_tags)) bind_rows(api_raw_tags) else tibble()
+
+# Keep only obs NOT already in the export
+new_ids <- setdiff(api_all_obs$obs_id, export_cabr$obs_id)
+
+if (length(new_ids) > 0L) {
+  message(sprintf("  %d new obs (not in export) -- clipping to survey box", length(new_ids)))
+
+  api_new_sf <- api_all_obs |>
+    filter(obs_id %in% new_ids, !is.na(latitude), !is.na(longitude)) |>
+    st_as_sf(coords = c("longitude", "latitude"), crs = 4326L) |>
+    st_transform(st_crs(cabr_survey_box))
+
+  api_in_box  <- lengths(st_within(api_new_sf, cabr_survey_box)) > 0L
+  api_new_obs <- api_new_sf |>
+    filter(api_in_box) |>
+    st_drop_geometry() |>
+    mutate(observed_date = as.Date(observed_on), data_from = "api_only")
+
+  message(sprintf("  %d new obs inside CABR survey box added from API", nrow(api_new_obs)))
+
+  # Reconstruct tag_list string for API obs (for reference + triage)
+  api_tag_strings <- api_all_tags |>
+    filter(obs_id %in% api_new_obs$obs_id) |>
+    group_by(obs_id) |>
+    summarise(tag_list = paste(tag, collapse = ", "), .groups = "drop")
+
+  # Triage API obs from their tags (no Tags obs_field available for API)
+  api_triage_input <- tibble(obs_id = api_new_obs$obs_id) |>
+    left_join(api_tag_strings, by = "obs_id")
+
+  api_triage_result <- triage_from_tag_list(api_triage_input, tag_map)
+
+  api_obs_triage <- api_triage_result$triage |>
+    mutate(
+      has_survey_from_tags_field = FALSE,
+      triage = case_when(
+        is_exclude ~ "exclude",
+        has_survey ~ "keep",
+        TRUE       ~ "flag"
+      ),
+      triage_reason = case_when(
+        is_exclude ~ paste0("exclude tag: ", exclude_tag),
+        has_survey ~ "valid Cabrillo survey tag",
+        TRUE       ~ "no recognized survey tag -- review"
+      )
+    )
+
+  api_new_obs <- api_new_obs |>
+    left_join(role_lookup,     by = c("observer" = "inaturalist_username")) |>
+    left_join(api_tag_strings, by = "obs_id") |>
+    left_join(api_obs_triage,  by = "obs_id")
+
+} else {
+  message("  No new obs from API -- export is fully current")
+  api_new_obs <- tibble()
+}
+
+
+# =============================================================
+# 6. MERGE EXPORT + API
+# =============================================================
+# Export is the ground truth for obs_fields. API-only obs get NA for
+# all obs_field columns (flower_visited, bee_behavior, etc.) -- they
+# will fill in on the next export refresh.
+export_core <- export_cabr |>
+  left_join(role_lookup, by = c("observer" = "inaturalist_username")) |>
+  left_join(obs_triage,  by = "obs_id") |>
+  mutate(
+    # Coalesce triage defaults for obs that had no tags at all
+    is_exclude  = coalesce(is_exclude,  FALSE),
+    has_survey  = coalesce(has_survey,  FALSE),
+    is_10min    = coalesce(is_10min,    FALSE),
+    triage      = coalesce(triage,      "flag"),
+    triage_reason = coalesce(triage_reason, "no tags on observation -- review"),
+    has_survey_from_tags_field = coalesce(has_survey_from_tags_field, FALSE)
+  )
+
+# bind_rows fills in NA for columns present in one source but not the other
+all_obs <- bind_rows(export_core, api_new_obs)
+
+message(sprintf(
+  "\nMerged: %d obs total (%d export + %d API-only)",
+  nrow(all_obs), nrow(export_core), nrow(api_new_obs)
+))
+
+
+# =============================================================
+# 7. TAXONOMY JOIN
+# =============================================================
+# bee_taxonomy_lookup.csv is built by native_bee_checklist.R.
+# It covers all ranks from epifamily through subspecies, and includes
+# subgenus and complex (which the iNat CSV export does NOT include).
+# Join key: taxon_id (integer).
+# For obs the lookup doesn't cover, fall back to the export's
+# taxon_*_name columns.
+if (!file.exists(taxonomy_path)) {
+  message("\nWARNING: bee_taxonomy_lookup.csv not found at '", taxonomy_path, "'")
+  message("Run native_bee_checklist.R first to build it.")
+  message("Proceeding with export taxon_*_name columns only (no subgenus/complex).")
+  tax <- tibble(
+    taxon_id   = integer(),
+    rank       = character(),
+    family     = character(), subfamily  = character(),
+    tribe      = character(), subtribe   = character(),
+    genus      = character(), subgenus   = character(),
+    complex    = character(), species    = character(),
+    subspecies = character()
+  )
+} else {
+  tax <- read_csv(taxonomy_path, show_col_types = FALSE) |>
+    select(taxon_id, rank, family, subfamily, tribe, subtribe,
+           genus, subgenus, complex, species, subspecies)
+  message(sprintf("Taxonomy lookup: %d taxa loaded", nrow(tax)))
+}
+
+all_obs <- all_obs |>
+  left_join(tax, by = "taxon_id") |>
+  mutate(
+    # Lookup wins (has subgenus/complex/correct tribe); export taxon_*_name
+    # columns fill in for obs the lookup doesn't yet cover (higher-rank obs
+    # added since the last checklist run, or if checklist hasn't been run yet).
+    family     = coalesce(family,     taxon_family_name),
+    subfamily  = coalesce(subfamily,  taxon_subfamily_name),
+    tribe      = coalesce(tribe,      taxon_tribe_name),
+    subtribe   = coalesce(subtribe,   taxon_subtribe_name),
+    genus      = coalesce(genus,      taxon_genus_name),
+    species    = coalesce(species,    taxon_species_name),
+    subspecies = coalesce(subspecies, taxon_subspecies_name)
+    # subgenus and complex: lookup only (not in iNat export)
+  )
+
+
+# =============================================================
+# 8. ASSEMBLE FINAL CLEAN OUTPUT
+# =============================================================
+clean <- all_obs |>
+  mutate(missing_coords = is.na(latitude) | is.na(longitude)) |>
+  select(
+    # --- Identity ---
+    obs_id,
+    url,
+    observer,
+    data_source,          # intern / beeple / staff (from roster role)
+    observed_date,
+    latitude,
+    longitude,
+    quality_grade,
+    captive_cultivated,
+    coordinates_obscured,
+    missing_coords,
+
+    # --- Triage ---
+    triage,               # keep / flag / exclude / recovered_by_date (Step 9)
+    triage_reason,
+    has_survey_from_tags_field,  # TRUE = rescued via Tags obs_field override
+    survey_year,
+    survey_type,          # beeple / intern / general
+    transect,             # TP / UPMON / BST / OT (from tags)
+    is_10min,             # CabrilloBee10MinuteSurvey flag
+
+    # --- Taxonomy (from lookup + export fallback) ---
+    taxon_id,
+    scientific_name,
+    common_name,
+    rank,
+    family,
+    subfamily,
+    tribe,
+    subtribe,
+    genus,
+    subgenus,             # lookup only (not in export)
+    complex,              # lookup only (not in export)
+    species,
+    subspecies,
+
+    # --- Observation fields (export only; NA for API-only obs) ---
+    flower_visited,       # coalesced from all plant-interaction fields
+    bee_behavior,
+    on_ground,
+    nesting,              # coalesced from field:nest + field:nesting
+    nesting_bee,
+    mating_behavior,
+
+    # --- Raw fields ---
+    tag_list,
+    description,
+    data_from             # "export" or "api_only"
+  )
+
+write_fresh_csv(clean, out_clean, na = "")
+
+message("\n========== CLEAN SUMMARY ==========")
+message(sprintf("Total obs: %d", nrow(clean)))
+message("\nBy triage:"); print(count(clean, triage, sort = TRUE))
+message("\nBy data_source:"); print(count(clean, data_source, sort = TRUE))
+message("\nBy survey_year:"); print(count(clean, survey_year, sort = TRUE))
+message(sprintf("\nSaved -> %s", out_clean))
+
+if (nrow(unknown_tags) > 0) {
+  message(sprintf(
+    "\nACTION: %d unrecognized tag(s) -- check:\n  %s",
+    nrow(unknown_tags), out_unknown_tags
+  ))
+  message("Scan for misspelled Cabrillo survey tags or new survey years.")
+  message("Add to crosswalk inat_variants, then re-run this script.")
+}
+
+
+# =============================================================
+# 9. DATE-BASED RECOVERY (optional second pass)
+# =============================================================
+# Only runs after survey_dates.R has produced the official date files.
+# Adds on_survey_date to all obs and recovers "flag" obs that occurred
+# on a confirmed survey date (most likely forgot the survey hashtag).
+#
+# To trigger: run survey_dates.R first, then re-run inat_bee_clean.R.
+beeple_official <- "data/project_info/beeple_survey_dates_official.csv"
+intern_official  <- "data/project_info/intern_survey_dates_official.csv"
+
+if (file.exists(beeple_official) && file.exists(intern_official)) {
+  message("\n--- Step 9: Date-based recovery ---")
+
+  # Beeple confirmed dates: each confirmed/manual row has usernames per transect column
+  TRANSECT_COLS <- c("OT", "TP1", "TP2", "UPMON", "BST")
+
+  beeple_dates <- read_csv(beeple_official, show_col_types = FALSE) |>
+    filter(status %in% c("confirmed", "manual")) |>
+    select(date, any_of(TRANSECT_COLS)) |>
+    pivot_longer(-date, names_to = "t", values_to = "username") |>
+    filter(!is.na(username), !is.na(date)) |>
+    transmute(username, date = as.Date(date))
+
+  # Intern confirmed dates: each row has one or two usernames
+  intern_dates <- read_csv(intern_official, show_col_types = FALSE) |>
+    filter(status == "confirmed") |>
+    select(date, any_of(c("username_1", "username_2"))) |>
+    pivot_longer(-date, names_to = NULL, values_to = "username") |>
+    filter(!is.na(username), !is.na(date)) |>
+    transmute(username, date = as.Date(date))
+
+  confirmed_events <- bind_rows(beeple_dates, intern_dates) |>
+    distinct() |>
+    mutate(on_survey_date = TRUE)
+
+  clean <- clean |>
+    left_join(confirmed_events,
+              by = c("observer" = "username", "observed_date" = "date")) |>
+    mutate(
+      on_survey_date = coalesce(on_survey_date, FALSE),
+      triage = if_else(
+        triage == "flag" & on_survey_date,
+        "recovered_by_date",
+        triage
+      ),
+      triage_reason = if_else(
+        triage == "recovered_by_date",
+        "no survey tag but obs date matches confirmed survey date",
+        triage_reason
+      )
+    )
+
+  n_recovered    <- sum(clean$triage == "recovered_by_date", na.rm = TRUE)
+  n_keep_offdate <- sum(clean$triage == "keep" & !clean$on_survey_date, na.rm = TRUE)
+
+  message(sprintf("  %d obs recovered (on confirmed survey date, lacked tag)", n_recovered))
+  if (n_keep_offdate > 0)
+    message(sprintf(
+      "  NOTE: %d 'keep' obs fall outside confirmed survey dates -- possible personal visits",
+      n_keep_offdate
+    ))
+
+  write_fresh_csv(clean, out_clean, na = "")
+  message(sprintf("  Updated with on_survey_date + recovery -> %s", out_clean))
+
+} else {
+  message("\nSkipping date recovery -- run survey_dates.R first, then re-run this script.")
+  message("(Re-run adds on_survey_date column and recovers untagged survey obs.)")
 }
