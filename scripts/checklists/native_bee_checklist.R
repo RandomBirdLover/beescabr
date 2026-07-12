@@ -443,8 +443,14 @@ finalize_checklist <- function(checklist) {
   checklist %>%
     left_join(taxonomy_lookup, by = "taxon_id") %>%
     mutate(
-      species    = word(species, -1),
-      subspecies = word(subspecies, -1)
+      # word(..., -1) extracts the last word (species epithet) from a full
+      # binomial like "Agapostemon texanus". For genus-level observations
+      # species is "" (blank), and word("", -1) returns "" not NA -- which
+      # breaks the genus_below_rows join because Holway genus rows carry
+      # species = NA_character_. na_if converts the empty string to NA so
+      # the join keys align.
+      species    = na_if(word(species, -1), ""),
+      subspecies = na_if(word(subspecies, -1), "")
     ) %>%
     select(
       taxon_id,
@@ -658,20 +664,32 @@ species_rows <- holway_taxonomy %>%
 # --- SUBGENUS ROWS (from iNat API via taxonomy_lookup) ---
 # Each unique subgenus encountered in the SD County iNat data,
 # paired with its genus's higher ranks (from genus_rows above).
+# Holway is the preferred source for family/subfamily/tribe. When
+# Holway doesn't know the genus (e.g. a genus that was recently
+# elevated from a subgenus after Holway was published), we fall back
+# to whatever the iNat export itself carries for those columns.
 subgenus_rows <- checklist_sd_county %>%
   filter(!is.na(subgenus), subgenus != "") %>%
-  distinct(genus, subgenus) %>%
+  distinct(genus, subgenus, family, subfamily, tribe, subtribe) %>%
   left_join(
-    genus_rows %>% select(genus, family, subfamily, tribe),
+    genus_rows %>% select(genus,
+                          holway_family    = family,
+                          holway_subfamily = subfamily,
+                          holway_tribe     = tribe),
     by = "genus"
   ) %>%
+  mutate(
+    family    = coalesce(holway_family,    family),
+    subfamily = coalesce(holway_subfamily, subfamily),
+    tribe     = coalesce(holway_tribe,     tribe)
+  ) %>%
+  select(-holway_family, -holway_subfamily, -holway_tribe) %>%
   mutate(
     kingdom     = BEE_KINGDOM,
     phylum      = BEE_PHYLUM,
     class       = BEE_CLASS,
     order       = BEE_ORDER,
     superfamily = BEE_SUPERFAMILY,
-    subtribe    = NA_character_,
     complex     = NA_character_,
     species     = NA_character_,
     subspecies  = NA_character_,
@@ -679,40 +697,63 @@ subgenus_rows <- checklist_sd_county %>%
   )
 
 # --- COMPLEX ROWS (from iNat API via taxonomy_lookup) ---
+# Same fallback pattern as subgenus_rows: Holway first, iNat export
+# as fallback for genera Holway doesn't list at genus level.
 complex_rows <- checklist_sd_county %>%
   filter(!is.na(complex), complex != "") %>%
-  distinct(genus, subgenus, complex) %>%
+  distinct(genus, subgenus, complex, family, subfamily, tribe, subtribe) %>%
   left_join(
-    genus_rows %>% select(genus, family, subfamily, tribe),
+    genus_rows %>% select(genus,
+                          holway_family    = family,
+                          holway_subfamily = subfamily,
+                          holway_tribe     = tribe),
     by = "genus"
   ) %>%
+  mutate(
+    family    = coalesce(holway_family,    family),
+    subfamily = coalesce(holway_subfamily, subfamily),
+    tribe     = coalesce(holway_tribe,     tribe)
+  ) %>%
+  select(-holway_family, -holway_subfamily, -holway_tribe) %>%
   mutate(
     kingdom     = BEE_KINGDOM,
     phylum      = BEE_PHYLUM,
     class       = BEE_CLASS,
     order       = BEE_ORDER,
     superfamily = BEE_SUPERFAMILY,
-    subtribe    = NA_character_,
     species     = NA_character_,
     subspecies  = NA_character_,
     rank        = "complex"
   )
 
 # --- SUBSPECIES ROWS (from current SD County iNat export) ---
+# Same fallback pattern: Holway first, iNat export as fallback.
+# This is specifically what fixes Epimelissodes obliquus expurgatus --
+# Holway lists Epimelissodes as a subgenus of Svastra, so there is no
+# genus row for "Epimelissodes" in genus_rows. Without the fallback,
+# family/subfamily/tribe come back NA for that subspecies row.
 subspecies_rows <- checklist_sd_county %>%
   filter(!is.na(subspecies), subspecies != "") %>%
-  distinct(genus, subgenus, species, subspecies) %>%
+  distinct(genus, subgenus, species, subspecies, family, subfamily, tribe, subtribe) %>%
   left_join(
-    genus_rows %>% select(genus, family, subfamily, tribe),
+    genus_rows %>% select(genus,
+                          holway_family    = family,
+                          holway_subfamily = subfamily,
+                          holway_tribe     = tribe),
     by = "genus"
   ) %>%
+  mutate(
+    family    = coalesce(holway_family,    family),
+    subfamily = coalesce(holway_subfamily, subfamily),
+    tribe     = coalesce(holway_tribe,     tribe)
+  ) %>%
+  select(-holway_family, -holway_subfamily, -holway_tribe) %>%
   mutate(
     kingdom     = BEE_KINGDOM,
     phylum      = BEE_PHYLUM,
     class       = BEE_CLASS,
     order       = BEE_ORDER,
     superfamily = BEE_SUPERFAMILY,
-    subtribe    = NA_character_,
     complex     = NA_character_,
     rank        = "subspecies"
   )
@@ -1061,6 +1102,39 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
         by = "match_key",
         na_matches = "never"
       )
+
+    # Rollup: if any species in a genus/subgenus has a specimen, propagate
+    # that flag up to the less-specific rows for that same genus/subgenus.
+    # E.g. a specimen of Andrena (Simandrena) pallidifovea means we also
+    # have a specimen of Andrena (Simandrena) -- the subgenus-only row
+    # should get an X in Recent survey too.
+    genera_with_specimen <- checklist %>%
+      filter(!is.na(has_cabr_specimen) & has_cabr_specimen) %>%
+      distinct(genus) %>%
+      mutate(genus_rollup = TRUE)
+
+    subgenera_with_specimen <- checklist %>%
+      filter(!is.na(has_cabr_specimen) & has_cabr_specimen,
+             !is.na(subgenus) & subgenus != "") %>%
+      distinct(genus, subgenus) %>%
+      mutate(subgenus_rollup = TRUE)
+
+    checklist <- checklist %>%
+      left_join(genera_with_specimen,  by = "genus") %>%
+      left_join(subgenera_with_specimen, by = c("genus", "subgenus")) %>%
+      mutate(has_cabr_specimen = case_when(
+        !is.na(has_cabr_specimen) & has_cabr_specimen ~ TRUE,
+        # subgenus-only row: roll up from any species in same genus+subgenus
+        (is.na(species) | species == "") &
+          !is.na(subgenus) & subgenus != "" &
+          !is.na(subgenus_rollup)                     ~ TRUE,
+        # genus-only row: roll up from any species in same genus
+        (is.na(species) | species == "") &
+          (is.na(subgenus) | subgenus == "") &
+          !is.na(genus_rollup)                        ~ TRUE,
+        TRUE ~ has_cabr_specimen
+      )) %>%
+      select(-genus_rollup, -subgenus_rollup)
   } else {
     checklist$has_cabr_specimen <- NA
   }

@@ -110,6 +110,45 @@ clean_bee_data <- clean_bee_data %>%
   )
 
 # ------------------------------------------------------------
+# STEP 2c: Fill missing taxonomy ranks from bee_taxonomy_lookup.csv
+# Joins on (genus, species, subspecies) -- all three already
+# normalized by Step 2b. Coalesces in family, subfamily, tribe,
+# subtribe for any specimen where those were blank in the source
+# sheet (data-entry omissions, reclassified genera, etc.).
+# Holway-derived rows in the lookup already carry the authoritative
+# CA family/tribe values, so this is the same taxonomy authority
+# the checklist uses -- not a separate/competing source.
+# Runs BEFORE the QC step so the saved CSV has ranks filled in.
+# ------------------------------------------------------------
+taxonomy_lookup_path <- "data/outputs/reference/bee_taxonomy_lookup.csv"
+if (file.exists(taxonomy_lookup_path)) {
+  tax_lookup <- read.csv(taxonomy_lookup_path, na.strings = "") %>%
+    filter(!is.na(genus), genus != "") %>%
+    select(genus, species, subspecies, family, subfamily, tribe, subtribe) %>%
+    distinct(genus, species, subspecies, .keep_all = TRUE)
+
+  clean_bee_data <- clean_bee_data %>%
+    left_join(tax_lookup,
+              by = c("genus", "species", "subspecies"),
+              suffix = c("", "_lookup")) %>%
+    mutate(
+      family    = coalesce(na_if(family,    ""), family_lookup),
+      subfamily = coalesce(na_if(subfamily, ""), subfamily_lookup),
+      tribe     = coalesce(na_if(tribe,     ""), tribe_lookup),
+      subtribe  = coalesce(na_if(subtribe,  ""), subtribe_lookup)
+    ) %>%
+    select(-ends_with("_lookup"))
+
+  n_filled <- sum(!is.na(clean_bee_data$family)) -
+              sum(!is.na(raw_bee_data$family) & raw_bee_data$family != "")
+  cat(sprintf("Taxonomy ranks filled from bee_taxonomy_lookup: %d row(s) updated\n",
+              max(0L, n_filled)))
+} else {
+  cat("WARNING: bee_taxonomy_lookup.csv not found -- taxonomy ranks not auto-filled.\n")
+  cat("         Run native_bee_checklist.R first to generate it.\n")
+}
+
+# ------------------------------------------------------------
 # STEP 3: QC flags -- see header note on scope.
 # ------------------------------------------------------------
 clean_bee_data <- clean_bee_data %>%
@@ -166,7 +205,7 @@ dup_sdnhm <- clean_bee_data %>%
 
 duplicates_list <- bind_rows(dup_ucsd, dup_sdnhm) %>%
   distinct(ucsd_id, .keep_all = TRUE) %>%
-  arrange(ucsd_id)
+  arrange(sdnhm_id, ucsd_id)
 
 cat(sprintf("\nDuplicate IDs detected: %d rows\n", nrow(duplicates_list)))
 if (nrow(duplicates_list) > 0) {
