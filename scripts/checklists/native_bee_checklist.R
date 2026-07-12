@@ -114,7 +114,6 @@ bees <- bees %>%
     family      = taxon_family_name,
     subfamily   = taxon_subfamily_name,
     tribe       = taxon_tribe_name,
-    subtribe    = taxon_subtribe_name,
     genus       = taxon_genus_name,
     species     = taxon_species_name,
     subspecies  = taxon_subspecies_name
@@ -258,7 +257,6 @@ build_checklist <- function(obs_df, label) {
       family,
       subfamily,
       tribe,
-      subtribe,
       genus,
       species,
       subspecies
@@ -464,7 +462,6 @@ finalize_checklist <- function(checklist) {
       family,
       subfamily,
       tribe,
-      subtribe,
       genus,
       subgenus,
       complex,   # join key for specimen matching
@@ -623,7 +620,6 @@ genus_rows <- holway_taxonomy %>%
     class       = BEE_CLASS,
     order       = BEE_ORDER,
     superfamily = BEE_SUPERFAMILY,
-    subtribe    = NA_character_,
     subgenus    = NA_character_,
     complex     = NA_character_,
     species     = NA_character_,
@@ -652,7 +648,6 @@ species_rows <- holway_taxonomy %>%
     class       = BEE_CLASS,
     order       = BEE_ORDER,
     superfamily = BEE_SUPERFAMILY,
-    subtribe    = NA_character_,
     complex     = NA_character_,
     subspecies  = NA_character_,
     rank        = "species"
@@ -670,7 +665,7 @@ species_rows <- holway_taxonomy %>%
 # to whatever the iNat export itself carries for those columns.
 subgenus_rows <- checklist_sd_county %>%
   filter(!is.na(subgenus), subgenus != "") %>%
-  distinct(genus, subgenus, family, subfamily, tribe, subtribe) %>%
+  distinct(genus, subgenus, family, subfamily, tribe) %>%
   left_join(
     genus_rows %>% select(genus,
                           holway_family    = family,
@@ -701,7 +696,7 @@ subgenus_rows <- checklist_sd_county %>%
 # as fallback for genera Holway doesn't list at genus level.
 complex_rows <- checklist_sd_county %>%
   filter(!is.na(complex), complex != "") %>%
-  distinct(genus, subgenus, complex, family, subfamily, tribe, subtribe) %>%
+  distinct(genus, subgenus, complex, family, subfamily, tribe) %>%
   left_join(
     genus_rows %>% select(genus,
                           holway_family    = family,
@@ -734,7 +729,7 @@ complex_rows <- checklist_sd_county %>%
 # family/subfamily/tribe come back NA for that subspecies row.
 subspecies_rows <- checklist_sd_county %>%
   filter(!is.na(subspecies), subspecies != "") %>%
-  distinct(genus, subgenus, species, subspecies, family, subfamily, tribe, subtribe) %>%
+  distinct(genus, subgenus, species, subspecies, family, subfamily, tribe) %>%
   left_join(
     genus_rows %>% select(genus,
                           holway_family    = family,
@@ -763,7 +758,7 @@ taxonomy_column_order <- c(
   "taxon_id",
   "scientific_name", "common_name",
   "kingdom", "phylum", "class", "order", "superfamily",
-  "family", "subfamily", "tribe", "subtribe",
+  "family", "subfamily", "tribe",
   "genus", "subgenus", "complex", "complex_taxon_id",
   "species", "subspecies",
   "rank"
@@ -774,28 +769,56 @@ taxonomy_column_order <- c(
 # observed in the SD County iNat data). Holway-only taxa (not yet observed
 # on iNat) get taxon_id = NA -- they stay in the lookup for completeness
 # but won't match any observation join until someone records them on iNat.
-genus_below_rows <- bind_rows(
-  genus_rows      %>% mutate(complex_taxon_id = NA_integer_),
-  subgenus_rows   %>% mutate(complex_taxon_id = NA_integer_),
-  complex_rows,
+#
+# TWO-PASS JOIN (2026-07-11):
+# Genus/subgenus/complex rows join on all five keys
+# (genus, subgenus, complex, species, subspecies) -- these row types are
+# built FROM the iNat checklist so their complex values already align.
+#
+# Species/subspecies rows join on (genus, species, subspecies) ONLY.
+# Holway does not track complexes, so species_rows always has complex=NA.
+# But iNat assigns species to a complex (e.g. Agapostemon subtilior has
+# complex='Agapostemon texanus'). Including complex in the join key means
+# NA != 'Agapostemon texanus' -> no match -> taxon_id stays NA. Joining
+# without complex fixes this, and we pick up complex/complex_taxon_id
+# from the iNat side after the join.
+
+inat_ref <- checklist_sd_county %>%
+  select(taxon_id, scientific_name, common_name, genus, subgenus,
+         complex, complex_taxon_id, species, subspecies)
+
+higher_group_rows <- bind_rows(
+  genus_rows    %>% mutate(complex_taxon_id = NA_integer_),
+  subgenus_rows %>% mutate(complex_taxon_id = NA_integer_),
+  complex_rows
+) %>%
+  left_join(inat_ref,
+            by = c("genus", "subgenus", "complex", "species", "subspecies"),
+            relationship = "many-to-many") %>%
+  mutate(complex_taxon_id = coalesce(complex_taxon_id.y, complex_taxon_id.x)) %>%
+  select(-complex_taxon_id.x, -complex_taxon_id.y) %>%
+  distinct()
+
+species_group_rows <- bind_rows(
   species_rows    %>% mutate(complex_taxon_id = NA_integer_),
   subspecies_rows %>% mutate(complex_taxon_id = NA_integer_)
 ) %>%
   left_join(
-    checklist_sd_county %>%
-      select(taxon_id, scientific_name, common_name, genus, subgenus,
-             complex, complex_taxon_id, species, subspecies),
-    by = c("genus", "subgenus", "complex", "species", "subspecies"),
+    inat_ref %>% rename(inat_complex          = complex,
+                        inat_complex_taxon_id = complex_taxon_id),
+    by = c("genus", "species", "subspecies"),
     relationship = "many-to-many"
   ) %>%
-  # coalesce: iNat taxon_id wins; Holway-only rows keep NA
   mutate(
-    complex_taxon_id = coalesce(complex_taxon_id.y, complex_taxon_id.x)
+    complex          = coalesce(inat_complex,          complex),
+    complex_taxon_id = coalesce(inat_complex_taxon_id, complex_taxon_id)
   ) %>%
-  select(-complex_taxon_id.x, -complex_taxon_id.y) %>%
+  select(-inat_complex, -inat_complex_taxon_id) %>%
   distinct()
 
-# --- HIGHER-RANK ROWS (epifamily, family, subfamily, tribe, subtribe) ---
+genus_below_rows <- bind_rows(higher_group_rows, species_group_rows)
+
+# --- HIGHER-RANK ROWS (epifamily, family, subfamily, tribe) ---
 # Observations identified above genus level have a taxon_id pointing to
 # that higher rank in iNat. They never appear in the genus-and-below rows,
 # so without this step a join on taxon_id in inat_bee_clean.R would return
@@ -806,12 +829,11 @@ genus_below_rows <- bind_rows(
 higher_rank_rows <- bees %>%
   filter(is.na(genus) | genus == "") %>%
   select(taxon_id, scientific_name, common_name,
-         family, subfamily, tribe, subtribe) %>%
+         family, subfamily, tribe) %>%
   distinct(taxon_id, .keep_all = TRUE) %>%
   filter(!is.na(taxon_id)) %>%
   mutate(
     rank = case_when(
-      !is.na(subtribe)  & subtribe  != "" ~ "subtribe",
       !is.na(tribe)     & tribe     != "" ~ "tribe",
       !is.na(subfamily) & subfamily != "" ~ "subfamily",
       !is.na(family)    & family    != "" ~ "family",
@@ -831,17 +853,26 @@ higher_rank_rows <- bees %>%
   )
 
 # --- COMBINE AND SAVE ---
+# Two-pass deduplication:
+#   (1) Rows WITH a taxon_id: keep one row per taxon_id (stable iNat key).
+#   (2) Holway-only rows (taxon_id = NA): distinct(taxon_id) would collapse
+#       ALL of them into ONE row because dplyr treats NA == NA in distinct().
+#       Instead, deduplicate by genus+species+subspecies so every Holway
+#       species survives.
 bee_taxonomy_lookup <- bind_rows(
   genus_below_rows %>% select(any_of(taxonomy_column_order)),
   higher_rank_rows %>% select(any_of(taxonomy_column_order))
 ) %>%
-  distinct(taxon_id, .keep_all = TRUE) %>%   # one row per taxon_id (stable iNat key)
+  { bind_rows(
+      filter(., !is.na(taxon_id)) %>% distinct(taxon_id, .keep_all = TRUE),
+      filter(., is.na(taxon_id))  %>% distinct(genus, species, subspecies, .keep_all = TRUE)
+  )} %>%
   arrange(family, genus, rank, subgenus, complex, species, subspecies)
 
 # Per-rank summary for QC
 rank_summary <- bee_taxonomy_lookup %>%
   count(rank) %>%
-  arrange(match(rank, c("epifamily", "family", "subfamily", "tribe", "subtribe",
+  arrange(match(rank, c("epifamily", "family", "subfamily", "tribe",
                          "genus", "subgenus", "complex", "species", "subspecies")))
 cat("Taxonomy lookup rows by rank:\n")
 print(rank_summary)
@@ -1087,10 +1118,9 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
   # cause is dplyr's NA-matching default, which only matters once the
   # match_key fix correctly produces NAs in the first place). Setting
   # na_matches = "never" tells dplyr that NA never matches anything, not
-  # even another NA -- which is the semantically correct behavior for
-  # this join: a genus-only checklist row should not be "confirmed by
-  # specimen" just because some specimen of unknown species exists in
-  # the same genus.
+  # even another NA. Genus-only specimens (species=NA → match_key=NA)
+  # are intentionally excluded from this join and handled separately
+  # below in the "genus-only specimens" block.
   if (!is.null(specimen_species)) {
     checklist <- checklist %>%
       left_join(
@@ -1135,6 +1165,28 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
         TRUE ~ has_cabr_specimen
       )) %>%
       select(-genus_rollup, -subgenus_rollup)
+
+    # Genus-only specimens: the main join uses na_matches="never" so a
+    # specimen with species=NA (match_key=NA) never matched the genus-only
+    # checklist row (match_key=NA). The rollup above only propagates from
+    # species rows that already got a flag -- it doesn't help here either.
+    # Fix: pull genus-only specimens separately and mark genus-level
+    # checklist rows (no species, no subgenus) directly.
+    genus_only_specimen_genera <- specimen_species %>%
+      filter(is.na(species) | species == "") %>%
+      distinct(genus) %>%
+      mutate(genus_direct = TRUE)
+
+    checklist <- checklist %>%
+      left_join(genus_only_specimen_genera, by = "genus") %>%
+      mutate(has_cabr_specimen = case_when(
+        !is.na(has_cabr_specimen) & has_cabr_specimen ~ TRUE,
+        (is.na(species) | species == "") &
+          (is.na(subgenus) | subgenus == "") &
+          !is.na(genus_direct)                         ~ TRUE,
+        TRUE ~ has_cabr_specimen
+      )) %>%
+      select(-genus_direct)
   } else {
     checklist$has_cabr_specimen <- NA
   }
@@ -1156,9 +1208,8 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
                                  NA_character_),
       Species           = species,
       Subspecies        = subspecies,
-      Authority         = NA_character_,  # not available from iNat/specimen data
-      `Recent survey`   = ifelse(!is.na(has_cabr_specimen) & has_cabr_specimen, "X", NA_character_),
-      `Museum Collection` = NA_character_,  # NOT YET IMPLEMENTED -- see PART B header notes
+      Authority           = NA_character_,  # not available from iNat/specimen data
+      `Museum Collection` = ifelse(!is.na(has_cabr_specimen) & has_cabr_specimen, "X", NA_character_),
       Literature        = NA_character_,    # out of scope -- no literature source in this pipeline
       iNaturalist       = "X",  # every row here came from the PART A / Tier 1 checklist, so always present
       Notes             = NA_character_
@@ -1186,7 +1237,7 @@ build_tier2_checklist <- function(tier1_checklist, specimen_species, run_holway_
   }
   
   output_cols <- c("Family", "Subfamily", "Tribe", "Genus", "Subgenus", "Complex", "Species", "Subspecies",
-                   "Authority", "Recent survey", "Museum Collection", "Literature", "iNaturalist", "Notes")
+                   "Authority", "Museum Collection", "Literature", "iNaturalist", "Notes")
   if (run_holway_check) output_cols <- c(output_cols, "Found in Holway checklist?")
   
   checklist %>%

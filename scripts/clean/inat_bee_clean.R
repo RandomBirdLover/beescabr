@@ -521,14 +521,14 @@ if (!file.exists(taxonomy_path)) {
     taxon_id   = integer(),
     rank       = character(),
     family     = character(), subfamily  = character(),
-    tribe      = character(), subtribe   = character(),
+    tribe      = character(),
     genus      = character(), subgenus   = character(),
     complex    = character(), species    = character(),
     subspecies = character()
   )
 } else {
   tax <- read_csv(taxonomy_path, show_col_types = FALSE) |>
-    select(taxon_id, rank, family, subfamily, tribe, subtribe,
+    select(taxon_id, rank, family, subfamily, tribe,
            genus, subgenus, complex, species, subspecies)
   message(sprintf("Taxonomy lookup: %d taxa loaded", nrow(tax)))
 }
@@ -542,7 +542,6 @@ all_obs <- all_obs |>
     family     = coalesce(family,     taxon_family_name),
     subfamily  = coalesce(subfamily,  taxon_subfamily_name),
     tribe      = coalesce(tribe,      taxon_tribe_name),
-    subtribe   = coalesce(subtribe,   taxon_subtribe_name),
     genus      = coalesce(genus,      taxon_genus_name),
     species    = coalesce(species,    taxon_species_name),
     subspecies = coalesce(subspecies, taxon_subspecies_name)
@@ -586,7 +585,6 @@ clean <- all_obs |>
     family,
     subfamily,
     tribe,
-    subtribe,
     genus,
     subgenus,             # lookup only (not in export)
     complex,              # lookup only (not in export)

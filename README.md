@@ -459,6 +459,24 @@ Both failures occur because `cabr_boundary` (NPS source) extends slightly into t
 
 ---
 
+## Known limitations
+
+Like any research pipeline, this one makes trade-offs and carries assumptions that are worth stating explicitly.
+
+**Taxonomy follows iNaturalist, which is a moving target.** The `bee_taxonomy_lookup.csv` is built fresh from the iNat API each run, so genus and species names track iNat's current taxonomy — but iNat itself lags behind the primary literature and occasionally disagrees with other authorities (e.g. ITIS, Discover Life). A taxon reclassification on iNat between runs can silently change which checklist row an observation joins to, or cause a previously-matching specimen name to no longer match.
+
+**The specimen taxonomy spell-check is a heuristic, not an authority.** `specimen_bee_clean.R` flags genus and species names that don't appear in the taxonomy lookup, which catches most typos and some outdated names. It will not catch: names that are still valid iNat taxa but incorrect for the specimen at hand; rank changes that don't alter the genus+species string; or iNat synonyms that haven't been cleaned up yet.
+
+**Genus-level and subgenus-level identifications are kept, not excluded.** The pipeline follows a "possible at CABR" philosophy — an iNat observation identified only to *Lasioglossum* counts as evidence of *Lasioglossum* at CABR. This is intentional (excluding them would lose real data), but it means checklist presence evidence varies in precision: some rows are confirmed to species, others only to genus.
+
+**The combined checklist "Museum Collection" column reflects CABR survey specimens only.** The specimen sheet is the sole source for the X in that column. Bees observed on iNat but not collected are not counted as specimen evidence, even when the identification is unambiguous. This is by design — the column tracks physical specimens in the collection — but it means the column is not a proxy for "seen at CABR."
+
+**Spatial tiers depend on iNat place boundaries, which are user-contributed.** The CABR, Point Loma, and SD County tiers are defined by iNat's place geometries, not by authoritative NPS or government shapefiles (except where `spatial_utils.R` applies the NPS CABR boundary for fine-grained spatial clipping). Minor boundary inconsistencies between iNat places and official shapefiles can cause observations to appear in one tier but not another unexpectedly.
+
+**Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run skips the write and leaves stale data in place. Delete `data/outputs/` contents before each run until this is resolved. (See also: TODO below.)
+
+---
+
 ## TODO
 
 ### Data — iNat bees
@@ -488,6 +506,7 @@ Both failures occur because `cabr_boundary` (NPS source) extends slightly into t
 
 ### Pipeline design
 
+- [ ] **Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run silently skips the write and you get stale data. Delete the relevant files in `data/outputs/` before each run until this is fixed.
 - [ ] **Ask Mitchell Nuckols:** does the interactive "did you review tags/fields?" prompt in `inat_bee_clean.R` conflict with how Taro wants to use this? If Taro just wants one button that runs everything and produces outputs (which is what the Rmd suggests), then stopping mid-run for user input breaks that. May need a different approach — e.g. always output the QC files and let the Rmd surface a warning instead of stopping.
 
 ### Spatial / infrastructure

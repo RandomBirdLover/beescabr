@@ -112,8 +112,8 @@ clean_bee_data <- clean_bee_data %>%
 # ------------------------------------------------------------
 # STEP 2c: Fill missing taxonomy ranks from bee_taxonomy_lookup.csv
 # Joins on (genus, species, subspecies) -- all three already
-# normalized by Step 2b. Coalesces in family, subfamily, tribe,
-# subtribe for any specimen where those were blank in the source
+# normalized by Step 2b. Coalesces in family, subfamily, tribe
+# for any specimen where those were blank in the source
 # sheet (data-entry omissions, reclassified genera, etc.).
 # Holway-derived rows in the lookup already carry the authoritative
 # CA family/tribe values, so this is the same taxonomy authority
@@ -124,7 +124,7 @@ taxonomy_lookup_path <- "data/outputs/reference/bee_taxonomy_lookup.csv"
 if (file.exists(taxonomy_lookup_path)) {
   tax_lookup <- read.csv(taxonomy_lookup_path, na.strings = "") %>%
     filter(!is.na(genus), genus != "") %>%
-    select(genus, species, subspecies, family, subfamily, tribe, subtribe) %>%
+    select(genus, species, subspecies, family, subfamily, tribe) %>%
     distinct(genus, species, subspecies, .keep_all = TRUE)
 
   clean_bee_data <- clean_bee_data %>%
@@ -134,8 +134,7 @@ if (file.exists(taxonomy_lookup_path)) {
     mutate(
       family    = coalesce(na_if(family,    ""), family_lookup),
       subfamily = coalesce(na_if(subfamily, ""), subfamily_lookup),
-      tribe     = coalesce(na_if(tribe,     ""), tribe_lookup),
-      subtribe  = coalesce(na_if(subtribe,  ""), subtribe_lookup)
+      tribe     = coalesce(na_if(tribe,     ""), tribe_lookup)
     ) %>%
     select(-ends_with("_lookup"))
 
@@ -146,6 +145,117 @@ if (file.exists(taxonomy_lookup_path)) {
 } else {
   cat("WARNING: bee_taxonomy_lookup.csv not found -- taxonomy ranks not auto-filled.\n")
   cat("         Run native_bee_checklist.R first to generate it.\n")
+}
+
+# ------------------------------------------------------------
+# STEP 2d: Taxonomy spell-check against bee_taxonomy_lookup.csv
+# Compares genus, species, and subspecies values in the specimen
+# sheet to every known name in the lookup. Flags two levels:
+#   (1) Unknown genus -- not in the lookup at all. Almost always a
+#       typo (e.g. "Augochorella" vs "Augochlorella"). These are
+#       the most dangerous because they silently break every
+#       downstream join.
+#   (2) Unknown species for a known genus -- genus is recognised
+#       but the genus+species combo isn't in the lookup. Could be a
+#       new record not yet in the taxonomy, a misspelling, or a
+#       name that predates the current iNat taxonomy. Worth a
+#       manual check.
+# Results are printed to console and written to
+# data/outputs/specimens/cabr_specimen_bee_taxonomy_flags.csv
+# so you have a permanent record of what needs fixing in the
+# source .xlsx before the next pipeline run.
+# Only runs if bee_taxonomy_lookup.csv exists (i.e. after
+# native_bee_checklist.R has been run at least once).
+# ------------------------------------------------------------
+if (file.exists(taxonomy_lookup_path)) {
+  tax_check <- read.csv(taxonomy_lookup_path, na.strings = "") %>%
+    filter(!is.na(genus), genus != "") %>%
+    mutate(genus   = str_to_title(genus),
+           species = str_to_lower(species))
+
+  # Also pull known genus+species from the SD County iNat checklist.
+  # bee_taxonomy_lookup.csv only carries species that appear in Holway v3
+  # -- valid species observed on iNat but not yet in Holway (e.g.
+  # Agapostemon subtilior, Lasioglossum perichlarus, Andrena baeriae)
+  # would otherwise be incorrectly flagged as unknown. The iNat checklist
+  # is the second authority: if a name is known to iNat SD County it is
+  # a known valid name and should not be flagged.
+  inat_checklist_path <- "data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv"
+  inat_species <- if (file.exists(inat_checklist_path)) {
+    read.csv(inat_checklist_path, na.strings = "") %>%
+      filter(!is.na(genus), genus != "",
+             !is.na(species), species != "") %>%
+      mutate(genus   = str_to_title(genus),
+             species = str_to_lower(species)) %>%
+      distinct(genus, species)
+  } else {
+    tibble(genus = character(), species = character())
+  }
+
+  known_genera  <- unique(c(tax_check$genus, inat_species$genus))
+  known_genus_species <- bind_rows(
+    tax_check %>% filter(!is.na(species), species != "") %>% distinct(genus, species),
+    inat_species
+  ) %>% distinct(genus, species)
+
+  taxonomy_flags <- clean_bee_data %>%
+    filter(!is.na(genus), genus != "") %>%
+    mutate(
+      flag_unknown_genus   = !(genus %in% known_genera),
+      flag_unknown_species = !flag_unknown_genus &
+                             !is.na(species) & species != "" &
+                             !paste(genus, species) %in%
+                               paste(known_genus_species$genus,
+                                     known_genus_species$species)
+    ) %>%
+    filter(flag_unknown_genus | flag_unknown_species) %>%
+    mutate(flag_reason = case_when(
+      flag_unknown_genus   ~ "genus not in taxonomy lookup",
+      flag_unknown_species ~ "genus+species combo not in taxonomy lookup"
+    )) %>%
+    select(ucsd_id, sdnhm_id, genus, species, subspecies,
+           flag_reason) %>%
+    distinct()
+
+  n_bad_genus   <- sum(taxonomy_flags$flag_reason == "genus not in taxonomy lookup")
+  n_bad_species <- sum(taxonomy_flags$flag_reason == "genus+species combo not in taxonomy lookup")
+
+  cat(sprintf("\n--- TAXONOMY SPELL-CHECK (%d flag(s)) ---\n",
+              nrow(taxonomy_flags)))
+  cat(sprintf("  Unknown genus (fix in .xlsx):              %d\n", n_bad_genus))
+  cat(sprintf("  Unknown genus+species combo (check/fix):   %d\n", n_bad_species))
+
+  if (nrow(taxonomy_flags) > 0) {
+    print(taxonomy_flags, n = Inf)
+    write_fresh(
+      taxonomy_flags,
+      "data/outputs/specimens/cabr_specimen_bee_taxonomy_flags.csv",
+      row.names = FALSE
+    )
+    cat("\n")
+    cat("  Flagged names saved to data/outputs/specimens/cabr_specimen_bee_taxonomy_flags.csv\n")
+    cat("\n")
+    cat("  NEXT STEPS:\n")
+    cat("   - Unknown genus:            almost certainly a typo -- check spelling\n")
+    cat("     against iNat or the taxonomy lookup and fix in the source .xlsx.\n")
+    cat("   - Unknown genus+species:    may be a real new record OR a misspelling --\n")
+    cat("     look it up on iNat to confirm it exists, then fix or leave as-is.\n")
+    cat("\n")
+    answer <- readline("  Have you reviewed the flags above and fixed any mistakes\n  in the source .xlsx? (y = fixed / confirmed, n = stop and fix now): ")
+    if (tolower(trimws(answer)) != "y") {
+      stop("Stopping. Fix the flagged names in the source .xlsx, then re-run specimen_bee_clean.R.")
+    }
+    cat("  Continuing with current data (fixes will take effect on next re-run).\n")
+  } else {
+    cat("  All genus and species names match the taxonomy lookup.\n")
+    write_fresh(
+      taxonomy_flags,
+      "data/outputs/specimens/cabr_specimen_bee_taxonomy_flags.csv",
+      row.names = FALSE
+    )
+  }
+} else {
+  cat("WARNING: bee_taxonomy_lookup.csv not found -- taxonomy spell-check skipped.\n")
 }
 
 # ------------------------------------------------------------
