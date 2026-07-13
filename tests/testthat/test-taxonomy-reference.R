@@ -39,18 +39,25 @@ test_that("build_bee_taxonomy_lookup emits genus + species + higher-rank rows", 
     subfamily = NA_character_, tribe = NA_character_, subtribe = NA_character_
   )
 
-  lookup <- build_bee_taxonomy_lookup(holway, checklist_sd, bees)
+  # specimen record: Melissodes robustior is in the museum collection
+  spec <- tibble::tibble(genus = "melissodes", species = "robustior", has_cabr_specimen = TRUE)
+  lookup <- build_bee_taxonomy_lookup(holway, checklist_sd, bees, specimen_species = spec)
 
   expect_true(all(c("genus","species","subgenus","family") %in% lookup$rank))
   # NEW: an iNat-only species (not in Holway) now appears
   expect_true("Agapostemon subtilior" %in% lookup$scientific_name)
-  # metadata columns exist and are first
-  expect_equal(names(lookup)[1:5], c("taxon_id","scientific_name","rank","verified","holway_status"))
-  # subtribe sits between tribe and genus
+  # metadata + membership columns, in order
+  expect_equal(names(lookup)[1:8],
+               c("taxon_id","scientific_name","rank","verified","holway_status",
+                 "in_holway","in_inat","in_cabr_specimens"))
   expect_true("subtribe" %in% names(lookup))
-  # Holway species verified; iNat-only species not
-  expect_true(filter(lookup, scientific_name == "Melissodes robustior")$verified[1])
-  expect_false(filter(lookup, scientific_name == "Agapostemon subtilior")$verified[1])
-  # Tentative/Unpublished tracking column present
-  expect_true("holway_status" %in% names(lookup))
+
+  mr <- filter(lookup, scientific_name == "Melissodes robustior")
+  ag <- filter(lookup, scientific_name == "Agapostemon subtilior")
+  # Holway species: verified, in Holway, on iNat, and has a specimen
+  expect_true(mr$verified[1]); expect_true(mr$in_holway[1])
+  expect_true(mr$in_inat[1]);  expect_true(mr$in_cabr_specimens[1])
+  # iNat-only species: not verified, NOT in Holway, on iNat, no specimen
+  expect_false(ag$verified[1]); expect_false(ag$in_holway[1])
+  expect_true(ag$in_inat[1]);   expect_false(ag$in_cabr_specimens[1])
 })

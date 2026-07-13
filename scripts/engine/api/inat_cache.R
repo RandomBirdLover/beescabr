@@ -15,9 +15,9 @@
 # Depends on: api/inat_http.R, api/inat_flatten.R, db/taxon_store.R.
 # =============================================================
 
-if (!exists("inat_fetch_taxon_by_id")) source("scripts/api/inat_http.R")
-if (!exists("parse_taxon_ranks"))       source("scripts/api/inat_flatten.R")
-if (!exists("taxon_cache_get"))          source("scripts/db/taxon_store.R")
+if (!exists("inat_fetch_taxon_by_id")) source("scripts/engine/api/inat_http.R")
+if (!exists("parse_taxon_ranks"))       source("scripts/engine/api/inat_flatten.R")
+if (!exists("taxon_cache_get"))          source("scripts/engine/db/taxon_store.R")
 
 # ------------------------------------------------------------
 # get_taxon_by_id(): return one taxon object (nested list), cache-first.

@@ -1,8 +1,8 @@
 # CLAUDE.md — agent instructions for the beescabr repo
 
 Guidance for Claude / coding agents working in this repository. Read this
-before writing code. For the full architecture see
-`ARCHITECTURE_api_rewrite.md`; for a task-oriented guide see `PIPELINE_GUIDE.md`.
+before writing code. For a task-oriented guide and the layer map, see
+`docs/PIPELINE_GUIDE.md`.
 
 ## Project in one line
 

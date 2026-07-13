@@ -45,7 +45,8 @@ TAXONOMY_COLUMN_ORDER <- c(
 }
 
 build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
-                                      verified_ids = integer(0)) {
+                                      verified_ids = integer(0),
+                                      specimen_species = NULL) {
 
   holway_taxonomy <- holway_df |>
     mutate(species = str_trim(
@@ -215,13 +216,30 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
     deduped$holway_status <- NA_character_
   }
 
-  # --- verified: TRUE if the taxon is in Holway or you've verified its id ---
+  # --- verified + source-membership columns ---
   sets <- holway_name_sets(holway_df)
   flagged <- flag_new_taxa(deduped, sets, verified_ids = verified_ids)
   deduped$verified <- !flagged$needs_verification
+  deduped$in_holway <- is.na(flagged$new_at_rank)   # nothing new to Holway = known to Holway
+  deduped$in_inat   <- !is.na(deduped$taxon_id)      # matched an iNat-observed taxon
+
+  # in_cabr_specimens: TRUE if this taxon's genus+species (or genus, for a
+  # genus-only row) appears in the cleaned CABR specimen records. All FALSE
+  # until specimen_bee_clean.R has produced that file.
+  gs <- character(0); gonly <- character(0)
+  if (!is.null(specimen_species) && nrow(specimen_species) > 0) {
+    has_sp <- !is.na(specimen_species$species) & specimen_species$species != ""
+    gs    <- paste(tolower(specimen_species$genus[has_sp]), tolower(specimen_species$species[has_sp]))
+    gonly <- tolower(specimen_species$genus[!has_sp])
+  }
+  has_species <- !is.na(deduped$species) & deduped$species != ""
+  deduped$in_cabr_specimens <-
+    (has_species  & paste(tolower(deduped$genus), tolower(deduped$species)) %in% gs) |
+    (!has_species & tolower(deduped$genus) %in% gonly)
 
   # --- final column order: metadata first, then the taxonomic hierarchy ---
   ordered <- c("taxon_id", "scientific_name", "rank", "verified", "holway_status",
+               "in_holway", "in_inat", "in_cabr_specimens",
                TAXONOMY_LEVELS, "complex_taxon_id", "common_name")
   deduped |>
     select(any_of(ordered), everything()) |>

@@ -8,5 +8,5 @@ it FAILS, then implement, then loop red → green until it passes, and finally r
 the whole suite (`Rscript -e 'library(testthat); test_dir("tests/testthat")'`)
 to confirm no regressions. Test pure logic directly; inject fakes for the API
 (`request_fn` / `request_text_fn`) and use a temp DuckDB for DB code. Do not
-modify `py/`. Full conventions and layer map: `CLAUDE.md`,
-`PIPELINE_GUIDE.md`, `ARCHITECTURE_api_rewrite.md`.
+modify `py/` (archived in `_to_delete/`). Full conventions and layer map:
+`CLAUDE.md`, `docs/PIPELINE_GUIDE.md`.

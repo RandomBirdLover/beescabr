@@ -25,14 +25,14 @@ local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
   need("PATHS",                    "config.R")
   need("write_fresh",              "utils/utils.R")
-  need("store_connect",            "db/store_conn.R")
-  need("count_observations",       "db/observations_store.R")
-  need("taxon_cache_get",          "db/taxon_store.R")
-  need("inat_request",             "api/inat_http.R")
-  need("flatten_observation",      "api/inat_flatten.R")
-  need("resolve_taxonomy",         "api/inat_cache.R")
-  need("ingest_observations",      "pipelines/ingest_inat.R")
-  need("read_observations_export", "pipelines/read_inat.R")
+  need("store_connect",            "engine/db/store_conn.R")
+  need("count_observations",       "engine/db/observations_store.R")
+  need("taxon_cache_get",          "engine/db/taxon_store.R")
+  need("inat_request",             "engine/api/inat_http.R")
+  need("flatten_observation",      "engine/api/inat_flatten.R")
+  need("resolve_taxonomy",         "engine/api/inat_cache.R")
+  need("ingest_observations",      "engine/pipelines/ingest_inat.R")
+  need("read_observations_export", "engine/pipelines/read_inat.R")
   need("load_holway",              "checklists/holway.R")
   need("build_checklist",          "checklists/checklist_tiers.R")
   need("build_bee_taxonomy_lookup","checklists/taxonomy_reference.R")
@@ -102,22 +102,11 @@ build_all_checklists <- function(con) {
   write_fresh(cl_cabr, PATHS$checklist_cabr_inat)
   message("\nTier 1 checklists written.")
 
-  # STEP 5: bee_taxonomy_lookup.csv.
-  message("\n--- sd_bee_taxonomy_lookup ---")
-  verified_ids <- load_verified_taxa(PATHS$verified_taxa)
-  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees, verified_ids = verified_ids)
-  write_fresh(bee_taxonomy_lookup, PATHS$taxonomy_lookup, na = "")
-  message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
-          sum(!bee_taxonomy_lookup$verified), " unverified).")
-
-  # STEP 6: Tier 2 merged checklists (+ CABR specimen evidence & Holway check).
-  # Specimen evidence is OPTIONAL in this automated run. Cleaning the specimen
-  # workbook (specimen_bee_clean.R) is an INTERACTIVE, manual-QC step -- it
-  # prompts the user to review flagged names in the source .xlsx -- so the
-  # pipeline must never invoke it (doing so froze the run at a prompt). If its
-  # cleaned output already exists we fold it in; otherwise Tier 2 still builds,
-  # just without specimen columns, and we tell the user how to add it.
-  specimen_species <- NULL
+  # Read CABR specimens once (optional) -- used by BOTH the lookup's
+  # in_cabr_specimens column and the Tier 2 specimen evidence below. Cleaning
+  # the specimen workbook is a separate interactive step; if its output isn't
+  # there yet, specimen columns are simply blank/FALSE.
+  specimen_species <- NULL; cabr_specimens <- NULL
   if (file.exists(PATHS$specimen_clean)) {
     cabr_specimens <- readr::read_csv(PATHS$specimen_clean, show_col_types = FALSE)
     require_columns(cabr_specimens,
@@ -125,15 +114,25 @@ build_all_checklists <- function(con) {
                       "complex", "complex_taxon_id", "species", "subspecies"),
                     "cabr_specimens")
     specimen_species <- specimen_species_table(cabr_specimens)
-    write_fresh(build_specimen_checklist(cabr_specimens), PATHS$checklist_cabr_specimen, na = "")
     message("Specimen evidence: using ", basename(PATHS$specimen_clean))
   } else {
-    message("\nNOTE: specimen clean file not found:\n  ", PATHS$specimen_clean)
-    message("Building Tier 2 WITHOUT CABR specimen evidence (Museum Collection blank,")
-    message("no specimen-only checklist). To include specimens, run the interactive")
-    message("QC step once, then re-run this pipeline:")
-    message("  Rscript scripts/clean/specimen_bee_clean.R")
+    message("\nNOTE: specimen clean file not found -- in_cabr_specimens/Tier 2 specimen",
+            " evidence blank. Run scripts/clean/specimen_bee_clean.R when ready.")
   }
+
+  # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
+  message("\n--- sd_bee_taxonomy_lookup ---")
+  verified_ids <- load_verified_taxa(PATHS$verified_taxa)
+  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees,
+                                                   verified_ids = verified_ids,
+                                                   specimen_species = specimen_species)
+  write_fresh(bee_taxonomy_lookup, PATHS$taxonomy_lookup, na = "")
+  message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
+          sum(!bee_taxonomy_lookup$verified), " unverified).")
+
+  # STEP 6: Tier 2 merged checklists (+ CABR specimen evidence & Holway check).
+  if (!is.null(cabr_specimens))
+    write_fresh(build_specimen_checklist(cabr_specimens), PATHS$checklist_cabr_specimen, na = "")
 
   holway_keys <- holway_match_keys(holway_df)
 

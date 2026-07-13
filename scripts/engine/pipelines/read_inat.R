@@ -19,9 +19,9 @@
 # config.R.
 # =============================================================
 
-if (!exists("read_observations_raw")) source("scripts/db/observations_store.R")
-if (!exists("flatten_observation"))   source("scripts/api/inat_flatten.R")
-if (!exists("resolve_taxonomy"))       source("scripts/api/inat_cache.R")
+if (!exists("read_observations_raw")) source("scripts/engine/db/observations_store.R")
+if (!exists("flatten_observation"))   source("scripts/engine/api/inat_flatten.R")
+if (!exists("resolve_taxonomy"))       source("scripts/engine/api/inat_cache.R")
 if (!exists("TAXON_RANK_COLUMNS"))     source("scripts/config.R")
 
 library(dplyr)

@@ -150,9 +150,9 @@ build_holway_reference <- function(con, holway_df,
 if (identical(environment(), globalenv()) &&
     !is.na(Sys.getenv("BEESCABR_RUN_HOLWAY", unset = NA))) {
   source("scripts/config.R")
-  source("scripts/db/store_conn.R"); source("scripts/db/taxon_store.R")
-  source("scripts/db/decision_store.R"); source("scripts/api/inat_http.R")
-  source("scripts/api/inat_flatten.R"); source("scripts/api/inat_cache.R")
+  source("scripts/engine/db/store_conn.R"); source("scripts/engine/db/taxon_store.R")
+  source("scripts/engine/db/decision_store.R"); source("scripts/engine/api/inat_http.R")
+  source("scripts/engine/api/inat_flatten.R"); source("scripts/engine/api/inat_cache.R")
   source("scripts/checklists/holway.R")
 
   con <- store_connect()
