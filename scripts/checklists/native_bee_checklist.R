@@ -36,6 +36,7 @@ local({
   need("load_holway",              "checklists/holway.R")
   need("build_checklist",          "checklists/checklist_tiers.R")
   need("build_bee_taxonomy_lookup","checklists/taxonomy_reference.R")
+  need("load_verified_taxa",       "clean/verify.R")
   need("build_tier2_checklist",    "checklists/tier2_merge.R")
 })
 
@@ -57,6 +58,7 @@ build_all_checklists <- function(con) {
       class = taxon_class_name, order = taxon_order_name,
       superfamily = taxon_superfamily_name, family = taxon_family_name,
       subfamily = taxon_subfamily_name, tribe = taxon_tribe_name,
+      subtribe = taxon_subtribe_name,
       genus = taxon_genus_name, species = taxon_species_name,
       subspecies = taxon_subspecies_name
     )
@@ -101,10 +103,12 @@ build_all_checklists <- function(con) {
   message("\nTier 1 checklists written.")
 
   # STEP 5: bee_taxonomy_lookup.csv.
-  message("\n--- bee_taxonomy_lookup ---")
-  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees)
+  message("\n--- sd_bee_taxonomy_lookup ---")
+  verified_ids <- load_verified_taxa(PATHS$verified_taxa)
+  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees, verified_ids = verified_ids)
   write_fresh(bee_taxonomy_lookup, PATHS$taxonomy_lookup, na = "")
-  message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows.")
+  message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
+          sum(!bee_taxonomy_lookup$verified), " unverified).")
 
   # STEP 6: Tier 2 merged checklists (+ CABR specimen evidence & Holway check).
   # Specimen evidence is OPTIONAL in this automated run. Cleaning the specimen

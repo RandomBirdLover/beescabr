@@ -41,7 +41,7 @@ build_checklist <- function(obs_df, label = "", verbose = TRUE) {
     select(
       taxon_id, scientific_name, common_name,
       kingdom, phylum, class, order, superfamily,
-      family, subfamily, tribe, genus, species, subspecies
+      family, subfamily, tribe, any_of("subtribe"), genus, species, subspecies
     ) |>
     distinct(taxon_id, .keep_all = TRUE)
 
@@ -71,7 +71,7 @@ finalize_checklist <- function(checklist, taxonomy_lookup) {
     select(
       taxon_id, scientific_name, common_name,
       kingdom, phylum, class, order, superfamily,
-      family, subfamily, tribe, genus, subgenus,
+      family, subfamily, tribe, any_of("subtribe"), genus, subgenus,
       complex, complex_taxon_id,
       species, subspecies
     )

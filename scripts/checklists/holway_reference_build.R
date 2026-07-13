@@ -160,6 +160,6 @@ if (identical(environment(), globalenv()) &&
   holway_df <- load_holway(PATHS$holway_combined)
   interactive_ok <- Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"
   ref <- build_holway_reference(con, holway_df, interactive_ok = interactive_ok)
-  write.csv(ref, "data/outputs/reference/holway_reference_checklist.csv", row.names = FALSE, na = "")
+  write.csv(ref, PATHS$holway_reference, row.names = FALSE, na = "")
   message("Wrote ", sum(ref$resolved), " resolved of ", nrow(ref), " Holway rows.")
 }

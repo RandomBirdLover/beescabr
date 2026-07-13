@@ -59,6 +59,11 @@ DB_CACHE_PATH <- "data/cache/inat_cache.duckdb"
 # BEESCABR_REFRESH_FLAT=1 to force a rebuild.
 EXPORT_FLAT_CACHE <- "data/cache/export_flat.rds"
 
+# Records when observations were last ingested, so a refresh can also re-pull
+# observations that were re-identified/edited on iNaturalist since then
+# (updated_since), not just brand-new ones.
+INGEST_STATE_PATH <- "data/cache/last_ingest.txt"
+
 # ---- Observation-field id map ------------------------------------------------
 # The flatten step builds `field:<lower(name)>` columns generically from the
 # API `ofvs` array (guaranteeing name-parity with the old CSV export). This
@@ -88,7 +93,9 @@ NESTING_SOURCES <- c("field:nest", "field:nesting")
 # Centralized so renames happen in one spot (the old scripts hardcoded these
 # inline in many places).
 PATHS <- list(
-  taxonomy_lookup = "data/outputs/reference/bee_taxonomy_lookup.csv",
+  taxonomy_lookup = "data/outputs/reference/sd_bee_taxonomy_lookup.csv",
+  holway_reference = "data/outputs/reference/holway_sd_bee_reference_table.csv",
+  verified_taxa = "data/outputs/reference/verified_taxa.csv",
   checklist_sd_county_inat = "data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv",
   checklist_cabr_inat = "data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv",
@@ -98,16 +105,24 @@ PATHS <- list(
   checklist_cabr_specimen = "data/outputs/checklists/cabr/cabr_specimen_bee_checklist.csv",
   inat_clean = "data/outputs/inat_clean/cabr_inat_bee_clean.csv",
   inat_unknown_tags = "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
+  inat_to_verify = "data/outputs/inat_clean/qc/cabr_inat_to_verify.csv",
   specimen_clean = "data/outputs/specimens/cabr_specimen_bee_record_clean.csv",
-  holway_combined = "data/reference_exports/holway_2026/holway_v3_combined.csv",
-  holway_decisions = "data/outputs/reference/holway_taxon_decisions.csv"
+  holway_combined = "data/reference_exports/holway_2026/holway_v3_combined.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the
-# exact order and naming the retired CSV export used.
+# exact order and naming the retired CSV export used (subtribe added 2026-07).
 TAXON_RANK_COLUMNS <- c(
   "taxon_kingdom_name", "taxon_phylum_name", "taxon_class_name",
   "taxon_order_name", "taxon_superfamily_name", "taxon_family_name",
-  "taxon_subfamily_name", "taxon_tribe_name", "taxon_genus_name",
-  "taxon_species_name", "taxon_subspecies_name"
+  "taxon_subfamily_name", "taxon_tribe_name", "taxon_subtribe_name",
+  "taxon_genus_name", "taxon_species_name", "taxon_subspecies_name"
+)
+
+# The taxonomic hierarchy column order requested for the reference/lookup
+# outputs, with metadata columns first.
+TAXONOMY_LEVELS <- c(
+  "kingdom", "phylum", "class", "order", "superfamily",
+  "family", "subfamily", "tribe", "subtribe",
+  "genus", "subgenus", "complex", "species", "subspecies"
 )

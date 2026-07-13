@@ -55,36 +55,50 @@ ingest_observations <- function(con,
                     place_id, taxon_id, without_taxon_id,
                     if (incremental) "incremental" else "full", id_above, per_page, commit_every))
 
-  n_written <- 0L; pages <- 0L; pages_since_commit <- 0L; in_txn <- FALSE
+  n_written <- 0L; in_txn <- FALSE
   begin_txn  <- function() if (!in_txn) { DBI::dbBegin(con);  in_txn <<- TRUE }
   commit_txn <- function() if (in_txn)  { DBI::dbCommit(con); in_txn <<- FALSE }
   on.exit(if (in_txn) tryCatch(DBI::dbRollback(con), error = function(e) NULL), add = TRUE)
 
-  repeat {
-    q <- c(base_query, list(id_above = sprintf("%.0f", id_above)))
-    text <- request_text_fn("observations", query = q)
-
-    begin_txn()
-    stats <- write_observations_page(con, text)
-    if (stats$n == 0L) break
-
-    n_written <- n_written + stats$n
-    id_above  <- stats$last_id
-    pages <- pages + 1L; pages_since_commit <- pages_since_commit + 1L
-
-    if (verbose && pages %% 10L == 0L)
-      message(sprintf("  page %d: %d rows (id up to %.0f)", pages, n_written, id_above))
-    if (pages_since_commit >= commit_every) {
-      commit_txn(); pages_since_commit <- 0L
-      if (verbose) message(sprintf("  committed -> %d rows persisted", n_written))
+  # One id_above-cursor pass over a query; used for both the new-obs pass and
+  # the updated_since (re-ID) pass. Returns rows written by this pass.
+  run_pass <- function(pass_query, start_id, label) {
+    id_above <- as.numeric(start_id); pages <- 0L; since_commit <- 0L; written <- 0L
+    repeat {
+      q <- c(pass_query, list(id_above = sprintf("%.0f", id_above)))
+      stats <- { begin_txn(); write_observations_page(con, request_text_fn("observations", query = q)) }
+      if (stats$n == 0L) break
+      written <- written + stats$n; id_above <- stats$last_id
+      pages <- pages + 1L; since_commit <- since_commit + 1L
+      if (verbose && pages %% 10L == 0L)
+        message(sprintf("  [%s] page %d: %d rows (id up to %.0f)", label, pages, written, id_above))
+      if (since_commit >= commit_every) { commit_txn(); since_commit <- 0L
+        if (verbose) message(sprintf("  [%s] committed -> %d rows", label, written)) }
+      if (.page_done(stats$n, per_page)) break
+      if (!is.null(throttle) && throttle > 0) sleep_fn(throttle)
     }
-    if (.page_done(stats$n, per_page)) break
-    if (!is.null(throttle) && throttle > 0) sleep_fn(throttle)
+    commit_txn()
+    written
   }
-  commit_txn()
+
+  # Pass 1: brand-new observations (id above the highest we hold).
+  n_written <- n_written + run_pass(base_query, id_above, "new")
+
+  # Pass 2: re-identified/edited observations since our last ingest. iNat's
+  # updated_since returns anything changed after that time; upsert catches the
+  # re-IDs. Skipped on a full re-walk (which already re-pulls everything).
+  last_ts <- if (incremental && file.exists(INGEST_STATE_PATH)) trimws(readLines(INGEST_STATE_PATH, warn = FALSE)[1]) else NA
+  if (!is.na(last_ts) && nzchar(last_ts)) {
+    if (verbose) message("Ingest: re-pulling observations updated since ", last_ts, " ...")
+    n_written <- n_written + run_pass(c(base_query, list(updated_since = last_ts)), 0L, "updated")
+  }
+
+  # Stamp this run's time (UTC) so the next refresh knows the cutoff.
+  dir.create(dirname(INGEST_STATE_PATH), recursive = TRUE, showWarnings = FALSE)
+  writeLines(format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"), INGEST_STATE_PATH)
 
   if (verbose)
-    message(sprintf("Ingest complete: %d pages, %d rows written. Cache holds %d observations.",
-                    pages, n_written, count_observations(con)))
+    message(sprintf("Ingest complete: %d rows written. Cache holds %d observations.",
+                    n_written, count_observations(con)))
   invisible(n_written)
 }

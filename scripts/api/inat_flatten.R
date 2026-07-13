@@ -162,6 +162,7 @@ flatten_observation <- function(o) {
   family      = "taxon_family_name",
   subfamily   = "taxon_subfamily_name",
   tribe       = "taxon_tribe_name",
+  subtribe    = "taxon_subtribe_name",
   genus       = "taxon_genus_name",
   species     = "taxon_species_name",
   subspecies  = "taxon_subspecies_name"
@@ -171,8 +172,8 @@ parse_taxon_ranks <- function(taxon) {
   rank_cols <- c(
     "taxon_kingdom_name", "taxon_phylum_name", "taxon_class_name",
     "taxon_order_name", "taxon_superfamily_name", "taxon_family_name",
-    "taxon_subfamily_name", "taxon_tribe_name", "taxon_genus_name",
-    "taxon_species_name", "taxon_subspecies_name"
+    "taxon_subfamily_name", "taxon_tribe_name", "taxon_subtribe_name",
+    "taxon_genus_name", "taxon_species_name", "taxon_subspecies_name"
   )
   row <- as.list(rep(NA_character_, length(rank_cols)))
   names(row) <- rank_cols

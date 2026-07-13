@@ -33,6 +33,7 @@ local({
   need("resolve_taxonomy",         "api/inat_cache.R")
   need("ingest_observations",      "pipelines/ingest_inat.R")
   need("read_observations_export", "pipelines/read_inat.R")
+  need("holway_name_sets",         "clean/verify.R")
 })
 
 # Safe column helpers (obs-field names contain ':' and '->').
@@ -146,7 +147,8 @@ clean_inat_bees <- function(con) {
       has_survey_from_tags_field = coalesce(has_survey_from_tags_field, FALSE)
     ) |>
     rename(family = taxon_family_name, subfamily = taxon_subfamily_name,
-           tribe = taxon_tribe_name, genus = taxon_genus_name,
+           tribe = taxon_tribe_name, subtribe = taxon_subtribe_name,
+           genus = taxon_genus_name,
            species = taxon_species_name, subspecies = taxon_subspecies_name) |>
     mutate(transect_conflict = !is.na(transect_field) & transect_field != "" &
              !is.na(transect) & transect != "" &
@@ -155,6 +157,29 @@ clean_inat_bees <- function(con) {
   if (n_conflict > 0)
     message(sprintf("NOTE: %d obs where the transect obs-field disagrees with the tag-derived transect.", n_conflict))
 
+  # ---- taxonomy from sd_bee_taxonomy_lookup.csv (lookup wins; raw fallback) ----
+  if (file.exists(PATHS$taxonomy_lookup)) {
+    lk <- read_csv(PATHS$taxonomy_lookup, show_col_types = FALSE) |>
+      select(taxon_id, any_of(c("family","subfamily","tribe","subtribe","genus","subgenus",
+                                "complex","species","subspecies","holway_status")))
+    all_obs <- all_obs |>
+      left_join(lk, by = "taxon_id", suffix = c("", "_lk")) |>
+      mutate(across(any_of(c("family","subfamily","tribe","subtribe","genus","subgenus",
+                             "complex","species","subspecies")),
+                    ~ coalesce(get(paste0(cur_column(), "_lk")), .x))) |>
+      select(-ends_with("_lk"))
+  } else {
+    message("NOTE: ", PATHS$taxonomy_lookup, " not found -- using raw iNat taxonomy. Run native_bee_checklist.R first.")
+    if (!"holway_status" %in% names(all_obs)) all_obs$holway_status <- NA_character_
+  }
+
+  # ---- verification flag: anything new-to-Holway needs a human photo check ----
+  holway_df   <- read.csv(PATHS$holway_combined, stringsAsFactors = FALSE)
+  verified_ids <- load_verified_taxa(PATHS$verified_taxa)
+  all_obs <- flag_new_taxa(all_obs, holway_name_sets(holway_df), verified_ids = verified_ids)
+  message(sprintf("Verification: %d obs flagged (new-to-Holway taxa needing a photo check).",
+                  sum(all_obs$needs_verification, na.rm = TRUE)))
+
   clean <- all_obs |>
     mutate(missing_coords = is.na(latitude) | is.na(longitude)) |>
     select(
@@ -162,16 +187,24 @@ clean_inat_bees <- function(con) {
       latitude, longitude, quality_grade, captive_cultivated, coordinates_obscured, missing_coords,
       triage, triage_reason, has_survey_from_tags_field, survey_year, survey_type,
       transect, transect_field, transect_conflict, is_10min,
+      needs_verification, new_at_rank, holway_status,
       taxon_id, scientific_name, common_name, rank,
-      family, subfamily, tribe, genus, subgenus, complex, species, subspecies,
+      family, subfamily, tribe, any_of("subtribe"), genus, subgenus, complex, species, subspecies,
       flower_visited, bee_behavior, on_ground, nesting, nesting_bee, mating_behavior,
       tag_list, description, data_from
     )
   write_fresh(clean, PATHS$inat_clean, na = "")
+
+  # QC worklist: just the observations needing a photo check.
+  to_verify <- clean |> filter(needs_verification)
+  dir.create(dirname(PATHS$inat_to_verify), recursive = TRUE, showWarnings = FALSE)
+  write_fresh(to_verify, PATHS$inat_to_verify, na = "")
+
   message("\n========== CLEAN SUMMARY ==========")
-  message("Total obs: ", nrow(clean))
+  message("Total obs: ", nrow(clean), " | needing verification: ", nrow(to_verify))
   print(count(clean, triage, sort = TRUE))
   message("Saved -> ", PATHS$inat_clean)
+  message("To-verify worklist -> ", PATHS$inat_to_verify)
 
   # ---- optional date-based recovery ----
   beeple_official <- "data/project_info/beeple_survey_dates_official.csv"
