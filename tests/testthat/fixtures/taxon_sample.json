@@ -1,0 +1,19 @@
+{
+  "id": 632955,
+  "name": "Melissodes robustior",
+  "rank": "species",
+  "parent_id": 632954,
+  "ancestors": [
+    { "id": 48460,  "name": "Animalia",     "rank": "kingdom" },
+    { "id": 47120,  "name": "Arthropoda",   "rank": "phylum" },
+    { "id": 372739, "name": "Hexapoda",     "rank": "subphylum" },
+    { "id": 47158,  "name": "Insecta",      "rank": "class" },
+    { "id": 47201,  "name": "Hymenoptera",  "rank": "order" },
+    { "id": 47222,  "name": "Apoidea",      "rank": "superfamily" },
+    { "id": 47221,  "name": "Apidae",       "rank": "family" },
+    { "id": 538904, "name": "Apinae",       "rank": "subfamily" },
+    { "id": 538903, "name": "Eucerini",     "rank": "tribe" },
+    { "id": 632790, "name": "Melissodes",   "rank": "genus" },
+    { "id": 632900, "name": "Melissodes",   "rank": "subgenus" }
+  ]
+}

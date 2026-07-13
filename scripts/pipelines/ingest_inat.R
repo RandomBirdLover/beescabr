@@ -1,0 +1,90 @@
+# =============================================================
+# pipelines/ingest_inat.R
+# beescabr pipeline -- populate the DuckDB observation cache from the API
+# Rewritten: 2026-07-13 (raw-body ingest; the fast path)
+#
+# THE ONE PLACE that fetches observations. Both native_bee_checklist.R and
+# inat_bee_clean.R depend on the cache this fills, but neither fetches -- so a
+# manual DB query, the checklist, and the clean script all see identical data
+# refreshed once. Replaces the retired CSV export.
+#
+# Speed design (why this matches/beats the Python script):
+#   - The raw response string for each page is handed straight to DuckDB,
+#     which parses + inserts + reports the pagination cursor in C++. R never
+#     builds nested lists from the JSON, and never re-serializes it. That
+#     parse->serialize->parse round-trip in R was the real bottleneck.
+#   - Only one page (~200 objects, as a single string) is in memory at a time.
+#   - One transaction stays open across `commit_every` pages, so commits are
+#     batched but the incremental id cursor stays durable if a run is stopped.
+#   - The throttle between requests is configurable (config INAT_THROTTLE_SEC).
+#
+# Incremental by default (id_above cursor from the highest stored id).
+#
+# Depends on: api/inat_http.R, db/observations_store.R, config.R.
+# =============================================================
+
+if (!exists("inat_request_text"))     source("scripts/api/inat_http.R")
+if (!exists("write_observations_page")) source("scripts/db/observations_store.R")
+if (!exists("TAXON_ANTHOPHILA"))      source("scripts/config.R")
+
+ingest_observations <- function(con,
+                                place_id = PLACE_SD_COUNTY_BUFFER,
+                                taxon_id = TAXON_ANTHOPHILA,
+                                without_taxon_id = TAXON_APIS_MELLIFERA,
+                                incremental = TRUE,
+                                extra_query = list(),
+                                per_page = 200L,
+                                commit_every = 25L,
+                                throttle = INAT_THROTTLE_SEC,
+                                request_text_fn = inat_request_text,
+                                sleep_fn = Sys.sleep,
+                                verbose = TRUE) {
+
+  base_query <- c(list(
+    place_id         = place_id,
+    taxon_id         = taxon_id,
+    without_taxon_id = without_taxon_id,
+    order_by         = "id",
+    order            = "asc",
+    per_page         = per_page
+  ), extra_query)
+
+  id_above <- as.numeric(if (incremental) max_observation_id(con) else 0L)
+  if (verbose)
+    message(sprintf("Ingest: place_id=%s taxon_id=%s (exclude %s) | %s from id_above=%.0f | %d/page, commit every %d",
+                    place_id, taxon_id, without_taxon_id,
+                    if (incremental) "incremental" else "full", id_above, per_page, commit_every))
+
+  n_written <- 0L; pages <- 0L; pages_since_commit <- 0L; in_txn <- FALSE
+  begin_txn  <- function() if (!in_txn) { DBI::dbBegin(con);  in_txn <<- TRUE }
+  commit_txn <- function() if (in_txn)  { DBI::dbCommit(con); in_txn <<- FALSE }
+  on.exit(if (in_txn) tryCatch(DBI::dbRollback(con), error = function(e) NULL), add = TRUE)
+
+  repeat {
+    q <- c(base_query, list(id_above = sprintf("%.0f", id_above)))
+    text <- request_text_fn("observations", query = q)
+
+    begin_txn()
+    stats <- write_observations_page(con, text)
+    if (stats$n == 0L) break
+
+    n_written <- n_written + stats$n
+    id_above  <- stats$last_id
+    pages <- pages + 1L; pages_since_commit <- pages_since_commit + 1L
+
+    if (verbose && pages %% 10L == 0L)
+      message(sprintf("  page %d: %d rows (id up to %.0f)", pages, n_written, id_above))
+    if (pages_since_commit >= commit_every) {
+      commit_txn(); pages_since_commit <- 0L
+      if (verbose) message(sprintf("  committed -> %d rows persisted", n_written))
+    }
+    if (.page_done(stats$n, per_page)) break
+    if (!is.null(throttle) && throttle > 0) sleep_fn(throttle)
+  }
+  commit_txn()
+
+  if (verbose)
+    message(sprintf("Ingest complete: %d pages, %d rows written. Cache holds %d observations.",
+                    pages, n_written, count_observations(con)))
+  invisible(n_written)
+}

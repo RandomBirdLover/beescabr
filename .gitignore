@@ -1,3 +1,6 @@
+# Python pipeline
+/py
+
 # History files
 .Rhistory
 .Rapp.history
