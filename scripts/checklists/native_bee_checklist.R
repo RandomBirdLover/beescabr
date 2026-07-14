@@ -137,10 +137,15 @@ build_all_checklists <- function(con) {
     message("NOTE: ", basename(PATHS$holway_reference), " not found -- Holway rows",
             " will have blank taxon_id/scientific_name. Run holway_reference_build.R.")
   }
+  # Decision map: original Holway name (as searched) -> resolved taxon_id. Lets
+  # the lookup merge a Holway row you RENAMED during resolution (e.g. searched
+  # the correct iNat name) with its iNat twin, instead of leaving a stale row.
+  holway_decision_map <- build_holway_decision_map(con)
   bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees,
                                                    verified_ids = verified_ids,
                                                    specimen_species = specimen_species,
-                                                   holway_resolved = holway_resolved)
+                                                   holway_resolved = holway_resolved,
+                                                   holway_decision_map = holway_decision_map)
   write_fresh(bee_taxonomy_lookup, PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified).")

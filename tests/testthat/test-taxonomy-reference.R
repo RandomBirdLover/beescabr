@@ -136,6 +136,53 @@ test_that("merge_holway_resolved fills taxon_id + scientific_name on Holway rows
   expect_equal(col$scientific_name[1], "Colletes")
 })
 
+test_that("parse_holway_decision_map keys on the original genus+epithet", {
+  src("config.R"); src("clean/verify.R"); src("checklists/taxonomy_reference.R")
+  d <- tibble::tibble(
+    search_term = c("Calliopsis rhodophilus", "Ashmeadiella cactorum basalis", "Andrena"),
+    chosen_taxon_id = c(271415L, 313836L, 50L))
+  m <- parse_holway_decision_map(d)
+  expect_equal(m$dm_id[m$.dkey == "calliopsis rhodophilus"], 271415L)
+  expect_true("ashmeadiella cactorum basalis" %in% m$.dkey)
+  expect_false(any(m$.dkey == "andrena"))   # genus-only decision skipped
+})
+
+test_that("a renamed Holway row merges with its iNat twin (stale row removed)", {
+  src("config.R"); src("clean/verify.R"); src("checklists/taxonomy_reference.R")
+  deduped <- tibble::tibble(
+    taxon_id = c(NA_integer_, 271415L),
+    scientific_name = c(NA_character_, "Calliopsis rhodophila"),
+    rank = c("species", "species"),
+    genus = c("Calliopsis", "Calliopsis"),
+    subgenus = NA_character_, complex = NA_character_,
+    species = c("rhodophilus", "rhodophila"), subspecies = NA_character_,
+    holway_status = c("Described", ""),
+    verified = c(TRUE, FALSE), in_holway = c(TRUE, FALSE),
+    in_inat = c(FALSE, TRUE), in_cabr_specimens = c(FALSE, FALSE))
+  dm <- tibble::tibble(.dkey = "calliopsis rhodophilus", dm_id = 271415L)
+  out <- merge_holway_resolved(deduped, holway_resolved = NULL, holway_decision_map = dm)
+  r <- out[!is.na(out$taxon_id) & out$taxon_id == 271415L, ]
+  expect_equal(nrow(r), 1)                                # one row, not two
+  expect_equal(r$scientific_name[1], "Calliopsis rhodophila")   # current name kept
+  expect_equal(r$species[1], "rhodophila")
+  expect_true(r$in_holway[1]); expect_true(r$in_inat[1])        # flags OR-ed
+  expect_true(r$verified[1])                                    # in Holway -> verified
+  expect_false(any(out$species == "rhodophilus", na.rm = TRUE)) # stale row gone
+})
+
+test_that("reconcile_lookup_dupes leaves non-duplicate and NA-taxon rows intact", {
+  src("checklists/taxonomy_reference.R")
+  df <- tibble::tibble(
+    taxon_id = c(1L, 2L, NA_integer_),
+    scientific_name = c("Aa a", "Bb b", NA_character_),
+    rank = "species", genus = c("Aa", "Bb", "Cc"),
+    species = c("a", "b", "c"), subspecies = NA_character_,
+    holway_status = "", verified = c(TRUE, TRUE, TRUE),
+    in_holway = c(TRUE, FALSE, TRUE), in_inat = c(FALSE, TRUE, FALSE),
+    in_cabr_specimens = FALSE)
+  expect_equal(nrow(reconcile_lookup_dupes(df)), 3)
+})
+
 test_that("merge_holway_resolved is a no-op when the reference table is absent/empty", {
   src("checklists/taxonomy_reference.R")
   d <- tibble::tibble(taxon_id = NA_integer_, scientific_name = NA_character_,
