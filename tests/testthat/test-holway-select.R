@@ -31,6 +31,26 @@ test_that("exact match disambiguates near-spellings (Andrena nigra vs nigrae)", 
   expect_equal(res$index, 2L)
 })
 
+test_that("resolved subspecies scientific_name gets the ssp. display form", {
+  src("checklists/holway_reference_build.R")
+  ranks <- tibble::tibble(
+    taxon_id = 313836L,
+    taxon_kingdom_name = "Animalia", taxon_phylum_name = "Arthropoda",
+    taxon_class_name = "Insecta", taxon_order_name = "Hymenoptera",
+    taxon_superfamily_name = "Apoidea", taxon_family_name = "Megachilidae",
+    taxon_subfamily_name = "Megachilinae", taxon_tribe_name = "Osmiini",
+    taxon_subtribe_name = NA_character_, taxon_genus_name = "Ashmeadiella",
+    taxon_species_name = "Ashmeadiella cactorum",
+    taxon_subspecies_name = "Ashmeadiella cactorum basalis",
+    subgenus = "Ashmeadiella", complex = NA_character_, complex_taxon_id = NA_integer_,
+    rank = "subspecies")
+  row <- tidy_holway_ref_row(ranks, scientific_name = "Ashmeadiella cactorum basalis",
+                             common_name = NA_character_, source_sheet = "Described")
+  expect_equal(row$scientific_name, "Ashmeadiella cactorum ssp. basalis")
+  expect_equal(row$species, "cactorum"); expect_equal(row$subspecies, "basalis")
+  expect_equal(row$taxon_id, 313836L)
+})
+
 test_that("holway_resolution_plan builds the right search per row type", {
   src("checklists/holway.R"); src("checklists/holway_reference_build.R")
   p_ss <- holway_resolution_plan("Described", "Ashmeadiella", split_holway_species("cactorum basalis"))
@@ -43,6 +63,24 @@ test_that("holway_resolution_plan builds the right search per row type", {
   expect_equal(p_g$term, "Andrena")
 })
 
+test_that("parse_slash_options splits a name pair into full-name candidates", {
+  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  expect_equal(parse_slash_options("Bombus", "californicus / fervidus"),
+               c("Bombus californicus", "Bombus fervidus"))
+  expect_equal(parse_slash_options("Bombus", "pensylvanicus / sonorus"),
+               c("Bombus pensylvanicus", "Bombus sonorus"))
+})
+
+test_that("resolve_slash_answer maps number / typed name / none", {
+  src("checklists/holway_reference_build.R")
+  opts <- c("Bombus californicus", "Bombus fervidus")
+  expect_equal(resolve_slash_answer("1", "Bombus", opts), "Bombus californicus")
+  expect_equal(resolve_slash_answer("2", "Bombus", opts), "Bombus fervidus")
+  expect_equal(resolve_slash_answer("sonorus", "Bombus", opts), "Bombus sonorus")  # custom
+  expect_true(is.na(resolve_slash_answer("none", "Bombus", opts)))
+  expect_true(is.na(resolve_slash_answer("", "Bombus", opts)))
+})
+
 test_that("unresolved_holway_ref_row builds subspecies and species keep-rows", {
   src("checklists/holway.R"); src("checklists/holway_reference_build.R")
   ss <- tibble::tibble(source_sheet = "Described", family = "Megachilidae",
@@ -52,7 +90,7 @@ test_that("unresolved_holway_ref_row builds subspecies and species keep-rows", {
   row <- unresolved_holway_ref_row(ss, itis_valid = TRUE, is_subspecies = TRUE)
   expect_equal(row$rank, "subspecies")
   expect_equal(row$species, "copelandica"); expect_equal(row$subspecies, "albomarginata")
-  expect_equal(row$scientific_name, "Atoposmia copelandica albomarginata")
+  expect_equal(row$scientific_name, "Atoposmia copelandica ssp. albomarginata")
   expect_equal(row$subgenus, "Hexosmia")            # parens stripped
   expect_true(row$itis_valid); expect_true(is.na(row$taxon_id))
 

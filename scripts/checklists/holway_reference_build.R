@@ -107,9 +107,9 @@ retry_empty_search <- function(results, term, fetch_fn,
   cur <- term
   while (length(results) == 0 && isTRUE(interactive_ok)) {
     message("No iNat match for '", cur,
-            "'. Enter an alternate name to search, or 'skip' to move on.")
-    raw <- trimws(prompt_fn("Alternate search (or 'skip'): "))
-    if (raw == "" || identical(raw, "skip")) break
+            "'. Enter an alternate name to search, or 'none' if not found.")
+    raw <- trimws(prompt_fn("Alternate search (or 'none'): "))
+    if (raw == "" || raw %in% c("none", "skip")) break
     cur <- raw
     results <- fetch_fn(cur)
   }
@@ -142,6 +142,64 @@ holway_resolution_plan <- function(source_sheet, genus, sp) {
 # keyed on the stable "genus species_raw" identity (unchanged from before), so
 # prior picks are reused. Returns list(taxon_id, action, term). Impure.
 # ------------------------------------------------------------
+# parse_slash_options(): PURE. Holway writes "epithet A / epithet B" for a
+# synonym or uncertain-identity pair. Split on "/" and build the candidate full
+# names ("Bombus californicus", "Bombus fervidus").
+parse_slash_options <- function(genus, species_raw) {
+  parts <- trimws(strsplit(species_raw, "/", fixed = TRUE)[[1]])
+  parts <- parts[parts != ""]
+  vapply(parts, function(p) trimws(paste(genus, clean_holway_species(p))),
+         character(1), USE.NAMES = FALSE)
+}
+
+# resolve_slash_answer(): PURE. Map the user's answer to a search term:
+# a number -> that option; 'none' / '' -> NA (give up); anything else ->
+# "genus <typed epithet>" so they can supply a current name not in the pair.
+resolve_slash_answer <- function(raw, genus, opts) {
+  raw <- trimws(raw)
+  if (raw == "" || raw %in% c("none", "skip")) return(NA_character_)
+  idx <- suppressWarnings(as.integer(raw))
+  if (!is.na(idx) && idx >= 1 && idx <= length(opts)) opts[[idx]] else paste(genus, raw)
+}
+
+# .resolve_term(): shared search -> exact-match select -> keep/skip for a single
+# search term. Impure. Returns list(taxon_id, action, term).
+.resolve_term <- function(con, key, term, is_subspecies, described,
+                          request_fn, interactive_ok, prompt_fn) {
+  results <- get_taxa_by_name(con, term, request_fn = request_fn)
+  if (length(results) == 0 && interactive_ok) {
+    results <- retry_empty_search(
+      results, term,
+      fetch_fn = function(t) get_taxa_by_name(con, t, request_fn = request_fn),
+      prompt_fn = prompt_fn, interactive_ok = interactive_ok)
+  }
+  choice <- select_taxon_candidate(results, described = described,
+                                   search_term = term, is_subspecies = is_subspecies)
+  if (choice$action == "pick") {
+    chosen <- results[[choice$index]]
+    decision_put(con, key, "pick", chosen$id)
+    return(list(taxon_id = as.integer(chosen$id), action = "pick", term = key))
+  }
+  if (choice$action == "prompt" && interactive_ok) {
+    message("\nMore than one match for '", term, "' -- choose one:")
+    for (i in seq_along(results)) {
+      t <- results[[i]]
+      message(sprintf("  [%d] id=%s %s (%s)", i, t$id, t$name, t$rank %||% "?"))
+    }
+    raw <- trimws(prompt_fn("Pick a number, or 'none' if none fit: "))
+    idx <- suppressWarnings(as.integer(raw))
+    if (!(raw %in% c("none", "skip")) && !is.na(idx) && idx >= 1 && idx <= length(results)) {
+      chosen <- results[[idx]]
+      decision_put(con, key, "pick", chosen$id)
+      return(list(taxon_id = as.integer(chosen$id), action = "pick", term = key))
+    }
+  }
+  # Nothing usable on iNat -- ask the ITIS keep/skip question.
+  disp <- if (interactive_ok) itis_disposition(term, prompt_fn, interactive_ok) else "skip"
+  decision_put(con, key, disp)
+  list(taxon_id = NA_integer_, action = disp, term = key)
+}
+
 resolve_holway_row <- function(con, source_sheet, genus, species_raw,
                                request_fn = inat_request,
                                interactive_ok = TRUE,
@@ -153,10 +211,29 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
     return(list(taxon_id = decided$chosen_taxon_id, action = decided$action, term = key))
   }
 
+  # SLASH: "epithet A / epithet B" -- a synonym/uncertainty pair. Only the user
+  # knows which name is current, so they pick which one to resolve.
+  if (grepl("/", species_raw, fixed = TRUE)) {
+    opts <- parse_slash_options(genus, species_raw)
+    term <- NA_character_
+    if (interactive_ok && length(opts) > 0) {
+      message("'", trimws(paste(genus, species_raw)), "' lists ", length(opts), " names:")
+      for (i in seq_along(opts)) message(sprintf("  [%d] %s", i, opts[[i]]))
+      term <- resolve_slash_answer(prompt_fn("Which to use? (number, a name, or 'none'): "),
+                                   genus, opts)
+    }
+    if (is.na(term)) {
+      decision_put(con, key, "skip")
+      return(list(taxon_id = NA_integer_, action = "skip", term = key))
+    }
+    return(.resolve_term(con, key, term, is_subspecies = FALSE, described = TRUE,
+                         request_fn, interactive_ok, prompt_fn))
+  }
+
   sp   <- split_holway_species(species_raw)
   plan <- holway_resolution_plan(source_sheet, genus, sp)
 
-  # Two-word Described entry: confirm it's really a subspecies before adding ssp.
+  # Two-word Described entry: confirm it's really a subspecies.
   if (plan$ask_subspecies && interactive_ok) {
     if (!.yn(prompt_fn, sprintf("Is '%s %s %s' a subspecies? (y/n): ",
                                 genus, sp$species, sp$subspecies))) {
@@ -165,44 +242,9 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
     }
   }
 
-  results <- get_taxa_by_name(con, plan$term, request_fn = request_fn)
-  if (length(results) == 0 && interactive_ok) {
-    results <- retry_empty_search(
-      results, plan$term,
-      fetch_fn = function(t) get_taxa_by_name(con, t, request_fn = request_fn),
-      prompt_fn = prompt_fn, interactive_ok = interactive_ok)
-  }
-
-  choice <- select_taxon_candidate(results, described = identical(source_sheet, "Described"),
-                                   search_term = plan$term, is_subspecies = plan$is_subspecies)
-
-  if (choice$action == "pick") {
-    chosen <- results[[choice$index]]
-    decision_put(con, key, "pick", chosen$id)
-    return(list(taxon_id = as.integer(chosen$id), action = "pick", term = key))
-  }
-
-  if (choice$action == "prompt" && interactive_ok) {
-    message("\nAmbiguous: '", plan$term, "' -- choose a taxon:")
-    for (i in seq_along(results)) {
-      t <- results[[i]]
-      message(sprintf("  [%d] id=%s %s (%s)", i, t$id, t$name, t$rank %||% "?"))
-    }
-    raw <- trimws(prompt_fn("Pick number (or 'skip'): "))
-    idx <- suppressWarnings(as.integer(raw))
-    if (!identical(raw, "skip") && !is.na(idx) && idx >= 1 && idx <= length(results)) {
-      chosen <- results[[idx]]
-      decision_put(con, key, "pick", chosen$id)
-      return(list(taxon_id = as.integer(chosen$id), action = "pick", term = key))
-    }
-    # declined the prompt -> fall through to the ITIS question
-  }
-
-  # Nothing usable on iNat (empty, subspecies w/o exact match, or declined
-  # prompt): ask the ITIS keep/skip question.
-  disp <- if (interactive_ok) itis_disposition(plan$term, prompt_fn, interactive_ok) else "skip"
-  decision_put(con, key, disp)
-  list(taxon_id = NA_integer_, action = disp, term = key)
+  .resolve_term(con, key, plan$term, plan$is_subspecies,
+                identical(source_sheet, "Described"),
+                request_fn, interactive_ok, prompt_fn)
 }
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
@@ -234,15 +276,32 @@ HOLWAY_REF_COLUMNS <- c("taxon_id", "scientific_name", "common_name", "rank",
   stringr::word(x, -1)
 }
 
+# .ssp_scientific_name(): format a subspecies name with the "ssp." marker for
+# display -- "Ashmeadiella cactorum ssp. basalis". Falls back to the binomial
+# when there's no subspecies epithet.
+.ssp_scientific_name <- function(genus, species, subspecies) {
+  parts <- c(genus, species)
+  parts <- parts[!is.na(parts) & parts != ""]
+  base  <- if (length(parts) > 0) paste(parts, collapse = " ") else NA_character_
+  if (!is.na(subspecies) && subspecies != "" && !is.na(base))
+    paste0(base, " ssp. ", subspecies) else base
+}
+
 # tidy_holway_ref_row(): PURE. Reshape one parse_taxon_ranks() result plus the
 # taxon's API name/common name into the clean reference-table layout. species/
 # subspecies are reduced to bare epithets; scientific_name is the AUTHORITATIVE
 # iNat taxon name (taxon$name), not a derived string.
 tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_sheet,
                                 itis_valid = NA) {
+  sp_ep <- .bare_epithet(ranks$taxon_species_name)
+  ss_ep <- .bare_epithet(ranks$taxon_subspecies_name)
+  # subspecies get the "ssp." display form; everything else keeps the API name
+  sci <- if (identical(ranks$rank, "subspecies") && !is.na(ss_ep))
+    .ssp_scientific_name(ranks$taxon_genus_name, sp_ep, ss_ep)
+  else scientific_name %||% NA_character_
   tibble::tibble(
     taxon_id        = as.integer(ranks$taxon_id),
-    scientific_name = scientific_name %||% NA_character_,
+    scientific_name = sci,
     common_name     = common_name %||% NA_character_,
     rank            = ranks$rank %||% NA_character_,
     kingdom     = ranks$taxon_kingdom_name,     phylum = ranks$taxon_phylum_name,
@@ -251,8 +310,8 @@ tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_shee
     subfamily   = ranks$taxon_subfamily_name,   tribe  = ranks$taxon_tribe_name,
     subtribe    = ranks$taxon_subtribe_name,    genus  = ranks$taxon_genus_name,
     subgenus    = ranks$subgenus,               complex = ranks$complex,
-    species     = .bare_epithet(ranks$taxon_species_name),
-    subspecies  = .bare_epithet(ranks$taxon_subspecies_name),
+    species     = sp_ep,
+    subspecies  = ss_ep,
     complex_taxon_id = ranks$complex_taxon_id,
     source_sheet = source_sheet, resolved = TRUE, itis_valid = as.logical(itis_valid)
   )
@@ -273,15 +332,16 @@ unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE)
     species_col    <- sp$species
     subspecies_col <- sp$subspecies
     rank           <- "subspecies"
+    sci            <- .ssp_scientific_name(genus, species_col, subspecies_col)
   } else {
     species_col    <- clean_holway_species(r$species_raw %||% "")
     species_col    <- ifelse(is.na(species_col) | species_col == "", NA_character_, species_col)
     subspecies_col <- NA_character_
     rank           <- if (!is.na(species_col)) "species" else NA_character_
+    parts <- c(genus, species_col)
+    parts <- parts[!is.na(parts) & parts != ""]
+    sci   <- if (length(parts) > 0) paste(parts, collapse = " ") else NA_character_
   }
-  parts <- c(genus, species_col, if (isTRUE(is_subspecies)) subspecies_col else NULL)
-  parts <- parts[!is.na(parts) & parts != ""]
-  sci   <- if (length(parts) > 0) paste(parts, collapse = " ") else NA_character_
 
   tibble::tibble(
     taxon_id = NA_integer_, scientific_name = sci,
@@ -306,13 +366,29 @@ unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE)
 build_holway_reference <- function(con, holway_df,
                                    request_fn = inat_request,
                                    interactive_ok = TRUE) {
+  # Batch-prefetch every already-decided taxon in full (with ancestors) so the
+  # per-row get_taxon_by_id() calls below are cache hits -- turns hundreds of
+  # single requests into a few throttled batch requests.
+  if (exists("prefetch_taxa")) {
+    decided_ids <- integer(0)
+    for (i in seq_len(nrow(holway_df))) {
+      d <- decision_get(con, holway_search_term(holway_df$source_sheet[i],
+                                                holway_df$genus[i], holway_df$species_raw[i]))
+      if (!is.null(d) && !is.na(d$chosen_taxon_id)) decided_ids <- c(decided_ids, d$chosen_taxon_id)
+    }
+    if (length(decided_ids) > 0)
+      prefetch_taxa(con, unique(decided_ids), request_fn = request_fn)
+  }
+
   rows <- vector("list", nrow(holway_df))
   for (i in seq_len(nrow(holway_df))) {
     r <- holway_df[i, ]
     res <- resolve_holway_row(con, r$source_sheet, r$genus, r$species_raw,
                               request_fn = request_fn, interactive_ok = interactive_ok)
-    # a two-word entry that reached keep/skip was a confirmed subspecies
-    is_ss <- !is.na(split_holway_species(r$species_raw %||% "")$subspecies)
+    # a two-word entry that reached keep/skip was a confirmed subspecies (but a
+    # slash "A / B" pair is never a subspecies)
+    is_ss <- !grepl("/", r$species_raw %||% "", fixed = TRUE) &&
+             !is.na(split_holway_species(r$species_raw %||% "")$subspecies)
     rows[[i]] <- if (!is.na(res$taxon_id)) {
       taxon <- get_taxon_by_id(con, res$taxon_id, request_fn = request_fn)
       ranks <- parse_taxon_ranks(taxon)

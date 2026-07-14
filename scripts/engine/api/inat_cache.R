@@ -50,8 +50,15 @@ get_taxa_by_name <- function(con, name, request_fn = inat_request, verbose = FAL
   }
   results <- inat_fetch_taxa_by_name(name, request_fn = request_fn)
   taxon_cache_put(con, key, NA_integer_, results)
+  # Cache a candidate by id ONLY if it carries ancestors and isn't already
+  # cached. The /taxa?q= search endpoint omits ancestors, so caching those by id
+  # would clobber the full ancestor-bearing objects the observation flatten
+  # (resolve_taxonomy -> parse_taxon_ranks) needs, blanking out genus/family.
   for (t in results) {
-    if (!is.null(t$id)) taxon_cache_put(con, taxon_cache_key_id(t$id), t$id, t)
+    if (!is.null(t$id) && !is.null(t$ancestors) && length(t$ancestors) > 0 &&
+        is.null(taxon_cache_get(con, taxon_cache_key_id(t$id)))) {
+      taxon_cache_put(con, taxon_cache_key_id(t$id), t$id, t)
+    }
   }
   if (verbose) message("  fetched name search '", name, "' (", length(results), " results)")
   results
