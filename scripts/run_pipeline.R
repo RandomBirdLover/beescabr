@@ -89,6 +89,15 @@ main <- function() {
             nrow(holway_ref), " rows -> ", PATHS$holway_reference)
   }
 
+  # Always stamp the "(Complex)" display prefix onto the reference file, whether
+  # it was just built or reused from an earlier run. decorate_complex is
+  # idempotent (it never double-prefixes), so this is safe to run every time --
+  # it just guarantees the reused file carries the label like the checklists do.
+  if (file.exists(PATHS$holway_reference)) {
+    hr <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
+    write.csv(decorate_complex(hr), PATHS$holway_reference, row.names = FALSE, na = "")
+  }
+
   # ---- 2. EXPORT: checklists + lookup ----
   message("\n== [2/3] EXPORT: Tier 1 + Tier 2 checklists + taxonomy lookup ==")
   build_summary <- build_all_checklists(con)

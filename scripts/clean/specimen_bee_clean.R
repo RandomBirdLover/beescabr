@@ -95,13 +95,17 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   duplicates_list <- detect_duplicate_ids(df)
   write_fresh(duplicates_list, dupes_out, row.names = FALSE)
 
-  # --- complex match (needs SD County checklist) ---
-  if (file.exists(inat_checklist_path)) {
-    checklist <- read.csv(inat_checklist_path)
-    require_columns(checklist, c("genus", "species", "complex", "complex_taxon_id"), "checklist")
+  # --- complex match (needs the internal complex map) ---
+  # complex_taxon_id is stripped from the public iNat checklists, so the
+  # species->complex_taxon_id map is read from the internal file that
+  # native_bee_checklist.R writes for exactly this purpose.
+  complex_map_path <- PATHS$complex_map
+  if (file.exists(complex_map_path)) {
+    checklist <- read.csv(complex_map_path)
+    require_columns(checklist, c("genus", "species", "complex", "complex_taxon_id"), "complex_map")
     df <- match_specimen_complex(df, build_complex_lookup(checklist))
   } else {
-    message("WARNING: SD County checklist not found -- complex not matched.")
+    message("WARNING: complex map not found -- complex not matched.")
     if (!"complex" %in% names(df))          df$complex <- NA_character_
     if (!"complex_taxon_id" %in% names(df)) df$complex_taxon_id <- NA
   }

@@ -94,6 +94,11 @@ NESTING_SOURCES <- c("field:nest", "field:nesting")
 # inline in many places).
 PATHS <- list(
   taxonomy_lookup = "data/outputs/reference/sd_bee_taxonomy_lookup.csv",
+  # Internal-only: species -> species-complex taxon_id map. complex_taxon_id is
+  # an iNat implementation detail (it looks identical to a species scientific
+  # name and confuses non-scientists), so it's stripped from the public
+  # checklists and parked here for the specimen complex-match step to read.
+  complex_map = "data/cache/complex_taxon_id_map.csv",
   # Built ONCE from Holway's v3 checklist (resolving names -> iNat taxon_ids is
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).

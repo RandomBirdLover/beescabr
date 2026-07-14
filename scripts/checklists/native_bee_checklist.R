@@ -25,6 +25,7 @@ local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
   need("PATHS",                    "config.R")
   need("write_fresh",              "utils/utils.R")
+  need("decorate_complex",         "utils/utils.R")
   need("store_connect",            "engine/db/store_conn.R")
   need("count_observations",       "engine/db/observations_store.R")
   need("taxon_cache_get",          "engine/db/taxon_store.R")
@@ -97,9 +98,27 @@ build_all_checklists <- function(con) {
   run_qc(cl_pl,   "Point Loma")
   run_qc(cl_cabr, "CABR")
 
-  write_fresh(cl_sd,   PATHS$checklist_sd_county_inat)
-  write_fresh(cl_pl,   PATHS$checklist_point_loma_inat)
-  write_fresh(cl_cabr, PATHS$checklist_cabr_inat)
+  # Internal complex map (bare names + complex_taxon_id) for the specimen
+  # complex-match step. Written from the SD County checklist (broadest tier)
+  # BEFORE decoration/stripping, so it keeps the bare complex + taxon_id that
+  # match_specimen_complex() needs. This is the ONLY place complex_taxon_id
+  # survives to disk -- the public checklists drop it (see strip_public below).
+  complex_map <- cl_sd |>
+    filter(!is.na(complex), complex != "") |>
+    distinct(genus, species, complex, complex_taxon_id)
+  dir.create(dirname(PATHS$complex_map), recursive = TRUE, showWarnings = FALSE)
+  write_fresh(complex_map, PATHS$complex_map, na = "")
+  message("Wrote internal complex map (", nrow(complex_map), " species) -> ",
+          basename(PATHS$complex_map))
+
+  # Public checklists: add the "(Complex)" prefix (a complex name is otherwise
+  # identical to a species scientific name) and drop the internal
+  # complex_taxon_id column. decorate_complex is idempotent + display-only.
+  strip_public <- function(cl) decorate_complex(cl) |> select(-any_of("complex_taxon_id"))
+
+  write_fresh(strip_public(cl_sd),   PATHS$checklist_sd_county_inat)
+  write_fresh(strip_public(cl_pl),   PATHS$checklist_point_loma_inat)
+  write_fresh(strip_public(cl_cabr), PATHS$checklist_cabr_inat)
   message("\nTier 1 checklists written.")
 
   # Read CABR specimens once (optional) -- used by BOTH the lookup's
@@ -146,7 +165,7 @@ build_all_checklists <- function(con) {
                                                    specimen_species = specimen_species,
                                                    holway_resolved = holway_resolved,
                                                    holway_decision_map = holway_decision_map)
-  write_fresh(bee_taxonomy_lookup, PATHS$taxonomy_lookup, na = "")
+  write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified).")
 
