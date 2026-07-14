@@ -22,6 +22,7 @@ library(dplyr)
 library(stringr)
 
 if (!exists("holway_name_sets")) source("scripts/clean/verify.R")
+if (!exists("split_holway_species")) source("scripts/checklists/holway.R")
 
 BEE_KINGDOM     <- "Animalia"
 BEE_PHYLUM      <- "Arthropoda"
@@ -106,13 +107,11 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
                                       specimen_species = NULL,
                                       holway_resolved = NULL) {
 
+  # Holway packs species + subspecies into species_raw ("cactorum basalis").
+  # Split it: first token = species epithet, remainder = subspecies epithet.
+  .hsplit <- split_holway_species(holway_df$species_raw)
   holway_taxonomy <- holway_df |>
-    mutate(species = str_trim(
-      species_raw |>
-        str_remove("^CF\\s+") |>
-        str_remove("^MSN\\s+") |>
-        str_remove("\\s+sp\\.\\s*nov\\.$")
-    ))
+    mutate(species = .hsplit$species, subspecies_h = .hsplit$subspecies)
 
   # --- GENUS ROWS (Holway) ---
   genus_rows <- holway_taxonomy |>
@@ -124,14 +123,20 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
     mutate(subgenus = NA_character_, complex = NA_character_,
            species = NA_character_, subspecies = NA_character_, rank = "genus")
 
-  # --- SPECIES ROWS (Holway) --- strip subgenus parens to match iNat notation
+  # --- SPECIES + SUBSPECIES ROWS (Holway) --- strip subgenus parens to match
+  # iNat notation. A row with a subspecies epithet becomes a rank="subspecies"
+  # row; otherwise rank="species".
   species_rows <- holway_taxonomy |>
     filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
     mutate(subgenus = str_remove(str_remove(subgenus, "^\\("), "\\)$")) |>
-    distinct(family, subfamily, tribe, genus, subgenus, species) |>
+    distinct(family, subfamily, tribe, genus, subgenus, species, subspecies_h) |>
     .higher_rank_constants() |>
-    mutate(complex = NA_character_, subspecies = NA_character_, rank = "species",
-           subgenus = ifelse(subgenus == "", NA_character_, subgenus))
+    mutate(complex = NA_character_,
+           subspecies = ifelse(is.na(subspecies_h) | subspecies_h == "",
+                               NA_character_, subspecies_h),
+           rank = ifelse(is.na(subspecies), "species", "subspecies"),
+           subgenus = ifelse(subgenus == "", NA_character_, subgenus)) |>
+    select(-subspecies_h)
 
   # helper: Holway-first, iNat-export fallback for family/subfamily/tribe
   with_holway_fallback <- function(df) {
@@ -304,10 +309,14 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
   # column for DISPLAY. All internal joins/dedup/verify above ran on the
   # stripped epithet, so matching is unaffected; here we swap the shown value
   # back to Holway's original notation via a genus+stripped-epithet map. ---
+  # Restore only the leading qualifier (CF/MSN) onto the species epithet -- NOT
+  # the subspecies, which now lives in its own column.
   holway_species_display <- holway_taxonomy |>
     filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
+    mutate(.qual = str_trim(str_extract(species_raw, "^(CF|MSN)\\s+") %||% NA_character_),
+           species_display = ifelse(is.na(.qual), species, paste(.qual, species))) |>
     transmute(.dkey = paste(tolower(genus), tolower(species)),
-              species_display = str_trim(species_raw)) |>
+              species_display = species_display) |>
     distinct(.dkey, .keep_all = TRUE)
   deduped <- deduped |>
     mutate(.dkey = ifelse(!is.na(species) & species != "",

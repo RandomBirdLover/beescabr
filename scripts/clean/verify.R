@@ -26,15 +26,23 @@ library(stringr)
     str_remove("\\s+sp\\.\\s*nov\\.$") |> str_trim()
 }
 
-# Sets of lowercased names Holway knows, by rank. species keys are "genus species".
+# Sets of lowercased names Holway knows, by rank. species keys are "genus
+# species"; subspecies keys "genus species subspecies". Holway packs the
+# subspecies into species_raw ("cactorum basalis"), so we split on the space:
+# first token = species epithet, remainder = subspecies epithet.
 holway_name_sets <- function(holway_df) {
   g  <- tolower(trimws(holway_df$genus))
   sg <- tolower(str_remove_all(holway_df$subgenus %||% "", "[()]"))
-  sp <- .clean_epithet(holway_df$species_raw %||% "")
+  cleaned <- .clean_epithet(holway_df$species_raw %||% "")
+  sp_ep <- tolower(str_trim(word(cleaned, 1)))
+  ss_ep <- tolower(str_trim(word(cleaned, 2, -1)))
+  has_sp <- !is.na(sp_ep) & sp_ep != ""
+  has_ss <- !is.na(ss_ep) & ss_ep != ""
   list(
-    genus   = unique(g[!is.na(g) & g != ""]),
-    subgenus = unique(sg[!is.na(sg) & sg != ""]),
-    species = unique(paste(g, tolower(sp))[!is.na(sp) & sp != ""])
+    genus      = unique(g[!is.na(g) & g != ""]),
+    subgenus   = unique(sg[!is.na(sg) & sg != ""]),
+    species    = unique(paste(g, sp_ep)[has_sp]),
+    subspecies = unique(paste(g, sp_ep, ss_ep)[has_ss])
   )
 }
 
@@ -47,11 +55,15 @@ flag_new_taxa <- function(df, sets, verified_ids = integer(0)) {
   sp <- col("species"); ss <- col("subspecies")
   present <- function(x) !is.na(x) & x != ""
 
+  ss_set <- sets$subspecies %||% character(0)
   new_genus   <- present(g)  & !(tolower(g)  %in% sets$genus)
   new_subg    <- present(sg) & !(tolower(str_remove_all(sg, "[()]")) %in% sets$subgenus)
   new_complex <- present(cx)                                   # Holway has no complexes
   new_species <- present(sp) & !(paste(tolower(g), tolower(.clean_epithet(sp))) %in% sets$species)
-  new_subsp   <- present(ss)                                   # Holway has no subspecies
+  # Holway DOES carry subspecies (packed into species_raw), so a subspecies is
+  # only "new" if the genus+species+subspecies key isn't in the Holway set.
+  new_subsp   <- present(ss) &
+    !(paste(tolower(g), tolower(.clean_epithet(sp)), tolower(.clean_epithet(ss))) %in% ss_set)
 
   M <- cbind(genus = new_genus, subgenus = new_subg, complex = new_complex,
              species = new_species, subspecies = new_subsp)

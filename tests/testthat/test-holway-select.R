@@ -1,6 +1,69 @@
 library(testthat)
 
 sp <- function(rank) list(id = 1, name = "x", rank = rank)
+mk <- function(id, name, rank) list(id = id, name = name, rank = rank)
+
+test_that("exact name match auto-picks (subspecies, with ssp. normalization)", {
+  src("checklists/holway_reference_build.R")
+  results <- list(mk(1, "Ashmeadiella cactorum", "species"),
+                  mk(313836, "Ashmeadiella cactorum basalis", "subspecies"))
+  res <- select_taxon_candidate(results, described = TRUE,
+                                search_term = "Ashmeadiella cactorum ssp. basalis",
+                                is_subspecies = TRUE)
+  expect_equal(res$action, "pick")
+  expect_equal(res$index, 2L)                       # the subspecies, not the parent
+})
+
+test_that("subspecies with no exact match does NOT grab the parent species", {
+  src("checklists/holway_reference_build.R")
+  results <- list(mk(1, "Atoposmia copelandica", "species"))   # only the species exists
+  res <- select_taxon_candidate(results, described = TRUE,
+                                search_term = "Atoposmia copelandica ssp. albomarginata",
+                                is_subspecies = TRUE)
+  expect_equal(res$action, "skip")                  # -> routes to ITIS keep/skip
+})
+
+test_that("exact match disambiguates near-spellings (Andrena nigra vs nigrae)", {
+  src("checklists/holway_reference_build.R")
+  results <- list(mk(1, "Andrena nigrae", "species"), mk(2, "Andrena nigra", "species"))
+  res <- select_taxon_candidate(results, described = TRUE, search_term = "Andrena nigra")
+  expect_equal(res$action, "pick")
+  expect_equal(res$index, 2L)
+})
+
+test_that("holway_resolution_plan builds the right search per row type", {
+  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  p_ss <- holway_resolution_plan("Described", "Ashmeadiella", split_holway_species("cactorum basalis"))
+  expect_true(p_ss$is_subspecies)
+  expect_equal(p_ss$term, "Ashmeadiella cactorum basalis")   # plain trinomial, no ssp.
+  p_sp <- holway_resolution_plan("Described", "Stelis", split_holway_species("anthocopae"))
+  expect_false(p_sp$is_subspecies)
+  expect_equal(p_sp$term, "Stelis anthocopae")
+  p_g <- holway_resolution_plan("Unpublished", "Andrena", split_holway_species("sp1"))
+  expect_equal(p_g$term, "Andrena")
+})
+
+test_that("unresolved_holway_ref_row builds subspecies and species keep-rows", {
+  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  ss <- tibble::tibble(source_sheet = "Described", family = "Megachilidae",
+                       subfamily = "Megachilinae", tribe = "Osmiini",
+                       genus = "Atoposmia", subgenus = "(Hexosmia)",
+                       species_raw = "copelandica albomarginata")
+  row <- unresolved_holway_ref_row(ss, itis_valid = TRUE, is_subspecies = TRUE)
+  expect_equal(row$rank, "subspecies")
+  expect_equal(row$species, "copelandica"); expect_equal(row$subspecies, "albomarginata")
+  expect_equal(row$scientific_name, "Atoposmia copelandica albomarginata")
+  expect_equal(row$subgenus, "Hexosmia")            # parens stripped
+  expect_true(row$itis_valid); expect_true(is.na(row$taxon_id))
+
+  spp <- tibble::tibble(source_sheet = "Described", family = "Megachilidae",
+                        subfamily = NA_character_, tribe = NA_character_,
+                        genus = "Stelis", subgenus = "", species_raw = "anthocopae")
+  row2 <- unresolved_holway_ref_row(spp, itis_valid = TRUE, is_subspecies = FALSE)
+  expect_equal(row2$rank, "species"); expect_equal(row2$species, "anthocopae")
+  expect_true(is.na(row2$subspecies))
+  expect_equal(row2$scientific_name, "Stelis anthocopae")
+})
 
 test_that("select_taxon_candidate picks the single result", {
   src("checklists/holway_reference_build.R")

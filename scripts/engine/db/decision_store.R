@@ -15,7 +15,12 @@
 library(DBI)
 
 # Return the recorded decision for a search term, or NULL if undecided.
-# A decision is list(action = "pick"|"skip", chosen_taxon_id = <int|NA>).
+# A decision is list(action, chosen_taxon_id). action is one of:
+#   "pick"      -> resolved to chosen_taxon_id
+#   "keep"      -> valid in ITIS but not on iNat (blank id, itis_valid TRUE)
+#   "skip"      -> checked ITIS, not valid / unpublished (blank id, itis_valid FALSE)
+#   "tentative" -> two-word name the user said is NOT a subspecies; provisional
+#                  (blank id, itis_valid blank)
 decision_get <- function(con, search_term) {
   res <- DBI::dbGetQuery(
     con,
@@ -28,7 +33,7 @@ decision_get <- function(con, search_term) {
 }
 
 decision_put <- function(con, search_term, action, chosen_taxon_id = NA_integer_) {
-  stopifnot(action %in% c("pick", "skip"))
+  stopifnot(action %in% c("pick", "skip", "keep", "tentative"))
   DBI::dbExecute(
     con,
     "INSERT OR REPLACE INTO holway_decisions (search_term, chosen_taxon_id, action, decided_at)

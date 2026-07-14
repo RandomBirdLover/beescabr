@@ -94,7 +94,10 @@ NESTING_SOURCES <- c("field:nest", "field:nesting")
 # inline in many places).
 PATHS <- list(
   taxonomy_lookup = "data/outputs/reference/sd_bee_taxonomy_lookup.csv",
-  holway_reference = "data/outputs/reference/holway_sd_bee_reference_table.csv",
+  # Built ONCE from Holway's v3 checklist (resolving names -> iNat taxon_ids is
+  # slow + interactive), then reused every run. Bump the version suffix only when
+  # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
+  holway_reference = "data/outputs/reference/holway_sd_bee_reference_table_v3.csv",
   verified_taxa = "data/outputs/reference/verified_taxa.csv",
   checklist_sd_county_inat = "data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv",

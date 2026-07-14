@@ -54,6 +54,22 @@ test_that("flag_new_taxa respects the verified list", {
   expect_false(flag_new_taxa(obs, s, verified_ids = 99L)$needs_verification)
 })
 
+test_that("Holway subspecies packed in species_raw are recognized, not flagged new", {
+  src("clean/verify.R")
+  holway <- tibble::tibble(genus = "Ashmeadiella", subgenus = "",
+                           species_raw = "cactorum basalis")
+  s <- holway_name_sets(holway)
+  expect_true("ashmeadiella cactorum basalis" %in% s$subspecies)
+  expect_true("ashmeadiella cactorum" %in% s$species)          # species-level implied
+  obs <- tibble::tibble(taxon_id = 1, genus = "Ashmeadiella", subgenus = NA,
+                        complex = NA, species = "cactorum", subspecies = "basalis")
+  expect_false(flag_new_taxa(obs, s, integer(0))$needs_verification[1])
+  # a subspecies Holway does NOT list is still flagged
+  obs2 <- tibble::tibble(taxon_id = 2, genus = "Ashmeadiella", subgenus = NA,
+                         complex = NA, species = "cactorum", subspecies = "nototherum")
+  expect_true(flag_new_taxa(obs2, s, integer(0))$needs_verification[1])
+})
+
 test_that("load_verified_taxa returns ids, or empty when file absent", {
   src("clean/verify.R")
   expect_length(load_verified_taxa(tempfile()), 0)          # missing file

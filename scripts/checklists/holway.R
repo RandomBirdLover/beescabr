@@ -37,6 +37,24 @@ clean_holway_species <- function(species_raw) {
 }
 
 # ------------------------------------------------------------
+# split_holway_species(): Holway packs the subspecies epithet into species_raw
+# ("cactorum basalis"). After stripping CF/MSN/sp. nov. qualifiers, the FIRST
+# token is the species epithet and any remaining token(s) the subspecies.
+# Returns a tibble(species, subspecies); either is NA when absent. Vectorized,
+# pure. The ORIGINAL qualifier (CF/MSN) is not preserved here -- callers that
+# need it keep species_raw around separately.
+# ------------------------------------------------------------
+split_holway_species <- function(species_raw) {
+  cleaned <- clean_holway_species(species_raw)
+  sp <- str_trim(word(cleaned, 1))
+  ss <- str_trim(word(cleaned, 2, -1))
+  tibble::tibble(
+    species    = ifelse(is.na(sp) | sp == "", NA_character_, sp),
+    subspecies = ifelse(is.na(ss) | ss == "", NA_character_, ss)
+  )
+}
+
+# ------------------------------------------------------------
 # holway_genus_taxonomy(): one row per genus with its family/subfamily/tribe.
 # Holway occasionally files a genus under two tribes (a documented
 # inconsistency, not a real split); we collapse to the first alphabetical

@@ -9,6 +9,14 @@ test_that("clean_holway_species strips CF/MSN/sp.nov qualifiers", {
   expect_equal(clean_holway_species("plain"), "plain")
 })
 
+test_that("split_holway_species separates the packed species + subspecies", {
+  src("checklists/holway.R")
+  out <- split_holway_species(c("copelandica albomarginata", "annectens",
+                                "CF baeriae", "", NA_character_))
+  expect_equal(out$species,    c("copelandica", "annectens", "baeriae", NA, NA))
+  expect_equal(out$subspecies, c("albomarginata", NA, NA, NA, NA))
+})
+
 test_that("holway_genus_taxonomy collapses conflicting tribes to first alphabetical", {
   src("checklists/holway.R")
   holway <- tibble::tibble(

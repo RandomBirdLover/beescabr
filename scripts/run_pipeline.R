@@ -6,7 +6,8 @@
 # The single entrypoint that runs the whole pipeline end to end:
 #   1.  INGEST        iNat API -> DuckDB cache (once, incremental)
 #   1b. HOLWAY REF    load raw Holway CSV -> resolve each species to an iNat
-#                     taxon -> write holway_sd_bee_reference_table.csv
+#                     taxon -> write holway_sd_bee_reference_table_v3.csv (ONCE;
+#                     reused on later runs)
 #   2.  EXPORT        Tier 1 + Tier 2 checklists + sd_bee_taxonomy_lookup.csv
 #                     (the lookup combines the enriched Holway ref + iNat)
 #   3.  CLEAN         cabr_inat_bee_clean.csv (triage + obs-fields + date recovery)
@@ -19,14 +20,15 @@
 #   Rscript scripts/run_pipeline.R      (or Source in RStudio)
 #
 # Flags (env vars):
-#   BEESCABR_SKIP_INGEST=1      skip the API pull, use the existing cache
-#   BEESCABR_FULL_INGEST=1      re-walk the whole place (not incremental)
-#   BEESCABR_SKIP_HOLWAY_REF=1  skip rebuilding the Holway reference table
-#   BEESCABR_NONINTERACTIVE=1   auto-skip ambiguous Holway names (no prompts)
+#   BEESCABR_SKIP_INGEST=1         skip the API pull, use the existing cache
+#   BEESCABR_FULL_INGEST=1         re-walk the whole place (not incremental)
+#   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table
+#   BEESCABR_NONINTERACTIVE=1      auto-skip ambiguous Holway names (no prompts)
 #
-# NOTE: step 1b resolves Holway species to iNat taxa. On the FIRST run it hits
-# the API once per species and may prompt you to disambiguate a few names;
-# every choice is cached in DuckDB, so later runs are fast and prompt-free.
+# NOTE: step 1b builds the Holway reference table ONCE (resolving 700+ names to
+# iNat taxa is slow + interactive). The result is saved to a versioned file and
+# REUSED every run thereafter -- no re-resolution, no prompts. Rebuild only when
+# Holway ships a new checklist version, via BEESCABR_REBUILD_HOLWAY_REF=1.
 # =============================================================
 
 # Prevent the stage scripts' own standalone entrypoints from firing when we
@@ -68,9 +70,15 @@ main <- function() {
     ingest_observations(con, incremental = Sys.getenv("BEESCABR_FULL_INGEST", "0") != "1")
   }
 
-  # ---- 1b. BUILD HOLWAY REFERENCE: raw Holway CSV -> iNat-resolved table ----
-  if (Sys.getenv("BEESCABR_SKIP_HOLWAY_REF", "0") == "1") {
-    message("\n== [1b/3] HOLWAY REFERENCE skipped (BEESCABR_SKIP_HOLWAY_REF=1) ==")
+  # ---- 1b. HOLWAY REFERENCE: built ONCE, then reused ----
+  # Holway's v3 checklist rarely changes, and resolving its 700+ names to iNat
+  # taxa is slow + interactive -- so we do it once, save the versioned table,
+  # and just reuse it on every later run. Force a rebuild (e.g. when Holway ships
+  # a new checklist version) with BEESCABR_REBUILD_HOLWAY_REF=1.
+  if (file.exists(PATHS$holway_reference) &&
+      Sys.getenv("BEESCABR_REBUILD_HOLWAY_REF", "0") != "1") {
+    message("\n== [1b/3] HOLWAY REFERENCE: reusing ", basename(PATHS$holway_reference),
+            " (set BEESCABR_REBUILD_HOLWAY_REF=1 to rebuild) ==")
   } else {
     message("\n== [1b/3] BUILD HOLWAY REFERENCE: resolve Holway species -> iNat taxon_ids ==")
     holway_raw <- load_holway(PATHS$holway_combined)
