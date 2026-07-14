@@ -176,7 +176,28 @@ merge_holway_resolved <- function(deduped, holway_resolved, holway_decision_map 
   }
 
   # Merge any rows that now share a taxon_id (the renamed-Holway <-> iNat twins).
-  reconcile_lookup_dupes(out)
+  out <- reconcile_lookup_dupes(out)
+
+  # Carry itis_valid from the reference onto matching Holway rows so old/invalid
+  # names (itis_valid = FALSE) can be filtered without losing the record.
+  if (!is.null(holway_resolved) && "itis_valid" %in% names(holway_resolved)) {
+    iv <- holway_resolved |>
+      transmute(.ikey = str_squish(tolower(paste(
+                  ifelse(is.na(genus), "", genus),
+                  ifelse(is.na(species), "", species),
+                  ifelse(is.na(subspecies), "", subspecies)))),
+                itis_valid = as.logical(itis_valid)) |>
+      filter(.ikey != "") |>
+      distinct(.ikey, .keep_all = TRUE)
+    out <- out |>
+      mutate(.ikey = str_squish(tolower(paste(
+                ifelse(is.na(genus), "", genus),
+                ifelse(is.na(species), "", species),
+                ifelse(is.na(subspecies), "", subspecies))))) |>
+      left_join(iv, by = ".ikey") |>
+      select(-.ikey)
+  }
+  out
 }
 
 build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
@@ -406,10 +427,12 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
   # --- final column order: metadata first (common_name right after
   # scientific_name), then the taxonomic hierarchy ---
   ordered <- c("taxon_id", "scientific_name", "common_name",
-               "rank", "verified", "holway_status",
+               "rank", "verified", "holway_status", "itis_valid",
                "in_holway", "in_inat", "in_cabr_specimens",
-               TAXONOMY_LEVELS, "complex_taxon_id")
+               TAXONOMY_LEVELS)
+  # complex_taxon_id is dropped from this human-facing lookup; it's still carried
+  # in the SD County checklist that the specimen complex-matching reads.
   deduped |>
-    select(any_of(ordered), everything()) |>
+    select(any_of(ordered), everything(), -any_of("complex_taxon_id")) |>
     arrange(family, genus, rank, subgenus, complex, species, subspecies)
 }

@@ -258,9 +258,11 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
 HOLWAY_REF_LEVELS <- c("kingdom", "phylum", "class", "order", "superfamily",
                        "family", "subfamily", "tribe", "subtribe", "genus",
                        "subgenus", "complex", "species", "subspecies")
+# complex_taxon_id is intentionally omitted from the reference-table output
+# (human-facing); the value still exists internally for the checklists.
 HOLWAY_REF_COLUMNS <- c("taxon_id", "scientific_name", "common_name", "rank",
-                        HOLWAY_REF_LEVELS, "complex_taxon_id",
-                        "source_sheet", "resolved", "itis_valid")
+                        "source_sheet", "resolved", "itis_valid",
+                        HOLWAY_REF_LEVELS)
 
 # .strip_parens(): "(Hexosmia)" -> "Hexosmia"; NA/"" -> NA.
 .strip_parens <- function(x) {

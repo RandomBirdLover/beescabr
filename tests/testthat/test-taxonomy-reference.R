@@ -183,6 +183,33 @@ test_that("reconcile_lookup_dupes leaves non-duplicate and NA-taxon rows intact"
   expect_equal(nrow(reconcile_lookup_dupes(df)), 3)
 })
 
+test_that("itis_valid propagates onto Holway rows and sits right after holway_status", {
+  src("config.R"); src("clean/verify.R"); src("checklists/taxonomy_reference.R")
+  holway <- tibble::tibble(
+    source_sheet = c("Described", "Described"),
+    family = "Andrenidae", subfamily = "Andreninae", tribe = "Andrenini",
+    genus = "Calliopsis", subgenus = "", species_raw = c("anthidius", "validus"))
+  empty_cols <- function() tibble::tibble(
+    taxon_id = integer(0), scientific_name = character(0), common_name = character(0),
+    kingdom = character(0), phylum = character(0), class = character(0), order = character(0),
+    superfamily = character(0), family = character(0), subfamily = character(0), tribe = character(0),
+    genus = character(0), subgenus = character(0), complex = character(0),
+    complex_taxon_id = integer(0), species = character(0), subspecies = character(0))
+  bees <- tibble::tibble(taxon_id = integer(0), scientific_name = character(0),
+    common_name = character(0), genus = character(0), family = character(0),
+    subfamily = character(0), tribe = character(0), subtribe = character(0))
+  holway_resolved <- tibble::tibble(
+    taxon_id = c(NA_integer_, NA_integer_),
+    scientific_name = c("Calliopsis anthidius", "Calliopsis validus"),
+    rank = "species", genus = "Calliopsis", species = c("anthidius", "validus"),
+    subspecies = NA_character_, itis_valid = c(FALSE, TRUE))
+  lk <- build_bee_taxonomy_lookup(holway, empty_cols(), bees, holway_resolved = holway_resolved)
+  expect_equal(names(lk)[1:7],
+               c("taxon_id","scientific_name","common_name","rank","verified","holway_status","itis_valid"))
+  expect_false(lk$itis_valid[lk$species == "anthidius" & !is.na(lk$species)][1])  # old name
+  expect_true( lk$itis_valid[lk$species == "validus"   & !is.na(lk$species)][1])  # valid, not on iNat
+})
+
 test_that("merge_holway_resolved is a no-op when the reference table is absent/empty", {
   src("checklists/taxonomy_reference.R")
   d <- tibble::tibble(taxon_id = NA_integer_, scientific_name = NA_character_,
