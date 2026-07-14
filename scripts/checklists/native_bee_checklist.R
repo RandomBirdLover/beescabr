@@ -121,11 +121,26 @@ build_all_checklists <- function(con) {
   }
 
   # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
+  # The enriched Holway reference table (holway_sd_bee_reference_table.csv,
+  # built by holway_reference_build.R earlier in run_pipeline.R) supplies iNat
+  # taxon_ids + scientific names for Holway species, including ones never
+  # observed in SD County. If it isn't present yet, the lookup falls back to
+  # Holway rows without taxon_ids (blank, as before).
   message("\n--- sd_bee_taxonomy_lookup ---")
   verified_ids <- load_verified_taxa(PATHS$verified_taxa)
+  holway_resolved <- NULL
+  if (file.exists(PATHS$holway_reference)) {
+    holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
+    message("Using enriched Holway reference: ", basename(PATHS$holway_reference),
+            " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
+  } else {
+    message("NOTE: ", basename(PATHS$holway_reference), " not found -- Holway rows",
+            " will have blank taxon_id/scientific_name. Run holway_reference_build.R.")
+  }
   bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees,
                                                    verified_ids = verified_ids,
-                                                   specimen_species = specimen_species)
+                                                   specimen_species = specimen_species,
+                                                   holway_resolved = holway_resolved)
   write_fresh(bee_taxonomy_lookup, PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified).")

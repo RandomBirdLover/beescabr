@@ -44,9 +44,67 @@ TAXONOMY_COLUMN_ORDER <- c(
   )
 }
 
+# ------------------------------------------------------------
+# merge_holway_resolved(): fill taxon_id + scientific_name on the lookup's
+# Holway genus/species rows from the enriched Holway reference table
+# (holway_sd_bee_reference_table.csv, built by holway_reference_build.R).
+# PURE. holway_resolved is the clean reference table (columns: taxon_id,
+# scientific_name, rank, genus, species [bare epithet], ...). Species rows match
+# on "genus epithet", genus rows on the genus name (both case-insensitive); we
+# fill ONLY where the lookup still has no taxon_id, taking scientific_name
+# straight from the reference table (the authoritative iNat taxon name). in_inat
+# must already be computed BEFORE calling this, since a resolved-but-unobserved
+# Holway taxon now carries a taxon_id yet was never observed on iNat.
+# ------------------------------------------------------------
+merge_holway_resolved <- function(deduped, holway_resolved) {
+  if (is.null(holway_resolved) || nrow(holway_resolved) == 0) return(deduped)
+  need <- c("taxon_id", "genus", "species", "scientific_name")
+  if (!all(need %in% names(holway_resolved))) return(deduped)
+
+  hr <- holway_resolved |> filter(!is.na(taxon_id))
+  if (nrow(hr) == 0) return(deduped)
+  has_rank <- "rank" %in% names(hr)
+
+  sp_map <- hr |>
+    filter(!is.na(genus), genus != "", !is.na(species), species != "",
+           if (has_rank) rank == "species" else TRUE) |>
+    transmute(.mkey = paste(tolower(str_trim(genus)), tolower(.clean_epithet(species))),
+              hr_sp_id  = as.integer(taxon_id),
+              hr_sp_sci = scientific_name) |>
+    distinct(.mkey, .keep_all = TRUE)
+
+  g_map <- hr |>
+    filter(!is.na(genus), genus != "", (is.na(species) | species == ""),
+           if (has_rank) rank == "genus" else TRUE) |>
+    transmute(.gkey = tolower(str_trim(genus)),
+              hr_g_id  = as.integer(taxon_id),
+              hr_g_sci = scientific_name) |>
+    distinct(.gkey, .keep_all = TRUE)
+
+  out <- deduped |>
+    mutate(
+      .mkey = ifelse(rank == "species" & !is.na(genus) & !is.na(species) & species != "",
+                     tolower(paste(str_trim(genus), .clean_epithet(species))), NA_character_),
+      .gkey = ifelse(rank == "genus" & !is.na(genus) & genus != "",
+                     tolower(str_trim(genus)), NA_character_)
+    ) |>
+    left_join(sp_map, by = ".mkey") |>
+    left_join(g_map,  by = ".gkey") |>
+    mutate(
+      taxon_id        = dplyr::coalesce(taxon_id, hr_sp_id, hr_g_id),
+      scientific_name = dplyr::coalesce(scientific_name, hr_sp_sci, hr_g_sci)
+    ) |>
+    select(-.mkey, -.gkey, -hr_sp_id, -hr_sp_sci, -hr_g_id, -hr_g_sci)
+
+  # a fill must never duplicate a taxon_id already present in the table
+  dup <- !is.na(out$taxon_id) & duplicated(out$taxon_id)
+  out[!dup, , drop = FALSE]
+}
+
 build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
                                       verified_ids = integer(0),
-                                      specimen_species = NULL) {
+                                      specimen_species = NULL,
+                                      holway_resolved = NULL) {
 
   holway_taxonomy <- holway_df |>
     mutate(species = str_trim(
@@ -237,10 +295,33 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
     (has_species  & paste(tolower(deduped$genus), tolower(deduped$species)) %in% gs) |
     (!has_species & tolower(deduped$genus) %in% gonly)
 
-  # --- final column order: metadata first, then the taxonomic hierarchy ---
-  ordered <- c("taxon_id", "scientific_name", "rank", "verified", "holway_status",
+  # --- fill Holway taxon_id + scientific_name from the enriched reference
+  # table (must run AFTER in_inat, so unobserved-but-resolved Holway taxa keep
+  # in_inat = FALSE while gaining a taxon_id). ---
+  deduped <- merge_holway_resolved(deduped, holway_resolved)
+
+  # --- restore the original Holway qualifier (CF/MSN/sp. nov.) in the species
+  # column for DISPLAY. All internal joins/dedup/verify above ran on the
+  # stripped epithet, so matching is unaffected; here we swap the shown value
+  # back to Holway's original notation via a genus+stripped-epithet map. ---
+  holway_species_display <- holway_taxonomy |>
+    filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
+    transmute(.dkey = paste(tolower(genus), tolower(species)),
+              species_display = str_trim(species_raw)) |>
+    distinct(.dkey, .keep_all = TRUE)
+  deduped <- deduped |>
+    mutate(.dkey = ifelse(!is.na(species) & species != "",
+                          paste(tolower(genus), tolower(species)), NA_character_)) |>
+    left_join(holway_species_display, by = ".dkey") |>
+    mutate(species = coalesce(species_display, species)) |>
+    select(-.dkey, -species_display)
+
+  # --- final column order: metadata first (common_name right after
+  # scientific_name), then the taxonomic hierarchy ---
+  ordered <- c("taxon_id", "scientific_name", "common_name",
+               "rank", "verified", "holway_status",
                "in_holway", "in_inat", "in_cabr_specimens",
-               TAXONOMY_LEVELS, "complex_taxon_id", "common_name")
+               TAXONOMY_LEVELS, "complex_taxon_id")
   deduped |>
     select(any_of(ordered), everything()) |>
     arrange(family, genus, rank, subgenus, complex, species, subspecies)

@@ -59,6 +59,27 @@ holway_search_term <- function(source_sheet, genus, species_raw) {
 }
 
 # ------------------------------------------------------------
+# retry_empty_search(): PURE. When the initial iNat name search returns nothing
+# and the run is interactive, let a human supply alternate search terms (Python
+# parity -- rescues misspelled or since-renamed Holway names). Returns the first
+# non-empty result set, or the (still-empty) results if the user skips or the
+# run is non-interactive. fetch_fn(term) does the lookup; prompt_fn() reads a line.
+# ------------------------------------------------------------
+retry_empty_search <- function(results, term, fetch_fn,
+                               prompt_fn = readline, interactive_ok = TRUE) {
+  cur <- term
+  while (length(results) == 0 && isTRUE(interactive_ok)) {
+    message("No iNat match for '", cur,
+            "'. Enter an alternate name to search, or 'skip' to move on.")
+    raw <- trimws(prompt_fn("Alternate search (or 'skip'): "))
+    if (raw == "" || identical(raw, "skip")) break
+    cur <- raw
+    results <- fetch_fn(cur)
+  }
+  results
+}
+
+# ------------------------------------------------------------
 # resolve_holway_row(): resolve one row to a taxon id, consulting/recording
 # the decision cache and (only when needed and allowed) prompting. Returns
 # list(taxon_id, action). Impure: may call the API via `con`/request_fn and
@@ -76,6 +97,13 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
   }
 
   results <- get_taxa_by_name(con, term, request_fn = request_fn)
+  # zero-result retry: offer a human an alternate search term (Python parity).
+  if (length(results) == 0 && interactive_ok) {
+    results <- retry_empty_search(
+      results, term,
+      fetch_fn = function(t) get_taxa_by_name(con, t, request_fn = request_fn),
+      prompt_fn = prompt_fn, interactive_ok = interactive_ok)
+  }
   choice <- select_taxon_candidate(results, described = identical(source_sheet, "Described"))
 
   if (choice$action == "prompt") {
@@ -113,10 +141,73 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
   list(taxon_id = as.integer(chosen$id), action = "pick", term = term)
 }
 
+`%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
+
+# ------------------------------------------------------------
+# Clean reference-table layout -- mirrors sd_bee_taxonomy_lookup.csv (minus the
+# lookup-only computed columns verified/holway_status/in_*): taxon_id,
+# scientific_name, common_name, rank, then the 14 taxonomic levels in order,
+# complex_taxon_id, source_sheet, resolved.
+# ------------------------------------------------------------
+HOLWAY_REF_LEVELS <- c("kingdom", "phylum", "class", "order", "superfamily",
+                       "family", "subfamily", "tribe", "subtribe", "genus",
+                       "subgenus", "complex", "species", "subspecies")
+HOLWAY_REF_COLUMNS <- c("taxon_id", "scientific_name", "common_name", "rank",
+                        HOLWAY_REF_LEVELS, "complex_taxon_id",
+                        "source_sheet", "resolved")
+
+# .bare_epithet(): last token of a binomial/trinomial ("Andrena annectens" ->
+# "annectens"), matching the lookup's bare-epithet species/subspecies columns.
+.bare_epithet <- function(x) {
+  if (length(x) == 0 || is.na(x) || x == "") return(NA_character_)
+  stringr::word(x, -1)
+}
+
+# tidy_holway_ref_row(): PURE. Reshape one parse_taxon_ranks() result plus the
+# taxon's API name/common name into the clean reference-table layout. species/
+# subspecies are reduced to bare epithets; scientific_name is the AUTHORITATIVE
+# iNat taxon name (taxon$name), not a derived string.
+tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_sheet) {
+  tibble::tibble(
+    taxon_id        = as.integer(ranks$taxon_id),
+    scientific_name = scientific_name %||% NA_character_,
+    common_name     = common_name %||% NA_character_,
+    rank            = ranks$rank %||% NA_character_,
+    kingdom     = ranks$taxon_kingdom_name,     phylum = ranks$taxon_phylum_name,
+    class       = ranks$taxon_class_name,       order  = ranks$taxon_order_name,
+    superfamily = ranks$taxon_superfamily_name, family = ranks$taxon_family_name,
+    subfamily   = ranks$taxon_subfamily_name,   tribe  = ranks$taxon_tribe_name,
+    subtribe    = ranks$taxon_subtribe_name,    genus  = ranks$taxon_genus_name,
+    subgenus    = ranks$subgenus,               complex = ranks$complex,
+    species     = .bare_epithet(ranks$taxon_species_name),
+    subspecies  = .bare_epithet(ranks$taxon_subspecies_name),
+    complex_taxon_id = ranks$complex_taxon_id,
+    source_sheet = source_sheet, resolved = TRUE
+  )
+}
+
+# unresolved_holway_ref_row(): PURE. Same layout for a Holway row we could not
+# resolve to an iNat taxon -- NA taxon fields, but keep the family/genus and the
+# ORIGINAL species_raw (with CF/MSN) so nothing is lost.
+unresolved_holway_ref_row <- function(r) {
+  tibble::tibble(
+    taxon_id = NA_integer_, scientific_name = NA_character_,
+    common_name = NA_character_, rank = NA_character_,
+    kingdom = NA_character_, phylum = NA_character_, class = NA_character_,
+    order = NA_character_, superfamily = NA_character_,
+    family = r$family %||% NA_character_, subfamily = r$subfamily %||% NA_character_,
+    tribe = r$tribe %||% NA_character_, subtribe = NA_character_,
+    genus = r$genus %||% NA_character_, subgenus = r$subgenus %||% NA_character_,
+    complex = NA_character_, species = r$species_raw %||% NA_character_,
+    subspecies = NA_character_, complex_taxon_id = NA_integer_,
+    source_sheet = r$source_sheet %||% NA_character_, resolved = FALSE
+  )
+}
+
 # ------------------------------------------------------------
 # build_holway_reference(): full interactive run over the Holway sheet.
-# Produces a taxonomy tibble (one row per resolved Holway entry, full
-# ancestry) and returns it; the runner writes it to disk.
+# Produces a taxonomy tibble in the clean reference-table layout (one row per
+# Holway entry, full ancestry) and returns it; the runner writes it to disk.
 # ------------------------------------------------------------
 build_holway_reference <- function(con, holway_df,
                                    request_fn = inat_request,
@@ -127,22 +218,20 @@ build_holway_reference <- function(con, holway_df,
     res <- resolve_holway_row(con, r$source_sheet, r$genus, r$species_raw,
                               request_fn = request_fn, interactive_ok = interactive_ok)
     if (is.na(res$taxon_id)) {
-      rows[[i]] <- tibble::tibble(
-        source_sheet = r$source_sheet, genus = r$genus,
-        species = r$species_raw, taxon_id = NA_integer_, resolved = FALSE
-      )
+      rows[[i]] <- unresolved_holway_ref_row(r)
     } else {
       taxon <- get_taxon_by_id(con, res$taxon_id, request_fn = request_fn)
       ranks <- parse_taxon_ranks(taxon)
-      rows[[i]] <- ranks |>
-        mutate(source_sheet = r$source_sheet, resolved = TRUE)
+      rows[[i]] <- tidy_holway_ref_row(
+        ranks,
+        scientific_name = .scalar(taxon$name, NA_character_),
+        common_name     = .scalar(taxon$preferred_common_name, NA_character_),
+        source_sheet    = r$source_sheet)
     }
     if (i %% 25 == 0) message(sprintf("  Holway resolve: %d / %d", i, nrow(holway_df)))
   }
-  dplyr::bind_rows(rows)
+  dplyr::bind_rows(rows) |> dplyr::select(dplyr::any_of(HOLWAY_REF_COLUMNS))
 }
-
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
 
 # ------------------------------------------------------------
 # Runner (only when executed directly, not when sourced for tests).
