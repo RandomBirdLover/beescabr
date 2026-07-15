@@ -47,6 +47,9 @@ source("scripts/engine/api/inat_cache.R")
 source("scripts/engine/pipelines/ingest_inat.R")
 source("scripts/engine/pipelines/read_inat.R")
 source("scripts/clean/triage.R")
+source("scripts/clean/verify.R")                   # flag_new_taxa/holway_name_sets -- sourced
+                                                   # UNCONDITIONALLY so edits reload on a re-run
+                                                   # (taxonomy_reference.R only loads it if absent)
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
 source("scripts/checklists/holway.R")
 source("scripts/checklists/holway_reference_build.R") # builds holway_sd_bee_reference_table.csv
