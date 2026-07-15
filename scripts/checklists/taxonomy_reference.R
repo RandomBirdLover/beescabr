@@ -460,6 +460,14 @@ build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees
   sets    <- reference_name_sets(holway_ref)
   flagged <- flag_new_taxa(deduped, sets, verified_ids = verified_ids)
   deduped$verified  <- !flagged$needs_verification
+  # in_holway = TRUE means Holway's checklist lists THIS taxon by its own name at
+  # its own rank. NOTE FOR FUTURE READERS: a rank="complex" row shows in_holway=FALSE
+  # NOT because the complex is missing from Holway, but because Holway lists species
+  # (never complexes) -- the complex has no row of its own here. Its member species
+  # that ARE in Holway are still flagged in_holway=TRUE on their own species rows.
+  # This literal "does it have its own Holway row" definition is intentional: it's
+  # what lets the reference + taxonomy tables build cleanly. Don't read a complex's
+  # FALSE as "the bees in that complex aren't in Holway."
   deduped$in_holway <- is.na(flagged$new_at_rank)
 
   # in_cabr_specimens: genus+species (or genus, for a genus row) in the specimens

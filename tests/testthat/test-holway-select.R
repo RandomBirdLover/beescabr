@@ -31,6 +31,23 @@ test_that("exact match disambiguates near-spellings (Andrena nigra vs nigrae)", 
   expect_equal(res$index, 2L)
 })
 
+test_that("an aff. row never inherits its Described sibling's cached taxon_id", {
+  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  # the Described sibling ("miserabilis") is already cached under the SHARED key
+  # "Habropoda miserabilis"; the aff. row must NOT read it.
+  assign("decision_get", function(con, key)
+    if (identical(key, "Habropoda miserabilis")) list(chosen_taxon_id = 307633L, action = "pick") else NULL,
+    envir = globalenv())
+  assign("decision_put", function(con, key, action, id = NA) invisible(NULL), envir = globalenv())
+  on.exit(rm(list = c("decision_get", "decision_put"), envir = globalenv()), add = TRUE)
+
+  aff <- resolve_holway_row(NULL, "Unpublished", "Habropoda", "aff. miserabilis sp. nov.", interactive_ok = FALSE)
+  expect_true(is.na(aff$taxon_id))       # NOT 307633 -- aff. is a different species
+  expect_equal(aff$action, "tentative")
+  sib <- resolve_holway_row(NULL, "Described", "Habropoda", "miserabilis", interactive_ok = FALSE)
+  expect_equal(sib$taxon_id, 307633L)    # the real species still resolves normally
+})
+
 test_that("a same-named complex never wins over the species (Andrena osmioides)", {
   src("checklists/holway_reference_build.R")
   # iNat lists the COMPLEX first, then the species -- both named "Andrena osmioides"

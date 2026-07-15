@@ -43,6 +43,22 @@ test_that("flag_new_taxa flags taxa new-to-Holway at the right rank", {
   expect_false(out$needs_verification[4])
 })
 
+test_that("flag_new_taxa: a species carrying its parent complex is NOT new; a complex-rank row IS", {
+  src("clean/verify.R")
+  sets <- list(genus = "triepeolus", subgenus = "triepeolus",
+               species = "triepeolus segregatus", subspecies = character(0))
+  df <- tibble::tibble(
+    taxon_id   = c(1L, 2L),
+    genus      = "Triepeolus", subgenus = "Triepeolus", complex = "Triepeolus simplex",
+    species    = c("segregatus", NA_character_), subspecies = NA_character_,
+    rank       = c("species", "complex"))
+  out <- flag_new_taxa(df, sets)
+  expect_true(is.na(out$new_at_rank[1]))            # Holway species w/ parent complex -> NOT new
+  expect_false(out$needs_verification[1])
+  expect_match(out$new_at_rank[2], "complex")       # a real complex-rank row -> new
+  expect_true(out$needs_verification[2])
+})
+
 test_that("flag_new_taxa respects the verified list", {
   src("clean/verify.R")
   s <- holway_name_sets(holway())

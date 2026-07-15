@@ -52,13 +52,17 @@ holway_name_sets <- function(holway_df) {
 flag_new_taxa <- function(df, sets, verified_ids = integer(0)) {
   col <- function(n) if (n %in% names(df)) df[[n]] else rep(NA_character_, nrow(df))
   g  <- col("genus"); sg <- col("subgenus"); cx <- col("complex")
-  sp <- col("species"); ss <- col("subspecies")
+  sp <- col("species"); ss <- col("subspecies"); rk <- col("rank")
   present <- function(x) !is.na(x) & x != ""
 
   ss_set <- sets$subspecies %||% character(0)
   new_genus   <- present(g)  & !(tolower(g)  %in% sets$genus)
   new_subg    <- present(sg) & !(tolower(str_remove_all(sg, "[()]")) %in% sets$subgenus)
-  new_complex <- present(cx)                                   # Holway has no complexes
+  # Holway has no complex-LEVEL taxa, so a rank="complex" row is new to it -- but a
+  # SPECIES/subspecies row that merely carries its PARENT complex (for the specimen
+  # roll-up) is a real Holway taxon and must NOT be flagged. When there's no rank
+  # column, keep the old presence test.
+  new_complex <- present(cx) & (is.na(rk) | rk == "complex")
   new_species <- present(sp) & !(paste(tolower(g), tolower(.clean_epithet(sp))) %in% sets$species)
   # Holway DOES carry subspecies (packed into species_raw), so a subspecies is
   # only "new" if the genus+species+subspecies key isn't in the Holway set.

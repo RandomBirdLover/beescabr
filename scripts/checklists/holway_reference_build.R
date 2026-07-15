@@ -253,6 +253,18 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
                                force = FALSE) {
   key <- holway_search_term(source_sheet, genus, species_raw)  # stable cache key
 
+  # 'aff.' ("affinis") flags a species NEAR the named one, NOT that species, so it
+  # must never resolve to that taxon. Check this BEFORE the decision cache: an aff.
+  # name strips to the SAME search key as its Described sibling ("aff. miserabilis"
+  # -> "Habropoda miserabilis"), so reading the cache here would inherit the
+  # sibling's taxon_id. Short-circuit to unresolved and DON'T write the cache, so
+  # the shared key stays owned by the real species.
+  if (!identical(source_sheet, "Described")) {
+    qual <- holway_qualifier(species_raw)
+    if (!is.na(qual) && grepl("aff", qual, ignore.case = TRUE))
+      return(list(taxon_id = NA_integer_, action = "tentative", term = key))
+  }
+
   # force = TRUE bypasses the decision cache and re-resolves from scratch. Used to
   # auto-heal an old complex mis-pick (the cached decision would otherwise stick).
   decided <- if (force) NULL else decision_get(con, key)
@@ -277,17 +289,6 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
     }
     return(.resolve_term(con, key, term, is_subspecies = FALSE, described = TRUE,
                          request_fn, interactive_ok, prompt_fn))
-  }
-
-  # 'aff.' ("affinis") flags a species NEAR the named one, NOT that species --
-  # resolving to that taxon's id would be wrong. Leave it unresolved; the clean
-  # name + "aff." qualifier are still recorded so a human can look it up by hand.
-  if (!identical(source_sheet, "Described")) {
-    qual <- holway_qualifier(species_raw)
-    if (!is.na(qual) && grepl("aff\\.", qual)) {
-      decision_put(con, key, "tentative")
-      return(list(taxon_id = NA_integer_, action = "tentative", term = key))
-    }
   }
 
   sp   <- split_holway_species(species_raw)
