@@ -32,22 +32,58 @@ clean_holway_species <- function(species_raw) {
   species_raw |>
     str_remove("^CF\\s+") |>
     str_remove("^MSN\\s+") |>
-    str_remove("\\s+sp\\.\\s*nov\\.$") |>
+    str_remove("^(aff\\.|AFF)\\s+") |>          # "aff. x" (lowercase) OR "AFF x" (uppercase, no period)
+    str_remove("(^|\\s+)sp\\.\\s*nov\\.$") |>   # also strips a BARE "sp. nov." -> ""
     str_trim()
+}
+
+# ------------------------------------------------------------
+# holway_qualifier(): PURE, vectorized. Pull out the tentative/unpublished MARKER
+# that Holway prefixes or suffixes onto a provisional name -- "CF"/"MSN"/"aff."
+# (leading) and "sp. nov." (trailing) -- and return it as a single string, so the
+# reference table can record the name's STATUS in its own column while the species
+# column keeps the clean epithet a user can look up on iNat/ITIS.
+#   "CF annectens"            -> "CF"
+#   "MSN atripes sp. nov."    -> "MSN sp. nov."
+#   "aff. miserabilis sp. nov." -> "aff. sp. nov."
+#   "AFF salicicola"          -> "aff."   (Holway also writes aff. as uppercase "AFF")
+#   "sp. nov."                -> "sp. nov."
+#   "robustior" / "affinis" / "a / b" -> NA  (plain names & slash pairs carry no marker;
+#                                             a real epithet like "affinis" is NOT the aff. marker)
+# ------------------------------------------------------------
+holway_qualifier <- function(species_raw) {
+  x     <- ifelse(is.na(species_raw), "", species_raw)
+  # marker must be a standalone token (followed by whitespace), so "affinis" is
+  # never mistaken for "aff."; "aff." (lowercase, with period) and "AFF" (uppercase,
+  # no period) are the two forms Holway uses.
+  m     <- str_match(x, "^(CF|MSN|AFF|aff\\.)\\s")[, 2]
+  lead  <- ifelse(is.na(m), NA_character_, ifelse(m %in% c("AFF", "aff."), "aff.", m))
+  trail <- ifelse(str_detect(x, "sp\\.\\s*nov\\.$"), "sp. nov.", NA_character_)
+  ifelse(is.na(lead) & is.na(trail), NA_character_,
+    ifelse(is.na(lead),  trail,
+    ifelse(is.na(trail), lead, paste(lead, trail))))
 }
 
 # ------------------------------------------------------------
 # split_holway_species(): Holway packs the subspecies epithet into species_raw
 # ("cactorum basalis"). After stripping CF/MSN/sp. nov. qualifiers, the FIRST
 # token is the species epithet and any remaining token(s) the subspecies.
-# Returns a tibble(species, subspecies); either is NA when absent. Vectorized,
-# pure. The ORIGINAL qualifier (CF/MSN) is not preserved here -- callers that
-# need it keep species_raw around separately.
+#
+# EXCEPTION -- a slash pair "epithet A / epithet B" is an either/or SPECIES pair
+# (a synonym / uncertain identification), NEVER a subspecies. So for a slash row
+# we keep the first name as the primary epithet and force subspecies = NA -- the
+# part after the "/" must never be recorded as a subspecies. Which of A/B is
+# actually correct is decided by a human in holway_reference_build.R (the
+# interactive "which to use?" prompt); this pure split just avoids the bogus
+# subspecies. Returns a tibble(species, subspecies); either is NA when absent.
 # ------------------------------------------------------------
 split_holway_species <- function(species_raw) {
-  cleaned <- clean_holway_species(species_raw)
-  sp <- str_trim(word(cleaned, 1))
-  ss <- str_trim(word(cleaned, 2, -1))
+  cleaned   <- clean_holway_species(species_raw)
+  has_slash <- !is.na(cleaned) & str_detect(cleaned, "/")
+  sp <- ifelse(has_slash,
+               str_trim(word(str_extract(cleaned, "^[^/]*"), 1)),  # first name, before the "/"
+               str_trim(word(cleaned, 1)))
+  ss <- ifelse(has_slash, NA_character_, str_trim(word(cleaned, 2, -1)))
   tibble::tibble(
     species    = ifelse(is.na(sp) | sp == "", NA_character_, sp),
     subspecies = ifelse(is.na(ss) | ss == "", NA_character_, ss)
@@ -103,16 +139,24 @@ backfill_taxonomy <- function(bees, genus_lookup) {
 }
 
 # ------------------------------------------------------------
-# holway_match_keys(): distinct "genus_species" keys (lowercased,
-# qualifier-stripped) for the cross-check. Pure.
+# holway_match_keys(): distinct "genus_species" keys (lowercased) for the SD
+# County Holway cross-check. Pure. Two things keep it from producing false
+# "not in Holway" flags:
+#   * SPECIES ONLY -- keys use the species epithet (word 1), never the packed
+#     subspecies, so a Holway entry listed at subspecies level ("cactorum
+#     basalis") still matches a species-level checklist row ("cactorum").
+#   * SLASH EXPANDED -- a "epithet A / epithet B" pair yields a key for EACH
+#     name, so a match on either counts (the pair is an either/or species, not
+#     a subspecies).
 # ------------------------------------------------------------
 holway_match_keys <- function(holway_df) {
   holway_df |>
-    mutate(
-      species_clean = clean_holway_species(species_raw),
-      match_key = paste(str_to_lower(genus), str_to_lower(species_clean), sep = "_")
-    ) |>
-    filter(match_key != "_", !is.na(genus), genus != "") |>
+    filter(!is.na(genus), genus != "") |>
+    select(genus, species_raw) |>
+    tidyr::separate_rows(species_raw, sep = "\\s*/\\s*") |>          # "A / B" -> two rows
+    mutate(species_epithet = str_to_lower(str_trim(word(clean_holway_species(species_raw), 1))),
+           match_key = paste(str_to_lower(str_trim(genus)), species_epithet, sep = "_")) |>
+    filter(!is.na(species_epithet), species_epithet != "") |>
     pull(match_key) |>
     unique()
 }

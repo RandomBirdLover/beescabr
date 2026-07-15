@@ -147,24 +147,18 @@ build_all_checklists <- function(con) {
   # Holway rows without taxon_ids (blank, as before).
   message("\n--- sd_bee_taxonomy_lookup ---")
   verified_ids <- load_verified_taxa(PATHS$verified_taxa)
-  holway_resolved <- NULL
-  if (file.exists(PATHS$holway_reference)) {
-    holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
-    message("Using enriched Holway reference: ", basename(PATHS$holway_reference),
-            " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
-  } else {
-    message("NOTE: ", basename(PATHS$holway_reference), " not found -- Holway rows",
-            " will have blank taxon_id/scientific_name. Run holway_reference_build.R.")
-  }
-  # Decision map: original Holway name (as searched) -> resolved taxon_id. Lets
-  # the lookup merge a Holway row you RENAMED during resolution (e.g. searched
-  # the correct iNat name) with its iNat twin, instead of leaving a stale row.
-  holway_decision_map <- build_holway_decision_map(con)
-  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_df, cl_sd, bees,
+  # The cleaned Holway reference table is the BASE of the lookup (never the raw
+  # sheet). run_pipeline.R step 1b builds it before we get here; require it.
+  if (!file.exists(PATHS$holway_reference))
+    stop("Holway reference table not found (", basename(PATHS$holway_reference), "). It is the ",
+         "base of the taxonomy lookup -- build it first (run_pipeline.R step 1b, or ",
+         "holway_reference_build.R).")
+  holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
+  message("Holway base from reference table: ", basename(PATHS$holway_reference),
+          " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
+  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_resolved, cl_sd, bees,
                                                    verified_ids = verified_ids,
-                                                   specimen_species = specimen_species,
-                                                   holway_resolved = holway_resolved,
-                                                   holway_decision_map = holway_decision_map)
+                                                   specimen_species = specimen_species)
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified).")

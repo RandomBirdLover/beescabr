@@ -54,7 +54,10 @@ source("scripts/checklists/checklist_tiers.R")
 source("scripts/checklists/taxonomy_reference.R")
 source("scripts/checklists/tier2_merge.R")
 source("scripts/checklists/native_bee_checklist.R") # defines build_all_checklists()
-source("scripts/clean/inat_bee_clean.R")            # defines clean_inat_bees()
+# CLEAN stage pulled from the pipeline (2026-07-14): inat_bee_clean.R still reads
+# the old crosswalk columns and needs its rewrite. Run it by hand for now; do NOT
+# source it here. Re-add this line once it's updated.
+# source("scripts/clean/inat_bee_clean.R")          # defines clean_inat_bees()
 
 main <- function() {
   t0 <- Sys.time()
@@ -102,9 +105,8 @@ main <- function() {
   message("\n== [2/3] EXPORT: Tier 1 + Tier 2 checklists + taxonomy lookup ==")
   build_summary <- build_all_checklists(con)
 
-  # ---- 3. CLEAN: triage output ----
-  message("\n== [3/3] CLEAN: cabr_inat_bee_clean.csv ==")
-  clean_df <- clean_inat_bees(con)
+  # ---- 3. CLEAN: temporarily removed (see note near the source lines) ----
+  message("\n== CLEAN stage skipped -- inat_bee_clean.R pending its crosswalk rewrite; run it manually ==")
 
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   message("\n========================================")
@@ -113,7 +115,6 @@ main <- function() {
   message("  Tier 1 (CABR/PL/SD): ", paste(build_summary$tier1[c("cabr","pl","sd")], collapse = " / "))
   message("  Tier 2 (CABR/PL/SD): ", paste(build_summary$tier2[c("cabr","pl","sd")], collapse = " / "))
   message("  Taxonomy lookup rows: ", build_summary$lookup)
-  message("  Clean obs rows      : ", nrow(clean_df))
   message("Outputs under data/outputs/. Done.")
 }
 

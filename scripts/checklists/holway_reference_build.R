@@ -54,22 +54,38 @@ select_taxon_candidate <- function(results, described, search_term = NULL,
   n <- length(results)
   if (n == 0) return(list(action = "skip", index = NA_integer_))
 
-  # Exact name match (ignoring ssp./subsp./var.) auto-picks. This is what grabs
-  # the correct subspecies (e.g. 313836) when iNat has it, and disambiguates
-  # near-spellings (Andrena nigra vs nigrae).
+  rnk <- vapply(results, function(t) t$rank %||% "", character(1))
+  # NEVER resolve to a complex. iNat files a species and its same-named complex
+  # side by side -- "Andrena osmioides" the SPECIES, and "Osmioides Species Group",
+  # a COMPLEX whose scientific name is also "Andrena osmioides". The species is the
+  # target (closest true rank); its complex is reached later by roll-up (the species
+  # row carries the parent complex via its ancestry). So only the non-complex
+  # candidates are eligible; if every result is a complex, take nothing.
+  ok <- which(rnk != "complex")
+  if (length(ok) == 0) return(list(action = "skip", index = NA_integer_))
+
+  # Exact name match (ignoring ssp./subsp./var.) auto-picks -- but ONLY at the
+  # ranks Holway actually uses: species or subspecies. Matching on name alone was
+  # the bug: a same-named aggregate (the "Andrena osmioides" COMPLEX, or a section)
+  # equalled the search string and got picked. Restricting to species/subspecies
+  # (preferring species) makes the aggregate ineligible. This still grabs the
+  # correct subspecies (313836) and disambiguates near-spellings (nigra vs nigrae).
   if (!is.null(search_term)) {
     want <- .norm_name(search_term)
     got  <- vapply(results, function(t) .norm_name(t$name), character(1))
-    exact <- which(got == want)
-    if (length(exact) >= 1) return(list(action = "pick", index = exact[[1]]))
+    exact <- which(got == want & rnk %in% c("species", "subspecies"))
+    if (length(exact) >= 1) {
+      sp <- exact[rnk[exact] == "species"]
+      return(list(action = "pick", index = (if (length(sp)) sp else exact)[[1]]))
+    }
   }
 
   # A subspecies with no exact match: do NOT fall back to the parent species --
   # route it to the ITIS keep/skip question instead.
   if (isTRUE(is_subspecies)) return(list(action = "skip", index = NA_integer_))
 
-  if (n == 1) return(list(action = "pick", index = 1L))
-  species_idx <- which(vapply(results, function(t) identical(t$rank, "species"), logical(1)))
+  if (length(ok) == 1) return(list(action = "pick", index = ok[[1]]))
+  species_idx <- ok[rnk[ok] == "species"]
   if (!described) return(list(action = "skip", index = NA_integer_))
   if (length(species_idx) == 1) return(list(action = "pick", index = species_idx[[1]]))
   list(action = "prompt", index = NA_integer_)   # 0 or >1 species -> ask
@@ -88,26 +104,49 @@ itis_disposition <- function(term, prompt_fn = readline, interactive_ok = TRUE) 
 }
 
 # ------------------------------------------------------------
-# holway_search_term(): the string to search iNat for a Holway row.
-# Described rows search "Genus species"; others search the genus alone.
+# holway_search_term(): the string to search iNat for a Holway row -- ALSO the
+# stable decision-cache key.
+#   Described    -> "Genus species_raw" (UNCHANGED, so already-made picks still hit
+#                   the cache and are never re-prompted).
+#   non-Described (Tentative/Unpublished) -> "Genus <cleaned epithet>". These carry
+#                   real names once the CF/MSN/aff./sp. nov. marker is stripped
+#                   (e.g. "Andrena annectens" -> 573509), so we resolve them like a
+#                   species instead of collapsing every one to a bare genus row.
+#                   Falls back to the genus alone when nothing is left after
+#                   stripping (a bare "sp. nov.").
 # ------------------------------------------------------------
 holway_search_term <- function(source_sheet, genus, species_raw) {
-  if (identical(source_sheet, "Described")) paste(genus, species_raw) else genus
+  if (identical(source_sheet, "Described")) return(trimws(paste(genus, species_raw)))
+  ep <- clean_holway_species(if (is.na(species_raw)) "" else species_raw)
+  if (!is.na(ep) && ep != "") trimws(paste(genus, ep)) else trimws(genus)
+}
+
+# .needs_alt_search(): PURE. Should we ask the human for an alternate name? YES when
+# the search found NOTHING, or when the only hits are a same-named COMPLEX with no
+# species/subspecies (iNat elevated the name and renamed the species). A genus-only
+# result (the bare "sp. nov." fallback) does NOT trigger a retry -- that genus hit
+# is expected, not a miss.
+.needs_alt_search <- function(results) {
+  if (length(results) == 0) return(TRUE)
+  rnk <- vapply(results, function(t) t$rank %||% "", character(1))
+  any(rnk == "complex") && !any(rnk %in% c("species", "subspecies"))
 }
 
 # ------------------------------------------------------------
-# retry_empty_search(): PURE. When the initial iNat name search returns nothing
-# and the run is interactive, let a human supply alternate search terms (Python
-# parity -- rescues misspelled or since-renamed Holway names). Returns the first
-# non-empty result set, or the (still-empty) results if the user skips or the
-# run is non-interactive. fetch_fn(term) does the lookup; prompt_fn() reads a line.
+# retry_empty_search(): PURE. When the initial iNat name search returns no usable
+# species/subspecies -- either NOTHING, or only a same-named complex -- and the run
+# is interactive, let a human supply alternate search terms (rescues misspelled or
+# since-renamed Holway names, and the "iNat only has the complex" case). Returns the
+# first usable result set, or the last results if the user skips / non-interactive.
+# fetch_fn(term) does the lookup; prompt_fn() reads a line.
 # ------------------------------------------------------------
 retry_empty_search <- function(results, term, fetch_fn,
                                prompt_fn = readline, interactive_ok = TRUE) {
   cur <- term
-  while (length(results) == 0 && isTRUE(interactive_ok)) {
-    message("No iNat match for '", cur,
-            "'. Enter an alternate name to search, or 'none' if not found.")
+  while (.needs_alt_search(results) && isTRUE(interactive_ok)) {
+    lead <- if (length(results) == 0) paste0("No iNat match for '", cur, "'.")
+            else paste0("iNat has only a complex (no species/subspecies) for '", cur, "'.")
+    message(lead, " Enter an alternate name to search, or 'none' if not found.")
     raw <- trimws(prompt_fn("Alternate search (or 'none'): "))
     if (raw == "" || raw %in% c("none", "skip")) break
     cur <- raw
@@ -125,8 +164,15 @@ retry_empty_search <- function(results, term, fetch_fn,
 #   - two-word Described    -> ask_subspecies = TRUE; when confirmed, search
 #                             "genus species ssp. subspecies"
 holway_resolution_plan <- function(source_sheet, genus, sp) {
-  if (!identical(source_sheet, "Described"))
-    return(list(term = genus, is_subspecies = FALSE, ask_subspecies = FALSE))
+  if (!identical(source_sheet, "Described")) {
+    # Tentative/Unpublished: resolve the CLEANED "Genus epithet" (sp$species is
+    # already stripped of CF/MSN/aff./sp. nov.) so it can match its real iNat
+    # taxon; fall back to the genus alone when there's no epithet left.
+    if (!is.na(sp$species) && sp$species != "")
+      return(list(term = trimws(paste(genus, sp$species)),
+                  is_subspecies = FALSE, ask_subspecies = FALSE))
+    return(list(term = trimws(genus), is_subspecies = FALSE, ask_subspecies = FALSE))
+  }
   if (!is.na(sp$subspecies))
     # iNat's name search wants the PLAIN trinomial -- inserting "ssp." makes it
     # miss valid subspecies (e.g. Anthophora bomboides stanfordiana). The exact-
@@ -167,7 +213,7 @@ resolve_slash_answer <- function(raw, genus, opts) {
 .resolve_term <- function(con, key, term, is_subspecies, described,
                           request_fn, interactive_ok, prompt_fn) {
   results <- get_taxa_by_name(con, term, request_fn = request_fn)
-  if (length(results) == 0 && interactive_ok) {
+  if (.needs_alt_search(results) && interactive_ok) {
     results <- retry_empty_search(
       results, term,
       fetch_fn = function(t) get_taxa_by_name(con, t, request_fn = request_fn),
@@ -203,10 +249,13 @@ resolve_slash_answer <- function(raw, genus, opts) {
 resolve_holway_row <- function(con, source_sheet, genus, species_raw,
                                request_fn = inat_request,
                                interactive_ok = TRUE,
-                               prompt_fn = readline) {
+                               prompt_fn = readline,
+                               force = FALSE) {
   key <- holway_search_term(source_sheet, genus, species_raw)  # stable cache key
 
-  decided <- decision_get(con, key)
+  # force = TRUE bypasses the decision cache and re-resolves from scratch. Used to
+  # auto-heal an old complex mis-pick (the cached decision would otherwise stick).
+  decided <- if (force) NULL else decision_get(con, key)
   if (!is.null(decided)) {
     return(list(taxon_id = decided$chosen_taxon_id, action = decided$action, term = key))
   }
@@ -228,6 +277,17 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
     }
     return(.resolve_term(con, key, term, is_subspecies = FALSE, described = TRUE,
                          request_fn, interactive_ok, prompt_fn))
+  }
+
+  # 'aff.' ("affinis") flags a species NEAR the named one, NOT that species --
+  # resolving to that taxon's id would be wrong. Leave it unresolved; the clean
+  # name + "aff." qualifier are still recorded so a human can look it up by hand.
+  if (!identical(source_sheet, "Described")) {
+    qual <- holway_qualifier(species_raw)
+    if (!is.na(qual) && grepl("aff\\.", qual)) {
+      decision_put(con, key, "tentative")
+      return(list(taxon_id = NA_integer_, action = "tentative", term = key))
+    }
   }
 
   sp   <- split_holway_species(species_raw)
@@ -261,7 +321,7 @@ HOLWAY_REF_LEVELS <- c("kingdom", "phylum", "class", "order", "superfamily",
 # complex_taxon_id is intentionally omitted from the reference-table output
 # (human-facing); the value still exists internally for the checklists.
 HOLWAY_REF_COLUMNS <- c("taxon_id", "scientific_name", "common_name", "rank",
-                        "source_sheet", "resolved", "itis_valid",
+                        "source_sheet", "qualifier", "resolved", "itis_valid",
                         HOLWAY_REF_LEVELS)
 
 # .strip_parens(): "(Hexosmia)" -> "Hexosmia"; NA/"" -> NA.
@@ -294,13 +354,17 @@ HOLWAY_REF_COLUMNS <- c("taxon_id", "scientific_name", "common_name", "rank",
 # subspecies are reduced to bare epithets; scientific_name is the AUTHORITATIVE
 # iNat taxon name (taxon$name), not a derived string.
 tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_sheet,
-                                itis_valid = NA) {
+                                itis_valid = NA, qualifier = NA_character_,
+                                holway_subgenus = NA_character_) {
   sp_ep <- .bare_epithet(ranks$taxon_species_name)
   ss_ep <- .bare_epithet(ranks$taxon_subspecies_name)
   # subspecies get the "ssp." display form; everything else keeps the API name
   sci <- if (identical(ranks$rank, "subspecies") && !is.na(ss_ep))
     .ssp_scientific_name(ranks$taxon_genus_name, sp_ep, ss_ep)
   else scientific_name %||% NA_character_
+  # prefer iNat's subgenus; fall back to Holway's own (e.g. a resolved tentative
+  # species whose iNat ancestry omits the subgenus still keeps "(Micandrena)").
+  subg <- if (is.na(ranks$subgenus)) .strip_parens(holway_subgenus) else ranks$subgenus
   tibble::tibble(
     taxon_id        = as.integer(ranks$taxon_id),
     scientific_name = sci,
@@ -311,11 +375,12 @@ tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_shee
     superfamily = ranks$taxon_superfamily_name, family = ranks$taxon_family_name,
     subfamily   = ranks$taxon_subfamily_name,   tribe  = ranks$taxon_tribe_name,
     subtribe    = ranks$taxon_subtribe_name,    genus  = ranks$taxon_genus_name,
-    subgenus    = ranks$subgenus,               complex = ranks$complex,
+    subgenus    = subg,                         complex = ranks$complex,
     species     = sp_ep,
     subspecies  = ss_ep,
     complex_taxon_id = ranks$complex_taxon_id,
-    source_sheet = source_sheet, resolved = TRUE, itis_valid = as.logical(itis_valid)
+    source_sheet = source_sheet, qualifier = qualifier,
+    resolved = TRUE, itis_valid = as.logical(itis_valid)
   )
 }
 
@@ -327,7 +392,8 @@ tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_shee
 # from Holway's OWN names here -- the only place we construct it, because no iNat
 # taxon exists to source it from. itis_valid: TRUE (valid, not on iNat),
 # FALSE (checked ITIS, not valid), or NA (provisional / not asked).
-unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE) {
+unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE,
+                                      qualifier = NA_character_) {
   sp      <- split_holway_species(r$species_raw %||% "")
   genus   <- r$genus %||% NA_character_
   if (isTRUE(is_subspecies)) {
@@ -355,8 +421,8 @@ unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE)
     genus = genus, subgenus = .strip_parens(r$subgenus %||% NA_character_),
     complex = NA_character_, species = species_col, subspecies = subspecies_col,
     complex_taxon_id = NA_integer_,
-    source_sheet = r$source_sheet %||% NA_character_, resolved = FALSE,
-    itis_valid = as.logical(itis_valid)
+    source_sheet = r$source_sheet %||% NA_character_, qualifier = qualifier,
+    resolved = FALSE, itis_valid = as.logical(itis_valid)
   )
 }
 
@@ -387,23 +453,36 @@ build_holway_reference <- function(con, holway_df,
     r <- holway_df[i, ]
     res <- resolve_holway_row(con, r$source_sheet, r$genus, r$species_raw,
                               request_fn = request_fn, interactive_ok = interactive_ok)
+    # Fetch the resolved taxon once. AUTO-HEAL an old complex mis-pick: if the
+    # cached decision landed on a complex-rank taxon, re-resolve with the fixed
+    # rule (which prefers the same-named species and never takes a complex solo).
+    taxon <- if (!is.na(res$taxon_id))
+      get_taxon_by_id(con, res$taxon_id, request_fn = request_fn) else NULL
+    if (!is.null(taxon) && identical(parse_taxon_ranks(taxon)$rank, "complex")) {
+      res   <- resolve_holway_row(con, r$source_sheet, r$genus, r$species_raw,
+                                  request_fn = request_fn, interactive_ok = interactive_ok,
+                                  force = TRUE)
+      taxon <- if (!is.na(res$taxon_id))
+        get_taxon_by_id(con, res$taxon_id, request_fn = request_fn) else NULL
+    }
     # a two-word entry that reached keep/skip was a confirmed subspecies (but a
     # slash "A / B" pair is never a subspecies)
     is_ss <- !grepl("/", r$species_raw %||% "", fixed = TRUE) &&
              !is.na(split_holway_species(r$species_raw %||% "")$subspecies)
-    rows[[i]] <- if (!is.na(res$taxon_id)) {
-      taxon <- get_taxon_by_id(con, res$taxon_id, request_fn = request_fn)
+    qual  <- holway_qualifier(r$species_raw %||% "")   # "CF"/"MSN"/"aff."/"sp. nov." or NA
+    rows[[i]] <- if (!is.null(taxon)) {
       ranks <- parse_taxon_ranks(taxon)
       tidy_holway_ref_row(
         ranks,
         scientific_name = .scalar(taxon$name, NA_character_),
         common_name     = .scalar(taxon$preferred_common_name, NA_character_),
-        source_sheet    = r$source_sheet, itis_valid = NA)
+        source_sheet    = r$source_sheet, itis_valid = NA,
+        qualifier = qual, holway_subgenus = r$subgenus %||% NA_character_)
     } else switch(res$action %||% "skip",
-      keep      = unresolved_holway_ref_row(r, itis_valid = TRUE,  is_subspecies = is_ss),
-      skip      = unresolved_holway_ref_row(r, itis_valid = FALSE, is_subspecies = is_ss),
-      tentative = unresolved_holway_ref_row(r, itis_valid = NA,    is_subspecies = FALSE),
-      unresolved_holway_ref_row(r, itis_valid = NA, is_subspecies = is_ss)
+      keep      = unresolved_holway_ref_row(r, itis_valid = TRUE,  is_subspecies = is_ss, qualifier = qual),
+      skip      = unresolved_holway_ref_row(r, itis_valid = FALSE, is_subspecies = is_ss, qualifier = qual),
+      tentative = unresolved_holway_ref_row(r, itis_valid = NA,    is_subspecies = FALSE, qualifier = qual),
+      unresolved_holway_ref_row(r, itis_valid = NA, is_subspecies = is_ss, qualifier = qual)
     )
     if (i %% 25 == 0) message(sprintf("  Holway resolve: %d / %d", i, nrow(holway_df)))
   }

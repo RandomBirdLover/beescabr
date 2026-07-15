@@ -22,8 +22,8 @@ library(stringr)
 
 .clean_epithet <- function(x) {
   x |>
-    str_remove("^CF\\s+") |> str_remove("^MSN\\s+") |>
-    str_remove("\\s+sp\\.\\s*nov\\.$") |> str_trim()
+    str_remove("^CF\\s+") |> str_remove("^MSN\\s+") |> str_remove("^(aff\\.|AFF)\\s+") |>
+    str_remove("(^|\\s+)sp\\.\\s*nov\\.$") |> str_trim()
 }
 
 # Sets of lowercased names Holway knows, by rank. species keys are "genus

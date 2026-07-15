@@ -200,194 +200,269 @@ merge_holway_resolved <- function(deduped, holway_resolved, holway_decision_map 
   out
 }
 
-build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
+# ------------------------------------------------------------
+# reference_name_sets(): the Holway name-membership sets (genus / subgenus /
+# species / subspecies), built from the CLEANED reference table -- NOT the raw
+# sheet. Used by flag_new_taxa() to decide in_holway / verified. Because the
+# reference already holds clean epithets, a lookup row matches iff Holway truly
+# knows that name. PURE.
+# ------------------------------------------------------------
+reference_name_sets <- function(ref) {
+  g  <- tolower(trimws(ref$genus))
+  sg <- tolower(str_remove_all(ifelse(is.na(ref$subgenus), "", ref$subgenus), "[()]"))
+  sp <- tolower(.clean_epithet(ifelse(is.na(ref$species), "", ref$species)))
+  ss <- tolower(.clean_epithet(ifelse(is.na(ref$subspecies), "", ref$subspecies)))
+  has_sp <- !is.na(sp) & sp != ""
+  has_ss <- !is.na(ss) & ss != ""
+  list(
+    genus      = unique(g[!is.na(g) & g != ""]),
+    subgenus   = unique(sg[!is.na(sg) & sg != ""]),
+    species    = unique(paste(g, sp)[has_sp]),
+    subspecies = unique(paste(g, sp, ss)[has_ss])
+  )
+}
+
+# ============================================================================
+# build_bee_taxonomy_lookup(): the reference table is the START of the lookup.
+#
+# The Holway BASE is taken ENTIRELY from the cleaned reference table
+# (holway_resolved); the raw Holway sheet is never read for names. iNat-observed
+# taxa and CABR specimen evidence are then layered ON TOP. This is the rewrite
+# that (a) stops the raw slash leak -- "Bombus sonorus" is what the reference
+# holds, so "pensylvanicus" can never appear -- and (b) carries the tentative/
+# unpublished names properly: clean epithet in `species`, marker in `qualifier`,
+# and a real taxon_id where one exists (e.g. Andrena annectens 573509).
+#
+# merge_holway_resolved()/build_holway_decision_map() above are retained for
+# their unit tests but are no longer part of this path: with the reference as the
+# base, taxon_ids are already present and there is no stale raw row to reconcile.
+# ============================================================================
+build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees,
                                       verified_ids = integer(0),
-                                      specimen_species = NULL,
-                                      holway_resolved = NULL,
-                                      holway_decision_map = NULL) {
+                                      specimen_species = NULL) {
 
-  # Holway packs species + subspecies into species_raw ("cactorum basalis").
-  # Split it: first token = species epithet, remainder = subspecies epithet.
-  .hsplit <- split_holway_species(holway_df$species_raw)
-  holway_taxonomy <- holway_df |>
-    mutate(species = .hsplit$species, subspecies_h = .hsplit$subspecies)
+  if (is.null(holway_resolved) || nrow(holway_resolved) == 0)
+    stop("build_bee_taxonomy_lookup(): the cleaned Holway reference table is REQUIRED ",
+         "as the Holway base. Build it first with holway_reference_build.R -- the lookup ",
+         "never reads the raw Holway sheet for names.")
 
-  # --- GENUS ROWS (Holway) ---
-  genus_rows <- holway_taxonomy |>
-    filter(!is.na(genus), genus != "") |>
-    distinct(family, subfamily, tribe, genus) |>
-    arrange(genus, family, subfamily, tribe) |>
-    group_by(genus) |> slice(1) |> ungroup() |>
-    .higher_rank_constants() |>
-    mutate(subgenus = NA_character_, complex = NA_character_,
-           species = NA_character_, subspecies = NA_character_, rank = "genus")
-
-  # --- SPECIES + SUBSPECIES ROWS (Holway) --- strip subgenus parens to match
-  # iNat notation. A row with a subspecies epithet becomes a rank="subspecies"
-  # row; otherwise rank="species".
-  species_rows <- holway_taxonomy |>
-    filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
-    mutate(subgenus = str_remove(str_remove(subgenus, "^\\("), "\\)$")) |>
-    distinct(family, subfamily, tribe, genus, subgenus, species, subspecies_h) |>
-    .higher_rank_constants() |>
-    mutate(complex = NA_character_,
-           subspecies = ifelse(is.na(subspecies_h) | subspecies_h == "",
-                               NA_character_, subspecies_h),
-           rank = ifelse(is.na(subspecies), "species", "subspecies"),
-           subgenus = ifelse(subgenus == "", NA_character_, subgenus)) |>
-    select(-subspecies_h)
-
-  # helper: Holway-first, iNat-export fallback for family/subfamily/tribe
-  with_holway_fallback <- function(df) {
-    df |>
-      left_join(genus_rows |> select(genus,
-                                     holway_family = family,
-                                     holway_subfamily = subfamily,
-                                     holway_tribe = tribe),
-                by = "genus") |>
-      mutate(
-        family    = coalesce(holway_family, family),
-        subfamily = coalesce(holway_subfamily, subfamily),
-        tribe     = coalesce(holway_tribe, tribe)
-      ) |>
-      select(-holway_family, -holway_subfamily, -holway_tribe)
+  # NB: base ifelse() returns a *logical* vector on length-0 input, which would
+  # poison an empty column's type and break bind_rows -> guard length 0 explicitly.
+  strip_par <- function(x) {
+    x <- as.character(x); if (length(x) == 0) return(character(0))
+    y <- str_remove_all(ifelse(is.na(x), "", x), "[()]")
+    ifelse(y == "", NA_character_, y)
+  }
+  blank_na  <- function(x) {
+    x <- as.character(x); if (length(x) == 0) return(character(0))
+    ifelse(is.na(x) | x == "", NA_character_, x)
   }
 
-  # --- SUBGENUS ROWS (iNat) ---
-  subgenus_rows <- checklist_sd_county |>
-    filter(!is.na(subgenus), subgenus != "") |>
+  # ---------------------------------------------------------------
+  # 1. HOLWAY BASE -- reshaped from the reference table into lookup columns.
+  # ---------------------------------------------------------------
+  need <- c("taxon_id","scientific_name","common_name","rank","source_sheet",
+            "qualifier","itis_valid","family","subfamily","tribe","subtribe",
+            "genus","subgenus","complex","species","subspecies")
+  hr <- holway_resolved
+  for (nm in need) if (!nm %in% names(hr)) hr[[nm]] <- NA
+  holway_ref <- hr |>
+    transmute(
+      taxon_id        = suppressWarnings(as.integer(taxon_id)),
+      scientific_name = blank_na(scientific_name),
+      common_name     = blank_na(common_name),
+      rank            = as.character(rank),
+      holway_status   = blank_na(source_sheet),
+      qualifier       = blank_na(qualifier),
+      itis_valid      = as.logical(itis_valid),
+      family = blank_na(family), subfamily = blank_na(subfamily),
+      tribe  = blank_na(tribe),  subtribe  = blank_na(subtribe),
+      genus  = blank_na(genus),  subgenus  = strip_par(subgenus),
+      complex = blank_na(complex), complex_taxon_id = NA_integer_,
+      species = blank_na(species), subspecies = blank_na(subspecies)
+    ) |>
+    filter(!is.na(genus))
+
+  # Named Holway taxa from the reference: species / subspecies / complex (and any
+  # subgenus) rows keep their reference taxon_id + name. EVERY such reference row
+  # must reach the lookup -- incl. a Described species that resolved to a complex
+  # (osmioides) or an unresolved subspecies -- so nothing Holway is dropped.
+  # genus-level rows are synthesized below (one per genus) and excluded here.
+  holway_named <- holway_ref |>
+    filter(rank %in% c("species", "subspecies", "complex", "subgenus")) |>
+    .higher_rank_constants()
+
+  # reference genus-level ids (genus-only Holway entries) to fold into the synth
+  ref_genus_id <- holway_ref |>
+    filter(rank == "genus", !is.na(taxon_id)) |>
+    distinct(genus, .keep_all = TRUE) |>
+    transmute(genus, rg_id = as.integer(taxon_id), rg_sci = scientific_name)
+
+  # genus-level family/subfamily/tribe (Holway wins over iNat when backfilling)
+  holway_genus_map <- holway_ref |>
+    distinct(genus, family, subfamily, tribe) |>
+    arrange(genus, family, subfamily, tribe) |>
+    group_by(genus) |> slice(1) |> ungroup() |>
+    rename(h_family = family, h_subfamily = subfamily, h_tribe = tribe)
+  with_holway_fallback <- function(df) {
+    df |>
+      left_join(holway_genus_map, by = "genus") |>
+      mutate(family = coalesce(h_family, family),
+             subfamily = coalesce(h_subfamily, subfamily),
+             tribe = coalesce(h_tribe, tribe)) |>
+      select(-h_family, -h_subfamily, -h_tribe)
+  }
+
+  # ---------------------------------------------------------------
+  # 2. iNat OBSERVED taxa (SD County checklist) -- genus / subgenus / complex /
+  #    species / subspecies rows, incl. taxa Holway never lists.
+  # ---------------------------------------------------------------
+  cl <- checklist_sd_county
+  # An all-NA column can arrive typed <logical>, which clashes with <character>
+  # in bind_rows -> coerce the name/text columns on both inputs up front.
+  .chr <- c("genus","subgenus","complex","species","subspecies",
+            "family","subfamily","tribe","subtribe","scientific_name","common_name")
+  for (c in intersect(.chr, names(cl)))   cl[[c]]   <- as.character(cl[[c]])
+  for (c in intersect(.chr, names(bees))) bees[[c]] <- as.character(bees[[c]])
+  mk_rows <- function(df) df |> .higher_rank_constants() |>
+    mutate(taxon_id = NA_integer_, scientific_name = NA_character_,
+           common_name = NA_character_, complex_taxon_id = NA_integer_)
+
+  genera_all <- sort(unique(c(holway_ref$genus,
+                              cl$genus[!is.na(cl$genus) & cl$genus != ""])))
+  genus_rows <- tibble(genus = genera_all,
+                       family = NA_character_, subfamily = NA_character_, tribe = NA_character_) |>
+    with_holway_fallback() |> mk_rows() |>
+    mutate(subgenus = NA_character_, complex = NA_character_,
+           species = NA_character_, subspecies = NA_character_, rank = "genus") |>
+    left_join(ref_genus_id, by = "genus") |>
+    mutate(taxon_id = coalesce(taxon_id, rg_id),
+           scientific_name = coalesce(scientific_name, rg_sci)) |>
+    select(-rg_id, -rg_sci)
+
+  subgenus_rows <- cl |> filter(!is.na(subgenus), subgenus != "") |>
     distinct(genus, subgenus, family, subfamily, tribe) |>
-    with_holway_fallback() |>
-    .higher_rank_constants() |>
+    mutate(subgenus = strip_par(subgenus)) |>
+    with_holway_fallback() |> mk_rows() |>
     mutate(complex = NA_character_, species = NA_character_,
            subspecies = NA_character_, rank = "subgenus")
 
-  # --- COMPLEX ROWS (iNat) ---
-  complex_rows <- checklist_sd_county |>
-    filter(!is.na(complex), complex != "") |>
+  complex_rows <- cl |> filter(!is.na(complex), complex != "") |>
     distinct(genus, subgenus, complex, family, subfamily, tribe) |>
-    with_holway_fallback() |>
-    .higher_rank_constants() |>
+    mutate(subgenus = strip_par(subgenus)) |>
+    with_holway_fallback() |> mk_rows() |>
     mutate(species = NA_character_, subspecies = NA_character_, rank = "complex")
 
-  # --- SUBSPECIES ROWS (iNat) ---
-  subspecies_rows <- checklist_sd_county |>
-    filter(!is.na(subspecies), subspecies != "") |>
-    distinct(genus, subgenus, species, subspecies, family, subfamily, tribe) |>
-    with_holway_fallback() |>
-    .higher_rank_constants() |>
-    mutate(complex = NA_character_, rank = "subspecies")
-
-  inat_ref <- checklist_sd_county |>
-    select(taxon_id, scientific_name, common_name, genus, subgenus,
-           complex, complex_taxon_id, species, subspecies)
-
-  # Two-pass join: higher-group rows on five keys; species-group on three.
-  higher_group_rows <- bind_rows(
-    genus_rows    |> mutate(complex_taxon_id = NA_integer_),
-    subgenus_rows |> mutate(complex_taxon_id = NA_integer_),
-    complex_rows
-  ) |>
-    left_join(inat_ref, by = c("genus", "subgenus", "complex", "species", "subspecies"),
-              relationship = "many-to-many") |>
-    mutate(complex_taxon_id = coalesce(complex_taxon_id.y, complex_taxon_id.x)) |>
-    select(-complex_taxon_id.x, -complex_taxon_id.y) |>
-    distinct()
-
-  # --- iNat SPECIES ROWS --- species OBSERVED on iNat (incl. ones Holway
-  # doesn't list, e.g. Agapostemon subtilior). This is the fix so the lookup
-  # is truly Holway + iNat, not Holway-only at species level.
-  inat_species_rows <- checklist_sd_county |>
-    filter(!is.na(species), species != "") |>
+  inat_species_rows <- cl |> filter(!is.na(species), species != "") |>
     distinct(genus, subgenus, species, family, subfamily, tribe) |>
-    with_holway_fallback() |>
-    .higher_rank_constants() |>
+    mutate(subgenus = strip_par(subgenus)) |>
+    with_holway_fallback() |> mk_rows() |>
     mutate(complex = NA_character_, subspecies = NA_character_, rank = "species")
 
-  species_group_rows <- bind_rows(
-    species_rows      |> mutate(complex_taxon_id = NA_integer_),
-    inat_species_rows |> mutate(complex_taxon_id = NA_integer_),
-    subspecies_rows   |> mutate(complex_taxon_id = NA_integer_)
-  ) |>
-    left_join(inat_ref |> rename(inat_complex = complex,
-                                 inat_complex_taxon_id = complex_taxon_id),
-              by = c("genus", "species", "subspecies"),
+  subspecies_rows <- cl |> filter(!is.na(subspecies), subspecies != "") |>
+    distinct(genus, subgenus, species, subspecies, family, subfamily, tribe) |>
+    mutate(subgenus = strip_par(subgenus)) |>
+    with_holway_fallback() |> mk_rows() |>
+    mutate(complex = NA_character_, rank = "subspecies")
+
+  # observed-taxon reference for attaching ids/names to the rank rows above
+  inat_ref <- cl |>
+    filter(!is.na(taxon_id)) |>
+    transmute(genus = blank_na(genus), subgenus = strip_par(subgenus),
+              complex = blank_na(complex), species = blank_na(species),
+              subspecies = blank_na(subspecies),
+              i_id = as.integer(taxon_id), i_sci = scientific_name,
+              i_common = common_name, i_cplx = complex_taxon_id)
+
+  # higher-group rows (genus/subgenus/complex) attach on the 5 name keys
+  higher_group <- bind_rows(genus_rows, subgenus_rows, complex_rows) |>
+    left_join(inat_ref, by = c("genus","subgenus","complex","species","subspecies"),
               relationship = "many-to-many") |>
-    mutate(
-      complex = coalesce(inat_complex, complex),
-      complex_taxon_id = coalesce(inat_complex_taxon_id, complex_taxon_id)
-    ) |>
-    select(-inat_complex, -inat_complex_taxon_id) |>
-    distinct()
+    mutate(taxon_id = coalesce(taxon_id, i_id),
+           scientific_name = coalesce(scientific_name, i_sci),
+           common_name = coalesce(common_name, i_common),
+           complex_taxon_id = coalesce(complex_taxon_id, i_cplx)) |>
+    select(-i_id, -i_sci, -i_common, -i_cplx) |> distinct()
 
-  genus_below_rows <- bind_rows(higher_group_rows, species_group_rows)
+  # species-group rows attach on 3 keys (genus+species+subspecies); Holway has no
+  # complex + subgenus can differ, so those are not part of the species key.
+  sp_ref <- inat_ref |>
+    group_by(genus, species, subspecies) |>
+    summarise(i_id = dplyr::first(i_id), i_sci = dplyr::first(i_sci),
+              i_common = dplyr::first(i_common), i_cplx = dplyr::first(i_cplx),
+              i_complex = dplyr::first(complex), .groups = "drop")
+  species_group <- bind_rows(inat_species_rows, subspecies_rows) |>
+    left_join(sp_ref, by = c("genus","species","subspecies"),
+              relationship = "many-to-many") |>
+    mutate(taxon_id = coalesce(taxon_id, i_id),
+           scientific_name = coalesce(scientific_name, i_sci),
+           common_name = coalesce(common_name, i_common),
+           complex = coalesce(complex, i_complex),
+           complex_taxon_id = coalesce(complex_taxon_id, i_cplx)) |>
+    select(-i_id, -i_sci, -i_common, -i_cplx, -i_complex) |> distinct()
 
-  # --- HIGHER-RANK ROWS (family/subfamily/tribe/epifamily) from raw export ---
+  # ---------------------------------------------------------------
+  # 3. HIGHER-RANK rows (family/subfamily/tribe) from the raw observations export.
+  # ---------------------------------------------------------------
   higher_rank_rows <- bees |>
     filter(is.na(genus) | genus == "") |>
-    select(taxon_id, scientific_name, common_name, family, subfamily, tribe) |>
+    select(any_of(c("taxon_id","scientific_name","common_name","family","subfamily","tribe"))) |>
     distinct(taxon_id, .keep_all = TRUE) |>
     filter(!is.na(taxon_id)) |>
-    mutate(
-      rank = case_when(
-        !is.na(tribe)     & tribe     != "" ~ "tribe",
-        !is.na(subfamily) & subfamily != "" ~ "subfamily",
-        !is.na(family)    & family    != "" ~ "family",
-        TRUE ~ "epifamily"
-      ),
-      kingdom = BEE_KINGDOM, phylum = BEE_PHYLUM, class = BEE_CLASS,
-      order = BEE_ORDER, superfamily = BEE_SUPERFAMILY,
-      genus = NA_character_, subgenus = NA_character_, complex = NA_character_,
-      complex_taxon_id = NA_integer_, species = NA_character_, subspecies = NA_character_
-    )
+    mutate(rank = case_when(!is.na(tribe)     & tribe     != "" ~ "tribe",
+                            !is.na(subfamily) & subfamily != "" ~ "subfamily",
+                            !is.na(family)    & family    != "" ~ "family",
+                            TRUE ~ "epifamily"),
+           kingdom = BEE_KINGDOM, phylum = BEE_PHYLUM, class = BEE_CLASS,
+           order = BEE_ORDER, superfamily = BEE_SUPERFAMILY,
+           subtribe = NA_character_, genus = NA_character_, subgenus = NA_character_,
+           complex = NA_character_, complex_taxon_id = NA_integer_,
+           species = NA_character_, subspecies = NA_character_)
 
-  # --- COMBINE + two-pass dedupe (taxon_id rows vs Holway-only NA rows) ---
+  # ---------------------------------------------------------------
+  # 4. COMBINE (base carries holway_status/qualifier/itis_valid; others blank) +
+  #    flags + dedupe.
+  # ---------------------------------------------------------------
+  add_meta <- function(df) {
+    if (!"holway_status" %in% names(df)) df$holway_status <- NA_character_
+    if (!"qualifier"     %in% names(df)) df$qualifier     <- NA_character_
+    if (!"itis_valid"    %in% names(df)) df$itis_valid    <- NA
+    df
+  }
+  keep <- c(TAXONOMY_COLUMN_ORDER, "holway_status", "qualifier", "itis_valid", "subtribe")
   combined <- bind_rows(
-    genus_below_rows |> select(any_of(TAXONOMY_COLUMN_ORDER)),
-    higher_rank_rows |> select(any_of(TAXONOMY_COLUMN_ORDER))
+    holway_named     |> add_meta() |> select(any_of(keep)),
+    higher_group     |> add_meta() |> select(any_of(keep)),
+    species_group    |> add_meta() |> select(any_of(keep)),
+    higher_rank_rows |> add_meta() |> select(any_of(keep))
   )
 
-  deduped <- bind_rows(
-    combined |> filter(!is.na(taxon_id)) |> distinct(taxon_id, .keep_all = TRUE),
-    combined |> filter(is.na(taxon_id))  |> distinct(genus, species, subspecies, .keep_all = TRUE)
-  )
-
-  # --- subtribe: pull from the observations by taxon_id (Holway has none) ---
+  # subtribe from the observations by taxon_id (Holway/iNat rank rows carry none)
   if ("subtribe" %in% names(bees)) {
-    subtribe_map <- bees |> filter(!is.na(taxon_id)) |>
-      distinct(taxon_id, subtribe)
-    deduped <- deduped |> left_join(subtribe_map, by = "taxon_id")
+    st <- bees |> filter(!is.na(taxon_id)) |> distinct(taxon_id, obs_subtribe = subtribe)
+    combined <- combined |> left_join(st, by = "taxon_id") |>
+      mutate(subtribe = coalesce(subtribe, obs_subtribe)) |> select(-obs_subtribe)
   }
-  if (!"subtribe" %in% names(deduped)) deduped$subtribe <- NA_character_
+  if (!"subtribe" %in% names(combined)) combined$subtribe <- NA_character_
 
-  # --- holway_status: Described / Tentative / Unpublished, kept for every
-  # Holway species (so Tentative & Unpublished rows stay and are identifiable);
-  # NA for iNat-only species and higher ranks. ---
-  if ("source_sheet" %in% names(holway_taxonomy)) {
-    holway_status_map <- holway_taxonomy |>
-      filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
-      mutate(.key = paste(tolower(genus), tolower(species))) |>
-      distinct(.key, .keep_all = TRUE) |>
-      transmute(.key, holway_status = source_sheet)
-    deduped <- deduped |>
-      mutate(.key = ifelse(!is.na(species) & species != "",
-                           paste(tolower(genus), tolower(species)), NA_character_)) |>
-      left_join(holway_status_map, by = ".key") |>
-      select(-.key)
-  } else {
-    deduped$holway_status <- NA_character_
-  }
+  # in_inat: observed on iNat -- NOT merely "has a taxon_id". A resolved-but-
+  # unobserved Holway taxon (Andrena annectens, 573509, 0 obs) stays in_inat=FALSE.
+  observed_ids <- unique(c(cl$taxon_id[!is.na(cl$taxon_id)],
+                           bees$taxon_id[!is.na(bees$taxon_id)]))
+  combined$in_inat <- !is.na(combined$taxon_id) & combined$taxon_id %in% observed_ids
 
-  # --- verified + source-membership columns ---
-  sets <- holway_name_sets(holway_df)
+  # dedupe NA-taxon rows on their name identity; id rows collapse in reconcile
+  na_rows <- combined |> filter(is.na(taxon_id)) |>
+    distinct(rank, genus, subgenus, complex, species, subspecies, .keep_all = TRUE)
+  deduped <- bind_rows(combined |> filter(!is.na(taxon_id)), na_rows)
+
+  # verified + in_holway from Holway NAME membership (reference-derived)
+  sets    <- reference_name_sets(holway_ref)
   flagged <- flag_new_taxa(deduped, sets, verified_ids = verified_ids)
-  deduped$verified <- !flagged$needs_verification
-  deduped$in_holway <- is.na(flagged$new_at_rank)   # nothing new to Holway = known to Holway
-  deduped$in_inat   <- !is.na(deduped$taxon_id)      # matched an iNat-observed taxon
+  deduped$verified  <- !flagged$needs_verification
+  deduped$in_holway <- is.na(flagged$new_at_rank)
 
-  # in_cabr_specimens: TRUE if this taxon's genus+species (or genus, for a
-  # genus-only row) appears in the cleaned CABR specimen records. All FALSE
-  # until specimen_bee_clean.R has produced that file.
+  # in_cabr_specimens: genus+species (or genus, for a genus row) in the specimens
   gs <- character(0); gonly <- character(0)
   if (!is.null(specimen_species) && nrow(specimen_species) > 0) {
     has_sp <- !is.na(specimen_species$species) & specimen_species$species != ""
@@ -399,39 +474,15 @@ build_bee_taxonomy_lookup <- function(holway_df, checklist_sd_county, bees,
     (has_species  & paste(tolower(deduped$genus), tolower(deduped$species)) %in% gs) |
     (!has_species & tolower(deduped$genus) %in% gonly)
 
-  # --- fill Holway taxon_id + scientific_name from the enriched reference
-  # table (must run AFTER in_inat, so unobserved-but-resolved Holway taxa keep
-  # in_inat = FALSE while gaining a taxon_id). ---
-  deduped <- merge_holway_resolved(deduped, holway_resolved, holway_decision_map)
+  # collapse rows that share a taxon_id (a Holway taxon and its iNat-observed twin)
+  deduped <- reconcile_lookup_dupes(deduped)
 
-  # --- restore the original Holway qualifier (CF/MSN/sp. nov.) in the species
-  # column for DISPLAY. All internal joins/dedup/verify above ran on the
-  # stripped epithet, so matching is unaffected; here we swap the shown value
-  # back to Holway's original notation via a genus+stripped-epithet map. ---
-  # Restore only the leading qualifier (CF/MSN) onto the species epithet -- NOT
-  # the subspecies, which now lives in its own column.
-  holway_species_display <- holway_taxonomy |>
-    filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
-    mutate(.qual = str_trim(str_extract(species_raw, "^(CF|MSN)\\s+") %||% NA_character_),
-           species_display = ifelse(is.na(.qual), species, paste(.qual, species))) |>
-    transmute(.dkey = paste(tolower(genus), tolower(species)),
-              species_display = species_display) |>
-    distinct(.dkey, .keep_all = TRUE)
-  deduped <- deduped |>
-    mutate(.dkey = ifelse(!is.na(species) & species != "",
-                          paste(tolower(genus), tolower(species)), NA_character_)) |>
-    left_join(holway_species_display, by = ".dkey") |>
-    mutate(species = coalesce(species_display, species)) |>
-    select(-.dkey, -species_display)
-
-  # --- final column order: metadata first (common_name right after
-  # scientific_name), then the taxonomic hierarchy ---
-  ordered <- c("taxon_id", "scientific_name", "common_name",
-               "rank", "verified", "holway_status", "itis_valid",
-               "in_holway", "in_inat", "in_cabr_specimens",
-               TAXONOMY_LEVELS)
-  # complex_taxon_id is dropped from this human-facing lookup; it's still carried
-  # in the SD County checklist that the specimen complex-matching reads.
+  # ---------------------------------------------------------------
+  # 5. Final column order + sort. qualifier sits right after holway_status.
+  # ---------------------------------------------------------------
+  ordered <- c("taxon_id","scientific_name","common_name","rank","verified",
+               "holway_status","qualifier","itis_valid",
+               "in_holway","in_inat","in_cabr_specimens", TAXONOMY_LEVELS)
   deduped |>
     select(any_of(ordered), everything(), -any_of("complex_taxon_id")) |>
     arrange(family, genus, rank, subgenus, complex, species, subspecies)

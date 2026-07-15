@@ -31,6 +31,34 @@ test_that("exact match disambiguates near-spellings (Andrena nigra vs nigrae)", 
   expect_equal(res$index, 2L)
 })
 
+test_that("a same-named complex never wins over the species (Andrena osmioides)", {
+  src("checklists/holway_reference_build.R")
+  # iNat lists the COMPLEX first, then the species -- both named "Andrena osmioides"
+  results <- list(mk(1258784, "Andrena osmioides", "complex"),
+                  mk(573001,  "Andrena osmioides", "species"))
+  res <- select_taxon_candidate(results, described = TRUE, search_term = "Andrena osmioides")
+  expect_equal(res$action, "pick")
+  expect_equal(res$index, 2L)                       # the SPECIES, not the complex
+
+  # order-independent: species first, complex second -> still the species
+  res_b <- select_taxon_candidate(list(mk(573001, "Andrena osmioides", "species"),
+                                       mk(1258784, "Andrena osmioides", "complex")),
+                                  described = TRUE, search_term = "Andrena osmioides")
+  expect_equal(res_b$index, 1L)
+
+  # NEVER a complex solo: if the only match is a complex, take nothing
+  res_c <- select_taxon_candidate(list(mk(1258784, "Andrena osmioides", "complex")),
+                                  described = TRUE, search_term = "Andrena osmioides")
+  expect_equal(res_c$action, "skip")
+
+  # a multi-result search where the only species is buried under a complex still
+  # picks the species (no exact-name shortcut here)
+  res_d <- select_taxon_candidate(list(mk(1, "Andrena osmioides", "complex"),
+                                       mk(2, "Andrena foo", "species")),
+                                  described = TRUE)
+  expect_equal(res_d$action, "pick"); expect_equal(res_d$index, 2L)
+})
+
 test_that("resolved subspecies scientific_name gets the ssp. display form", {
   src("checklists/holway_reference_build.R")
   ranks <- tibble::tibble(
@@ -59,8 +87,13 @@ test_that("holway_resolution_plan builds the right search per row type", {
   p_sp <- holway_resolution_plan("Described", "Stelis", split_holway_species("anthocopae"))
   expect_false(p_sp$is_subspecies)
   expect_equal(p_sp$term, "Stelis anthocopae")
-  p_g <- holway_resolution_plan("Unpublished", "Andrena", split_holway_species("sp1"))
-  expect_equal(p_g$term, "Andrena")
+  # non-Described WITH a cleaned epithet now resolves "Genus epithet" (so CF/MSN
+  # names reach their real iNat taxon), not just the bare genus.
+  p_cf <- holway_resolution_plan("Tentative", "Andrena", split_holway_species("CF annectens"))
+  expect_equal(p_cf$term, "Andrena annectens")
+  # a bare "sp. nov." leaves no epithet -> falls back to the genus.
+  p_g <- holway_resolution_plan("Unpublished", "Ashmeadiella", split_holway_species("sp. nov."))
+  expect_equal(p_g$term, "Ashmeadiella")
 })
 
 test_that("parse_slash_options splits a name pair into full-name candidates", {
@@ -133,10 +166,40 @@ test_that("Described with multiple species hits needs a prompt", {
   expect_equal(res$action, "prompt")
 })
 
-test_that("holway_search_term uses genus+species for Described, genus otherwise", {
-  src("checklists/holway_reference_build.R")
+test_that("holway_search_term: Described unchanged; non-Described resolves the cleaned name", {
+  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
   expect_equal(holway_search_term("Described", "Andrena", "quercina"), "Andrena quercina")
-  expect_equal(holway_search_term("Unpublished", "Andrena", "sp1"), "Andrena")
+  # non-Described now keys on the CLEANED epithet (was the bare genus before), so
+  # already-made Described picks still hit the cache but CF/MSN rows re-resolve.
+  expect_equal(holway_search_term("Tentative", "Andrena", "CF annectens"), "Andrena annectens")
+  expect_equal(holway_search_term("Unpublished", "Lasioglossum", "MSN pilosifrons"), "Lasioglossum pilosifrons")
+  # bare "sp. nov." (nothing left after stripping) -> genus only
+  expect_equal(holway_search_term("Unpublished", "Ashmeadiella", "sp. nov."), "Ashmeadiella")
+})
+
+test_that("reference rows carry the CF/MSN/aff. qualifier and keep subgenus", {
+  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  r <- tibble::tibble(source_sheet="Tentative", family="Andrenidae", subfamily="Andreninae",
+                      tribe="Andrenini", genus="Andrena", subgenus="(Micandrena)",
+                      species_raw="CF annectens")
+  row <- unresolved_holway_ref_row(r, itis_valid=NA, is_subspecies=FALSE,
+                                   qualifier=holway_qualifier("CF annectens"))
+  expect_equal(row$species,   "annectens")   # CLEAN epithet, not "CF annectens"
+  expect_equal(row$qualifier, "CF")
+  expect_equal(row$subgenus,  "Micandrena")  # parens stripped, kept
+  # a RESOLVED tentative row: qualifier passed through; Holway subgenus fills in
+  # when iNat's ancestry omits it.
+  ranks <- tibble::tibble(taxon_id=573509L,
+    taxon_kingdom_name="Animalia", taxon_phylum_name="Arthropoda", taxon_class_name="Insecta",
+    taxon_order_name="Hymenoptera", taxon_superfamily_name="Apoidea", taxon_family_name="Andrenidae",
+    taxon_subfamily_name="Andreninae", taxon_tribe_name="Andrenini", taxon_subtribe_name=NA_character_,
+    taxon_genus_name="Andrena", taxon_species_name="Andrena annectens", taxon_subspecies_name=NA_character_,
+    subgenus=NA_character_, complex=NA_character_, complex_taxon_id=NA_integer_, rank="species")
+  row2 <- tidy_holway_ref_row(ranks, scientific_name="Andrena annectens", common_name=NA_character_,
+                              source_sheet="Tentative", qualifier="CF", holway_subgenus="(Micandrena)")
+  expect_equal(row2$qualifier, "CF")
+  expect_equal(row2$subgenus,  "Micandrena")
+  expect_equal(row2$taxon_id,  573509L)
 })
 
 test_that("retry_empty_search returns initial results untouched when non-empty", {
@@ -181,6 +244,28 @@ test_that("tidy_holway_ref_row reshapes to the clean lookup layout", {
   expect_equal(row$genus, "Andrena")
   expect_equal(row$family, "Andrenidae")
   expect_true(row$resolved)
+})
+
+test_that("retry fires when the only hit is a complex, but NOT for a genus-only result", {
+  src("checklists/holway_reference_build.R")
+  # only a complex came back -> ask for an alternate name; the typed name finds the species
+  fetch <- function(t) if (identical(t, "Andrena realname")) list(mk(2, "Andrena realname", "species"))
+                       else list(mk(1, "Andrena osmioides", "complex"))
+  got <- retry_empty_search(list(mk(1, "Andrena osmioides", "complex")), "Andrena osmioides",
+                            fetch_fn = fetch, prompt_fn = function(...) "Andrena realname")
+  expect_true(any(vapply(got, function(t) identical(t$rank, "species"), logical(1))))
+
+  # a genus-only result is the expected bare "sp. nov." fallback -> no retry
+  hit_g <- list(mk(3, "Andrena", "genus"))
+  got2 <- retry_empty_search(hit_g, "Andrena",
+                             fetch_fn = function(t) stop("should not fetch"),
+                             prompt_fn = function(...) stop("should not prompt"))
+  expect_identical(got2, hit_g)
+
+  # a species result short-circuits (no retry) -- unchanged
+  expect_false(.needs_alt_search(list(mk(1, "Andrena x", "species"))))
+  expect_true(.needs_alt_search(list()))
+  expect_true(.needs_alt_search(list(mk(1, "Andrena x", "complex"))))
 })
 
 test_that("retry_empty_search stops on 'skip' and when non-interactive", {
