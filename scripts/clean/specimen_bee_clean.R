@@ -85,7 +85,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
                       nrow(flags), flags_out))
   } else {
     message("WARNING: ", lookup_path, " not found -- taxonomy fill + spell-check skipped.")
-    message("         Run native_bee_checklist.R first to generate it.")
+    message("         Run taxonomy_lookup_build.R first to generate it.")
   }
 
   # --- QC flags + side lists ---
@@ -98,7 +98,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   # --- complex match (needs the internal complex map) ---
   # complex_taxon_id is stripped from the public iNat checklists, so the
   # species->complex_taxon_id map is read from the internal file that
-  # native_bee_checklist.R writes for exactly this purpose.
+  # taxonomy_lookup_build.R writes for exactly this purpose.
   complex_map_path <- PATHS$complex_map
   if (file.exists(complex_map_path)) {
     checklist <- read.csv(complex_map_path)

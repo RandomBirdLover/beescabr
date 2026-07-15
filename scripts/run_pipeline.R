@@ -8,13 +8,15 @@
 #   1b. HOLWAY REF    load raw Holway CSV -> resolve each species to an iNat
 #                     taxon -> write holway_sd_bee_reference_table_v3.csv (ONCE;
 #                     reused on later runs)
-#   2.  EXPORT        Tier 1 + Tier 2 checklists + sd_bee_taxonomy_lookup.csv
-#                     (the lookup combines the enriched Holway ref + iNat)
+#   2.  LOOKUP        sd_bee_taxonomy_lookup.csv (the enriched Holway ref + iNat).
+#                     Checklists are PARKED: the old Tier 1/2 writer moved to
+#                     legacy_checklists.R (off) while the new per-source checklist
+#                     stage is built to run LAST in the pipeline.
 #   3.  CLEAN         cabr_inat_bee_clean.csv (triage + obs-fields + date recovery)
 #
 # Ingest runs exactly once here; the build and clean stages both read the
 # same freshly-filled cache (they do NOT re-fetch). This is why the two
-# stage scripts were refactored into build_all_checklists() / clean_inat_bees().
+# stage scripts were refactored into build_taxonomy_lookup() / clean_inat_bees().
 #
 # Run:
 #   Rscript scripts/run_pipeline.R      (or Source in RStudio)
@@ -56,7 +58,13 @@ source("scripts/checklists/holway_reference_build.R") # builds holway_sd_bee_ref
 source("scripts/checklists/checklist_tiers.R")
 source("scripts/checklists/taxonomy_reference.R")
 source("scripts/checklists/tier2_merge.R")
-source("scripts/checklists/native_bee_checklist.R") # defines build_all_checklists()
+source("scripts/checklists/taxonomy_lookup_build.R") # defines build_taxonomy_lookup()
+# CHECKLISTS PARKED (2026-07-15): the old Tier 1/Tier 2 writer moved to
+# legacy_checklists.R and is deliberately NOT sourced -- the checklist stage is
+# being rebuilt into the new per-source architecture (cabr_inat / cabr_specimen /
+# cabr_official / pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat)
+# which runs LAST. Run the old writer by hand if you still need those outputs.
+# source("scripts/checklists/legacy_checklists.R")   # defines build_legacy_checklists()
 # CLEAN stage pulled from the pipeline (2026-07-14): inat_bee_clean.R still reads
 # the old crosswalk columns and needs its rewrite. Run it by hand for now; do NOT
 # source it here. Re-add this line once it's updated.
@@ -104,9 +112,9 @@ main <- function() {
     write.csv(decorate_complex(hr), PATHS$holway_reference, row.names = FALSE, na = "")
   }
 
-  # ---- 2. EXPORT: checklists + lookup ----
-  message("\n== [2/3] EXPORT: Tier 1 + Tier 2 checklists + taxonomy lookup ==")
-  build_summary <- build_all_checklists(con)
+  # ---- 2. LOOKUP: taxonomy lookup (checklists parked -- see note near sources) ----
+  message("\n== [2/3] LOOKUP: sd_bee_taxonomy_lookup (checklists parked) ==")
+  build_summary <- build_taxonomy_lookup(con)
 
   # ---- 3. CLEAN: temporarily removed (see note near the source lines) ----
   message("\n== CLEAN stage skipped -- inat_bee_clean.R pending its crosswalk rewrite; run it manually ==")
@@ -115,9 +123,8 @@ main <- function() {
   message("\n========================================")
   message("PIPELINE COMPLETE in ", dt, " min")
   message("  Cache observations : ", count_observations(con))
-  message("  Tier 1 (CABR/PL/SD): ", paste(build_summary$tier1[c("cabr","pl","sd")], collapse = " / "))
-  message("  Tier 2 (CABR/PL/SD): ", paste(build_summary$tier2[c("cabr","pl","sd")], collapse = " / "))
   message("  Taxonomy lookup rows: ", build_summary$lookup)
+  message("  (Checklists parked -- legacy_checklists.R off; new per-source stage pending.)")
   message("Outputs under data/outputs/. Done.")
 }
 

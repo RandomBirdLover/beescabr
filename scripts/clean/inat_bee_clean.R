@@ -169,7 +169,7 @@ clean_inat_bees <- function(con) {
                     ~ coalesce(get(paste0(cur_column(), "_lk")), .x))) |>
       select(-ends_with("_lk"))
   } else {
-    message("NOTE: ", PATHS$taxonomy_lookup, " not found -- using raw iNat taxonomy. Run native_bee_checklist.R first.")
+    message("NOTE: ", PATHS$taxonomy_lookup, " not found -- using raw iNat taxonomy. Run taxonomy_lookup_build.R first.")
     if (!"holway_status" %in% names(all_obs)) all_obs$holway_status <- NA_character_
   }
 

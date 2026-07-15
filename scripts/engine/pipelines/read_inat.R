@@ -6,7 +6,7 @@
 # The read counterpart to ingest_inat.R. Turns cached observation objects
 # into a data frame with the SAME columns the retired CSV export had
 # (id, user_login, coords, tag_list, quality, taxon_*_name hierarchy, and
-# field:* obs-fields), so native_bee_checklist.R and inat_bee_clean.R only
+# field:* obs-fields), so taxonomy_lookup_build.R and inat_bee_clean.R only
 # had to swap their input source, not their logic.
 #
 # Two-part assembly:

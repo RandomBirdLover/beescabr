@@ -1,19 +1,24 @@
 # =============================================================
-# checklists/native_bee_checklist.R
-# beescabr pipeline -- Tier 1 + Tier 2 checklist builder
-# Rewritten: 2026-07-13 (API + DuckDB rewrite; monolith split into modules)
+# checklists/legacy_checklists.R
+# beescabr pipeline -- OLD Tier 1 + Tier 2 checklist writer (PARKED)
+# Split out 2026-07-15 from native_bee_checklist.R (now taxonomy_lookup_build.R).
 #
-# Exposes build_all_checklists(con): builds all Tier 1 + Tier 2 checklists
-# and bee_taxonomy_lookup.csv from an already-populated observation cache.
-# Ingest is the CALLER's job (so run_pipeline.R can ingest once for the whole
-# run). Running this file directly still works -- it ingests, builds, done.
+# This holds the pre-rewrite checklist outputs:
+#   - 3 Tier 1 iNat checklists   (SD County / Point Loma / CABR)
+#   - 3 Tier 2 merged checklists (SD County / Point Loma / CABR)
+#   - the CABR specimen checklist
 #
-# Modules wired here:
-#   config.R, pipelines/read_inat.R, checklists/holway.R,
-#   checklists/checklist_tiers.R, checklists/taxonomy_reference.R,
-#   checklists/tier2_merge.R
+# It is intentionally NOT wired into run_pipeline.R. The checklist stage is being
+# rebuilt into the new per-source architecture (cabr_inat / cabr_specimen /
+# cabr_official / pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat),
+# which runs LAST in the pipeline. This file is kept runnable by hand so the old
+# outputs can still be regenerated until the replacement lands.
 #
-# Run standalone: Rscript scripts/checklists/native_bee_checklist.R
+# The taxonomy lookup + the internal complex map now live in
+# taxonomy_lookup_build.R. This file rebuilds the SD / PL / CABR tiers from the
+# cache independently and does NOT touch the lookup or the complex map.
+#
+# Run standalone: Rscript scripts/checklists/legacy_checklists.R
 #   BEESCABR_SKIP_INGEST=1 reuses the cache without hitting the API.
 # =============================================================
 
@@ -26,6 +31,7 @@ local({
   need("PATHS",                    "config.R")
   need("write_fresh",              "utils/utils.R")
   need("decorate_complex",         "utils/utils.R")
+  need("require_columns",          "utils/utils.R")
   need("store_connect",            "engine/db/store_conn.R")
   need("count_observations",       "engine/db/observations_store.R")
   need("taxon_cache_get",          "engine/db/taxon_store.R")
@@ -36,18 +42,16 @@ local({
   need("read_observations_export", "engine/pipelines/read_inat.R")
   need("load_holway",              "checklists/holway.R")
   need("build_checklist",          "checklists/checklist_tiers.R")
-  need("build_bee_taxonomy_lookup","checklists/taxonomy_reference.R")
-  need("load_verified_taxa",       "clean/verify.R")
-  need("build_tier2_checklist",    "checklists/tier2_merge.R")
+  need("build_tier2_checklist",    "checklists/tier2_merge.R")  # + specimen_species_table / build_specimen_checklist
 })
 
 # ------------------------------------------------------------
-# build_all_checklists(con): the full Tier 1 + Tier 2 + lookup build against
-# a populated cache. Returns an invisible summary list of row counts.
+# build_legacy_checklists(con): the old Tier 1 + Tier 2 + specimen checklist
+# build against a populated cache. Returns an invisible summary list of counts.
+# Self-contained: rebuilds the tiers from the cache; does not depend on
+# taxonomy_lookup_build.R.
 # ------------------------------------------------------------
-build_all_checklists <- function(con) {
-  # Boundaries (reads shapefiles) loaded lazily so merely sourcing this file
-  # to define the function does not require the spatial data on disk.
+build_legacy_checklists <- function(con) {
   if (!exists("cabr_survey_box")) source("scripts/spatial/spatial_utils.R")
 
   bees <- read_observations_export(con)
@@ -98,19 +102,6 @@ build_all_checklists <- function(con) {
   run_qc(cl_pl,   "Point Loma")
   run_qc(cl_cabr, "CABR")
 
-  # Internal complex map (bare names + complex_taxon_id) for the specimen
-  # complex-match step. Written from the SD County checklist (broadest tier)
-  # BEFORE decoration/stripping, so it keeps the bare complex + taxon_id that
-  # match_specimen_complex() needs. This is the ONLY place complex_taxon_id
-  # survives to disk -- the public checklists drop it (see strip_public below).
-  complex_map <- cl_sd |>
-    filter(!is.na(complex), complex != "") |>
-    distinct(genus, species, complex, complex_taxon_id)
-  dir.create(dirname(PATHS$complex_map), recursive = TRUE, showWarnings = FALSE)
-  write_fresh(complex_map, PATHS$complex_map, na = "")
-  message("Wrote internal complex map (", nrow(complex_map), " species) -> ",
-          basename(PATHS$complex_map))
-
   # Public checklists: add the "(Complex)" prefix (a complex name is otherwise
   # identical to a species scientific name) and drop the internal
   # complex_taxon_id column. decorate_complex is idempotent + display-only.
@@ -121,10 +112,8 @@ build_all_checklists <- function(con) {
   write_fresh(strip_public(cl_cabr), PATHS$checklist_cabr_inat)
   message("\nTier 1 checklists written.")
 
-  # Read CABR specimens once (optional) -- used by BOTH the lookup's
-  # in_cabr_specimens column and the Tier 2 specimen evidence below. Cleaning
-  # the specimen workbook is a separate interactive step; if its output isn't
-  # there yet, specimen columns are simply blank/FALSE.
+  # CABR specimens (optional) -> Tier 2 specimen evidence + specimen checklist.
+  # If the cleaned workbook isn't there yet, specimen columns are blank/FALSE.
   specimen_species <- NULL; cabr_specimens <- NULL
   if (file.exists(PATHS$specimen_clean)) {
     cabr_specimens <- readr::read_csv(PATHS$specimen_clean, show_col_types = FALSE)
@@ -135,38 +124,14 @@ build_all_checklists <- function(con) {
     specimen_species <- specimen_species_table(cabr_specimens)
     message("Specimen evidence: using ", basename(PATHS$specimen_clean))
   } else {
-    message("\nNOTE: specimen clean file not found -- in_cabr_specimens/Tier 2 specimen",
-            " evidence blank. Run scripts/clean/specimen_bee_clean.R when ready.")
+    message("\nNOTE: specimen clean file not found -- Tier 2 specimen evidence blank.",
+            " Run scripts/clean/specimen_bee_clean.R when ready.")
   }
 
-  # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
-  # The enriched Holway reference table (holway_sd_bee_reference_table.csv,
-  # built by holway_reference_build.R earlier in run_pipeline.R) supplies iNat
-  # taxon_ids + scientific names for Holway species, including ones never
-  # observed in SD County. If it isn't present yet, the lookup falls back to
-  # Holway rows without taxon_ids (blank, as before).
-  message("\n--- sd_bee_taxonomy_lookup ---")
-  verified_ids <- load_verified_taxa(PATHS$verified_taxa)
-  # The cleaned Holway reference table is the BASE of the lookup (never the raw
-  # sheet). run_pipeline.R step 1b builds it before we get here; require it.
-  if (!file.exists(PATHS$holway_reference))
-    stop("Holway reference table not found (", basename(PATHS$holway_reference), "). It is the ",
-         "base of the taxonomy lookup -- build it first (run_pipeline.R step 1b, or ",
-         "holway_reference_build.R).")
-  holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
-  message("Holway base from reference table: ", basename(PATHS$holway_reference),
-          " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
-  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_resolved, cl_sd, bees,
-                                                   verified_ids = verified_ids,
-                                                   specimen_species = specimen_species)
-  write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
-  message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
-          sum(!bee_taxonomy_lookup$verified), " unverified).")
-
-  # STEP 6: Tier 2 merged checklists (+ CABR specimen evidence & Holway check).
   if (!is.null(cabr_specimens))
     write_fresh(build_specimen_checklist(cabr_specimens), PATHS$checklist_cabr_specimen, na = "")
 
+  # STEP 5: Tier 2 merged checklists (+ CABR specimen evidence & Holway check).
   holway_keys <- holway_match_keys(holway_df)
 
   message("\n--- Tier 2 build ---")
@@ -178,10 +143,9 @@ build_all_checklists <- function(con) {
   write_fresh(cl_pl_v2,   PATHS$checklist_point_loma_v2, na = "")
   write_fresh(cl_sd_v2,   PATHS$checklist_sd_county_v2, na = "")
 
-  message("\nAll checklists written.")
+  message("\nAll legacy checklists written.")
   invisible(list(
     tier1 = c(sd = nrow(cl_sd), pl = nrow(cl_pl), cabr = nrow(cl_cabr)),
-    lookup = nrow(bee_taxonomy_lookup),
     tier2 = c(sd = nrow(cl_sd_v2), pl = nrow(cl_pl_v2), cabr = nrow(cl_cabr_v2))
   ))
 }
@@ -195,7 +159,7 @@ if (!exists("BEESCABR_SOURCED_BY_RUNNER")) {
     on.exit(store_disconnect(con), add = TRUE)
     if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1") ingest_observations(con)
     else message("BEESCABR_SKIP_INGEST=1 -- using existing cache (", count_observations(con), " obs)")
-    build_all_checklists(con)
+    build_legacy_checklists(con)
   }
   main()
 }

@@ -3,9 +3,9 @@
 # beescabr pipeline -- populate the DuckDB observation cache from the API
 # Rewritten: 2026-07-13 (raw-body ingest; the fast path)
 #
-# THE ONE PLACE that fetches observations. Both native_bee_checklist.R and
+# THE ONE PLACE that fetches observations. Both taxonomy_lookup_build.R and
 # inat_bee_clean.R depend on the cache this fills, but neither fetches -- so a
-# manual DB query, the checklist, and the clean script all see identical data
+# manual DB query, the lookup build, and the clean script all see identical data
 # refreshed once. Replaces the retired CSV export.
 #
 # Speed design (why this matches/beats the Python script):
