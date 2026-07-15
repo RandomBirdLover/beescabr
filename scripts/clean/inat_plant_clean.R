@@ -16,7 +16,7 @@
 #   2. CLIP    to the real cabr_survey_box polygon (st_within, EPSG:26946).
 #   3. CLEAN   dates, missing-data flags, and data_source (intern vs beeple,
 #              read from the roster's role column).
-#   4. TRIAGE  every observation against project_tags_fields.csv:
+#   4. TRIAGE  every observation against crosswalk_master.csv:
 #                keep    = carries a valid Cabrillo survey tag
 #                exclude = carries an exclude tag (other project / pilot) --
 #                          retained WITH a reason, never silently dropped
@@ -48,7 +48,7 @@ library(sf)
 spatial_utils_path <- "scripts/spatial/spatial_utils.R"
 info_dir           <- "data/project_info"
 roster_path        <- list.files(info_dir, pattern = "^surveyors_by_year.*\\.csv$",   full.names = TRUE)[1]
-crosswalk_path     <- list.files(info_dir, pattern = "^project_tags_fields.*\\.csv$", full.names = TRUE)[1]
+crosswalk_path     <- list.files(info_dir, pattern = "^crosswalk_master.*\\.csv$", full.names = TRUE)[1]
 out_clean          <- "data/outputs/inat_clean/cabr_inat_plant_clean.csv"
 out_unknown        <- "data/outputs/inat_clean/qc/cabr_inat_plant_unknown_fields.csv"
 out_unknown_tags   <- "data/outputs/inat_clean/qc/cabr_inat_plant_unknown_tags.csv"
@@ -361,7 +361,7 @@ if (nrow(clean) == 0) {
       cat(sprintf("* %d new FIELD(S) not in the crosswalk.\n", nf),
           "    -> Review ", out_unknown, "\n",
           "    -> For each: keep as a new field, fold into an existing one, or ignore.\n",
-          "       If keeping, add a row to project_tags_fields.csv with applies_to = plant or both.\n", sep = "")
+          "       If keeping, add a row to crosswalk_master.csv with applies_to = plant or both.\n", sep = "")
     if (nt > 0)
       cat(sprintf("* %d new TAG(S) not in the crosswalk.\n", nt),
           "    -> Review ", out_unknown_tags, "\n",
@@ -374,12 +374,12 @@ if (nrow(clean) == 0) {
     # NOTE: ask Mitchell Nuckols whether this prompt should stay or be removed
     # depending on how Taro wants to run the pipeline (single button vs. manual steps).
     if (interactive()) {
-      answer <- readline("Have you reviewed and updated project_tags_fields.csv? (y/n): ")
+      answer <- readline("Have you reviewed and updated crosswalk_master.csv? (y/n): ")
       if (tolower(answer) == "y") {
         cat("Re-running triage with updated crosswalk...\n")
         source("scripts/clean/inat_plant_clean.R")
       } else {
-        stop("Stopped. Update project_tags_fields.csv first, then re-run this script.")
+        stop("Stopped. Update crosswalk_master.csv first, then re-run this script.")
       }
     }
   } else {

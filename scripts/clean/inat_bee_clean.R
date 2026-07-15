@@ -53,7 +53,7 @@ clean_inat_bees <- function(con) {
 
   info_dir       <- "data/project_info"
   roster_path    <- list.files(info_dir, pattern = "^surveyors_by_year.*\\.csv$",   full.names = TRUE)[1]
-  crosswalk_path <- list.files(info_dir, pattern = "^project_tags_fields.*\\.csv$", full.names = TRUE)[1]
+  crosswalk_path <- list.files(info_dir, pattern = "^crosswalk_master.*\\.csv$", full.names = TRUE)[1]
 
   # ---- roster + crosswalk ----
   roster <- read_csv(roster_path, show_col_types = FALSE)
