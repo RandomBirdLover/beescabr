@@ -59,6 +59,7 @@ FPI_BOUNDARY  <- "data/spatial/boundaries/cabr/cabr_survey_box.shp"
 
 FPI_MEMBERSHIP     <- "data/project_info/project_unclean_bee_observations.csv"  # the per-obs lookup
 FPI_SURVEY_DATES   <- "data/project_info/survey_dates.csv"
+FPI_REVIEW         <- "data/project_info/survey_windows_to_review.csv"   # beeple windows to rule on (persistent)
 FPI_UNKNOWN_TAGS   <- "data/project_info/crosswalk_unknown_bee_tags.csv"    # unknown hashtags
 FPI_UNKNOWN_FIELDS <- "data/project_info/crosswalk_unknown_bee_fields.csv"  # unknown obs-field NAMES
 FPI_UNKNOWN_NOTES  <- "data/project_info/crosswalk_unknown_bee_notes.csv"   # notes w/ survey keywords
@@ -68,9 +69,9 @@ FPI_QC_MISPLACED   <- "data/outputs/inat_clean/qc/survey_misplaced_bee_observati
 FPI_MEMBER_COLS <- c("obs_id", "kind", "observer", "observed_on", "survey_type",
                      "survey_year", "transect", "is_10min", "is_metadata",
                      "status", "status_reason", "in_cabr")
-SD_COLUMNS <- c("year", "role", "method", "technique", "first_name", "last_name",
-                "inat_username", "date", "window_start", "window_end", "transect",
-                "confirmed", "n_obs", "source", "note")
+SD_COLUMNS <- c("year", "role", "source", "date", "window_start", "window_end",
+                "transects", "surveyors", "inat_username", "method", "technique",
+                "confirmed", "confirmed_by", "n_obs", "n_days", "note")
 
 fpi_norm <- function(s) tolower(gsub("^#", "", trimws(s)))
 
@@ -248,119 +249,141 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
 }
 
 # ------------------------------------------------------------
-# survey_dates.csv -- observation-driven for iNat users (beeple), calendar
-# windows for planned-but-untagged, and the intern schedule PRESERVED from the
-# existing survey_dates.csv (the `source == "intern-log"` rows). Built in place.
+# survey_dates.csv  +  survey_windows_to_review.csv   (rewritten 2026-07-16)
+#   * interns -> PRESERVED as-is from survey_dates.csv (source=="intern-log").
+#     People maintain intern dates by editing survey_dates.csv directly; the
+#     brain never invents them -- it just carries them forward + rebuilds beeple.
+#   * beeple  -> ONE row per calendar WINDOW. Confirmed if the assigned surveyor
+#     has, inside the window: a Cabrillo-tagged obs (confirmed_by="tag") OR --
+#     forgot-to-tag -- an in-CABR obs with NO survey tag (status=="flag";
+#     confirmed_by="surveyor+window"). n_days flags multi-day windows.
+#   * windows with neither -> survey_windows_to_review.csv (empty / off-site /
+#     excluded-in-box / no-username) for a by-hand ruling; prior `decision`
+#     cells persist across runs so only NEW windows resurface.
+# survey_dates.csv = CONFIRMED surveys only. Returns list(survey_dates, review).
 # ------------------------------------------------------------
-fpi_survey_dates <- function(membership, windows, roster, existing_path = FPI_SURVEY_DATES) {
-  keep <- membership |> filter(status == "keep", coalesce(in_cabr, FALSE))
+INTERN_STD_TRANSECTS <- "TP; BST; UPMON"   # OT added to the route only recently
 
-  ros_b_name <- roster |> filter(role == "beeple") |>
-    transmute(inat_username = na_if(inaturalist_username, ""), first_name, last_name,
-              method, technique) |>
-    filter(!is.na(inat_username)) |> distinct(inat_username, .keep_all = TRUE)
+fpi_norm_transect <- function(x) {
+  u <- toupper(gsub("^#", "", trimws(as.character(x))))
+  dplyr::case_when(
+    u %in% c("", "NA", "N/A") ~ NA_character_,
+    startsWith(u, "TP")       ~ "TP",     # TP / TP1 / TP2 -> TP (tidepools merged)
+    startsWith(u, "UPMON")    ~ "UPMON",
+    startsWith(u, "BST")      ~ "BST",
+    u == "OT"                 ~ "OT",
+    TRUE                      ~ u
+  )
+}
 
-  # per (username,date) keep-obs summary
-  obs_day <- keep |>
-    group_by(inat_username = observer, date = observed_on) |>
-    summarise(survey_type = dplyr::first(survey_type),
-              transect = dplyr::first(stats::na.omit(transect)),
-              n_obs = dplyr::n(), .groups = "drop")
+fpi_survey_dates <- function(membership, windows, roster,
+                             existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW) {
+  blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
 
-  # ----- interns: read the schedule from survey_dates.csv (EITHER schema) -----
-  # survey_dates.csv may be the full master (has a `source` col -> keep its
-  # intern-log rows) OR the simple hand-kept intern schedule (year,date,
-  # first_name,role,method,...). Handle both so a re-run never breaks.
-  existing <- if (file.exists(existing_path)) read_csv(existing_path, show_col_types = FALSE) else NULL
-  interns <- if (!is.null(existing) && "source" %in% names(existing)) {
-    existing |> filter(source == "intern-log") |>
-      mutate(date = as.Date(date), window_start = as.Date(window_start),
-             window_end = as.Date(window_end)) |>
-      select(any_of(SD_COLUMNS))
-  } else if (!is.null(existing) && all(c("date", "first_name", "role", "method") %in% names(existing))) {
-    ros_i <- roster |> filter(role == "intern") |>
-      transmute(year = as.integer(year), first_name, last_name,
-                inat_username = na_if(inaturalist_username, ""), technique) |>
-      distinct(year, first_name, .keep_all = TRUE)
-    existing |>
-      mutate(year = as.integer(year), date = as.Date(date)) |>
-      left_join(ros_i, by = c("year", "first_name")) |>
-      left_join(obs_day |> select(inat_username, date, n_hit = n_obs),
-                by = c("inat_username", "date")) |>
-      mutate(
-        role = "intern", source = "intern-log",
-        window_start = as.Date(NA), window_end = as.Date(NA),
-        transect = if_else(!is.na(transects_surveyed) & transects_surveyed != "",
-                           transects_surveyed, NA_character_),
-        is_training = !is.na(notes) & str_detect(str_to_lower(notes), "training"),
-        uses_inat = method == "non-lethal" & !is.na(inat_username),
-        n_obs = if_else(uses_inat, coalesce(n_hit, 0L), NA_integer_),
-        confirmed = case_when(uses_inat ~ n_obs > 0, method == "lethal" ~ TRUE, TRUE ~ NA),
-        note = case_when(
-          is_training ~ "training day -- exclude from analysis",
-          method == "lethal" ~ "from intern log; net survey, no iNaturalist",
-          uses_inat & n_obs == 0 ~ "no Cabrillo-tagged obs found on this date",
-          method == "non-lethal" & is.na(inat_username) ~ "no iNaturalist username on file",
-          TRUE ~ NA_character_)
-      ) |>
-      select(any_of(SD_COLUMNS))
-  } else {
-    warning("survey_dates.csv missing or unrecognized schema -- no intern rows this run.")
-    tibble()
+  # ---- INTERNS: preserved as-is from survey_dates.csv (people edit them there) ----
+  # We NEVER invent intern dates. Whatever `source == "intern-log"` rows already
+  # exist in survey_dates.csv are carried forward unchanged; only beeple is
+  # rebuilt around them. Add / fix intern surveys by editing survey_dates.csv.
+  interns <- tibble()
+  if (file.exists(existing_path)) {
+    ex <- suppressWarnings(read_csv(existing_path, show_col_types = FALSE))
+    if ("source" %in% names(ex)) {
+      it <- ex |> filter(source == "intern-log")
+      if (nrow(it) > 0) {
+        # tolerate the pre-rework schema (first_name / transect) on the first run
+        if (!"surveyors" %in% names(it) && "first_name" %in% names(it)) it$surveyors <- it$first_name
+        if (!"transects" %in% names(it) && "transect"   %in% names(it)) it$transects <- it$transect
+        for (col in SD_COLUMNS) if (!col %in% names(it)) it[[col]] <- NA
+        interns <- it |>
+          mutate(role = "intern", source = "intern-log",
+                 date = as.Date(date), window_start = as.Date(NA), window_end = as.Date(NA),
+                 training = !is.na(note) & grepl("training", tolower(note)),
+                 confirmed = coalesce(as.logical(confirmed), !training),
+                 confirmed_by = coalesce(as.character(confirmed_by),
+                                         if_else(training, NA_character_, "log"))) |>
+          select(any_of(SD_COLUMNS))
+      }
+    }
   }
 
-  # ----- beeple (observation-driven) -----
-  wu <- windows |>
-    mutate(year = as.integer(year), window_start = as.Date(window_start),
-           window_end = as.Date(window_end)) |>
-    left_join(roster |> filter(role == "beeple") |>
-                transmute(year = as.integer(year), first_name,
-                          inat_username = na_if(inaturalist_username, "")),
-              by = c("year", "first_name"))
+  # ---- BEEPLE: one row per window ----
+  ros_b <- roster |> filter(tolower(role) == "beeple") |>
+    transmute(year = as.integer(year), first_name,
+              uname = ifelse(blank(inaturalist_username), NA_character_, trimws(inaturalist_username)),
+              method = coalesce(method, "non-lethal"), technique = coalesce(technique, "photo")) |>
+    distinct(year, first_name, .keep_all = TRUE)
 
-  bdays <- obs_day |> filter(survey_type %in% c("beeple", "unknown"))
+  w <- windows |>
+    mutate(year = as.integer(year),
+           window_start = as.Date(window_start), window_end = as.Date(window_end),
+           transect = fpi_norm_transect(transect)) |>
+    left_join(ros_b, by = c("year", "first_name")) |>
+    mutate(.wid = row_number())
 
-  day_win <- bdays |> select(inat_username, date) |>
-    inner_join(wu |> filter(!is.na(inat_username)) |>
-                 select(inat_username, window_start, window_end, transect_assigned = transect),
-               by = "inat_username", relationship = "many-to-many") |>
-    filter(date >= window_start, date <= window_end) |>
-    group_by(inat_username, date) |> slice(1) |> ungroup()
+  mem <- membership |>
+    transmute(uname = observer, d = as.Date(observed_on),
+              is_keep = status == "keep", is_flag = status == "flag",
+              in_cabr = coalesce(in_cabr, FALSE))
 
-  obs_rows <- bdays |>
-    left_join(day_win, by = c("inat_username", "date")) |>
-    left_join(ros_b_name, by = "inat_username") |>
-    mutate(year = as.integer(format(date, "%Y")),
-           role = if_else(survey_type == "unknown", "unknown", "beeple"),
-           method = coalesce(method, "non-lethal"), technique = coalesce(technique, "photo"),
-           source = "observation", confirmed = TRUE,
-           transect = coalesce(transect, transect_assigned),
-           note = if_else(is.na(window_start), "surveyed outside any planned calendar window",
-                          NA_character_)) |>
-    select(any_of(SD_COLUMNS))
+  in_win <- w |> filter(!is.na(uname)) |>
+    select(.wid, uname, window_start, window_end) |>
+    inner_join(mem, by = "uname", relationship = "many-to-many") |>
+    filter(d >= window_start, d <= window_end)
 
-  # planned windows with no tagged obs
-  win_hit <- wu |> mutate(.wid = row_number()) |>
-    left_join(bdays |> select(inat_username, date), by = "inat_username",
-              relationship = "many-to-many") |>
+  conf <- in_win |> filter(is_keep | is_flag) |>
     group_by(.wid) |>
-    summarise(any_obs = any(!is.na(date) & date >= window_start & date <= window_end),
+    mutate(has_keep = any(is_keep)) |>
+    filter(if_else(has_keep, is_keep, is_flag & !is_keep)) |>
+    summarise(confirmed_by = if_else(any(has_keep), "tag", "surveyor+window"),
+              date = min(d), n_days = n_distinct(d), n_obs = dplyr::n(),
               .groups = "drop")
-  miss_rows <- wu |> mutate(.wid = row_number()) |>
-    left_join(win_hit, by = ".wid") |>
-    filter(is.na(inat_username) | !coalesce(any_obs, FALSE)) |>
-    mutate(role = "beeple", method = "non-lethal", technique = "photo",
-           source = "calendar-only", date = as.Date(NA), n_obs = 0L,
-           confirmed = if_else(is.na(inat_username), NA, FALSE),
-           note = if_else(is.na(inat_username),
-                          "first name not matched to a beeple in the roster",
-                          "planned window, no Cabrillo-tagged obs (skipped or untagged)")) |>
+
+  beeple <- w |>
+    inner_join(conf, by = ".wid") |>
+    transmute(year, role = "beeple", source = "beeple-window", date,
+              window_start, window_end, transects = transect,
+              surveyors = first_name, inat_username = uname,
+              method, technique, confirmed = TRUE, confirmed_by, n_obs, n_days,
+              note = if_else(n_days > 1,
+                             paste0("multi-day window (", n_days, " days) -- verify one survey or several"),
+                             NA_character_)) |>
     select(any_of(SD_COLUMNS))
 
-  bind_rows(interns, obs_rows, miss_rows) |>
+  # ---- REVIEW: windows with no confirming obs ----
+  any_in_win <- in_win |> group_by(.wid) |>
+    summarise(n_any = dplyr::n(), n_incabr = sum(in_cabr), .groups = "drop")
+  review <- w |> filter(!(.wid %in% conf$.wid)) |>
+    left_join(any_in_win, by = ".wid") |>
+    transmute(year, first_name, inat_username = uname,
+              window_start, window_end, transect,
+              review_reason = case_when(
+                is.na(uname)                ~ "no-username",
+                coalesce(n_any, 0L) == 0    ~ "empty",
+                coalesce(n_incabr, 0L) == 0 ~ "off-site",
+                TRUE                        ~ "excluded-in-box"),
+              n_obs_in_window = coalesce(n_any, 0L),
+              decision = NA_character_, decision_note = NA_character_) |>
+    arrange(year, first_name, window_start)
+
+  # persist prior rulings by window key
+  if (file.exists(review_path)) {
+    prior <- suppressWarnings(read_csv(review_path, show_col_types = FALSE))
+    if (all(c("year","first_name","window_start","window_end","transect","decision") %in% names(prior))) {
+      pd <- prior |>
+        mutate(window_start = as.Date(window_start), window_end = as.Date(window_end)) |>
+        filter(!blank(decision)) |>
+        select(year, first_name, window_start, window_end, transect, decision, decision_note)
+      review <- review |> select(-decision, -decision_note) |>
+        left_join(pd, by = c("year","first_name","window_start","window_end","transect"))
+    }
+  }
+
+  survey_dates <- bind_rows(interns, beeple) |>
     mutate(across(where(is.character), ~ na_if(.x, ""))) |>
-    arrange(year, date, window_start, role, first_name) |>
-    select(all_of(SD_COLUMNS))
+    arrange(year, date, window_start, role, surveyors) |>
+    select(any_of(SD_COLUMNS))
+
+  list(survey_dates = survey_dates, review = review)
 }
 
 # ------------------------------------------------------------
@@ -383,7 +406,9 @@ finding_project_info <- function(write = TRUE) {
 
   sig <- fpi_signals(base, tagmap)
   membership <- fpi_membership(base, sig$signals, roster, FPI_BOUNDARY)
-  survey_dates <- fpi_survey_dates(membership, windows, roster)
+  sd_out         <- fpi_survey_dates(membership, windows, roster)
+  survey_dates   <- sd_out$survey_dates
+  review_windows <- sd_out$review
 
   # Step-2a review reports -- all scoped to OUR surveyors (a stranger's tag/field
   # isn't ours to categorize). Three separate files: hashtags, obs-field names, notes.
@@ -403,7 +428,7 @@ finding_project_info <- function(write = TRUE) {
 
   # QC: missing-tag (in CABR, on a confirmed survey day, no tag)
   survey_days <- survey_dates |>
-    filter(!is.na(date), confirmed == TRUE, source %in% c("observation", "intern-log")) |>
+    filter(!is.na(date), confirmed == TRUE, source %in% c("beeple-window", "intern-log")) |>
     transmute(user = inat_username, date = as.Date(date)) |>
     filter(!is.na(user)) |> distinct()
   qc_untagged <- membership |>
@@ -424,6 +449,7 @@ finding_project_info <- function(write = TRUE) {
     dir.create(dirname(FPI_QC_UNTAGGED), recursive = TRUE, showWarnings = FALSE)
     write.csv(membership,     FPI_MEMBERSHIP,     row.names = FALSE, na = "")
     write.csv(survey_dates,   FPI_SURVEY_DATES,   row.names = FALSE, na = "")
+    write.csv(review_windows, FPI_REVIEW,         row.names = FALSE, na = "")
     write.csv(unknown_tags,   FPI_UNKNOWN_TAGS,   row.names = FALSE, na = "")
     write.csv(unknown_fields, FPI_UNKNOWN_FIELDS, row.names = FALSE, na = "")
     write.csv(unknown_notes,  FPI_UNKNOWN_NOTES,  row.names = FALSE, na = "")
@@ -431,14 +457,15 @@ finding_project_info <- function(write = TRUE) {
     write.csv(qc_misplaced,   FPI_QC_MISPLACED,   row.names = FALSE, na = "")
     message("Wrote:")
     message("  project_unclean_bee_observations.csv  ", nrow(membership),     " rows")
-    message("  survey_dates.csv                      ", nrow(survey_dates),   " rows")
+    message("  survey_dates.csv                      ", nrow(survey_dates),   " confirmed surveys")
+    message("  survey_windows_to_review.csv          ", nrow(review_windows), " windows to review")
     message("  crosswalk_unknown_bee_tags.csv        ", nrow(unknown_tags),   " hashtags to review")
     message("  crosswalk_unknown_bee_fields.csv      ", nrow(unknown_fields), " obs-field names to review")
     message("  crosswalk_unknown_bee_notes.csv       ", nrow(unknown_notes),  " notes to review")
     message("  survey_untagged_bee_observations.csv  ", nrow(qc_untagged),    " rows")
     message("  survey_misplaced_bee_observations.csv ", nrow(qc_misplaced),   " rows")
   }
-  invisible(list(membership = membership, survey_dates = survey_dates,
+  invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  unknown_tags = unknown_tags, unknown_fields = unknown_fields,
                  unknown_notes = unknown_notes, qc_untagged = qc_untagged,
                  qc_misplaced = qc_misplaced))
