@@ -39,7 +39,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   dupes_out   <- "data/outputs/specimens/cabr_specimen_bee_duplicates.csv"
   clean_out   <- PATHS$specimen_clean
 
-  specimens_path <- read_latest("data/cabr_surveys/lethal", "^cabr_bee_specimens_record_V")
+  specimens_path <- read_latest("data/cabr_bee_specimens_records", "^cabr_bee_specimens_record_V")
   message("Loading specimens: ", basename(specimens_path))
   raw <- readxl::read_excel(specimens_path)
   require_columns(raw,

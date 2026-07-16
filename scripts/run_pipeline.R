@@ -8,8 +8,10 @@
 #   1.  INGEST   iNat API -> DuckDB cache (once, incremental)
 #   2.  EXPORT   refresh data/cache/export_flat.rds (the brain's input)
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
-#                project_unclean + unknown tags/fields/notes (review by hand, in
-#                order, update crosswalk, re-run) -> survey_dates.csv (+ review queue)
+#                project_unclean + unknown tags/fields/notes -> survey_dates.csv
+#   3b. REVIEW   walk through the unknown tags + fields (interactive), file them
+#                into crosswalk_master, then re-run the brain to apply. Notes have
+#                no reviewer yet. Auto-skipped when non-interactive.
 #   4.  CLEAN    cabr_inat_bee_clean.csv (pending its rewrite -- run by hand)
 #   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
 #                per-source checklists (parked until built)
@@ -53,6 +55,7 @@ source("scripts/clean/verify.R")                   # flag_new_taxa/holway_name_s
                                                    # (taxonomy_reference.R only loads it if absent)
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
 source("scripts/clean/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
+source("scripts/clean/review_crosswalk.R")         # interactive review of unknown tags + fields
 source("scripts/checklists/holway.R")
 source("scripts/checklists/holway_reference_build.R") # builds holway_sd_bee_reference_table.csv
 source("scripts/checklists/checklist_tiers.R")
@@ -95,6 +98,28 @@ main <- function() {
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
   message("\n== [3] BRAIN: finding_project_info (membership -> unknown tags/fields/notes -> survey_dates) ==")
   finding_project_info()
+
+  # ---- 3b. REVIEW: sort unknown tags + fields into crosswalk_master (interactive) ----
+  # The brain just wrote the unknown reports; walk through tags then fields (the
+  # same review you'd run by hand), then re-run the brain so survey membership +
+  # survey_dates reflect what you filed. Auto-skips in non-interactive / scheduled
+  # runs (or force-skip in RStudio with BEESCABR_NONINTERACTIVE=1).
+  .n_rows <- function(p) if (file.exists(p)) nrow(readr::read_csv(p, show_col_types = FALSE)) else 0L
+  if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1") {
+    n_tags <- .n_rows(FPI_UNKNOWN_TAGS); n_fields <- .n_rows(FPI_UNKNOWN_FIELDS)
+    message("\n== [3b] REVIEW unknowns: ", n_tags, " tags, ", n_fields, " fields to sort ==")
+    if (n_tags   > 0) review_unknowns("tags")
+    if (n_fields > 0) review_unknowns("fields")
+    if (n_tags > 0 || n_fields > 0) {
+      message("\n== [3c] Re-running the brain to apply your crosswalk edits ==")
+      finding_project_info()
+    }
+    n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
+    if (n_notes > 0)
+      message("  NOTE: ", n_notes, " unknown NOTES remain -- no notes reviewer yet.")
+  } else {
+    message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R by hand ==")
+  }
 
   # ---- 4. CLEAN: temporarily removed (inat_bee_clean.R pending its rewrite) ----
   message("\n== [4] CLEAN skipped -- inat_bee_clean.R pending its crosswalk rewrite; run it manually ==")

@@ -10,12 +10,6 @@
 #
 # Source this near the top of any script in the pipeline:
 #   source("scripts/config.R")
-#
-# NOTE on CRS: the project working CRS (EPSG:26946) is also defined in
-# spatial_utils.R as PROJECT_CRS, because that file predates this one and
-# is sourced independently by the spatial diagnostics scripts. The value
-# here (BEESCABR_PROJECT_CRS) is identical and is the authority for the
-# new API/DB code. Do not let the two drift.
 # =============================================================
 
 # ---- iNaturalist API ---------------------------------------------------------
@@ -38,13 +32,6 @@ TAXON_APIS_MELLIFERA <- 47219L
 # iNat place_id for the "San Diego County 25 Mile Buffer" custom place that
 # the retired CSV export was scoped to. Same id used in the Python pipeline.
 PLACE_SD_COUNTY_BUFFER <- 118491L
-
-# ---- Coordinate reference systems --------------------------------------------
-# Storage CRS for the DuckDB `location` geometry column: raw lon/lat. Kept in
-# 4326 so manual ad-hoc DB queries are portable; reproject to the metric
-# project CRS with ST_Transform (or in sf) when distances are needed.
-STORE_CRS          <- 4326L
-BEESCABR_PROJECT_CRS <- 26946L  # NAD83 / California zone 6 (meters) -- matches spatial_utils.R
 
 # ---- DuckDB cache ------------------------------------------------------------
 # One on-disk DuckDB file acts as the cache for BOTH observation objects

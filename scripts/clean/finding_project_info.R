@@ -37,8 +37,6 @@
 #   data/project_info/crosswalk_unknown_bee_tags.csv        <- unrecognized hashtags
 #   data/project_info/crosswalk_unknown_bee_fields.csv      <- unrecognized obs-field names
 #   data/project_info/crosswalk_unknown_bee_notes.csv       <- notes carrying survey keywords
-#   data/outputs/inat_clean/qc/survey_untagged_bee_observations.csv
-#   data/outputs/inat_clean/qc/survey_misplaced_bee_observations.csv
 #
 # Run: source("scripts/clean/finding_project_info.R"); finding_project_info()
 # =============================================================
@@ -63,12 +61,6 @@ FPI_REVIEW         <- "data/project_info/survey_windows_to_review.csv"   # beepl
 FPI_UNKNOWN_TAGS   <- "data/project_info/crosswalk_unknown_bee_tags.csv"    # unknown hashtags
 FPI_UNKNOWN_FIELDS <- "data/project_info/crosswalk_unknown_bee_fields.csv"  # unknown obs-field NAMES
 FPI_UNKNOWN_NOTES  <- "data/project_info/crosswalk_unknown_bee_notes.csv"   # notes w/ survey keywords
-FPI_QC_UNTAGGED    <- "data/outputs/inat_clean/qc/survey_untagged_bee_observations.csv"
-FPI_QC_MISPLACED   <- "data/outputs/inat_clean/qc/survey_misplaced_bee_observations.csv"
-
-FPI_MEMBER_COLS <- c("obs_id", "kind", "observer", "observed_on", "survey_type",
-                     "survey_year", "transect", "is_10min", "is_metadata",
-                     "status", "status_reason", "in_cabr")
 SD_COLUMNS <- c("year", "role", "source", "date", "window_start", "window_end",
                 "transects", "surveyors", "inat_username", "method", "technique",
                 "confirmed", "confirmed_by", "n_obs", "n_days", "note")
@@ -262,8 +254,6 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
 #     cells persist across runs so only NEW windows resurface.
 # survey_dates.csv = CONFIRMED surveys only. Returns list(survey_dates, review).
 # ------------------------------------------------------------
-INTERN_STD_TRANSECTS <- "TP; BST; UPMON"   # OT added to the route only recently
-
 fpi_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))
   dplyr::case_when(
@@ -426,35 +416,14 @@ finding_project_info <- function(write = TRUE) {
   unknown_fields <- fpi_unknown_fields(base, crosswalk, our_users)
   unknown_notes  <- fpi_unknown_notes(base, our_users)
 
-  # QC: missing-tag (in CABR, on a confirmed survey day, no tag)
-  survey_days <- survey_dates |>
-    filter(!is.na(date), confirmed == TRUE, source %in% c("beeple-window", "intern-log")) |>
-    transmute(user = inat_username, date = as.Date(date)) |>
-    filter(!is.na(user)) |> distinct()
-  qc_untagged <- membership |>
-    filter(status == "flag", coalesce(in_cabr, FALSE)) |>
-    transmute(obs_id, user = observer, date = observed_on) |>
-    inner_join(survey_days, by = c("user", "date")) |>
-    left_join(base |> select(obs_id, url), by = "obs_id") |>
-    arrange(date, user)
-
-  # QC: misplaced (tagged/keep but outside CABR)
-  qc_misplaced <- membership |>
-    filter(status == "keep", !coalesce(in_cabr, TRUE)) |>
-    left_join(base |> select(obs_id, url, latitude, longitude), by = "obs_id") |>
-    transmute(obs_id, observer, observed_on, survey_type, latitude, longitude, url,
-              flag = "Cabrillo-tagged but outside CABR box -- check coordinates")
-
   if (write) {
-    dir.create(dirname(FPI_QC_UNTAGGED), recursive = TRUE, showWarnings = FALSE)
+    dir.create(dirname(FPI_MEMBERSHIP), recursive = TRUE, showWarnings = FALSE)
     write.csv(membership,     FPI_MEMBERSHIP,     row.names = FALSE, na = "")
     write.csv(survey_dates,   FPI_SURVEY_DATES,   row.names = FALSE, na = "")
     write.csv(review_windows, FPI_REVIEW,         row.names = FALSE, na = "")
     write.csv(unknown_tags,   FPI_UNKNOWN_TAGS,   row.names = FALSE, na = "")
     write.csv(unknown_fields, FPI_UNKNOWN_FIELDS, row.names = FALSE, na = "")
     write.csv(unknown_notes,  FPI_UNKNOWN_NOTES,  row.names = FALSE, na = "")
-    write.csv(qc_untagged,    FPI_QC_UNTAGGED,    row.names = FALSE, na = "")
-    write.csv(qc_misplaced,   FPI_QC_MISPLACED,   row.names = FALSE, na = "")
     message("Wrote:")
     message("  project_unclean_bee_observations.csv  ", nrow(membership),     " rows")
     message("  survey_dates.csv                      ", nrow(survey_dates),   " confirmed surveys")
@@ -462,13 +431,10 @@ finding_project_info <- function(write = TRUE) {
     message("  crosswalk_unknown_bee_tags.csv        ", nrow(unknown_tags),   " hashtags to review")
     message("  crosswalk_unknown_bee_fields.csv      ", nrow(unknown_fields), " obs-field names to review")
     message("  crosswalk_unknown_bee_notes.csv       ", nrow(unknown_notes),  " notes to review")
-    message("  survey_untagged_bee_observations.csv  ", nrow(qc_untagged),    " rows")
-    message("  survey_misplaced_bee_observations.csv ", nrow(qc_misplaced),   " rows")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  unknown_tags = unknown_tags, unknown_fields = unknown_fields,
-                 unknown_notes = unknown_notes, qc_untagged = qc_untagged,
-                 qc_misplaced = qc_misplaced))
+                 unknown_notes = unknown_notes))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0) finding_project_info()

@@ -44,9 +44,11 @@ standardize_specimen_names <- function(df) {
 # Fill blank family/subfamily/tribe from the taxonomy lookup (Holway-derived
 # authority). iNat/source values win when present; the lookup only fills blanks.
 fill_specimen_taxonomy <- function(df, tax_lookup) {
+  if (!"order" %in% names(df)) df$order <- NA_character_   # bees are all Hymenoptera; filled from the lookup
   df |>
     left_join(tax_lookup, by = c("genus", "species", "subspecies"), suffix = c("", "_lookup")) |>
     mutate(
+      order     = coalesce(na_if(order, ""),     order_lookup),
       family    = coalesce(na_if(family, ""),    family_lookup),
       subfamily = coalesce(na_if(subfamily, ""), subfamily_lookup),
       tribe     = coalesce(na_if(tribe, ""),     tribe_lookup)
