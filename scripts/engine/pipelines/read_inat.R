@@ -31,6 +31,17 @@ library(dplyr)
 # a single flatten instead of doing it twice.
 .export_cache_env <- new.env(parent = emptyenv())
 
+# Free the memoized export frame between pipeline stages. run_pipeline calls this
+# before the PLANT export build so the large bee frame isn't resident at the same
+# time -- holding both the 77k-bee frame and the 40k-plant flatten OOM'd the
+# session on the first plant run (2026-07-17). The on-disk RDS cache is left
+# intact, so any later read (e.g. the checklist stage) re-hits it from disk.
+clear_export_cache <- function() {
+  .export_cache_env$sig   <- NULL
+  .export_cache_env$frame <- NULL
+  invisible(gc(FALSE))
+}
+
 # ------------------------------------------------------------
 # .export_signature(): a cheap content fingerprint of everything the export
 # frame depends on -- the observation cache AND the taxon cache. Uses an

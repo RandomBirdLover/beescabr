@@ -107,6 +107,11 @@ main <- function() {
     message("\n== [2b] PLANTS skipped (BEESCABR_SKIP_PLANTS=1) ==")
   } else {
     message("\n== [2b] PLANTS: iNat -> plant cache -> export_flat_plant.rds ==")
+    # Free the bee export frame first: building the plant export (flatten + taxonomy
+    # of 40k obs) while the 77k-bee frame was still resident OOM'd R on the first
+    # plant run (2026-07-17). The on-disk export_flat.rds is untouched; the later
+    # checklist stage re-reads it from disk (cache hit) if it needs it.
+    clear_export_cache()
     ingest_plants(
       incremental = Sys.getenv("BEESCABR_FULL_INGEST", "0") != "1",
       do_ingest   = Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1"
