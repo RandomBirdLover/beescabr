@@ -7,11 +7,14 @@
 # ALL checklist/taxonomy work LAST:
 #   1.  INGEST   iNat API -> DuckDB cache (once, incremental)
 #   2.  EXPORT   refresh data/cache/export_flat.rds (the brain's input)
+#   2b. PLANTS   pull vascular plants -> SEPARATE plant cache -> export_flat_plant.rds
+#                (the brain's second input; survey-day confirm + flower resources)
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
 #                project_unclean + unknown tags/fields/notes -> survey_dates.csv
-#   3b. REVIEW   walk through the unknown tags + fields (interactive), file them
-#                into crosswalk_master, then re-run the brain to apply. Notes have
-#                no reviewer yet. Auto-skipped when non-interactive.
+#   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
+#                re-run brain; then 3d rule the survey-date windows the brain
+#                couldn't auto-confirm (last, so it sees all tags + fields) ->
+#                re-run brain. Notes reviewer is standalone. Skipped non-interactive.
 #   4.  CLEAN    cabr_inat_bee_clean.csv (pending its rewrite -- run by hand)
 #   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
 #                per-source checklists (parked until built)
@@ -23,7 +26,8 @@
 #   Rscript scripts/run_pipeline.R      (or Source in RStudio)
 #
 # Flags (env vars):
-#   BEESCABR_SKIP_INGEST=1         skip the API pull, use the existing cache
+#   BEESCABR_SKIP_INGEST=1         skip the API pull (bees AND plants), use caches
+#   BEESCABR_SKIP_PLANTS=1         skip the plant step entirely (bees only)
 #   BEESCABR_FULL_INGEST=1         re-walk the whole place (not incremental)
 #   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table
 #   BEESCABR_NONINTERACTIVE=1      auto-skip ambiguous Holway names (no prompts)
@@ -49,6 +53,7 @@ source("scripts/engine/api/inat_flatten.R")
 source("scripts/engine/api/inat_cache.R")
 source("scripts/engine/pipelines/ingest_inat.R")
 source("scripts/engine/pipelines/read_inat.R")
+source("scripts/engine/pipelines/ingest_plants.R")  # plant pull -> separate cache -> export_flat_plant.rds
 source("scripts/clean/triage.R")
 source("scripts/clean/verify.R")                   # flag_new_taxa/holway_name_sets -- sourced
                                                    # UNCONDITIONALLY so edits reload on a re-run
@@ -56,6 +61,7 @@ source("scripts/clean/verify.R")                   # flag_new_taxa/holway_name_s
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
 source("scripts/clean/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
 source("scripts/clean/review_crosswalk.R")         # interactive review of unknown tags + fields
+source("scripts/clean/review_windows.R")           # interactive review of survey-date windows
 source("scripts/checklists/holway.R")
 source("scripts/checklists/holway_reference_build.R") # builds holway_sd_bee_reference_table.csv
 source("scripts/checklists/checklist_tiers.R")
@@ -91,6 +97,22 @@ main <- function() {
   message("\n== [2] EXPORT: refresh data/cache/export_flat.rds ==")
   invisible(read_observations_export(con))
 
+  # ---- 2b. PLANTS: ingest vascular plants -> export_flat_plant.rds (separate cache) ----
+  # Pulls Point Loma vascular plants into their OWN DuckDB cache and refreshes
+  # export_flat_plant.rds, which the brain reads ALONGSIDE the bee export. Serves
+  # BOTH survey-day confirmation (a surveyor's plant obs on a plant-only day) and
+  # flower-resource analysis. Own connection; the bee `con` above is untouched.
+  # Gated by the same ingest flags as bees (+ BEESCABR_SKIP_PLANTS to skip only plants).
+  if (Sys.getenv("BEESCABR_SKIP_PLANTS", "0") == "1") {
+    message("\n== [2b] PLANTS skipped (BEESCABR_SKIP_PLANTS=1) ==")
+  } else {
+    message("\n== [2b] PLANTS: iNat -> plant cache -> export_flat_plant.rds ==")
+    ingest_plants(
+      incremental = Sys.getenv("BEESCABR_FULL_INGEST", "0") != "1",
+      do_ingest   = Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1"
+    )
+  }
+
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
   # finding_project_info() decides survey membership from crosswalk_master, writes
   # project_unclean_bee_observations.csv, the THREE unknown reports (review them by
@@ -105,6 +127,12 @@ main <- function() {
   # survey_dates reflect what you filed. Auto-skips in non-interactive / scheduled
   # runs (or force-skip in RStudio with BEESCABR_NONINTERACTIVE=1).
   .n_rows <- function(p) if (file.exists(p)) nrow(readr::read_csv(p, show_col_types = FALSE)) else 0L
+  .n_windows <- function(p) {
+    if (!file.exists(p)) return(0L)
+    d <- readr::read_csv(p, show_col_types = FALSE, col_types = readr::cols(.default = "c"))
+    if (!"decision" %in% names(d)) return(nrow(d))
+    sum(is.na(d$decision) | trimws(d$decision) == "" | tolower(trimws(d$decision)) == "unsure")
+  }
   if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1") {
     n_tags <- .n_rows(FPI_UNKNOWN_TAGS); n_fields <- .n_rows(FPI_UNKNOWN_FIELDS)
     message("\n== [3b] REVIEW unknowns: ", n_tags, " tags, ", n_fields, " fields to sort ==")
@@ -116,9 +144,20 @@ main <- function() {
     }
     n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
     if (n_notes > 0)
-      message("  NOTE: ", n_notes, " unknown NOTES remain -- no notes reviewer yet.")
+      message("  NOTE: ", n_notes, " unknown NOTES remain -- run review_notes.R by hand (standalone).")
+
+    # [3d] SURVEY-DATE WINDOWS -- rule the ones the brain couldn't auto-confirm.
+    # Runs LAST so it sees every tag + field; then re-run so "survey" rulings fold
+    # into survey_dates.csv (confirmed_by = "review").
+    n_win <- .n_windows(FPI_REVIEW)
+    if (n_win > 0) {
+      message("\n== [3d] REVIEW survey windows: ", n_win, " to rule ==")
+      review_windows()
+      message("\n== [3e] Re-running the brain to fold in your window rulings ==")
+      finding_project_info()
+    }
   } else {
-    message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R by hand ==")
+    message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R / review_windows.R by hand ==")
   }
 
   # ---- 4. CLEAN: temporarily removed (inat_bee_clean.R pending its rewrite) ----

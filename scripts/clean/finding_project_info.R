@@ -48,8 +48,13 @@ library(readr)
 library(sf)
 
 # ---- paths ----
-FPI_EXPORTS   <- list(list(path = "data/cache/export_flat.rds", kind = "bee"))
-# When plants are ingested, add: list(path="data/cache/export_flat_plant.rds", kind="plant")
+# Every export listed here is pooled through the SAME membership + survey-date
+# logic, tagged by `kind`. The plant export is built by ingest_plants.R; it's
+# safe to list before the first plant pull -- an absent path is skipped below.
+FPI_EXPORTS   <- list(
+  list(path = "data/cache/export_flat.rds",       kind = "bee"),
+  list(path = "data/cache/export_flat_plant.rds", kind = "plant")
+)
 FPI_CROSSWALK <- "data/project_info/crosswalk_master.csv"
 FPI_ROSTER    <- "data/project_info/surveyors_by_year.csv"
 FPI_WINDOWS   <- "data/project_info/beeple_calendar_windows.csv"
@@ -65,7 +70,35 @@ SD_COLUMNS <- c("year", "role", "source", "date", "window_start", "window_end",
                 "transects", "surveyors", "inat_username", "method", "technique",
                 "confirmed", "confirmed_by", "n_obs", "n_days", "note")
 
+# survey-date confirmation tuning:
+#   * tol_days -- a survey may drift this many days outside its planned calendar
+#     window and still count (people survey a week early/late); nearest window wins.
+#   * min_obs  -- a DRIFTED day (outside the window) needs this many in-CABR obs to
+#     count as a survey, not a casual visit. On-window days confirm with >=1 obs.
+SD_WINDOW_TOL_DAYS <- 10L
+SD_MIN_SURVEY_OBS  <- 3L
+
 fpi_norm <- function(s) tolower(gsub("^#", "", trimws(s)))
+
+# Split a ";"/"," -delimited variant list WITHOUT splitting on a delimiter that
+# sits inside parentheses. FOR FIELD VARIANTS ONLY -- some iNat field NAMES embed
+# their allowed values, e.g. "soil type (sandy; loam; clay)" is ONE name, not three,
+# so a plain split would shred them. TAGS must NOT use this: their parenthetical
+# common names ("Sweat Bee (Lasioglossum sp)") sit beside standalone tags and must
+# stay split, or tags like bokeh/ceratina resurface as "unknown".
+fpi_split_variants <- function(s) {
+  s <- as.character(s)
+  if (length(s) != 1L) return(unlist(lapply(s, fpi_split_variants), use.names = FALSE))
+  if (is.na(s) || !nzchar(trimws(s))) return(character(0))
+  out <- character(0); buf <- ""; depth <- 0L
+  for (ch in strsplit(s, "", fixed = TRUE)[[1]]) {
+    if (ch == "(") depth <- depth + 1L
+    else if (ch == ")") depth <- if (depth > 0L) depth - 1L else 0L
+    if (depth == 0L && (ch == ";" || ch == ",")) { out <- c(out, buf); buf <- "" }
+    else buf <- paste0(buf, ch)
+  }
+  out <- trimws(c(out, buf)); out[nzchar(out)]
+}
 
 # ------------------------------------------------------------
 # crosswalk -> normalized variant -> canonical/category (survey/transect/exclude)
@@ -78,7 +111,7 @@ fpi_build_tagmap <- function(crosswalk) {
     filter(!is.na(name), trimws(name) != "") |>
     transmute(concept = name, what_for = tolower(trimws(what_for)),
               variants = paste(name, coalesce(inat_tag_variants, ""), sep = "; ")) |>
-    separate_rows(variants, sep = "[;,]\\s*") |>
+    separate_rows(variants, sep = "[;,]\\s*") |>   # TAGS: plain split (NOT paren-aware)
     mutate(key = fpi_norm(variants)) |>
     filter(nchar(key) > 0, !grepl("^\\(", key), !(key %in% c("n/a", "na"))) |>
     distinct(key, concept, what_for)
@@ -149,7 +182,8 @@ fpi_unknown_fields <- function(df, crosswalk, our_users) {
   known <- crosswalk |>
     filter(!is.na(inat_field_variants), trimws(inat_field_variants) != "") |>
     transmute(v = inat_field_variants) |>
-    separate_rows(v, sep = "[;,]\\s*") |>
+    mutate(v = lapply(v, fpi_split_variants)) |>
+    tidyr::unnest(v) |>
     mutate(k = tolower(trimws(v))) |>
     filter(k != "", !(k %in% c("n/a", "na"))) |> pull(k) |> unique()
   fld <- names(df)[startsWith(names(df), "field:")]
@@ -267,7 +301,8 @@ fpi_norm_transect <- function(x) {
 }
 
 fpi_survey_dates <- function(membership, windows, roster,
-                             existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW) {
+                             existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW,
+                             tol_days = SD_WINDOW_TOL_DAYS, min_obs = SD_MIN_SURVEY_OBS) {
   blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
 
   # ---- INTERNS: preserved as-is from survey_dates.csv (people edit them there) ----
@@ -310,23 +345,36 @@ fpi_survey_dates <- function(membership, windows, roster,
     left_join(ros_b, by = c("year", "first_name")) |>
     mutate(.wid = row_number())
 
-  mem <- membership |>
-    transmute(uname = observer, d = as.Date(observed_on),
-              is_keep = status == "keep", is_flag = status == "flag",
-              in_cabr = coalesce(in_cabr, FALSE))
+  # obs that can confirm a survey: tagged (status "keep") or in-CABR untagged ("flag").
+  sig <- membership |>
+    transmute(obs_id, uname = observer, d = as.Date(observed_on),
+              yr = suppressWarnings(as.integer(format(as.Date(observed_on), "%Y"))),
+              is_keep = status == "keep", is_flag = status == "flag") |>
+    filter(!is.na(uname), !is.na(d), is_keep | is_flag)
 
-  in_win <- w |> filter(!is.na(uname)) |>
-    select(.wid, uname, window_start, window_end) |>
-    inner_join(mem, by = "uname", relationship = "many-to-many") |>
-    filter(d >= window_start, d <= window_end)
+  # Attach each signal obs to its NEAREST assigned window (same surveyor + year),
+  # tolerating drift of up to tol_days OUTSIDE the planned window -- people survey a
+  # week early/late. gap = days outside the window (0 when the obs falls inside it).
+  wsel <- w |> filter(!is.na(uname)) |> select(.wid, uname, year, window_start, window_end)
+  attic <- sig |>
+    inner_join(wsel, by = c("uname", "yr" = "year"), relationship = "many-to-many") |>
+    mutate(gap = pmax(0L, as.integer(window_start - d), as.integer(d - window_end))) |>
+    filter(gap <= tol_days) |>
+    group_by(obs_id) |> dplyr::slice_min(gap, n = 1, with_ties = FALSE) |> ungroup()
 
-  conf <- in_win |> filter(is_keep | is_flag) |>
+  # A window+day is a real survey day when a tagged obs is present (any count), OR it
+  # sits ON the planned window with >=1 in-CABR obs, OR it DRIFTED (gap>0) but carries
+  # a cluster of >= min_obs in-CABR obs (so a lone off-schedule obs doesn't count).
+  day_ct <- attic |>
+    group_by(.wid, d) |>
+    summarise(n_tag = sum(is_keep), n_flag = sum(is_flag), gap = min(gap), .groups = "drop") |>
+    mutate(survey_day = n_tag > 0 | (gap == 0L & n_flag >= 1L) | (gap > 0L & n_flag >= min_obs))
+
+  conf <- day_ct |> filter(survey_day) |>
     group_by(.wid) |>
-    mutate(has_keep = any(is_keep)) |>
-    filter(if_else(has_keep, is_keep, is_flag & !is_keep)) |>
-    summarise(confirmed_by = if_else(any(has_keep), "tag", "surveyor+window"),
-              date = min(d), n_days = n_distinct(d), n_obs = dplyr::n(),
-              .groups = "drop")
+    summarise(confirmed_by = if_else(any(n_tag > 0), "tag", "surveyor+window"),
+              date = min(d), n_days = dplyr::n_distinct(d), n_obs = sum(pmax(n_tag, n_flag)),
+              max_gap = max(gap), .groups = "drop")
 
   beeple <- w |>
     inner_join(conf, by = ".wid") |>
@@ -334,23 +382,37 @@ fpi_survey_dates <- function(membership, windows, roster,
               window_start, window_end, transects = transect,
               surveyors = first_name, inat_username = uname,
               method, technique, confirmed = TRUE, confirmed_by, n_obs, n_days,
-              note = if_else(n_days > 1,
-                             paste0("multi-day window (", n_days, " days) -- verify one survey or several"),
-                             NA_character_)) |>
+              note = dplyr::case_when(
+                n_days > 1  ~ paste0("multi-day (", n_days, " days) -- verify one survey or several"),
+                max_gap > 0 ~ paste0("surveyed ", max_gap, "d off the planned window"),
+                TRUE        ~ NA_character_)) |>
     select(any_of(SD_COLUMNS))
 
-  # ---- REVIEW: windows with no confirming obs ----
-  any_in_win <- in_win |> group_by(.wid) |>
-    summarise(n_any = dplyr::n(), n_incabr = sum(in_cabr), .groups = "drop")
-  review <- w |> filter(!(.wid %in% conf$.wid)) |>
-    left_join(any_in_win, by = ".wid") |>
+  # ---- REVIEW: windows with no confirming survey day ----
+  # Count the surveyor's obs within tol_days of the window (all statuses) so we can
+  # tell empty (no obs at all) from off-site (obs but none in CABR) from too-few
+  # (in-CABR obs present but below the survey-day threshold / drifted & sparse).
+  allmem <- membership |>
+    transmute(uname = observer, d = as.Date(observed_on),
+              yr = suppressWarnings(as.integer(format(as.Date(observed_on), "%Y"))),
+              sig = status %in% c("keep", "flag")) |>
+    filter(!is.na(uname), !is.na(d))
+  near_ct <- allmem |>
+    inner_join(wsel, by = c("uname", "yr" = "year"), relationship = "many-to-many") |>
+    mutate(gap = pmax(0L, as.integer(window_start - d), as.integer(d - window_end))) |>
+    filter(gap <= tol_days) |>
+    group_by(.wid) |> summarise(n_any = dplyr::n(), n_sig = sum(sig), .groups = "drop")
+  # Drop FUTURE windows -- a survey whose window hasn't started yet can't be
+  # confirmed or ruled; it re-surfaces automatically once window_start has passed.
+  review <- w |> filter(!(.wid %in% conf$.wid), window_start <= Sys.Date()) |>
+    left_join(near_ct, by = ".wid") |>
     transmute(year, first_name, inat_username = uname,
               window_start, window_end, transect,
               review_reason = case_when(
-                is.na(uname)                ~ "no-username",
-                coalesce(n_any, 0L) == 0    ~ "empty",
-                coalesce(n_incabr, 0L) == 0 ~ "off-site",
-                TRUE                        ~ "excluded-in-box"),
+                is.na(uname)              ~ "no-username",
+                coalesce(n_any, 0L) == 0  ~ "empty",
+                coalesce(n_sig, 0L) == 0  ~ "off-site",
+                TRUE                      ~ "too-few-obs"),
               n_obs_in_window = coalesce(n_any, 0L),
               decision = NA_character_, decision_note = NA_character_) |>
     arrange(year, first_name, window_start)
@@ -368,7 +430,24 @@ fpi_survey_dates <- function(membership, windows, roster,
     }
   }
 
-  survey_dates <- bind_rows(interns, beeple) |>
+  # ---- windows CONFIRMED BY HAND in the review queue -> promote into survey_dates ----
+  # A window you rule "survey" in survey_windows_to_review.csv becomes a confirmed
+  # survey here (confirmed_by = "review"); "no" / "unsure" / blank stay out.
+  manual <- review |>
+    filter(tolower(trimws(coalesce(decision, ""))) %in% c("survey", "yes", "y")) |>
+    left_join(ros_b |> select(year, first_name, method, technique),
+              by = c("year", "first_name")) |>
+    transmute(year, role = "beeple", source = "beeple-window",
+              date = window_start, window_start, window_end,
+              transects = transect, surveyors = first_name, inat_username,
+              method = coalesce(method, "non-lethal"), technique = coalesce(technique, "photo"),
+              confirmed = TRUE, confirmed_by = "review",
+              n_obs = n_obs_in_window, n_days = NA_integer_,
+              note = coalesce(na_if(trimws(as.character(decision_note)), ""),
+                              "confirmed by hand from review queue")) |>
+    select(any_of(SD_COLUMNS))
+
+  survey_dates <- bind_rows(interns, beeple, manual) |>
     mutate(across(where(is.character), ~ na_if(.x, ""))) |>
     arrange(year, date, window_start, role, surveyors) |>
     select(any_of(SD_COLUMNS))
@@ -385,8 +464,13 @@ finding_project_info <- function(write = TRUE) {
   windows   <- read_csv(FPI_WINDOWS, show_col_types = FALSE)
   tagmap    <- fpi_build_tagmap(crosswalk)
 
-  # load + normalize each export (bee now; plant later)
+  # load + normalize each export (bee + plant). A listed-but-absent export (e.g.
+  # plant, before the first plant pull) is skipped -- map_dfr drops the NULL.
   base <- purrr::map_dfr(FPI_EXPORTS, function(s) {
+    if (!file.exists(s$path)) {
+      message("  (export absent, skipping ", s$kind, ": ", s$path, ")")
+      return(NULL)
+    }
     x <- readRDS(s$path)
     x$obs_id <- x$id; x$kind <- s$kind
     x |> mutate(observer = user_login, observed_on = as.Date(observed_on)) |>

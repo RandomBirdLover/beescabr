@@ -32,6 +32,7 @@ ingest_observations <- function(con,
                                 taxon_id = TAXON_ANTHOPHILA,
                                 without_taxon_id = TAXON_APIS_MELLIFERA,
                                 incremental = TRUE,
+                                state_path = INGEST_STATE_PATH,
                                 extra_query = list(),
                                 per_page = 200L,
                                 commit_every = 25L,
@@ -87,15 +88,15 @@ ingest_observations <- function(con,
   # Pass 2: re-identified/edited observations since our last ingest. iNat's
   # updated_since returns anything changed after that time; upsert catches the
   # re-IDs. Skipped on a full re-walk (which already re-pulls everything).
-  last_ts <- if (incremental && file.exists(INGEST_STATE_PATH)) trimws(readLines(INGEST_STATE_PATH, warn = FALSE)[1]) else NA
+  last_ts <- if (incremental && file.exists(state_path)) trimws(readLines(state_path, warn = FALSE)[1]) else NA
   if (!is.na(last_ts) && nzchar(last_ts)) {
     if (verbose) message("Ingest: re-pulling observations updated since ", last_ts, " ...")
     n_written <- n_written + run_pass(c(base_query, list(updated_since = last_ts)), 0L, "updated")
   }
 
   # Stamp this run's time (UTC) so the next refresh knows the cutoff.
-  dir.create(dirname(INGEST_STATE_PATH), recursive = TRUE, showWarnings = FALSE)
-  writeLines(format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"), INGEST_STATE_PATH)
+  dir.create(dirname(state_path), recursive = TRUE, showWarnings = FALSE)
+  writeLines(format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"), state_path)
 
   if (verbose)
     message(sprintf("Ingest complete: %d rows written. Cache holds %d observations.",

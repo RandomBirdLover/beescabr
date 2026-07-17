@@ -32,7 +32,18 @@ CW_PATH    <- "data/project_info/crosswalk_master.csv"
 UNK_TAGS   <- "data/project_info/crosswalk_unknown_bee_tags.csv"
 UNK_FIELDS <- "data/project_info/crosswalk_unknown_bee_fields.csv"
 
-.split <- function(s) if (is.na(s) || s == "") character(0) else str_trim(str_split(s, ";\\s*")[[1]])
+# paren-aware split: don't break on ";" inside "(...)" -- some field NAMES embed
+# their allowed values, e.g. "soil type (sandy; loam; clay)" is ONE variant.
+.split <- function(s) {
+  if (is.na(s) || s == "") return(character(0))
+  out <- character(0); buf <- ""; depth <- 0L
+  for (ch in strsplit(s, "", fixed = TRUE)[[1]]) {
+    if (ch == "(") depth <- depth + 1L
+    else if (ch == ")") depth <- if (depth > 0L) depth - 1L else 0L
+    if (depth == 0L && ch == ";") { out <- c(out, buf); buf <- "" } else buf <- paste0(buf, ch)
+  }
+  out <- str_trim(c(out, buf)); out[nzchar(out)]
+}
 .join  <- function(v) { v <- unique(v[!is.na(v) & v != "" & !(tolower(v) %in% c("n/a", "na"))])
                         if (length(v)) paste(v, collapse = "; ") else NA_character_ }
 

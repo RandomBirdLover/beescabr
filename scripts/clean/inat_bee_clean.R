@@ -15,6 +15,27 @@
 #   BEESCABR_SKIP_INGEST=1 reuses the cache without hitting the API.
 # =============================================================
 
+# -------------------------------------------------------------------
+# TODO (rewrite) -- SUSPICIOUS-ANNOTATION QC:
+# Beyond cleaning, this step should FLAG survey annotations that break the
+# field protocol -- write them to a QC side-file for review, do NOT hard-drop:
+#   * "10-minute survey" over-applied. The 10-min timed survey is run ONCE per
+#     transect per day. If EVERY observation on a given day (or for one
+#     surveyor/transect) carries the CabrilloBee10MinuteSurvey tag/field, the
+#     tag was almost certainly applied to the whole day's uploads rather than
+#     just the timed window -> flag it; don't trust those as true 10-min records.
+#   * survey-tagged but WRONG LOCATION. An obs whose tag/field marks it as
+#     survey data but whose coordinates either (a) fall OUTSIDE the CABR
+#     boundary box, or (b) land in a DIFFERENT transect polygon than the one
+#     its transect tag/field names (e.g. tagged TP1 but the point sits inside
+#     the BST shapefile) -> the coordinates or the transect label is wrong;
+#     flag for review (point-in-polygon test each transect shapefile).
+#   * sibling checks to add as they surface: a transect logged twice the same
+#     day, meta_data on non-survey days, a surveyor's whole day tagged one
+#     transect, etc.
+# (See also the missing-tag + misplaced checks noted in docs/TODO.md.)
+# -------------------------------------------------------------------
+
 library(dplyr)
 library(stringr)
 library(readr)

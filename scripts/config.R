@@ -33,6 +33,22 @@ TAXON_APIS_MELLIFERA <- 47219L
 # the retired CSV export was scoped to. Same id used in the Python pipeline.
 PLACE_SD_COUNTY_BUFFER <- 118491L
 
+# ---- PLANT ingest: taxon / place ---------------------------------------------
+# Vascular plants (Tracheophyta) -- the ROOT taxon for the plant pull. Chosen
+# over Angiospermae because gymnosperms AND angiosperms both bear pollen (the bee
+# forage we care about); the few ferns/lycophytes that ride along are harmless and
+# get dropped by the flowering/pollen filter downstream. Same philosophy as the
+# bee ingest: pull broad at the root, narrow in the clean/analysis layer.
+# Sanity-check the id on the first run (the ingest prints it): api taxa/211194.
+TAXON_TRACHEOPHYTA <- 211194L
+# iNat place for the plant pull. Point Loma Peninsula (132551) FULLY CONTAINS the
+# cabr_survey_box (which is hand-drawn to extend past the NPS monument outline),
+# so it won't clip edge survey spots; the brain re-filters to the exact box by
+# point-in-polygon, discarding the rest. Cabrillo National Monument alone
+# (place 4715) is tighter/smaller but risks clipping the box -- kept for reference.
+PLACE_POINT_LOMA    <- 132551L
+PLACE_CABR_MONUMENT <- 4715L
+
 # ---- DuckDB cache ------------------------------------------------------------
 # One on-disk DuckDB file acts as the cache for BOTH observation objects
 # (with a spatial geometry column) and taxon request objects. This replaces
@@ -50,6 +66,15 @@ EXPORT_FLAT_CACHE <- "data/cache/export_flat.rds"
 # observations that were re-identified/edited on iNaturalist since then
 # (updated_since), not just brand-new ones.
 INGEST_STATE_PATH <- "data/cache/last_ingest.txt"
+
+# ---- PLANT cache (kept SEPARATE from the bee cache) ---------------------------
+# The plant ingest uses its OWN DuckDB file, export RDS, and updated_since state,
+# so its incremental id-cursor never collides with the bee cache and a plant pull
+# never invalidates the (expensive) 77k-bee export fingerprint. Identical schema
+# and code path -- just a different connection + paths (see ingest_plants.R).
+DB_CACHE_PATH_PLANT     <- "data/cache/inat_cache_plant.duckdb"
+EXPORT_FLAT_PLANT_CACHE <- "data/cache/export_flat_plant.rds"
+INGEST_STATE_PATH_PLANT <- "data/cache/last_ingest_plant.txt"
 
 # ---- Observation-field id map ------------------------------------------------
 # The flatten step builds `field:<lower(name)>` columns generically from the
