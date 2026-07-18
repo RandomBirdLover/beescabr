@@ -22,4 +22,4 @@ never flagged.
 Consequence for analysis: per-transect coverage/effort may be incomplete -- a
 transect can have gaps this method will not surface. Any analysis that depends on
 per-transect effort should verify coverage separately against the raw beeple
-calendar, not rely on survey_dates.csv alone.
+calendar, not rely on per_survey_information.csv alone.

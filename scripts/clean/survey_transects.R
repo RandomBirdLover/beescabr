@@ -8,19 +8,19 @@
 #     & survey_type=="beeple" obs are resolved.
 #   * A clear MAJORITY wins automatically.
 #   * A TIE (no strict majority -- looks like they did two transects in a day) is NOT
-#     guessed. It goes to survey_transect_ties_to_review.csv with the per-transect tag
+#     guessed. It goes to review_transect_overlap.csv with the per-transect tag
 #     counts, and you rule it in review_transect_ties(): pick the real transect, or
 #     "both" to keep it as a genuine two-transect day. Your ruling is applied next run.
 #   * Raw tag kept in `transect_tagged`; `transect` becomes the resolved value.
-#   * Outvoted obs -> survey_mistagged_transect_obs.csv (obs URL + tagged vs should_be).
+#   * Outvoted obs -> review_mistagged_transects.csv (obs URL + tagged vs should_be).
 #
 # No shapefiles -- pure tag counting. Called by finding_project_info.R on the membership,
 # AFTER it is built and BEFORE survey_dates.
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(tibble); library(readr)}))
 
-ST_MISTAG_OUT <- "data/project_info/survey_mistagged_transect_obs.csv"
-ST_TIES_OUT   <- "data/project_info/survey_transect_ties_to_review.csv"
+ST_MISTAG_OUT <- "data/project_info/review/review_mistagged_transects.csv"
+ST_TIES_OUT   <- "data/project_info/review/review_transect_overlap.csv"
 
 st_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))

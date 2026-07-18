@@ -4,7 +4,7 @@
 # the numeric iNat field_id. This pulls the name -> field_id map back out of the
 # raw observation cache so the crosswalk can carry real IDs.
 #
-# Writes data/project_info/inat_field_id_map.csv  (field_name, inat_field_id).
+# Writes data/project_info/inputs/inat_field_id_map.csv  (field_name, inat_field_id).
 # Run in RStudio (needs the DuckDB cache):
 #   source("scripts/utils/build_field_id_map.R")
 # =============================================================
@@ -16,17 +16,30 @@ local({
 })
 suppressMessages({library(DBI); library(dplyr); library(readr)})
 
-build_field_id_map <- function(out = "data/project_info/inat_field_id_map.csv") {
+build_field_id_map <- function(out = "data/project_info/inputs/inat_field_id_map.csv") {
   con <- store_connect(); on.exit(store_disconnect(con), add = TRUE)
 
   # Fast path: unnest the ofvs array in DuckDB and collect distinct (name, id).
+  # NOTE: casting the ofvs array to JSON[] (or unnesting a wildcard $.ofvs[*])
+  # makes DuckDB try to unify the element type and it errors
+  # ("Failed to cast value to numerical: {...}") on the mixed-type ofv objects.
+  # Two robust alternatives, both verified against DuckDB 1.5.4:
+  #   * from_json(..., '["JSON"]') keeps each element as JSON, so we extract
+  #     name + field_id from the SAME object (alignment-safe -- a wildcard like
+  #     $.ofvs[*].field_id COMPACTS out missing ids and mis-pairs them).
+  #   * json_extract_string always yields VARCHAR, dodging the numeric cast.
   q <- "
-    SELECT j->>'$.name' AS field_name,
-           string_agg(DISTINCT j->>'$.field_id', '; ') AS inat_field_id
-    FROM inat_observations,
-         UNNEST(CAST(CAST(raw_data AS JSON)->'$.ofvs' AS JSON[])) AS t(j)
-    WHERE j->>'$.field_id' IS NOT NULL AND j->>'$.name' IS NOT NULL
-    GROUP BY j->>'$.name'
+    WITH ofv AS (
+      SELECT UNNEST(from_json(json_extract(raw_data, '$.ofvs'), '[\"JSON\"]')) AS j
+      FROM inat_observations
+      WHERE json_extract(raw_data, '$.ofvs') IS NOT NULL
+    )
+    SELECT json_extract_string(j, '$.name')     AS field_name,
+           string_agg(DISTINCT json_extract_string(j, '$.field_id'), '; ') AS inat_field_id
+    FROM ofv
+    WHERE json_extract_string(j, '$.field_id') IS NOT NULL
+      AND json_extract_string(j, '$.name')     IS NOT NULL
+    GROUP BY 1
   "
   map <- tryCatch(DBI::dbGetQuery(con, q), error = function(e) {
     message("DuckDB JSON path failed (", conditionMessage(e), ") -- falling back to R parse.")

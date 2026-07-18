@@ -60,7 +60,7 @@ beescabr/
     utils/
       utils.R                        # shared read_latest(), require_columns()
       parse_beeple_calendars.py      # parses annual calendar PDFs → beeple_calendar_windows.csv
-      survey_dates.R                 # infers beeple survey dates from iNat obs → beeple_survey_dates_official.csv + intern_survey_dates_official.csv
+      survey_dates.R                 # infers beeple survey dates from iNat obs → beeple_survey_dates_official.csv
     clean/
       inat_bee_clean.R               # cleans non-lethal bee iNat data (intern + beeple)
       inat_plant_clean.R             # cleans non-lethal plant iNat data
@@ -83,10 +83,8 @@ beescabr/
       beeple_calendar_windows.csv  # parsed from annual calendar PDFs: one row per (year, person, transect, window)
       beeple_calendar/             # annual calendar PDFs: "YYYY Cabrillo Bee Survey Calendar.pdf"
                                    # drop new year's PDF here and re-run parse_beeple_calendars.py
-      intern_survey_dates.csv               # raw intern dates input (one row per person per date)
       beeple_survey_dates_official.csv      # PERMANENT beeple record; one row per window, transects as username columns
                                             # rows marked "manual" or "skipped" are never overwritten
-      intern_survey_dates_official.csv      # PERMANENT intern record; one row per date, full names + usernames
       survey_dates_needs_review.csv         # ambiguous/no_obs beeple windows needing manual attention (auto-deleted when resolved)
     reference_exports/
       gbif/                        # GBIF regional reference exports

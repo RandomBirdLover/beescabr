@@ -26,7 +26,7 @@
 # Run (standalone):
 #   source("scripts/clean/qc_misplaced_transect.R")
 #   qc_misplaced_transect("data/cache/export_flat.rds",
-#                         "data/project_info/project_unclean_bee_observations.csv",
+#                         "data/project_info/records/per_observation_raw_info.csv",
 #                         kind = "bee",
 #                         out_path = "data/outputs/inat_clean/qc/cabr_inat_bee_misplaced_transect.csv")
 # =============================================================
@@ -48,7 +48,7 @@ qc_norm_transect <- function(x) {
 }
 
 # export_path      -- data/cache/export_flat.rds (bee) or export_flat_plant.rds (plant); has coords
-# membership_path  -- project_unclean_bee_observations.csv (the shared per-obs lookup)
+# membership_path  -- per_observation_raw_info.csv (the shared per-obs lookup)
 # kind             -- "bee" / "plant" to filter the membership (NULL = all); tolerated if absent
 qc_misplaced_transect <- function(export_path, membership_path,
                                   kind          = NULL,

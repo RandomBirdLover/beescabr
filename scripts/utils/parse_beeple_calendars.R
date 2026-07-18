@@ -21,8 +21,8 @@ library(dplyr)
 library(stringr)
 library(purrr)
 
-CALENDAR_DIR <- "data/project_info/beeple_calendar"
-WINDOWS_OUT  <- "data/project_info/beeple_calendar_windows.csv"
+CALENDAR_DIR <- "data/project_info/inputs/beeple_calendar_pdfs"
+WINDOWS_OUT  <- "data/project_info/inputs/beeple_calendar_windows.csv"
 
 MONTHS <- c(January=1, February=2, March=3, April=4, May=5, June=6,
             July=7, August=8, September=9, October=10, November=11, December=12)

@@ -1,7 +1,7 @@
 # =============================================================
 # clean/review_crosswalk.R
 # beescabr -- interactive review of unknown tags & fields
-# Rewritten 2026-07-14 for the concept-per-row crosswalk_master.csv.
+# Rewritten 2026-07-14 for the concept-per-row master_crosswalk.csv.
 # Auto-suggest + multi-file + help block added 2026-07-15.
 #
 # Feels like the bee-name resolver. It shows each unknown tag/field one at a
@@ -20,7 +20,7 @@
 # Filing appends the item to that concept's variant cell (deduped):
 #   a tag   -> inat_tag_variants     a field -> inat_field_variants
 # After you finish, re-run finding_project_info() -- everything you filed drops
-# out of the unknown reports because it's now recognized in crosswalk_master.csv.
+# out of the unknown reports because it's now recognized in master_crosswalk.csv.
 #
 # Run: source("scripts/clean/review_crosswalk.R"); review_unknowns("tags")
 #      then                                        review_unknowns("fields")
@@ -28,9 +28,9 @@
 
 library(dplyr); library(readr); library(stringr)
 
-CW_PATH    <- "data/project_info/crosswalk_master.csv"
-UNK_TAGS   <- "data/project_info/crosswalk_unknown_bee_tags.csv"
-UNK_FIELDS <- "data/project_info/crosswalk_unknown_bee_fields.csv"
+CW_PATH    <- "data/project_info/inputs/master_crosswalk.csv"
+UNK_TAGS   <- "data/project_info/review/review_inat_unknown_tags.csv"
+UNK_FIELDS <- "data/project_info/review/review_inat_unknown_fields.csv"
 
 # paren-aware split: don't break on ";" inside "(...)" -- some field NAMES embed
 # their allowed values, e.g. "soil type (sandy; loam; clay)" is ONE variant.
@@ -204,7 +204,7 @@ review_unknowns <- function(kind = c("tags", "fields"), cw_path = CW_PATH,
     } else cat("  ? didn't understand -- skipped\n")
   }
 
-  if (changed && write) { write.csv(cw, cw_path, row.names = FALSE, na = ""); cat("\nSaved crosswalk_master.csv\n") }
+  if (changed && write) { write.csv(cw, cw_path, row.names = FALSE, na = ""); cat("\nSaved master_crosswalk.csv\n") }
   else cat("\nNo changes written.\n")
   invisible(cw)
 }

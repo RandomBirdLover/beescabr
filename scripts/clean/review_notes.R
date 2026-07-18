@@ -4,7 +4,7 @@
 # Created 2026-07-16.
 #
 # STANDALONE -- deliberately NOT wired into run_pipeline.R. The pipeline builds
-# the input file (the brain's crosswalk_unknown_bee_notes.csv); triaging free
+# the input file (the brain's review_inat_unknown_notes.csv); triaging free
 # text is a human job, so you run this by hand when you're ready.
 #
 # Why notes get their OWN reviewer (not review_crosswalk.R):
@@ -21,10 +21,10 @@
 #   <Enter>  accept the highlighted (*) guess      u  unsure -> park as "ambiguous"
 #   s        skip (stays un-reviewed, returns)      q  save & quit      ?  help
 #
-# Input:   data/project_info/crosswalk_unknown_bee_notes.csv   (brain output)
-# Output:  data/project_info/notes_reviewed.csv                (persistent, per obs_id)
+# Input:   data/project_info/review/review_inat_unknown_notes.csv   (brain output)
+# Output:  data/project_info/review/notes_reviewed.csv                (persistent, per obs_id)
 #   Non-interactive preview only:
-#          data/project_info/notes_auto_suggestions.csv        (guesses, un-reviewed)
+#          data/project_info/review/notes_auto_suggestions.csv        (guesses, un-reviewed)
 #
 # Run: source("scripts/clean/review_notes.R"); review_notes()
 #      BEESCABR_NONINTERACTIVE=1 Rscript -e 'source(...); review_notes()'  # preview guesses
@@ -32,9 +32,9 @@
 
 library(dplyr); library(readr); library(stringr)
 
-NOTES_IN       <- "data/project_info/crosswalk_unknown_bee_notes.csv"
-NOTES_REVIEWED <- "data/project_info/notes_reviewed.csv"
-NOTES_SUGGEST  <- "data/project_info/notes_auto_suggestions.csv"
+NOTES_IN       <- "data/project_info/review/review_inat_unknown_notes.csv"
+NOTES_REVIEWED <- "data/project_info/review/notes_reviewed.csv"
+NOTES_SUGGEST  <- "data/project_info/review/notes_auto_suggestions.csv"
 
 # The categories a note can be filed under. 1/2/3 are what you type; a note the
 # guesser can't place (or you mark 'u') lands in "ambiguous".

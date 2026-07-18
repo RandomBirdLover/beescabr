@@ -10,7 +10,7 @@
 #   2b. PLANTS   pull vascular plants -> SEPARATE plant cache -> export_flat_plant.rds
 #                (the brain's second input; survey-day confirm + flower resources)
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
-#                project_unclean + unknown tags/fields/notes -> survey_dates.csv
+#                project_unclean + unknown tags/fields/notes -> per_survey_information.csv
 #   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
 #                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
 #                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
@@ -60,6 +60,7 @@ source("scripts/clean/verify.R")                   # flag_new_taxa/holway_name_s
                                                    # (taxonomy_reference.R only loads it if absent)
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
 source("scripts/clean/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
+source("scripts/clean/finding_specimen_dates.R")   # newest specimen .xlsx -> inputs/specimen_dates.csv
 source("scripts/clean/review_crosswalk.R")         # interactive review of unknown tags + fields
 source("scripts/clean/review_windows.R")           # interactive review of survey-date windows
 source("scripts/checklists/holway.R")
@@ -118,10 +119,17 @@ main <- function() {
     )
   }
 
+  # ---- 2c. SPECIMENS: rebuild specimen_dates.csv from the newest specimen .xlsx ----
+  # Aggregates the newest cabr_bee_specimens_record_V*.xlsx -> inputs/specimen_dates.csv,
+  # which the brain reads to stamp n_speci on lethal days + add an intern row for any
+  # netting day not in the intern log. Skips quietly if no specimen .xlsx is present.
+  message("\n== [2c] SPECIMENS: newest specimen record -> inputs/specimen_dates.csv ==")
+  finding_specimen_dates()
+
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
   # finding_project_info() decides survey membership from crosswalk_master, writes
-  # project_unclean_bee_observations.csv, the THREE unknown reports (review them by
-  # hand in order -> update crosswalk_master -> re-run), and builds survey_dates.csv
+  # per_observation_raw_info.csv, the THREE unknown reports (review them by
+  # hand in order -> update crosswalk_master -> re-run), and builds per_survey_information.csv
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
   message("\n== [3] BRAIN: finding_project_info (membership -> unknown tags/fields/notes -> survey_dates) ==")
   finding_project_info()

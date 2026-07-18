@@ -569,7 +569,7 @@ clean <- all_obs |>
     missing_coords,
 
     # --- Triage ---
-    triage,               # keep / flag / exclude / recovered_by_date (Step 9)
+    triage,               # keep / flag / exclude
     triage_reason,
     has_survey_from_tags_field,  # TRUE = rescued via Tags obs_field override
     survey_year,
@@ -624,77 +624,6 @@ if (nrow(unknown_tags) > 0) {
 }
 
 
-# =============================================================
-# 9. DATE-BASED RECOVERY (optional second pass)
-# =============================================================
-# Only runs after survey_dates.R has produced the official date files.
-# Adds on_survey_date to all obs and recovers "flag" obs that occurred
-# on a confirmed survey date (most likely forgot the survey hashtag).
-#
-# To trigger: run survey_dates.R first, then re-run inat_bee_clean.R.
-beeple_official <- "data/project_info/beeple_survey_dates_official.csv"
-intern_official  <- "data/project_info/intern_survey_dates_official.csv"
-
-if (file.exists(beeple_official) && file.exists(intern_official)) {
-  message("\n--- Step 9: Date-based recovery ---")
-
-  # Beeple confirmed dates: each confirmed/manual row has usernames per transect column
-  TRANSECT_COLS <- c("OT", "TP1", "TP2", "UPMON", "BST")
-
-  beeple_dates <- read_csv(beeple_official, show_col_types = FALSE) |>
-    filter(status %in% c("confirmed", "manual")) |>
-    select(date, any_of(TRANSECT_COLS)) |>
-    pivot_longer(-date, names_to = "t", values_to = "username") |>
-    filter(!is.na(username), !is.na(date)) |>
-    transmute(username, date = as.Date(date))
-
-  # Intern confirmed dates: each row has one or two usernames
-  intern_dates <- read_csv(intern_official, show_col_types = FALSE) |>
-    filter(status == "confirmed") |>
-    select(date, any_of(c("username_1", "username_2"))) |>
-    pivot_longer(-date, names_to = NULL, values_to = "username") |>
-    filter(!is.na(username), !is.na(date)) |>
-    transmute(username, date = as.Date(date))
-
-  confirmed_events <- bind_rows(beeple_dates, intern_dates) |>
-    distinct() |>
-    mutate(on_survey_date = TRUE)
-
-  clean <- clean |>
-    left_join(confirmed_events,
-              by = c("observer" = "username", "observed_date" = "date")) |>
-    mutate(
-      on_survey_date = coalesce(on_survey_date, FALSE),
-      triage = if_else(
-        triage == "flag" & on_survey_date,
-        "recovered_by_date",
-        triage
-      ),
-      triage_reason = if_else(
-        triage == "recovered_by_date",
-        "no survey tag but obs date matches confirmed survey date",
-        triage_reason
-      )
-    )
-
-  n_recovered    <- sum(clean$triage == "recovered_by_date", na.rm = TRUE)
-  n_keep_offdate <- sum(clean$triage == "keep" & !clean$on_survey_date, na.rm = TRUE)
-
-  message(sprintf("  %d obs recovered (on confirmed survey date, lacked tag)", n_recovered))
-  if (n_keep_offdate > 0)
-    message(sprintf(
-      "  NOTE: %d 'keep' obs fall outside confirmed survey dates -- possible personal visits",
-      n_keep_offdate
-    ))
-
-  write_fresh_csv(clean, out_clean, na = "")
-  message(sprintf("  Updated with on_survey_date + recovery -> %s", out_clean))
-
-} else {
-  message("\nSkipping date recovery -- run survey_dates.R first, then re-run this script.")
-  message("(Re-run adds on_survey_date column and recovers untagged survey obs.)")
-}
-
 # --- helpers used by the QC worklists below (write_fresh clears a stale file/dir first) ---
 if (!exists("write_fresh")) write_fresh <- function(x, path, ...) {
   if (dir.exists(path)) unlink(path, recursive = TRUE, force = TRUE)
@@ -712,7 +641,7 @@ if (!exists("col_or_na")) col_or_na <- function(df, name, n = nrow(df)) if (name
 # if ANY of the ~20 visited-plant fields (not just the 4 authoritative ones) is filled.
 #
 # Standalone by design: reads the flattened export + the brain's membership
-# (project_unclean_bee_observations.csv, for survey status), so it runs on its own.
+# (per_observation_raw_info.csv, for survey status), so it runs on its own.
 #   source("scripts/clean/inat_bee_clean.R"); qc_missing_flower()
 # ============================================================================
 
@@ -745,7 +674,7 @@ FLOWER_NONFLOWER_RX <- "nest|ground|mat(e|ing)|copulat|sleep|rest|dead|prey|pred
 
 qc_missing_flower <- function(
     export_path     = if (exists("EXPORT_FLAT_CACHE")) EXPORT_FLAT_CACHE else "data/cache/export_flat.rds",
-    membership_path = "data/project_info/project_unclean_bee_observations.csv",
+    membership_path = "data/project_info/records/per_observation_raw_info.csv",
     out_path        = "data/outputs/inat_clean/qc/cabr_inat_bee_missing_flower.csv",
     statuses        = "keep",   # which membership statuses to check (survey obs)
     write           = TRUE) {
@@ -802,7 +731,7 @@ if (!exists("BEESCABR_SOURCED_BY_RUNNER")) {
     source("scripts/clean/qc_misplaced_transect.R")
     qc_misplaced_transect(
       export_path     = "data/cache/export_flat.rds",
-      membership_path = "data/project_info/project_unclean_bee_observations.csv",
+      membership_path = "data/project_info/records/per_observation_raw_info.csv",
       kind            = "bee",
       out_path        = "data/outputs/inat_clean/qc/cabr_inat_bee_misplaced_transect.csv")
   }, error = function(e) message("  (transect QC skipped: ", conditionMessage(e), ")"))
