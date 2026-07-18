@@ -12,9 +12,9 @@
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
 #                project_unclean + unknown tags/fields/notes -> survey_dates.csv
 #   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
-#                re-run brain; then 3d rule the survey-date windows the brain
-#                couldn't auto-confirm (last, so it sees all tags + fields) ->
-#                re-run brain. Notes reviewer is standalone. Skipped non-interactive.
+#                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
+#                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
+#                transect ties. Notes reviewer is standalone. Skipped non-interactive.
 #   4.  CLEAN    cabr_inat_bee_clean.csv (pending its rewrite -- run by hand)
 #   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
 #                per-source checklists (parked until built)
@@ -151,15 +151,25 @@ main <- function() {
     if (n_notes > 0)
       message("  NOTE: ", n_notes, " unknown NOTES remain -- run review_notes.R by hand (standalone).")
 
-    # [3d] SURVEY-DATE WINDOWS -- rule the ones the brain couldn't auto-confirm.
-    # Runs LAST so it sees every tag + field; then re-run so "survey" rulings fold
-    # into survey_dates.csv (confirmed_by = "review").
+    # [3d] SURVEY-DATE WINDOWS -- heads-up queue of planned windows with no tagged
+    # survey nearby (possible missed surveys). Runs LAST so it sees every tag + field.
+    # Ruling a window is for YOUR records only -- it never adds a survey date (nothing
+    # is hand-added; no tag = not a survey day), so there is NO brain re-run after it.
     n_win <- .n_windows(FPI_REVIEW)
     if (n_win > 0) {
-      message("\n== [3d] REVIEW survey windows: ", n_win, " to rule ==")
+      message("\n== [3d] REVIEW survey windows: ", n_win, " to rule (heads-up only) ==")
       review_windows()
-      message("\n== [3e] Re-running the brain to fold in your window rulings ==")
-      finding_project_info()
+    }
+
+    # [3e] TRANSECT TIES -- equal-split survey days the resolver couldn't call by
+    # majority (a beeple's obs tagged evenly across two transects). Rule which transect
+    # the day really was, or "both". A ruling re-stamps that day on the NEXT pipeline run.
+    n_ties <- .n_windows(FPI_TIES)   # reuse the blank/unsure "still to rule" counter
+    if (n_ties > 0) {
+      message("\n== [3e] REVIEW transect ties: ", n_ties, " to rule ==")
+      review_transect_ties()
+    } else {
+      message("\n== [3e] REVIEW transect ties: nothing to rule ==")
     }
   } else {
     message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R / review_windows.R by hand ==")

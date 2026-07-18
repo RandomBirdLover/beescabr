@@ -386,3 +386,17 @@ if (nrow(clean) == 0) {
     cat("\nNo new tags or fields to review -- crosswalk fully covers this export.\n")
   }
 }
+
+# ============================================================
+# TRANSECT-COORDINATE QC (shared -- scripts/clean/qc_misplaced_transect.R)
+# ROUGH placeholder: OT overlaps TP (~1m) / UPMON (~21m) so OT flags are unreliable;
+# refine later (see docs/PITFALLS). Wired in so it runs with the plant clean step; safe to ignore.
+# ============================================================
+if (!exists("BEESCABR_SOURCED_BY_RUNNER")) tryCatch({
+  source("scripts/clean/qc_misplaced_transect.R")
+  qc_misplaced_transect(
+    export_path     = "data/cache/export_flat_plant.rds",
+    membership_path = "data/project_info/project_unclean_bee_observations.csv",
+    kind            = "plant",
+    out_path        = "data/outputs/inat_clean/qc/cabr_inat_plant_misplaced_transect.csv")
+}, error = function(e) message("  (transect QC skipped: ", conditionMessage(e), ")"))
