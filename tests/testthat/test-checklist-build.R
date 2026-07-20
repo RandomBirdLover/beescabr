@@ -109,3 +109,19 @@ test_that("combine_checklists unions taxa with per-source boolean flags named af
   bb <- comb[comb$genus=="Bombus" & comb$taxon_rank=="genus", ]
   expect_true(bb$inat && !bb$specimen)
 })
+
+test_that("lookup_subtree keeps same-epithet species in different genera as distinct rows", {
+  src("checklists/checklist_build.R")
+  lk <- tibble::tibble(
+    taxon_id=c(1,2,3,4), rank=c("genus","species","genus","species"),
+    scientific_name=c("Andrena","Andrena annectens","Brachynomada","Brachynomada annectens"),
+    common_name=NA_character_, order="Hymenoptera",
+    family=c("Andrenidae","Andrenidae","Apidae","Apidae"),
+    subfamily=NA_character_, tribe=NA_character_,
+    genus=c("Andrena","Andrena","Brachynomada","Brachynomada"),
+    subgenus=NA_character_, complex=NA_character_,
+    species=c(NA,"annectens",NA,"annectens"), subspecies=NA_character_)
+  out <- suppressMessages(lookup_subtree(lk, lk |> filter(taxon_id %in% c(2,4))))
+  expect_equal(sum(out$species=="annectens", na.rm=TRUE), 2)   # both kept, not merged
+  expect_setequal(out$taxon_id, c(1,2,3,4))
+})

@@ -168,13 +168,25 @@ CL_LINEAGE_RANKS <- c("kingdom", "phylum", "subphylum", "class", "subclass", "or
 .cl_rankcol <- function(df) if ("rank" %in% names(df)) as.character(df$rank) else
   if ("taxon_rank" %in% names(df)) as.character(df$taxon_rank) else rep(NA_character_, nrow(df))
 
-# normalized (rank, name) identity key -- subgenus loses parens + keeps last word; NA/blank -> NA
-.cl_key <- function(rank, name) {
-  rk <- tolower(trimws(as.character(rank))); nm <- trimws(as.character(name))
+# fully-qualified (rank, name) identity key. Infra-generic ranks are qualified by their genus
+# (species/subgenus/complex) or genus+species (subspecies), so "Andrena annectens" and
+# "Brachynomada annectens" are DIFFERENT taxa -- a bare epithet would wrongly merge them. Subgenus
+# names drop parens + keep the last word. Recycles a scalar rank over a vector name. NA/blank -> NA.
+.cl_key <- function(rank, name, genus_ctx = NA, species_ctx = NA) {
+  n <- max(length(rank), length(name), length(genus_ctx), length(species_ctx))
+  rk <- tolower(trimws(rep_len(as.character(rank), n)))
+  nm <- trimws(rep_len(as.character(name), n))
   is_sub <- !is.na(rk) & rk == "subgenus"
   nm[is_sub] <- sub(".*\\s", "", trimws(gsub("[()]", "", nm[is_sub])))
   nm <- tolower(nm)
-  ifelse(is.na(rk) | rk == "" | is.na(nm) | nm == "", NA_character_, paste(rk, nm, sep = "\t"))
+  g <- tolower(trimws(rep_len(as.character(genus_ctx), n)))
+  s <- tolower(trimws(rep_len(as.character(species_ctx), n)))
+  qual <- dplyr::case_when(
+    rk == "subspecies"                          ~ paste(g, s, sep = "|"),
+    rk %in% c("species", "subgenus", "complex") ~ g,
+    TRUE                                        ~ "")
+  key <- ifelse(qual == "", paste(rk, nm, sep = "\t"), paste(rk, qual, nm, sep = "\t"))
+  ifelse(is.na(rk) | rk == "" | is.na(nm) | nm == "", NA_character_, key)
 }
 # value a row carries at its OWN rank
 .cl_name_at_own_rank <- function(df) {
@@ -183,13 +195,19 @@ CL_LINEAGE_RANKS <- c("kingdom", "phylum", "subphylum", "class", "subclass", "or
     hit <- !is.na(rk) & rk == lv; if (any(hit)) out[hit] <- as.character(df[[lv]][hit]) }
   out
 }
-.cl_own_key <- function(df) .cl_key(.cl_rankcol(df), .cl_name_at_own_rank(df))
+.cl_own_key <- function(df) {
+  g <- if ("genus"   %in% names(df)) df$genus   else rep(NA_character_, nrow(df))
+  s <- if ("species" %in% names(df)) df$species else rep(NA_character_, nrow(df))
+  .cl_key(.cl_rankcol(df), .cl_name_at_own_rank(df), g, s)
+}
 
-# every (rank, name) key present in the lineages of df's rows
+# every (rank, name) key present in the lineages of df's rows (genus-qualified per row)
 checklist_lineage_keys <- function(df) {
+  g <- if ("genus"   %in% names(df)) df$genus   else rep(NA_character_, nrow(df))
+  s <- if ("species" %in% names(df)) df$species else rep(NA_character_, nrow(df))
   keys <- character(0)
   for (lv in CL_LINEAGE_RANKS) { if (!lv %in% names(df)) next
-    k <- .cl_key(lv, df[[lv]]); keys <- c(keys, k[!is.na(k)]) }
+    k <- .cl_key(lv, df[[lv]], g, s); keys <- c(keys, k[!is.na(k)]) }
   unique(keys)
 }
 # format any lookup/present-shaped frame to CHECKLIST_COLS (taxon_rank <- rank)

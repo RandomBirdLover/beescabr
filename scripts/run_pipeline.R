@@ -292,7 +292,7 @@ main <- function() {
   message("\n========================================")
   message("PIPELINE COMPLETE (core stages) in ", dt, " min")
   message("  Cache observations   : ", count_observations(con))
-  message("  Taxonomy lookup: built when the Holway reference table is present; checklists still pending.")
+  message("  All 9 stages live: brain (+rescue) -> Holway -> lookup -> specimens -> inat bee/plant clean -> 7 checklists.")
   message("Outputs under data/. Done.")
 }
 
