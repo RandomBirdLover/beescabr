@@ -8,12 +8,12 @@ Native bee biodiversity pipeline for Cabrillo National Monument (CABR), comparin
 
 New here? Do the one-time **Setup** below, then run the pipeline. In normal use, open `scripts/analysis/native_bee_data_analysis.Rmd` and run it chunk by chunk — it sources everything else in order. Individual scripts in dependency order:
 
-1. `scripts/clean/inat_bee_clean.R` — cleans non-lethal bee iNat data (intern + beeple); writes `data/outputs/inat_clean/cabr_inat_bee_clean.csv`.
-2. `scripts/clean/inat_plant_clean.R` — cleans non-lethal plant iNat data; writes `data/outputs/inat_clean/cabr_inat_plant_clean.csv`.
+1. `scripts/clean/inat_bee_clean.R` — cleans non-lethal bee iNat data (intern + beeple); writes `data/observations/inat_clean/cabr_inat_bee_clean.csv`.
+2. `scripts/clean/inat_plant_clean.R` — cleans non-lethal plant iNat data; writes `data/observations/inat_clean/cabr_inat_plant_clean.csv`.
 3. `scripts/checklists/native_bee_checklist.R` — writes Tier 1 and Tier 2 checklists. Auto-sources `spatial_utils.R`, `utils.R`, and `specimen_bee_clean.R` as needed. **Do not run `specimen_bee_clean.R` standalone first** — it depends on a file Part A of this script writes.
 4. `scripts/analysis/native_bee_data_analysis.Rmd` — orchestrator; sources the above and runs the richness/method analysis.
 
-Standalone diagnostics (run only when needed): `scripts/spatial/check_boundaries.R`, `plot_boundaries_individually.R`, `diagnose_county_gap.R`. One-time filter: `scripts/checklists/dorey_bee_checklist.R`.
+Standalone diagnostics (run only when needed): `scripts/spatial/check_boundaries.R`, `plot_boundaries_individually.R`, `diagnose_sd_county_gap.R`. One-time filter: `scripts/checklists/dorey_bee_checklist.R`.
 
 Full detail: see **Pipeline overview** below.
 
@@ -75,7 +75,7 @@ beescabr/
       spatial_utils.R                # loads + reprojects boundaries; containment checks; 10m transect buffers
       check_boundaries.R             # diagnostic: plots all boundaries overlaid
       plot_boundaries_individually.R # one map per boundary layer
-      diagnose_county_gap.R          # computes gap between point_loma_boundary and sd_county_boundary
+      diagnose_sd_county_gap.R          # computes gap between point_loma_boundary and sd_county_boundary
   data/                            # gitignored — NOT on GitHub (see .gitignore)
     project_info/
       surveyors_by_year.csv        # per-year surveyor roster: username, role, method, technique
@@ -286,30 +286,30 @@ Two scripts pull from the API rather than the CSV export:
                                          observation against project_tags_fields.csv into
                                          keep / flag / exclude. Adding rows/variants to the
                                          crosswalk changes behavior with no code edit.
-                                         → data/outputs/inat_clean/cabr_inat_bee_clean.csv
-                                         → data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv
+                                         → data/observations/inat_clean/cabr_inat_bee_clean.csv
+                                         → data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv
 
    scripts/clean/inat_plant_clean.R      same pipeline for non-lethal plant survey observations.
-                                         → data/outputs/inat_clean/cabr_inat_plant_clean.csv
-                                         → data/outputs/inat_clean/qc/cabr_inat_plant_unknown_tags.csv
+                                         → data/observations/inat_clean/cabr_inat_plant_clean.csv
+                                         → data/observations/inat_clean/qc/cabr_inat_plant_unknown_tags.csv
 
 3. scripts/checklists/native_bee_checklist.R
                                    PART A: reads the master iNat export, spatially splits into
                                    three tiers (SD County / Point Loma / CABR) using boundaries
                                    from spatial_utils.R, then deduplicates each subset to unique
                                    taxa. Hits iNat API ~400 calls once across all 3 tiers.
-                                   → data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv
-                                   → data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv
-                                   → data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv
+                                   → data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv
+                                   → data/checklists/point_loma/pl_inat_native_bee_checklist.csv
+                                   → data/checklists/cabr/cabr_inat_bee_checklist.csv
                                    TIER 1 (iNat-only) checklists. Only re-run if a file is missing.
 
                                    PART B: builds TIER 2 (merged) checklists in Holway-format
                                    columns, folding in CABR specimen evidence and a Holway
                                    cross-check for SD County.
-                                   → data/outputs/checklists/cabr/cabr_combined_native_bee_checklist.csv
-                                   → data/outputs/checklists/cabr/cabr_specimen_bee_checklist.csv
-                                   → data/outputs/checklists/point_loma/pl_native_bee_checklist.csv
-                                   → data/outputs/checklists/sd_county/sd_county_native_bee_checklist.csv
+                                   → data/checklists/cabr/cabr_combined_native_bee_checklist.csv
+                                   → data/checklists/cabr/cabr_specimen_bee_checklist.csv
+                                   → data/checklists/point_loma/pl_native_bee_checklist.csv
+                                   → data/checklists/sd_county/sd_county_native_bee_checklist.csv
 
                                    DEPENDENCY: Part B auto-sources specimen_bee_clean.R if its
                                    output is missing. But specimen_bee_clean.R needs
@@ -323,8 +323,8 @@ Two scripts pull from the API rather than the CSV export:
                                          matches complex/complex_taxon_id against the SD County
                                          TIER 1 checklist. Normally runs automatically via
                                          native_bee_checklist.R Part B, not standalone.
-                                         → data/outputs/specimens/cabr_specimen_bee_record_clean.csv
-                                         → data/outputs/specimens/cabr_specimen_bee_missing.csv
+                                         → data/specimens/cleaned/cabr_specimen_bee_record_clean.csv
+                                         → data/specimens/cleaned/cabr_specimen_bee_missing.csv
 
 5. scripts/analysis/native_bee_data_analysis.Rmd
                                          sources 2–4 above (which source 1), then runs the
@@ -341,7 +341,7 @@ Both `inat_bee_clean.R` and `inat_plant_clean.R` triage observations against the
 
 ### Unknown tags
 
-**`data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv`** (bees) and **`cabr_inat_plant_unknown_tags.csv`** (plants).
+**`data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv`** (bees) and **`cabr_inat_plant_unknown_tags.csv`** (plants).
 
 This list is normally long and mostly harmless — camera/lens tags (`D500`, `300mm f/4`), species names, photo filenames, `City Nature Challenge`, etc. Ignore those. Scan for one thing only: a tag that looks like a **missed survey tag** — a new typo or new survey year. If you spot one, add it as an `inat_variant` on the matching crosswalk row, re-run, and those observations move from `flag` to `keep`.
 
@@ -431,7 +431,7 @@ All shapefiles are in EPSG:26946. `spatial_utils.R` calls `st_transform()` on lo
 
 **`sd_county_boundary.shp` note:** because this is a Union+Dissolve of county + Point Loma, "Point Loma within SD County" is true by construction. If you ever need the unmodified county boundary, re-download it separately.
 
-**1m noise buffer:** the Union+Dissolve left microscopic slivers along the Point Loma coastline (~4 sq ft total) — floating-point noise, not a real gap, but enough to make `st_contains()` return `FALSE`. `spatial_utils.R` applies a 1m buffer to `sd_county_boundary` on load to absorb this. See `diagnose_county_gap.R` for details.
+**1m noise buffer:** the Union+Dissolve left microscopic slivers along the Point Loma coastline (~4 sq ft total) — floating-point noise, not a real gap, but enough to make `st_contains()` return `FALSE`. `spatial_utils.R` applies a 1m buffer to `sd_county_boundary` on load to absorb this. See `diagnose_sd_county_gap.R` for details.
 
 ### CABR survey area vs. official NPS boundary
 

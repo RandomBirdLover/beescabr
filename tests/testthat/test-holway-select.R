@@ -4,7 +4,7 @@ sp <- function(rank) list(id = 1, name = "x", rank = rank)
 mk <- function(id, name, rank) list(id = id, name = name, rank = rank)
 
 test_that("exact name match auto-picks (subspecies, with ssp. normalization)", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   results <- list(mk(1, "Ashmeadiella cactorum", "species"),
                   mk(313836, "Ashmeadiella cactorum basalis", "subspecies"))
   res <- select_taxon_candidate(results, described = TRUE,
@@ -15,7 +15,7 @@ test_that("exact name match auto-picks (subspecies, with ssp. normalization)", {
 })
 
 test_that("subspecies with no exact match does NOT grab the parent species", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   results <- list(mk(1, "Atoposmia copelandica", "species"))   # only the species exists
   res <- select_taxon_candidate(results, described = TRUE,
                                 search_term = "Atoposmia copelandica ssp. albomarginata",
@@ -24,7 +24,7 @@ test_that("subspecies with no exact match does NOT grab the parent species", {
 })
 
 test_that("exact match disambiguates near-spellings (Andrena nigra vs nigrae)", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   results <- list(mk(1, "Andrena nigrae", "species"), mk(2, "Andrena nigra", "species"))
   res <- select_taxon_candidate(results, described = TRUE, search_term = "Andrena nigra")
   expect_equal(res$action, "pick")
@@ -32,7 +32,7 @@ test_that("exact match disambiguates near-spellings (Andrena nigra vs nigrae)", 
 })
 
 test_that("an aff. row never inherits its Described sibling's cached taxon_id", {
-  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  src("reference/holway.R"); src("reference/holway_reference_build.R")
   # the Described sibling ("miserabilis") is already cached under the SHARED key
   # "Habropoda miserabilis"; the aff. row must NOT read it.
   assign("decision_get", function(con, key)
@@ -49,7 +49,7 @@ test_that("an aff. row never inherits its Described sibling's cached taxon_id", 
 })
 
 test_that("a same-named complex never wins over the species (Andrena osmioides)", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   # iNat lists the COMPLEX first, then the species -- both named "Andrena osmioides"
   results <- list(mk(1258784, "Andrena osmioides", "complex"),
                   mk(573001,  "Andrena osmioides", "species"))
@@ -77,7 +77,7 @@ test_that("a same-named complex never wins over the species (Andrena osmioides)"
 })
 
 test_that("resolved subspecies scientific_name gets the ssp. display form", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   ranks <- tibble::tibble(
     taxon_id = 313836L,
     taxon_kingdom_name = "Animalia", taxon_phylum_name = "Arthropoda",
@@ -97,7 +97,7 @@ test_that("resolved subspecies scientific_name gets the ssp. display form", {
 })
 
 test_that("holway_resolution_plan builds the right search per row type", {
-  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  src("reference/holway.R"); src("reference/holway_reference_build.R")
   p_ss <- holway_resolution_plan("Described", "Ashmeadiella", split_holway_species("cactorum basalis"))
   expect_true(p_ss$is_subspecies)
   expect_equal(p_ss$term, "Ashmeadiella cactorum basalis")   # plain trinomial, no ssp.
@@ -114,7 +114,7 @@ test_that("holway_resolution_plan builds the right search per row type", {
 })
 
 test_that("parse_slash_options splits a name pair into full-name candidates", {
-  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  src("reference/holway.R"); src("reference/holway_reference_build.R")
   expect_equal(parse_slash_options("Bombus", "californicus / fervidus"),
                c("Bombus californicus", "Bombus fervidus"))
   expect_equal(parse_slash_options("Bombus", "pensylvanicus / sonorus"),
@@ -122,7 +122,7 @@ test_that("parse_slash_options splits a name pair into full-name candidates", {
 })
 
 test_that("resolve_slash_answer maps number / typed name / none", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   opts <- c("Bombus californicus", "Bombus fervidus")
   expect_equal(resolve_slash_answer("1", "Bombus", opts), "Bombus californicus")
   expect_equal(resolve_slash_answer("2", "Bombus", opts), "Bombus fervidus")
@@ -132,7 +132,7 @@ test_that("resolve_slash_answer maps number / typed name / none", {
 })
 
 test_that("unresolved_holway_ref_row builds subspecies and species keep-rows", {
-  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  src("reference/holway.R"); src("reference/holway_reference_build.R")
   ss <- tibble::tibble(source_sheet = "Described", family = "Megachilidae",
                        subfamily = "Megachilinae", tribe = "Osmiini",
                        genus = "Atoposmia", subgenus = "(Hexosmia)",
@@ -154,23 +154,23 @@ test_that("unresolved_holway_ref_row builds subspecies and species keep-rows", {
 })
 
 test_that("select_taxon_candidate picks the single result", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   expect_equal(select_taxon_candidate(list(sp("species")), described = TRUE)$action, "pick")
 })
 
 test_that("select_taxon_candidate skips empty results", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   expect_equal(select_taxon_candidate(list(), described = TRUE)$action, "skip")
 })
 
 test_that("non-Described multi-result auto-skips (genus-level search)", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   res <- select_taxon_candidate(list(sp("species"), sp("genus")), described = FALSE)
   expect_equal(res$action, "skip")
 })
 
 test_that("Described with one species hit auto-picks it", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   results <- list(sp("genus"), sp("species"), sp("subgenus"))
   res <- select_taxon_candidate(results, described = TRUE)
   expect_equal(res$action, "pick")
@@ -178,13 +178,13 @@ test_that("Described with one species hit auto-picks it", {
 })
 
 test_that("Described with multiple species hits needs a prompt", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   res <- select_taxon_candidate(list(sp("species"), sp("species")), described = TRUE)
   expect_equal(res$action, "prompt")
 })
 
 test_that("holway_search_term: Described unchanged; non-Described resolves the cleaned name", {
-  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  src("reference/holway.R"); src("reference/holway_reference_build.R")
   expect_equal(holway_search_term("Described", "Andrena", "quercina"), "Andrena quercina")
   # non-Described now keys on the CLEANED epithet (was the bare genus before), so
   # already-made Described picks still hit the cache but CF/MSN rows re-resolve.
@@ -195,7 +195,7 @@ test_that("holway_search_term: Described unchanged; non-Described resolves the c
 })
 
 test_that("reference rows carry the CF/MSN/aff. qualifier and keep subgenus", {
-  src("checklists/holway.R"); src("checklists/holway_reference_build.R")
+  src("reference/holway.R"); src("reference/holway_reference_build.R")
   r <- tibble::tibble(source_sheet="Tentative", family="Andrenidae", subfamily="Andreninae",
                       tribe="Andrenini", genus="Andrena", subgenus="(Micandrena)",
                       species_raw="CF annectens")
@@ -220,7 +220,7 @@ test_that("reference rows carry the CF/MSN/aff. qualifier and keep subgenus", {
 })
 
 test_that("retry_empty_search returns initial results untouched when non-empty", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   hit <- list(sp("species"))
   # fetch_fn must never be called if we already have results
   out <- retry_empty_search(hit, "Andrena x",
@@ -230,7 +230,7 @@ test_that("retry_empty_search returns initial results untouched when non-empty",
 })
 
 test_that("retry_empty_search retries with the typed term until a hit", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   # first alternate term still empty, second finds it
   fetch <- function(t) if (identical(t, "Andrena good")) list(sp("species")) else list()
   answers <- c("Andrena bad", "Andrena good")
@@ -241,7 +241,7 @@ test_that("retry_empty_search retries with the typed term until a hit", {
 })
 
 test_that("tidy_holway_ref_row reshapes to the clean lookup layout", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   ranks <- tibble::tibble(
     taxon_id = 42L,
     taxon_kingdom_name = "Animalia", taxon_phylum_name = "Arthropoda",
@@ -264,7 +264,7 @@ test_that("tidy_holway_ref_row reshapes to the clean lookup layout", {
 })
 
 test_that("retry fires when the only hit is a complex, but NOT for a genus-only result", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   # only a complex came back -> ask for an alternate name; the typed name finds the species
   fetch <- function(t) if (identical(t, "Andrena realname")) list(mk(2, "Andrena realname", "species"))
                        else list(mk(1, "Andrena osmioides", "complex"))
@@ -286,7 +286,7 @@ test_that("retry fires when the only hit is a complex, but NOT for a genus-only 
 })
 
 test_that("retry_empty_search stops on 'skip' and when non-interactive", {
-  src("checklists/holway_reference_build.R")
+  src("reference/holway_reference_build.R")
   # user skips -> stays empty
   out1 <- retry_empty_search(list(), "Andrena typo",
                              fetch_fn = function(t) list(sp("species")),

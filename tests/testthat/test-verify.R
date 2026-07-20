@@ -9,7 +9,7 @@ holway <- function() tibble::tibble(
 )
 
 test_that("holway_name_sets builds lowercased genus/subgenus/species sets", {
-  src("clean/verify.R")
+  src("reference/verify.R")
   s <- holway_name_sets(holway())
   expect_true("andrena" %in% s$genus)
   expect_true("diandrena" %in% s$subgenus)          # parens-free
@@ -19,7 +19,7 @@ test_that("holway_name_sets builds lowercased genus/subgenus/species sets", {
 })
 
 test_that("flag_new_taxa flags taxa new-to-Holway at the right rank", {
-  src("clean/verify.R")
+  src("reference/verify.R")
   s <- holway_name_sets(holway())
   obs <- tibble::tibble(
     taxon_id = 1:4,
@@ -44,7 +44,7 @@ test_that("flag_new_taxa flags taxa new-to-Holway at the right rank", {
 })
 
 test_that("flag_new_taxa: a species carrying its parent complex is NOT new; a complex-rank row IS", {
-  src("clean/verify.R")
+  src("reference/verify.R")
   sets <- list(genus = "triepeolus", subgenus = "triepeolus",
                species = "triepeolus segregatus", subspecies = character(0))
   df <- tibble::tibble(
@@ -60,7 +60,7 @@ test_that("flag_new_taxa: a species carrying its parent complex is NOT new; a co
 })
 
 test_that("flag_new_taxa respects the verified list", {
-  src("clean/verify.R")
+  src("reference/verify.R")
   s <- holway_name_sets(holway())
   obs <- tibble::tibble(taxon_id = 99, genus = "Agapostemon", subgenus = NA,
                         complex = NA, species = "subtilior", subspecies = NA)
@@ -71,7 +71,7 @@ test_that("flag_new_taxa respects the verified list", {
 })
 
 test_that("Holway subspecies packed in species_raw are recognized, not flagged new", {
-  src("clean/verify.R")
+  src("reference/verify.R")
   holway <- tibble::tibble(genus = "Ashmeadiella", subgenus = "",
                            species_raw = "cactorum basalis")
   s <- holway_name_sets(holway)
@@ -87,7 +87,7 @@ test_that("Holway subspecies packed in species_raw are recognized, not flagged n
 })
 
 test_that("load_verified_taxa returns ids, or empty when file absent", {
-  src("clean/verify.R")
+  src("reference/verify.R")
   expect_length(load_verified_taxa(tempfile()), 0)          # missing file
   p <- tempfile(fileext = ".csv")
   write.csv(data.frame(taxon_id = c(10, 20), verified = c("Y", "Y")), p, row.names = FALSE)

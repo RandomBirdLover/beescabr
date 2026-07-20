@@ -6,16 +6,16 @@
 # The single entrypoint that runs the whole pipeline end to end. Core data first,
 # ALL checklist/taxonomy work LAST:
 #   1.  INGEST   iNat API -> DuckDB cache (once, incremental)
-#   2.  EXPORT   refresh data/cache/export_flat.rds (the brain's input)
+#   2.  EXPORT   refresh data/observations/cache/export_flat.rds (the brain's input)
 #   2b. PLANTS   pull vascular plants -> SEPARATE plant cache -> export_flat_plant.rds
 #                (the brain's second input; survey-day confirm + flower resources)
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
-#                project_unclean + unknown tags/fields/notes -> per_survey_information.csv
+#                project_unclean + unknown tags/fields/notes -> master_per_survey_info.csv
 #   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
 #                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
 #                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
 #                transect ties. Notes reviewer is standalone. Skipped non-interactive.
-#   4.  CLEAN    cabr_inat_bee_clean.csv (pending its rewrite -- run by hand)
+#   4.  CLEAN    cabr_inat_bee_clean.csv (labeled CABR bee table; walk-in re-marked not-survey)
 #   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
 #                per-source checklists (parked until built)
 #
@@ -44,41 +44,42 @@ BEESCABR_SOURCED_BY_RUNNER <- TRUE
 
 source("scripts/config.R")
 source("scripts/utils/utils.R")
-source("scripts/engine/db/store_conn.R")
-source("scripts/engine/db/observations_store.R")
-source("scripts/engine/db/taxon_store.R")
-source("scripts/engine/db/decision_store.R")
-source("scripts/engine/api/inat_http.R")
-source("scripts/engine/api/inat_flatten.R")
-source("scripts/engine/api/inat_cache.R")
-source("scripts/engine/pipelines/ingest_inat.R")
-source("scripts/engine/pipelines/read_inat.R")
-source("scripts/engine/pipelines/ingest_plants.R")  # plant pull -> separate cache -> export_flat_plant.rds
-source("scripts/clean/triage.R")
-source("scripts/clean/verify.R")                   # flag_new_taxa/holway_name_sets -- sourced
-                                                   # UNCONDITIONALLY so edits reload on a re-run
-                                                   # (taxonomy_reference.R only loads it if absent)
+source("scripts/observations/engine/db/store_conn.R")
+source("scripts/observations/engine/db/observations_store.R")
+source("scripts/observations/engine/db/taxon_store.R")
+source("scripts/observations/engine/db/decision_store.R")
+source("scripts/observations/engine/api/inat_http.R")
+source("scripts/observations/engine/api/inat_flatten.R")
+source("scripts/observations/engine/api/inat_cache.R")
+source("scripts/observations/engine/pipelines/ingest_inat.R")
+source("scripts/observations/engine/pipelines/read_inat.R")
+source("scripts/observations/engine/pipelines/ingest_plants.R")  # plant pull -> separate cache -> export_flat_plant.rds
+source("scripts/observations/build_field_id_map.R")             # defines build_field_id_map() -- stage 2c
+# reference/ (holway.R, taxonomy_reference.R, verify.R) is pulled in by taxonomy_lookup_build.R (stage 5).
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
-source("scripts/clean/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
-source("scripts/clean/finding_specimen_dates.R")   # newest specimen .xlsx -> inputs/specimen_dates.csv
-source("scripts/clean/review_crosswalk.R")         # interactive review of unknown tags + fields
-source("scripts/clean/review_windows.R")           # interactive review of survey-date windows
-source("scripts/checklists/holway.R")
-source("scripts/checklists/holway_reference_build.R") # builds holway_sd_bee_reference_table.csv
-source("scripts/checklists/checklist_tiers.R")
-source("scripts/checklists/taxonomy_reference.R")
-source("scripts/checklists/tier2_merge.R")
-source("scripts/checklists/taxonomy_lookup_build.R") # defines build_taxonomy_lookup()
-# CHECKLISTS PARKED (2026-07-15): the old Tier 1/Tier 2 writer moved to
-# legacy_checklists.R and is deliberately NOT sourced -- the checklist stage is
+source("scripts/project_info/finding_beeple_calendar.R")  # defines finding_beeple_calendar() -- stage 2d
+source("scripts/project_info/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
+source("scripts/project_info/review_crosswalk.R")         # interactive review of unknown tags + fields
+source("scripts/project_info/review_windows.R")           # interactive review of survey-date windows
+source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 4 (clean)
+# ---- TAXONOMY (restored 2026-07-20) + CHECKLISTS (pending) ----
+# TAXONOMY: restored with the parent-roll-up fix -- an unresolved Holway species inherits
+# its nearest on-iNat parent's taxon_id + ancestry (same-named complex -> subgenus -> genus).
+# The INTERACTIVE Holway->iNat resolver (reference/holway_reference_build.R) is a SEPARATE
+# by-hand step (Rscript it, or BEESCABR_RUN_HOLWAY); the runner sources only the non-interactive
+# lookup builder, which pulls its own deps (holway.R, taxonomy_reference.R, verify.R,
+# checklist_build.R) via need().
+source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
+# CHECKLISTS: rough drafts, run LAST, not sourced until built (checklist_build.R is pulled in above).
+# source("scripts/checklists/cabr_bee_checklist.R")
+# source("scripts/checklists/pl_bee_checklist.R")
+# source("scripts/checklists/sd_bee_checklist.R")
+# CHECKLISTS PARKED (2026-07-15): the old Tier 1/Tier 2 writer (legacy_checklists.R) was REMOVED (old code in
+# _to_delete/legacy_checklists.R.removed) and is deliberately NOT sourced -- the checklist stage is
 # being rebuilt into the new per-source architecture (cabr_inat / cabr_specimen /
 # cabr_official / pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat)
 # which runs LAST. Run the old writer by hand if you still need those outputs.
-# source("scripts/checklists/legacy_checklists.R")   # defines build_legacy_checklists()
-# CLEAN stage pulled from the pipeline (2026-07-14): inat_bee_clean.R still reads
-# the old crosswalk columns and needs its rewrite. Run it by hand for now; do NOT
-# source it here. Re-add this line once it's updated.
-# source("scripts/clean/inat_bee_clean.R")          # defines clean_inat_bees()
+# CLEAN stage (inat_bee_clean.R) is sourced above and runs at stage 4 in main().
 
 main <- function() {
   t0 <- Sys.time()
@@ -95,7 +96,7 @@ main <- function() {
   }
 
   # ---- 2. EXPORT: refresh export_flat.rds (the brain reads it directly) ----
-  message("\n== [2] EXPORT: refresh data/cache/export_flat.rds ==")
+  message("\n== [2] EXPORT: refresh data/observations/cache/export_flat.rds ==")
   invisible(read_observations_export(con))
 
   # ---- 2b. PLANTS: ingest vascular plants -> export_flat_plant.rds (separate cache) ----
@@ -119,17 +120,33 @@ main <- function() {
     )
   }
 
-  # ---- 2c. SPECIMENS: rebuild specimen_dates.csv from the newest specimen .xlsx ----
-  # Aggregates the newest cabr_bee_specimens_record_V*.xlsx -> inputs/specimen_dates.csv,
-  # which the brain reads to stamp n_speci on lethal days + add an intern row for any
-  # netting day not in the intern log. Skips quietly if no specimen .xlsx is present.
-  message("\n== [2c] SPECIMENS: newest specimen record -> inputs/specimen_dates.csv ==")
-  finding_specimen_dates()
+  # ---- 2c. FIELD MAP: refresh the obs-field name -> iNat id map from the cache ----
+  # Keeps data/observations/inat_field_id_map.csv (the crosswalk's stable-id reference)
+  # in step with freshly-ingested fields. Cheap DuckDB query; skipped when ingest was
+  # skipped and the map already exists. Reuses the bee `con` (2b used its own plant con).
+  FIELD_MAP_PATH <- "data/observations/inat_field_id_map.csv"
+  if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1" || !file.exists(FIELD_MAP_PATH)) {
+    message("\n== [2c] FIELD MAP: refresh inat_field_id_map.csv ==")
+    build_field_id_map(con = con)
+  } else {
+    message("\n== [2c] FIELD MAP: skipped (ingest skipped, map already present) ==")
+  }
+
+  # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows.csv from the PDFs ----
+  # Re-parses every "YYYY Cabrillo Bee Survey Calendar.pdf" in
+  # data/project_info/sources/beeple_calendar_windows/ each run, so a newly-added year
+  # (e.g. 2027) is picked up automatically. The brain reads the resulting windows CSV.
+  # Wrapped so a missing pdftools / malformed PDF warns and keeps the existing CSV
+  # rather than killing the run.
+  message("\n== [2d] BEEPLE CALENDARS: rebuild beeple_calendar_windows.csv from PDFs ==")
+  tryCatch(finding_beeple_calendar(), error = function(e)
+    message("  WARNING: calendar parse failed (", conditionMessage(e),
+            ") -- keeping the existing beeple_calendar_windows.csv."))
 
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
   # finding_project_info() decides survey membership from crosswalk_master, writes
   # per_observation_raw_info.csv, the THREE unknown reports (review them by
-  # hand in order -> update crosswalk_master -> re-run), and builds per_survey_information.csv
+  # hand in order -> update crosswalk_master -> re-run), and builds master_per_survey_info.csv
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
   message("\n== [3] BRAIN: finding_project_info (membership -> unknown tags/fields/notes -> survey_dates) ==")
   finding_project_info()
@@ -155,9 +172,21 @@ main <- function() {
       message("\n== [3c] Re-running the brain to apply your crosswalk edits ==")
       finding_project_info()
     }
+    # [3b-notes] Free-text notes are OPTIONAL -- ask whether to review them this run.
+    # 'y' sources the reviewer from project_info/ and runs it; anything
+    # else proceeds without notes (the reviewer is never even sourced). Interactive-only.
     n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
-    if (n_notes > 0)
-      message("  NOTE: ", n_notes, " unknown NOTES remain -- run review_notes.R by hand (standalone).")
+    if (n_notes > 0) {
+      ans <- tolower(trimws(readline(sprintf(
+        "\n[3b-notes] %d free-text note(s) flagged. Review the observation notes now, or proceed without them? (y = review / N = skip): ",
+        n_notes))))
+      if (ans %in% c("y", "yes")) {
+        source("scripts/project_info/review_notes.R")
+        review_notes()
+      } else {
+        message("  Proceeding WITHOUT notes (skipped -- reviewer not run).")
+      }
+    }
 
     # [3d] SURVEY-DATE WINDOWS -- heads-up queue of planned windows with no tagged
     # survey nearby (possible missed surveys). Runs LAST so it sees every tag + field.
@@ -171,11 +200,16 @@ main <- function() {
 
     # [3e] TRANSECT TIES -- equal-split survey days the resolver couldn't call by
     # majority (a beeple's obs tagged evenly across two transects). Rule which transect
-    # the day really was, or "both". A ruling re-stamps that day on the NEXT pipeline run.
+    # the day really was, or "both". If you rule any, the brain re-runs right below so the
+    # chosen transect lands in master_per_survey_info.csv THIS run (your master truth).
     n_ties <- .n_windows(FPI_TIES)   # reuse the blank/unsure "still to rule" counter
     if (n_ties > 0) {
       message("\n== [3e] REVIEW transect ties: ", n_ties, " to rule ==")
       review_transect_ties()
+      if (.n_windows(FPI_TIES) < n_ties) {   # a tie was ruled -> apply it now, not next run
+        message("\n== [3f] Re-running the brain to apply your transect-tie ruling(s) ==")
+        finding_project_info()
+      }
     } else {
       message("\n== [3e] REVIEW transect ties: nothing to rule ==")
     }
@@ -183,43 +217,31 @@ main <- function() {
     message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R / review_windows.R by hand ==")
   }
 
-  # ---- 4. CLEAN: temporarily removed (inat_bee_clean.R pending its rewrite) ----
-  message("\n== [4] CLEAN skipped -- inat_bee_clean.R pending its crosswalk rewrite; run it manually ==")
+  # ---- 4. CLEAN: labeled analysis table (bee) ----
+  # Reads the brain's cabr_inat_raw.csv, joins coords + taxon_id, writes cabr_inat_bee_clean.csv.
+  # Also re-marks Humphreys Rd walk-in obs (off-transect but on the access road) as NOT survey.
+  message("\n== [4] CLEAN: writing cabr_inat_bee_clean.csv ==")
+  inat_bee_clean()
 
-  # ---- 5. CHECKLIST STUFF (LAST) : Holway reference -> taxonomy lookup -> checklists ----
-  # Everything checklist-related runs at the very END, after the core data pipeline.
-  # The Holway reference is built ONCE then reused (BEESCABR_REBUILD_HOLWAY_REF=1 to
-  # rebuild); the lookup reads it. The new per-source checklist stage slots in here
-  # too when built (parked for now).
-  message("\n== [5a] HOLWAY REFERENCE ==")
-  if (file.exists(PATHS$holway_reference) &&
-      Sys.getenv("BEESCABR_REBUILD_HOLWAY_REF", "0") != "1") {
-    message("  reusing ", basename(PATHS$holway_reference),
-            " (set BEESCABR_REBUILD_HOLWAY_REF=1 to rebuild)")
-  } else {
-    message("  building: resolve Holway species -> iNat taxon_ids")
-    holway_raw <- load_holway(PATHS$holway_combined)
-    interactive_ok <- interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"
-    holway_ref <- build_holway_reference(con, holway_raw, interactive_ok = interactive_ok)
-    write.csv(holway_ref, PATHS$holway_reference, row.names = FALSE, na = "")
-    message("  Holway reference: ", sum(holway_ref$resolved), " resolved / ",
-            nrow(holway_ref), " rows -> ", PATHS$holway_reference)
-  }
-  # stamp the "(Complex)" display prefix (idempotent) whether built or reused
+  # ---- 5. TAXONOMY LOOKUP (restored 2026-07-20) ----
+  # Reads the pre-built Holway reference table + the cache, writes sd_bee_taxonomy_lookup.csv
+  # (+ the internal complex map). The interactive Holway->iNat resolver (holway_reference_build.R)
+  # is a SEPARATE by-hand step -- run it when Holway updates; this stage consumes its output.
+  # Guarded + wrapped so a taxonomy failure never kills the core pipeline above.
   if (file.exists(PATHS$holway_reference)) {
-    hr <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
-    write.csv(decorate_complex(hr), PATHS$holway_reference, row.names = FALSE, na = "")
+    message("\n== [5] TAXONOMY LOOKUP: building sd_bee_taxonomy_lookup.csv ==")
+    tryCatch(build_taxonomy_lookup(con),
+             error = function(e) message("  [5] taxonomy lookup FAILED (non-fatal): ", conditionMessage(e)))
+  } else {
+    message("\n== [5] TAXONOMY LOOKUP skipped -- Holway reference table missing; run holway_reference_build.R first ==")
   }
-
-  message("\n== [5b] LOOKUP: sd_bee_taxonomy_lookup (checklists parked) ==")
-  build_summary <- build_taxonomy_lookup(con)
+  # CHECKLISTS (5+): rough drafts, run LAST -- not wired until built.
 
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   message("\n========================================")
-  message("PIPELINE COMPLETE in ", dt, " min")
-  message("  Cache observations  : ", count_observations(con))
-  message("  Taxonomy lookup rows: ", build_summary$lookup)
-  message("  (Checklists parked -- the new per-source stage runs here, LAST, when built.)")
+  message("PIPELINE COMPLETE (core stages) in ", dt, " min")
+  message("  Cache observations   : ", count_observations(con))
+  message("  Taxonomy lookup: built when the Holway reference table is present; checklists still pending.")
   message("Outputs under data/. Done.")
 }
 

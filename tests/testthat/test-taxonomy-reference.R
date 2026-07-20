@@ -16,7 +16,7 @@ empty_bees <- function() tibble::tibble(
   subtribe=character(0))
 
 test_that("lookup base is the reference table; iNat adds observed-only taxa + flags", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
 
   ref <- tibble::tibble(
     taxon_id = 1L, scientific_name = "Melissodes robustior", rank = "species",
@@ -64,7 +64,7 @@ test_that("lookup base is the reference table; iNat adds observed-only taxa + fl
 })
 
 test_that("slash pick: only the resolved name reaches the lookup (no 'pensylvanicus' leak)", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
   # Holway sheet had "pensylvanicus / sonorus"; the human picked sonorus, so THAT
   # is what the reference table holds. pensylvanicus never appears anywhere.
   ref <- tibble::tibble(
@@ -89,7 +89,7 @@ test_that("slash pick: only the resolved name reaches the lookup (no 'pensylvani
 })
 
 test_that("tentative names: clean epithet in species, marker in the qualifier column", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
   ref <- tibble::tibble(
     taxon_id = c(573509L, NA_integer_),
     scientific_name = c("Andrena annectens", "Lasioglossum pilosifrons"),
@@ -117,7 +117,7 @@ test_that("tentative names: clean epithet in species, marker in the qualifier co
 })
 
 test_that("itis_valid propagates from the reference and sits right after qualifier", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
   ref <- tibble::tibble(
     taxon_id = NA_integer_, scientific_name = c("Calliopsis anthidius","Calliopsis validus"),
     rank = "species", source_sheet = "Described", qualifier = NA_character_,
@@ -134,7 +134,7 @@ test_that("itis_valid propagates from the reference and sits right after qualifi
 })
 
 test_that("a resolved-but-unobserved Holway taxon keeps a taxon_id yet in_inat = FALSE", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
   ref <- tibble::tibble(
     taxon_id = 111L, scientific_name = "Andrena annectens", rank = "species",
     source_sheet = "Tentative", qualifier = "CF", itis_valid = NA,
@@ -149,7 +149,7 @@ test_that("a resolved-but-unobserved Holway taxon keeps a taxon_id yet in_inat =
 })
 
 test_that("no reference row is dropped: species/subspecies/complex/unresolved/genus all reach the lookup", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
   ref <- tibble::tibble(
     taxon_id        = c(573509L, 313836L, 900L, NA_integer_, 57669L),
     scientific_name = c("Andrena annectens", "Ashmeadiella cactorum ssp. basalis",
@@ -175,7 +175,7 @@ test_that("no reference row is dropped: species/subspecies/complex/unresolved/ge
 })
 
 test_that("build_bee_taxonomy_lookup REQUIRES the reference table", {
-  src("config.R"); src("clean/verify.R"); src("checklists/holway.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
   expect_error(build_bee_taxonomy_lookup(NULL, empty_checklist(), empty_bees()), "reference")
   expect_error(build_bee_taxonomy_lookup(empty_checklist()[0, ], empty_checklist(), empty_bees()), "reference")
 })
@@ -184,7 +184,7 @@ test_that("build_bee_taxonomy_lookup REQUIRES the reference table", {
 #      are still defined for reuse, though the builder no longer calls them) ----
 
 test_that("merge_holway_resolved fills taxon_id + scientific_name on Holway rows only where missing", {
-  src("config.R"); src("clean/verify.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/taxonomy_reference.R")
   deduped <- tibble::tibble(
     taxon_id        = c(NA_integer_, 500L, NA_integer_),
     scientific_name = c(NA_character_, "Andrena baeriae", NA_character_),
@@ -210,7 +210,7 @@ test_that("merge_holway_resolved fills taxon_id + scientific_name on Holway rows
 })
 
 test_that("parse_holway_decision_map keys on the original genus+epithet", {
-  src("config.R"); src("clean/verify.R"); src("checklists/taxonomy_reference.R")
+  src("config.R"); src("reference/verify.R"); src("reference/taxonomy_reference.R")
   d <- tibble::tibble(
     search_term = c("Calliopsis rhodophilus", "Ashmeadiella cactorum basalis", "Andrena"),
     chosen_taxon_id = c(271415L, 313836L, 50L))
@@ -221,7 +221,7 @@ test_that("parse_holway_decision_map keys on the original genus+epithet", {
 })
 
 test_that("reconcile_lookup_dupes leaves non-duplicate and NA-taxon rows intact", {
-  src("checklists/taxonomy_reference.R")
+  src("reference/taxonomy_reference.R")
   df <- tibble::tibble(
     taxon_id = c(1L, 2L, NA_integer_),
     scientific_name = c("Aa a", "Bb b", NA_character_),
@@ -234,7 +234,7 @@ test_that("reconcile_lookup_dupes leaves non-duplicate and NA-taxon rows intact"
 })
 
 test_that("merge_holway_resolved is a no-op when the reference table is absent/empty", {
-  src("checklists/taxonomy_reference.R")
+  src("reference/taxonomy_reference.R")
   d <- tibble::tibble(taxon_id = NA_integer_, scientific_name = NA_character_,
                       rank = "species", genus = "Andrena", species = "annectens",
                       subspecies = NA_character_)

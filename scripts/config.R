@@ -53,28 +53,28 @@ PLACE_CABR_MONUMENT <- 4715L
 # One on-disk DuckDB file acts as the cache for BOTH observation objects
 # (with a spatial geometry column) and taxon request objects. This replaces
 # the retired CSV export entirely and the Python taxon_cache.json.
-DB_CACHE_PATH <- "data/cache/inat_cache.duckdb"
+DB_CACHE_PATH <- "data/observations/cache/inat_cache.duckdb"
 
 # Cached flattened export frame (RDS). Flattening ~77k observations from JSON
 # and resolving their taxonomy is slow, so read_observations_export() memoizes
 # the result here and only rebuilds when the observation/taxon cache content
 # changes (a content fingerprint decides). Delete this file or set
 # BEESCABR_REFRESH_FLAT=1 to force a rebuild.
-EXPORT_FLAT_CACHE <- "data/cache/export_flat.rds"
+EXPORT_FLAT_CACHE <- "data/observations/cache/export_flat.rds"
 
 # Records when observations were last ingested, so a refresh can also re-pull
 # observations that were re-identified/edited on iNaturalist since then
 # (updated_since), not just brand-new ones.
-INGEST_STATE_PATH <- "data/cache/last_ingest.txt"
+INGEST_STATE_PATH <- "data/observations/cache/last_ingest.txt"
 
 # ---- PLANT cache (kept SEPARATE from the bee cache) ---------------------------
 # The plant ingest uses its OWN DuckDB file, export RDS, and updated_since state,
 # so its incremental id-cursor never collides with the bee cache and a plant pull
 # never invalidates the (expensive) 77k-bee export fingerprint. Identical schema
 # and code path -- just a different connection + paths (see ingest_plants.R).
-DB_CACHE_PATH_PLANT     <- "data/cache/inat_cache_plant.duckdb"
-EXPORT_FLAT_PLANT_CACHE <- "data/cache/export_flat_plant.rds"
-INGEST_STATE_PATH_PLANT <- "data/cache/last_ingest_plant.txt"
+DB_CACHE_PATH_PLANT     <- "data/observations/cache/inat_cache_plant.duckdb"
+EXPORT_FLAT_PLANT_CACHE <- "data/observations/cache/export_flat_plant.rds"
+INGEST_STATE_PATH_PLANT <- "data/observations/cache/last_ingest_plant.txt"
 
 # ---- Observation-field id map ------------------------------------------------
 # The flatten step builds `field:<lower(name)>` columns generically from the
@@ -105,29 +105,29 @@ NESTING_SOURCES <- c("field:nest", "field:nesting")
 # Centralized so renames happen in one spot (the old scripts hardcoded these
 # inline in many places).
 PATHS <- list(
-  taxonomy_lookup = "data/outputs/reference/sd_bee_taxonomy_lookup.csv",
+  taxonomy_lookup = "data/reference/sd_bee_taxonomy_lookup.csv",
   # Internal-only: species -> species-complex taxon_id map. complex_taxon_id is
   # an iNat implementation detail (it looks identical to a species scientific
   # name and confuses non-scientists), so it's stripped from the public
   # checklists and parked here for the specimen complex-match step to read.
-  complex_map = "data/cache/complex_taxon_id_map.csv",
+  complex_map = "data/observations/cache/complex_taxon_id_map.csv",
   # Built ONCE from Holway's v3 checklist (resolving names -> iNat taxon_ids is
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
-  holway_reference = "data/outputs/reference/holway_sd_bee_reference_table_v3.csv",
-  verified_taxa = "data/outputs/reference/verified_taxa.csv",
-  checklist_sd_county_inat = "data/outputs/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
-  checklist_point_loma_inat = "data/outputs/checklists/point_loma/pl_inat_native_bee_checklist.csv",
-  checklist_cabr_inat = "data/outputs/checklists/cabr/cabr_inat_bee_checklist.csv",
-  checklist_sd_county_v2 = "data/outputs/checklists/sd_county/sd_county_native_bee_checklist.csv",
-  checklist_point_loma_v2 = "data/outputs/checklists/point_loma/pl_native_bee_checklist.csv",
-  checklist_cabr_v2 = "data/outputs/checklists/cabr/cabr_combined_native_bee_checklist.csv",
-  checklist_cabr_specimen = "data/outputs/checklists/cabr/cabr_specimen_bee_checklist.csv",
-  inat_clean = "data/outputs/inat_clean/cabr_inat_bee_clean.csv",
-  inat_unknown_tags = "data/outputs/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
-  inat_to_verify = "data/outputs/inat_clean/qc/cabr_inat_to_verify.csv",
-  specimen_clean = "data/outputs/specimens/cabr_specimen_bee_record_clean.csv",
-  holway_combined = "data/reference_exports/holway_2026/holway_v3_combined.csv"
+  holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
+  verified_taxa = "data/reference/verified_taxa.csv",
+  checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
+  checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
+  checklist_cabr_inat = "data/checklists/cabr/cabr_inat_bee_checklist.csv",
+  checklist_sd_county_v2 = "data/checklists/sd_county/sd_county_native_bee_checklist.csv",
+  checklist_point_loma_v2 = "data/checklists/point_loma/pl_native_bee_checklist.csv",
+  checklist_cabr_v2 = "data/checklists/cabr/cabr_combined_native_bee_checklist.csv",
+  checklist_cabr_specimen = "data/checklists/cabr/cabr_specimen_bee_checklist.csv",
+  inat_clean = "data/observations/inat_clean/cabr_inat_bee_clean.csv",
+  inat_unknown_tags = "data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
+  inat_to_verify = "data/observations/inat_clean/qc/cabr_inat_to_verify.csv",
+  specimen_clean = "data/specimens/cleaned/cabr_specimen_bee_record_clean.csv",
+  holway_combined = "data/reference/source/holway_2026/holway_v3_combined.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the

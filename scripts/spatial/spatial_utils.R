@@ -59,7 +59,7 @@
 #                       load (see load section below) to absorb ~0.0001
 #                       acres of topological noise left by the dissolve
 #                       -- not a real gap, confirmed via
-#                       diagnose_county_gap.R.
+#                       diagnose_sd_county_gap.R.
 #
 #                       Practical effect: because point_loma_boundary
 #                       is now literally unioned into sd_county_boundary,
@@ -189,7 +189,7 @@ stopifnot(nrow(point_loma_boundary) == 1)
 # See provenance section above for why, and what this means for
 # downstream containment checks. Lives in boundaries/san_diego_county/.
 #
-# 1m buffer applied below: diagnose_county_gap.R confirmed the dissolved
+# 1m buffer applied below: diagnose_sd_county_gap.R confirmed the dissolved
 # Union leaves 576 microscopic topological slivers along the Point Loma
 # coastline, totaling 0.0001 acres (~4 sq ft) -- floating-point/rounding
 # noise from the dissolve operation, not a real missing area. This was
@@ -238,7 +238,7 @@ check_containment(cabr_boundary, "cabr_boundary", sd_county_boundary, "sd_county
 # ------------------------------------------------------------
 # Transect buffers (existing functionality)
 # ------------------------------------------------------------
-buffer_dist_m <- 10  # change this one line to adjust buffer width
+buffer_dist_m <- 50  # change this one line to adjust buffer width
 
 transects <- st_read(
   file.path("data/spatial/transects", "cabr_bee_transects.shp"),
@@ -246,9 +246,9 @@ transects <- st_read(
 ) |>
   st_transform(PROJECT_CRS)
 
-buffer_10m <- st_buffer(transects, dist = buffer_dist_m)
+buffer_50m <- st_buffer(transects, dist = buffer_dist_m)
 
-# buffer_10m is generated in-memory only -- per project convention,
+# buffer_50m is generated in-memory only -- per project convention,
 # do not write this (or any derived buffer) to disk.
 
-message("\nspatial_utils.R: boundaries and buffer_10m ready in environment.")
+message("\nspatial_utils.R: boundaries and buffer_50m ready in environment.")
