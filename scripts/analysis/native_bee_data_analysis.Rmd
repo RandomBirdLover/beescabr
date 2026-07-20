@@ -20,6 +20,45 @@ scripts (scripts/bee_specimen_clean.R, scripts/bee_inat_clean.R)
 so this stays focused on comparison, not data wrangling.
 -->
 
+#Questions
+####Reminder for comparison surveys, you can only compare months through April/March-September because interns were not surveying throughout the entire year
+
+#1. What bees exist in lethal vs. nonlethal (where do they not overlap, show a Venn Diagram)?
+####1. a. Where do we need more collective sampling if we find bees in our nonlethal dataset that aren't in our lethal, and vice versa? For example, the most common Lasioglossum Dialictus are missing from the nonlethal set because pictures are not enough to get ID's on such small animals (use CABR checklists for this).
+
+#2. What is the taxonomic resolution (taxon rank) you can get to for lethal vs. nonlethal? eg.) Nonlethal most commmonly only identifies to genus, and nonlethal most commonly gets species
+
+#3. What top 10 plants to bees visit the most throughout the year and then per month? Compare by park and by nonlethal surveys. We want to know what plants we should plant more of.
+
+#4. Network analysis what flowers to what bees visit to get those unique bees (rarer bee, what plant does it visit?).
+####4. a. Need species rank for finding specialist relationships 
+
+#5. Have we accumulated all the species there is to find at Cabrillo? (Graph a species accumulation curve)
+
+#6.Are there bees in the park that weren't found on the transects? Do we need more transects? (suveyors vs. whole park) Which bees were those? What are the observations url's associated with them to see what plants they were on?
+
+#7. What needs ID in our lethal and non-lethal specimens most frequently? (Target identification)
+
+#8. Across the years, how has diversity changed, in genus-->species, and how has it changed monthby month? Species diversity versus genus/subgenus diversity? Where is the most diversity concentrated in the park for bees?
+
+#10. What bees are in CABR Official Checklist that isn't in the Holway Official Checklist?
+
+#11. What surveys captured more bees by species rank, beeple vs. interns, lethal vs. nonlethal?
+
+#12. Give plant phenology based on the survey data (nonlethal only)
+
+
+
+
+
+
+
+
+
+
+
+
+
 ###### 1. SETUP ######
 ```{r setup, message=FALSE, warning=FALSE}
 # Run these ONCE to install, then leave commented out.
