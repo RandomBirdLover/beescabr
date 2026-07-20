@@ -72,16 +72,13 @@ source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_l
 source("scripts/specimens/specimen_clean.R")          # pure specimen-cleaning helpers
 source("scripts/specimens/specimen_bee_clean.R")      # defines clean_specimens() -- stage 6b
 source("scripts/specimens/tidy_raw_specimens.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
-# CHECKLISTS: rough drafts, run LAST, not sourced until built (checklist_build.R is pulled in above).
-# source("scripts/checklists/cabr_bee_checklist.R")
-# source("scripts/checklists/pl_bee_checklist.R")
-# source("scripts/checklists/sd_bee_checklist.R")
-# CHECKLISTS PARKED (2026-07-15): the old Tier 1/Tier 2 writer (legacy_checklists.R) was REMOVED (old code in
-# _to_delete/legacy_checklists.R.removed) and is deliberately NOT sourced -- the checklist stage is
-# being rebuilt into the new per-source architecture (cabr_inat / cabr_specimen /
-# cabr_official / pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat)
-# which runs LAST. Run the old writer by hand if you still need those outputs.
-# CLEAN stage (inat_bee_clean.R) is sourced above and runs at stage 4 in main().
+# CHECKLISTS (stage 9): normalized-tree builder + the 3 per-scope orchestrators. Sourced here so
+# the whole pipeline runs end-to-end with NO manual steps (cabr_inat / cabr_specimen / cabr_official /
+# pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat -- parent taxa as their own rows).
+source("scripts/checklists/checklist_build.R")        # spatial_split / lookup_subtree / combine_checklists
+source("scripts/checklists/cabr_bee_checklist.R")     # defines build_cabr_bee_checklists()
+source("scripts/checklists/pl_bee_checklist.R")       # defines build_pl_bee_checklists()
+source("scripts/checklists/sd_bee_checklist.R")       # defines build_sd_bee_checklists()
 
 main <- function() {
   t0 <- Sys.time()
@@ -270,8 +267,26 @@ main <- function() {
   tryCatch(inat_plant_clean(),
            error = function(e) message("  [8] inat plant clean FAILED (non-fatal): ", conditionMessage(e)))
 
-  # ---- 9. CHECKLISTS: sd / pl / cabr ----
-  message("\n== [9] CHECKLISTS: PENDING -- sd/pl/cabr checklists not built yet (placeholder) ==")
+  # ---- 9. CHECKLISTS: cabr / pl / sd native-bee checklists (normalized tree from the lookup) ----
+  # Each checklist carries parent taxa as their own rows (taxon_id/taxon_rank/names/taxonomy from the
+  # lookup), like Holway. iNat lists clip the RAW bee export to each boundary; the specimen + Holway
+  # subtrees come from cabr_specimen_bee_clean.csv + the Holway reference. Runs LAST (needs stages 5-8).
+  message("\n== [9] CHECKLISTS: cabr / pl / sd native-bee checklists ==")
+  tryCatch({
+    .lk <- suppressMessages(readr::read_csv(PATHS$taxonomy_lookup, show_col_types = FALSE)) |>
+             dplyr::mutate(taxon_id = as.character(taxon_id))
+    .bees_sf <- readRDS(EXPORT_FLAT_CACHE) |>
+             dplyr::filter(!is.na(latitude), !is.na(longitude)) |>
+             sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+             sf::st_transform(PROJECT_CRS)
+    .spec <- if (file.exists(PATHS$specimen_clean))   suppressMessages(readr::read_csv(PATHS$specimen_clean,   show_col_types = FALSE)) else NULL
+    .href <- if (file.exists(PATHS$holway_reference)) suppressMessages(readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)) else NULL
+    .hsub <- if (!is.null(.href)) lookup_subtree(.lk, .href, "SD Holway") else NULL   # built once, shared
+    build_cabr_bee_checklists(.bees_sf, .lk, specimens = .spec, holway_sub = .hsub)
+    build_pl_bee_checklists(.bees_sf, .lk)
+    build_sd_bee_checklists(.bees_sf, .lk, holway_sub = .hsub)
+    message("  checklists -> data/checklists/{cabr,point_loma,sd_county}/ (7 files)")
+  }, error = function(e) message("  [9] checklists FAILED (non-fatal): ", conditionMessage(e)))
 
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   message("\n========================================")
