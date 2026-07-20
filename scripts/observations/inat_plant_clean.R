@@ -59,7 +59,7 @@ IPC_EXPORT_RANKMAP <- c(
 # final column order for the clean plant table (mirrors inat_bee_clean; flower_flowering is the
 # only annotation, and there is no lethal-collection column -- plants are non-lethal by nature)
 IPC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
-                      "survey_type", "survey_year", "transect", "is_10min", "is_metadata",
+                      "survey_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
                       IPC_ANNOT_COLS, "location_needs_fix",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IPC_TAXONOMY_COLS,
@@ -235,6 +235,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   for (col in IPC_TAXONOMY_COLS) if (!col %in% names(df)) df[[col]] <- NA_character_
   if (!"flower_flowering" %in% names(df)) df$flower_flowering <- NA_character_
   if (!"survey_source" %in% names(df)) df$survey_source <- NA_character_   # tag / inferred_on_transect
+  df$survey_method <- "nonlethal"   # iNaturalist observations are the NON-lethal survey
 
   clean <- df |> select(any_of(IPC_COLUMN_ORDER))
 

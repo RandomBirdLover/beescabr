@@ -341,3 +341,19 @@ test_that("a complex row inherits its taxon_id from the species' complex_taxon_i
   expect_equal(nrow(cx), 1)
   expect_equal(cx$taxon_id[1], 1438690L)     # complex row now carries the iNat complex id
 })
+
+# infer_higher_rank(): a subtribe observation carries its parent tribe too, so a
+# tribe-first rank test mislabels the subtribe as "tribe" -- which added a second,
+# wrong-id row under the real tribe (Halictina under Halictini, etc.). subtribe must
+# win.
+test_that("infer_higher_rank labels a subtribe taxon subtribe, not tribe", {
+  src("reference/taxonomy_reference.R")
+  expect_equal(infer_higher_rank("Halictidae", "Halictinae", "Halictini", "Halictina"), "subtribe")
+  expect_equal(infer_higher_rank("Halictidae", "Halictinae", "Halictini", NA), "tribe")
+  expect_equal(infer_higher_rank("Halictidae", "Halictinae", NA, NA), "subfamily")
+  expect_equal(infer_higher_rank("Halictidae", NA, NA, NA), "family")
+  expect_equal(infer_higher_rank(NA, NA, NA, NA), "epifamily")
+  # vectorized; "" counts as unfilled
+  expect_equal(infer_higher_rank(c("Halictidae", "Apidae"), c("", "Apinae"),
+                                 c("", ""), c("", "")), c("family", "subfamily"))
+})

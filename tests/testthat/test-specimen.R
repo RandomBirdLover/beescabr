@@ -123,10 +123,15 @@ test_that("transect_variant_map + match_plot_transect map plot text to TP/UPMON/
 
 test_that("attach_lookup_taxonomy fills taxon_id + higher ranks, keeps specimen names", {
   src("specimens/specimen_clean.R")
-  df <- tibble::tibble(genus = c("Andrena", NA_character_), species = c("baeriae", NA_character_),
-                       subspecies = NA_character_, subgenus = c("Callandrena", NA_character_),
-                       complex = NA_character_, family = c(NA_character_, "Andrenidae"),
-                       subfamily = NA_character_, tribe = NA_character_)
+  # row1: genus+species ID; row2: family-ONLY ID (blank genus); row3: truly blank
+  df <- tibble::tibble(
+    genus      = c("Andrena", NA_character_, NA_character_),
+    species    = c("baeriae", NA_character_, NA_character_),
+    subspecies = NA_character_,
+    subgenus   = c("Callandrena", NA_character_, NA_character_),
+    complex    = NA_character_,
+    family     = c(NA_character_, "Andrenidae", NA_character_),
+    subfamily  = NA_character_, tribe = NA_character_)
   lk <- tibble::tibble(
     taxon_id = c(123L, 999L), rank = c("species", "family"),
     scientific_name = c("Andrena baeriae", "Andrenidae"), common_name = NA_character_,
@@ -145,8 +150,103 @@ test_that("attach_lookup_taxonomy fills taxon_id + higher ranks, keeps specimen 
   expect_equal(out$family[1], "Andrenidae")   # was NA -> filled from lookup
   expect_equal(out$genus[1], "Andrena")       # specimen's own kept
   expect_equal(out$species[1], "baeriae")
-  # blank-genus (unidentified) specimen must NOT inherit a higher-rank id
-  expect_true(is.na(out$taxon_id[2]))
-  expect_true(is.na(out$scientific_name[2]))
+  # family-ONLY specimen now resolves to the family taxon at its own rank
+  expect_equal(out$taxon_id[2], 999L)
+  expect_equal(out$taxon_rank[2], "family")
+  expect_equal(out$scientific_name[2], "Andrenidae")
   expect_equal(out$family[2], "Andrenidae")   # its own family column is kept
+  # truly-blank specimen (no genus, no family, nothing) must NOT grab a spurious id
+  expect_true(is.na(out$taxon_id[3]))
+  expect_true(is.na(out$scientific_name[3]))
+})
+
+# keep_bee_specimens(): the specimen record carries wasp/fly bycatch and fully-
+# unidentified rows; the bee cleaning script keeps ONLY the seven bee families
+# (Anthophila). Bee-ness is a FAMILY test -- apoid wasps share superfamily Apoidea.
+
+test_that("keep_bee_specimens keeps bee families, drops wasps/flies/unidentified", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(
+    ucsd_id = 1:6,
+    genus   = c("Lasioglossum", "Apis", "Tiphia", NA, NA, "Andrena"),
+    family  = c("Halictidae", "Apidae", "Tiphiidae", "", NA_character_, "andrenidae"),
+    order   = c("Hymenoptera", "Hymenoptera", "Hymenoptera", "Diptera", NA, "Hymenoptera"))
+  out <- keep_bee_specimens(df)
+  expect_equal(sort(out$ucsd_id), c(1L, 2L, 6L))       # 3 bee-family rows (case-insensitive)
+  expect_true(all(tolower(out$family) %in% tolower(BEE_FAMILIES)))
+  expect_false("Tiphia" %in% out$genus)                # wasp dropped
+})
+
+test_that("keep_bee_specimens covers all seven Anthophila families, superfamily-blind", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(family = c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
+                                  "Megachilidae", "Melittidae", "Stenotritidae", "Crabronidae"))
+  out <- keep_bee_specimens(df)
+  expect_equal(nrow(out), 7)                            # all 7 bee families kept
+  expect_false("Crabronidae" %in% out$family)          # apoid WASP (shares Apoidea) dropped
+})
+
+test_that("keep_bee_specimens fails open when there is no family column", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(genus = c("Apis", "Tiphia"))
+  expect_warning(out <- keep_bee_specimens(df))
+  expect_equal(nrow(out), 2)                            # unchanged, not silently emptied
+})
+
+# fill_above_genus_ids(): a specimen ID'd only above genus (e.g. tribe Halictini,
+# blank genus) gets its id/rank/scientific_name from the lookup's row at that rank.
+
+test_that("fill_above_genus_ids resolves a tribe-only specimen (finest rank wins)", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(
+    genus = c(NA_character_, "Andrena"),
+    family = c("Halictidae", "Andrenidae"),
+    subfamily = c("Halictinae", NA_character_),
+    tribe = c("Halictini", NA_character_),
+    subtribe = NA_character_,
+    taxon_id = c(NA_integer_, 123L),               # row 2 already resolved by genus join
+    taxon_rank = c(NA_character_, "genus"),
+    scientific_name = c(NA_character_, "Andrena"),
+    common_name = NA_character_)
+  lk <- tibble::tibble(
+    rank = c("tribe", "family", "genus"),
+    tribe = c("Halictini", NA_character_, NA_character_),
+    family = c("Halictidae", "Halictidae", "Andrenidae"),
+    subfamily = c("Halictinae", NA_character_, NA_character_),
+    genus = c(NA_character_, NA_character_, "Andrena"),
+    taxon_id = c(335597L, 49707L, 123L),
+    scientific_name = c("Halictini", "Halictidae", "Andrena"),
+    common_name = NA_character_)
+  out <- fill_above_genus_ids(df, lk)
+  expect_equal(out$taxon_id[1], 335597L)             # tribe (finest), not family 49707
+  expect_equal(out$taxon_rank[1], "tribe")
+  expect_equal(out$scientific_name[1], "Halictini")
+  expect_equal(out$taxon_id[2], 123L)                # genus-resolved row untouched
+})
+
+test_that("fill_above_genus_ids leaves an ambiguous rank+name (>1 id) blank", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(genus = NA_character_, family = "Halictidae", tribe = "Halictini",
+                       taxon_id = NA_integer_, taxon_rank = NA_character_,
+                       scientific_name = NA_character_, common_name = NA_character_)
+  lk <- tibble::tibble(rank = c("tribe", "tribe"), tribe = c("Halictini", "Halictini"),
+                       family = "Halictidae",
+                       taxon_id = c(335597L, 1597678L),      # two ids -> ambiguous
+                       scientific_name = c("Halictini", "Halictina"), common_name = NA_character_)
+  out <- fill_above_genus_ids(df, lk)
+  expect_true(is.na(out$taxon_id[1]))                # never guess
+})
+
+test_that("fill_above_genus_ids does NOT coarsen a genus-or-finer specimen", {
+  src("specimens/specimen_clean.R")
+  # genus present but its species absent from the lookup -> taxon_id must STAY NA,
+  # NOT fall back to the family id.
+  df <- tibble::tibble(genus = "Andrena", species = "notinlookup", family = "Andrenidae",
+                       tribe = NA_character_, subtribe = NA_character_,
+                       taxon_id = NA_integer_, taxon_rank = NA_character_,
+                       scientific_name = NA_character_, common_name = NA_character_)
+  lk <- tibble::tibble(rank = "family", family = "Andrenidae", tribe = NA_character_,
+                       taxon_id = 111L, scientific_name = "Andrenidae", common_name = NA_character_)
+  out <- fill_above_genus_ids(df, lk)
+  expect_true(is.na(out$taxon_id[1]))                # has_genus -> skipped
 })

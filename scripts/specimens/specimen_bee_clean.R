@@ -15,7 +15,8 @@
 # COLUMN MAP (iNat -> specimen)
 #   obs_id            -> ucsd_id + sdnhm_id
 #   observer          -> collector          observed_on -> date       survey_year -> year
-#   is_survey         -> TRUE (all)         survey_type -> "lethal"   survey_note -> blank
+#   is_survey         -> TRUE (all)         survey_type -> "intern"   survey_note -> blank
+#   survey_method     -> "lethal" (all)     (lethal/non-lethal axis; survey_type is the surveyor)
 #   transect          -> from `plot` (crosswalk variants) + spatial fallback
 #   flower_visited    -> the "ex. <plant>" value of method_or_plant (methods -> blank)
 #   cabr_bee_lethal_collection -> TRUE      the 8 other behavior flags -> blank
@@ -37,6 +38,7 @@ local({
   need("require_columns",           "utils/utils.R")
   need("write_fresh",               "utils/utils.R")
   need("standardize_specimen_names","specimens/specimen_clean.R")
+  need("keep_bee_specimens",        "specimens/specimen_clean.R")
 })
 
 SBC_RECORDS_DIR     <- "data/specimens/records"
@@ -55,7 +57,7 @@ SBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
                        "species", "subspecies")
 # final column order -- inat_bee_clean's IBC_COLUMN_ORDER, obs_id -> ucsd_id+sdnhm_id, + sex
 SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_survey", "survey_note",
-                      "survey_type", "survey_year", "transect", "is_10min", "is_metadata",
+                      "survey_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
                       "flower_visited", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
                       "location_needs_fix", "taxon_id", "taxon_rank", "quality_grade",
                       SBC_TAXONOMY_COLS, "latitude", "longitude", "positional_accuracy",
@@ -125,6 +127,17 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
 
   df <- raw |> parse_specimen_dates() |> standardize_specimen_names()
 
+  # BEES ONLY (per Brandi: "only include bees, not wasps or dipterans, or anything
+  # not bee"): drop wasp/fly bycatch AND fully-unidentified rows up front, so the
+  # entire downstream -- taxonomy attach, spell-check flags, transect, complex match,
+  # QC side files, output -- is bee-scoped. FAMILY test, not superfamily (apoid wasps
+  # like Crabronidae share Apoidea with bees). The record carries `family` on every
+  # ID'd row, so no real bee is lost.
+  n_pre_bee <- nrow(df)
+  df <- keep_bee_specimens(df)
+  message(sprintf("  bee filter: kept %d bee-family rows, dropped %d non-bee / unidentified",
+                  nrow(df), n_pre_bee - nrow(df)))
+
   # --- taxon_id + full taxonomy + spell-check (needs the lookup) ---
   if (file.exists(PATHS$taxonomy_lookup)) {
     lookup <- suppressMessages(read_csv(PATHS$taxonomy_lookup, show_col_types = FALSE))
@@ -173,7 +186,8 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   df$observed_on <- df$date_clean
   df$is_survey  <- TRUE
   df$survey_note <- NA_character_
-  df$survey_type <- "lethal"
+  df$survey_type <- "intern"     # surveyor category (interns collect the specimens)
+  df$survey_method <- "lethal"   # specimens are the LETHAL survey
   df$survey_year <- df$year
   df$is_10min <- NA; df$is_metadata <- NA
   df$flower_visited <- .sbc_flower_from_method(df$method_or_plant)

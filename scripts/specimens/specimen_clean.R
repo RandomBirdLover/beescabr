@@ -39,6 +39,30 @@ standardize_specimen_names <- function(df) {
     )
 }
 
+# BEE_FAMILIES: the seven true bee families (clade Anthophila). Apoid WASPS
+# (Crabronidae, Sphecidae, ...) share SUPERFAMILY Apoidea with bees, so bee-ness is
+# a FAMILY test, never a superfamily one -- filtering by Apoidea would keep the
+# apoid wasps too.
+BEE_FAMILIES <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
+                  "Megachilidae", "Melittidae", "Stenotritidae")
+
+# keep_bee_specimens(): PURE. Keep only rows whose `family` is one of the seven bee
+# families (case-/whitespace-insensitive). Drops identified non-bees (wasp families
+# Tiphiidae/Crabronidae/Vespidae/Pompilidae/Scoliidae, Diptera) AND fully-
+# unidentified rows (blank family) -- specimen_bee_clean is bees only (per Brandi:
+# "only include bees, not wasps or dipterans, or anything not bee"). The specimen
+# record carries `family` on every ID'd row, so this is lossless for real bees.
+# No `family` column -> can't tell, so return df unchanged with a warning (fail
+# open; never silently empty the record).
+keep_bee_specimens <- function(df) {
+  if (!"family" %in% names(df)) {
+    warning("keep_bee_specimens: no `family` column -- cannot filter to bees; returning df unchanged")
+    return(df)
+  }
+  fam <- tolower(trimws(as.character(df$family)))
+  df[fam %in% tolower(BEE_FAMILIES), , drop = FALSE]
+}
+
 # Fill blank order/family/subfamily/tribe from the taxonomy lookup (Holway-derived
 # authority). Source values win when present; the lookup only fills blanks. ROBUST
 # to a lookup that omits some of those columns (e.g. no `order`): a rank whose
@@ -237,6 +261,57 @@ match_plot_transect <- function(plot, variant_map) {
   out
 }
 
+# ABOVE_GENUS_RANKS: identification ranks coarser than genus, FINEST first. A
+# specimen keyed only to one of these (blank genus -- e.g. ID'd to tribe Halictini)
+# can't match the genus-and-below join, so its id/rank/name come from the lookup ROW
+# AT THAT RANK instead. Bee specimen records only ever reach family/subfamily/tribe
+# above genus, but the ladder is general.
+ABOVE_GENUS_RANKS <- c("subtribe", "tribe", "subfamily", "epifamily", "family",
+                       "superfamily", "infraorder", "suborder", "order",
+                       "subclass", "class", "subphylum", "phylum", "kingdom")
+
+# fill_above_genus_ids(): PURE. For rows STILL missing taxon_id AND with no genus,
+# resolve taxon_id / taxon_rank / scientific_name / common_name from the lookup's row
+# at the specimen's FINEST filled above-genus rank (e.g. tribe Halictini -> 335597).
+# Fills only on an UNAMBIGUOUS match (a single distinct taxon_id for that rank+name);
+# ambiguous or absent -> left blank (never guess). Genus-or-finer IDs are handled by
+# the genus join and are left untouched here -- a species not in the lookup stays
+# blank, it is NOT coarsened up to its family.
+fill_above_genus_ids <- function(df, lookup) {
+  if (!"taxon_id"        %in% names(df)) df$taxon_id        <- NA_integer_
+  if (!"taxon_rank"      %in% names(df)) df$taxon_rank      <- NA_character_
+  if (!"scientific_name" %in% names(df)) df$scientific_name <- NA_character_
+  if (!"common_name"     %in% names(df)) df$common_name     <- NA_character_
+  df$taxon_id <- suppressWarnings(as.integer(df$taxon_id))
+  if (is.null(lookup) || !nrow(lookup) || !"rank" %in% names(lookup)) return(df)
+  norm <- function(x) tolower(trimws(as.character(x)))
+  g <- if ("genus" %in% names(df)) as.character(df$genus) else rep(NA_character_, nrow(df))
+  has_genus <- !is.na(g) & trimws(g) != ""
+  need <- which(is.na(df$taxon_id) & !has_genus)
+  if (!length(need)) return(df)
+  lk_rank <- norm(lookup$rank)
+  lk_id   <- suppressWarnings(as.integer(lookup$taxon_id))
+  for (i in need) {
+    rk <- NA_character_; val <- NA_character_
+    for (r in ABOVE_GENUS_RANKS) {
+      if (!r %in% names(df)) next
+      v <- as.character(df[[r]][i])
+      if (!is.na(v) && trimws(v) != "") { rk <- r; val <- v; break }
+    }
+    if (is.na(rk) || !rk %in% names(lookup)) next          # finest rank unresolvable -> leave blank
+    hit <- lk_rank == rk & norm(lookup[[rk]]) == norm(val)
+    ids <- unique(lk_id[hit & !is.na(lk_id)])
+    if (length(ids) == 1L) {
+      j1 <- which(hit & lk_id == ids)[1]
+      df$taxon_id[i]        <- ids
+      df$taxon_rank[i]      <- rk
+      if ("scientific_name" %in% names(lookup)) df$scientific_name[i] <- as.character(lookup$scientific_name[j1])
+      if ("common_name"     %in% names(lookup)) df$common_name[i]     <- as.character(lookup$common_name[j1])
+    }
+  }
+  df
+}
+
 # ------------------------------------------------------------
 # attach_lookup_taxonomy(): PURE. Join the taxonomy lookup at the specimen's finest
 # ID rank (NA matches NA in the join, so a genus-only specimen matches the lookup's
@@ -272,5 +347,9 @@ attach_lookup_taxonomy <- function(df, lookup) {
     if (rc %in% names(j) && lkc %in% names(j)) j[[rc]] <- coalesce(b2na(j[[rc]]), j[[lkc]])
     else if (lkc %in% names(j))                j[[rc]] <- j[[lkc]]
   }
+  # Above-genus fallback: a specimen keyed only to family/subfamily/tribe (blank
+  # genus) matched nothing in the genus-and-below join -- resolve its id/rank/name
+  # from the lookup's row at that rank (uses the higher-rank columns just coalesced).
+  j <- fill_above_genus_ids(j, lookup)
   j |> select(-.g, -.s, -.ss, -any_of("rank"), -ends_with("_lk"))
 }

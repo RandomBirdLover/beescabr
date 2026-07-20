@@ -54,6 +54,24 @@ TAXONOMY_COLUMN_ORDER <- c(
   )
 }
 
+# infer_higher_rank(): the OWN rank of an above-genus taxon, from the DEEPEST filled
+# lineage column. subtribe is tested BEFORE tribe -- an observation identified to a
+# subtribe (e.g. Halictina) also carries its parent tribe (Halictini), so a tribe-
+# first test mislabels the subtribe taxon as rank "tribe". That put a SECOND, wrong-id
+# row under tribe Halictini / Panurgini / Epeolini (Halictina 1597678, Perditina
+# 572165, Epeolina 1671673), making those tribe ids ambiguous. Vectorized; NA/"" count
+# as unfilled.
+infer_higher_rank <- function(family, subfamily, tribe, subtribe = NA_character_) {
+  nz <- function(x) !is.na(x) & as.character(x) != ""
+  dplyr::case_when(
+    nz(subtribe)  ~ "subtribe",
+    nz(tribe)     ~ "tribe",
+    nz(subfamily) ~ "subfamily",
+    nz(family)    ~ "family",
+    TRUE          ~ "epifamily"
+  )
+}
+
 # ------------------------------------------------------------
 # merge_holway_resolved(): fill taxon_id + scientific_name on the lookup's
 # Holway genus/species rows from the enriched Holway reference table
@@ -607,16 +625,18 @@ build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees
   # ---------------------------------------------------------------
   higher_rank_rows <- bees |>
     filter(is.na(genus) | genus == "") |>
-    select(any_of(c("taxon_id","scientific_name","common_name","family","subfamily","tribe"))) |>
+    select(any_of(c("taxon_id","scientific_name","common_name",
+                    "family","subfamily","tribe","subtribe"))) |>
     distinct(taxon_id, .keep_all = TRUE) |>
-    filter(!is.na(taxon_id)) |>
-    mutate(rank = case_when(!is.na(tribe)     & tribe     != "" ~ "tribe",
-                            !is.na(subfamily) & subfamily != "" ~ "subfamily",
-                            !is.na(family)    & family    != "" ~ "family",
-                            TRUE ~ "epifamily"),
+    filter(!is.na(taxon_id))
+  # subtribe may be absent from the export; ensure the column exists so the rank
+  # inference (and the kept subtribe value) are well-defined.
+  if (!"subtribe" %in% names(higher_rank_rows)) higher_rank_rows$subtribe <- NA_character_
+  higher_rank_rows <- higher_rank_rows |>
+    mutate(rank = infer_higher_rank(family, subfamily, tribe, subtribe),
            kingdom = BEE_KINGDOM, phylum = BEE_PHYLUM, class = BEE_CLASS,
            order = BEE_ORDER, superfamily = BEE_SUPERFAMILY,
-           subtribe = NA_character_, genus = NA_character_, subgenus = NA_character_,
+           genus = NA_character_, subgenus = NA_character_,
            complex = NA_character_, complex_taxon_id = NA_integer_,
            species = NA_character_, subspecies = NA_character_)
 

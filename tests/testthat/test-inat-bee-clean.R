@@ -47,3 +47,40 @@ test_that("ibc_fill_taxonomy coerces integer taxon_id keys before joining", {
   out <- ibc_fill_taxonomy(df, lookup)
   expect_equal(out$scientific_name, "Bombus vosnesenskii")
 })
+
+# ibc_bee_situation(): on_flower > on_ground > nest > missing. A recorded flower_visited
+# PLANT counts as on_flower even when the bee_on_flower flag is FALSE (surveyors log the
+# plant, not the flag). "missing" -> handed back to scientists to annotate.
+
+test_that("ibc_bee_situation prioritizes, and a recorded plant counts as on_flower", {
+  src("observations/inat_bee_clean.R")
+  df <- tibble(
+    bee_on_flower  = c(TRUE,  FALSE,                 FALSE, FALSE, FALSE, TRUE),
+    flower_visited = c(NA,    "Encelia californica", NA,    NA,    NA,    NA),
+    bee_on_ground  = c(FALSE, FALSE,                 TRUE,  FALSE, FALSE, TRUE),
+    bee_nest       = c(FALSE, FALSE,                 FALSE, TRUE,  FALSE, FALSE),
+    bee_in_nest    = c(FALSE, FALSE,                 FALSE, FALSE, FALSE, FALSE))
+  expect_equal(ibc_bee_situation(df),
+               c("on_flower",   # flag set
+                 "on_flower",   # plant recorded, flag FALSE
+                 "on_ground",
+                 "nest",        # bee_nest
+                 "missing",     # nothing recorded
+                 "on_flower"))  # on_flower wins over on_ground
+})
+
+test_that("ibc_bee_situation counts bee_in_nest as nest and is NA/blank-safe", {
+  src("observations/inat_bee_clean.R")
+  df <- tibble(
+    bee_on_flower  = c(NA,    FALSE),
+    flower_visited = c("",    NA),          # "" is not a recorded plant
+    bee_on_ground  = c(NA,    FALSE),
+    bee_nest       = c(FALSE, NA),
+    bee_in_nest    = c(FALSE, TRUE))
+  expect_equal(ibc_bee_situation(df), c("missing", "nest"))
+})
+
+test_that("ibc_bee_situation returns 'missing' when the behavior columns are absent", {
+  src("observations/inat_bee_clean.R")
+  expect_equal(ibc_bee_situation(tibble(obs_id = c("1", "2"))), c("missing", "missing"))
+})
