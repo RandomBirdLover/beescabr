@@ -1,4 +1,12 @@
 library(stringr)
+
+# Ensure pdftools is installed (stage 2d reads the beeple-calendar PDFs with it).
+# utils.R is sourced first, so this runs before the calendar parser loads pdftools,
+# keeping the pipeline from halting at load time on a fresh machine. try() so an
+# offline install just warns and the calendar stage's own tryCatch skips gracefully.
+if (!requireNamespace("pdftools", quietly = TRUE))
+  try(install.packages("pdftools", repos = "https://cloud.r-project.org"), silent = TRUE)
+
 read_latest <- function(folder, pattern) {
   files <- list.files(folder, pattern = pattern, full.names = TRUE)
   if (length(files) == 0) stop("No files matching '", pattern, "' found in ", folder)

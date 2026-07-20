@@ -113,7 +113,7 @@ reconcile_lookup_dupes <- function(df) {
     y <- if (is.character(x)) x[!is.na(x) & x != ""] else x[!is.na(x)]
     if (length(y)) y[[1]] else x[[1]]
   }
-  flag_cols   <- intersect(c("verified", "in_holway", "in_inat", "in_cabr_specimens"), names(df))
+  flag_cols   <- intersect(c("verified", "in_holway", "in_inat"), names(df))
   status_cols <- intersect(c("holway_status"), names(df))
   taxo_cols   <- setdiff(names(df), c("taxon_id", flag_cols, status_cols))
 
@@ -294,6 +294,124 @@ fill_parent_ids <- function(df, ancestry_ids) {
     select(-.rk, -.nm, -.aid)
 }
 
+# ------------------------------------------------------------
+# ancestry_ids_from_reference(): PURE. Build the (taxon_id, rank, name) id map that
+# fill_parent_ids/derive_bee_subranks consume, from every id-bearing row of the
+# reference table -- using the name at each row's own rank. Replaces the retired
+# ancestry side-file now that the ancestor taxa live in the reference table itself.
+# ------------------------------------------------------------
+ancestry_ids_from_reference <- function(ref) {
+  LEVELS <- c("kingdom", "phylum", "subphylum", "class", "subclass", "order",
+              "suborder", "infraorder", "superfamily", "family", "epifamily",
+              "subfamily", "tribe", "subtribe", "genus", "subgenus", "complex",
+              "species", "subspecies")
+  for (nm in c("taxon_id", "rank", "scientific_name", LEVELS))
+    if (!nm %in% names(ref))
+      ref[[nm]] <- if (nm == "taxon_id") NA_integer_ else NA_character_
+  name_at <- as.character(ref$scientific_name)
+  for (lv in LEVELS) {
+    hit <- !is.na(ref$rank) & ref$rank == lv
+    name_at[hit] <- as.character(ref[[lv]][hit])
+  }
+  tibble(taxon_id = suppressWarnings(as.integer(ref$taxon_id)),
+         rank = as.character(ref$rank), name = name_at) |>
+    filter(!is.na(taxon_id), !is.na(rank), !is.na(name), name != "") |>
+    distinct(taxon_id, .keep_all = TRUE)
+}
+
+# ============================================================================
+# specimen_additions_to_lookup(): PURE. Merge NEW specimen-only taxa into the lookup WITHOUT
+# fabricating parent rows. This is the deferred "lookup = Holway + iNat + specimen additions"
+# step (see the TODO in taxonomy_lookup_build.R) -- GATED on the raw-specimen cleanup, so it is
+# NOT wired into the live build yet; it lives here, tested, ready to call.
+#
+# `additions` are lookup-shaped taxon rows (a `rank` + the rank-name columns). For each:
+#   * SKIP it if a row for that taxon already exists (matched by its name-at-own-rank);
+#   * otherwise APPEND its own (leaf) row;
+#   * its PARENT taxa are only ever LINKED to an EXISTING lookup row -- a missing parent is
+#     NEVER created (by request). Missing parents are returned so you can decide later.
+# Returns list(lookup = <lookup + appended leaves>, added = <appended rows>, missing_parents=<tibble>).
+# ============================================================================
+SPECIMEN_ADDITION_RANKS <- c("kingdom","phylum","subphylum","class","subclass","order",
+                             "suborder","infraorder","superfamily","family","epifamily",
+                             "subfamily","tribe","subtribe","genus","subgenus","complex",
+                             "species","subspecies")
+
+# .qual_key(): fully-qualified (rank, name) identity key. Infra-generic ranks are qualified by
+# their genus (species/subgenus/complex) or genus+species (subspecies), so "Colletes phaceliae" and
+# "Chelostoma phaceliae" are DIFFERENT taxa -- a bare epithet would wrongly collide them. Subgenus
+# names drop parens + keep the last word ("(Neochelostoma)" == "Neochelostoma"). NA/blank -> NA.
+.qual_key <- function(rank, name, genus_ctx = NA, species_ctx = NA) {
+  rk <- tolower(trimws(as.character(rank)))
+  nm <- trimws(as.character(name))
+  is_sub <- !is.na(rk) & rk == "subgenus"
+  nm[is_sub] <- sub(".*\\s", "", trimws(gsub("[()]", "", nm[is_sub])))   # strip parens, last word
+  nm <- tolower(nm)
+  g  <- tolower(trimws(as.character(genus_ctx)))
+  s  <- tolower(trimws(as.character(species_ctx)))
+  qual <- dplyr::case_when(
+    rk == "subspecies"                          ~ paste(g, s, sep = "|"),
+    rk %in% c("species", "subgenus", "complex") ~ g,
+    TRUE                                        ~ "")
+  key <- ifelse(qual == "", paste(rk, nm, sep = "\t"), paste(rk, qual, nm, sep = "\t"))
+  ifelse(is.na(rk) | rk == "" | is.na(nm) | nm == "", NA_character_, key)
+}
+
+# .row_keys(): identity key for each row of a lookup/addition frame -- its name-at-own-rank,
+# qualified by the row's own genus/species.
+.row_keys <- function(df) .qual_key(df$rank, .name_at_own_rank(df),
+                                    if ("genus" %in% names(df)) df$genus else NA,
+                                    if ("species" %in% names(df)) df$species else NA)
+
+# .name_at_own_rank(): the name a row carries AT ITS OWN rank (value of its rank-named column).
+.name_at_own_rank <- function(df) {
+  out <- rep(NA_character_, nrow(df))
+  rk  <- as.character(df$rank)
+  for (lv in SPECIMEN_ADDITION_RANKS) {
+    if (!lv %in% names(df)) next
+    hit <- !is.na(rk) & rk == lv
+    if (any(hit)) out[hit] <- as.character(df[[lv]][hit])
+  }
+  out
+}
+
+specimen_additions_to_lookup <- function(lookup, additions) {
+  empty_mp <- tibble(taxon = character(), rank = character(),
+                     missing_parent_rank = character(), missing_parent_name = character())
+  if (is.null(additions) || !nrow(additions) || !"rank" %in% names(additions))
+    return(list(lookup = lookup, added = additions[0, , drop = FALSE], missing_parents = empty_mp))
+
+  existing <- unique(na.omit(.row_keys(lookup)))
+
+  add_name <- .name_at_own_rank(additions)
+  add_key  <- .row_keys(additions)
+  is_new   <- !is.na(add_key) & !(add_key %in% existing) & !duplicated(add_key)  # dedupe vs lookup + within batch
+  added    <- additions[is_new, , drop = FALSE]
+  added_nm <- add_name[is_new]
+
+  # PARENT-EXISTENCE report -- higher ranks named on each added leaf that have NO lookup row.
+  # We report them; we do NOT create them (the caller decides later).
+  parents_above <- function(rk) {
+    i <- match(rk, SPECIMEN_ADDITION_RANKS)
+    if (is.na(i) || i <= 1L) character(0) else SPECIMEN_ADDITION_RANKS[seq_len(i - 1L)]
+  }
+  mp <- list()
+  if (nrow(added)) for (r in seq_len(nrow(added))) {
+    gctx <- if ("genus" %in% names(added)) added$genus[r] else NA
+    sctx <- if ("species" %in% names(added)) added$species[r] else NA
+    for (pr in parents_above(as.character(added$rank[r]))) {
+      if (!pr %in% names(added)) next
+      k <- .qual_key(pr, added[[pr]][r], gctx, sctx)
+      if (is.na(k) || k %in% existing) next                    # blank or already present -> fine
+      mp[[length(mp) + 1L]] <- tibble(taxon = added_nm[r], rank = as.character(added$rank[r]),
+                                      missing_parent_rank = pr,
+                                      missing_parent_name = as.character(added[[pr]][r]))
+    }
+  }
+  missing_parents <- if (length(mp)) bind_rows(mp) else empty_mp
+  list(lookup = bind_rows(lookup, added), added = added, missing_parents = missing_parents)
+}
+
 # ============================================================================
 # build_bee_taxonomy_lookup(): the reference table is the START of the lookup.
 #
@@ -311,7 +429,6 @@ fill_parent_ids <- function(df, ancestry_ids) {
 # ============================================================================
 build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees,
                                       verified_ids = integer(0),
-                                      specimen_species = NULL,
                                       ancestry_ids = NULL) {
 
   if (is.null(holway_resolved) || nrow(holway_resolved) == 0)
@@ -561,17 +678,10 @@ build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees
   # FALSE as "the bees in that complex aren't in Holway."
   deduped$in_holway <- is.na(flagged$new_at_rank)
 
-  # in_cabr_specimens: genus+species (or genus, for a genus row) in the specimens
-  gs <- character(0); gonly <- character(0)
-  if (!is.null(specimen_species) && nrow(specimen_species) > 0) {
-    has_sp <- !is.na(specimen_species$species) & specimen_species$species != ""
-    gs    <- paste(tolower(specimen_species$genus[has_sp]), tolower(specimen_species$species[has_sp]))
-    gonly <- tolower(specimen_species$genus[!has_sp])
-  }
-  has_species <- !is.na(deduped$species) & deduped$species != ""
-  deduped$in_cabr_specimens <-
-    (has_species  & paste(tolower(deduped$genus), tolower(deduped$species)) %in% gs) |
-    (!has_species & tolower(deduped$genus) %in% gonly)
+  # NOTE: this lookup is intentionally HOLWAY + iNAT ONLY. CABR specimen evidence
+  # (in_cabr_specimens) is deliberately NOT joined here -- the raw specimen names
+  # aren't QC'd, and the specimen leg belongs downstream in the CABR checklists,
+  # built from a CLEANED specimen record. Keep this reference table specimen-free.
 
   # collapse rows that share a taxon_id (a Holway taxon and its iNat-observed twin)
   deduped <- reconcile_lookup_dupes(deduped)
@@ -581,7 +691,7 @@ build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees
   # ---------------------------------------------------------------
   ordered <- c("taxon_id","scientific_name","common_name","rank","verified",
                "holway_status","qualifier","itis_valid",
-               "in_holway","in_inat","in_cabr_specimens", TAXONOMY_LEVELS)
+               "in_holway","in_inat", TAXONOMY_LEVELS)
   deduped |>
     select(any_of(ordered), everything(), -any_of("complex_taxon_id")) |>
     arrange(family, genus, rank, subgenus, complex, species, subspecies)

@@ -96,3 +96,16 @@ test_that("holway_match_keys keys on species only and expands slash pairs", {
   expect_false("ashmeadiella_cactorum basalis" %in% keys)       # the packed form is gone
   expect_true(all(c("bombus_californicus", "bombus_fervidus") %in% keys))  # both slash names
 })
+
+test_that(".holway_autorun_ok blocks the source-time auto-run under the pipeline runner", {
+  src("reference/holway_reference_build.R")
+  # Under the pipeline runner the sentinel is set and stage 4 calls build_holway_reference
+  # itself -- the bottom runner block must NOT also fire (that double-built the table).
+  expect_false(.holway_autorun_ok(globalenv(), run_flag = "1", sourced_by_runner = TRUE))
+  # Standalone direct run: top-level globalenv + env flag set + no sentinel -> DO run.
+  expect_true(.holway_autorun_ok(globalenv(), run_flag = "1", sourced_by_runner = FALSE))
+  # Standalone but env flag unset -> don't run.
+  expect_false(.holway_autorun_ok(globalenv(), run_flag = NA, sourced_by_runner = FALSE))
+  # Sourced into a local (non-global) env, e.g. for tests -> never run.
+  expect_false(.holway_autorun_ok(new.env(), run_flag = "1", sourced_by_runner = FALSE))
+})

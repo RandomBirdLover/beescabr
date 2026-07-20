@@ -52,6 +52,7 @@ library(sf)
 if (file.exists("scripts/project_info/resolve_beeple_transects_per_survey.R")) source("scripts/project_info/resolve_beeple_transects_per_survey.R")
 if (file.exists("scripts/project_info/finding_survey_dates.R")) source("scripts/project_info/finding_survey_dates.R")
 if (file.exists("scripts/project_info/finding_specimen_dates.R")) source("scripts/project_info/finding_specimen_dates.R")
+if (file.exists("scripts/project_info/rescue_on_transect_surveys.R")) source("scripts/project_info/rescue_on_transect_surveys.R")
 
 # ---- paths ----
 # Every export listed here is pooled through the SAME membership + survey-date
@@ -65,6 +66,7 @@ FPI_CROSSWALK <- "data/project_info/master_crosswalk.csv"
 FPI_ROSTER    <- "data/project_info/surveyor_roster.csv"
 FPI_WINDOWS   <- "data/project_info/sources/beeple_calendar_windows/beeple_calendar_windows.csv"
 FPI_BOUNDARY  <- "data/spatial/boundaries/cabr/cabr_survey_box.shp"
+FPI_TRANSECTS <- "data/spatial/transects/cabr_bee_transects.shp"  # rescue: on-transect untagged obs
 
 FPI_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"  # the per-obs lookup
 FPI_SURVEY_DATES   <- "data/project_info/master_per_survey_info.csv"
@@ -317,6 +319,15 @@ finding_project_info <- function(write = TRUE) {
   if (exists("resolve_transects")) {
     rt <- resolve_transects(membership); membership <- rt$membership
     mistags <- rt$mistags; ties <- rt$ties
+  }
+  # RESCUE: an untagged obs on its surveyor's survey-day transect IS a survey (they just missed the
+  # tag). Upgrade flag->keep, marked survey_source="inferred_on_transect". Runs AFTER the majority-
+  # transect resolve and BEFORE survey_dates, so it flows to n_obs + both cleaned tables at once.
+  if (exists("fpi_rescue_on_transect") && file.exists(FPI_TRANSECTS)) {
+    .tsf <- suppressWarnings(sf::st_read(FPI_TRANSECTS, quiet = TRUE))
+    names(.tsf)[tolower(names(.tsf)) == "name"] <- "Name"
+    .tsf$T <- fpi_norm_transect(.tsf$Name)
+    membership <- fpi_rescue_on_transect(membership, dplyr::select(base, obs_id, latitude, longitude), .tsf)
   }
   sd_out         <- fpi_survey_dates(membership, windows, roster)
   survey_dates   <- sd_out$survey_dates

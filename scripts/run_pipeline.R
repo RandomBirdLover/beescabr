@@ -61,15 +61,17 @@ source("scripts/project_info/finding_beeple_calendar.R")  # defines finding_beep
 source("scripts/project_info/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
 source("scripts/project_info/review_crosswalk.R")         # interactive review of unknown tags + fields
 source("scripts/project_info/review_windows.R")           # interactive review of survey-date windows
-source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 4 (clean)
-# ---- TAXONOMY (restored 2026-07-20) + CHECKLISTS (pending) ----
-# TAXONOMY: restored with the parent-roll-up fix -- an unresolved Holway species inherits
-# its nearest on-iNat parent's taxon_id + ancestry (same-named complex -> subgenus -> genus).
-# The INTERACTIVE Holway->iNat resolver (reference/holway_reference_build.R) is a SEPARATE
-# by-hand step (Rscript it, or BEESCABR_RUN_HOLWAY); the runner sources only the non-interactive
-# lookup builder, which pulls its own deps (holway.R, taxonomy_reference.R, verify.R,
-# checklist_build.R) via need().
+source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
+source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
+# ---- TAXONOMY + SPECIMENS + CHECKLISTS ----
+# Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in
+# the pipeline now (stages 4 + 5); they pull their own deps (holway.R, taxonomy_reference.R,
+# verify.R, checklist_build.R) via need().
+source("scripts/reference/holway_reference_build.R")  # defines build_holway_reference() -- stage 4 (interactive)
 source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
+source("scripts/specimens/specimen_clean.R")          # pure specimen-cleaning helpers
+source("scripts/specimens/specimen_bee_clean.R")      # defines clean_specimens() -- stage 6b
+source("scripts/specimens/tidy_raw_specimens.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
 # CHECKLISTS: rough drafts, run LAST, not sourced until built (checklist_build.R is pulled in above).
 # source("scripts/checklists/cabr_bee_checklist.R")
 # source("scripts/checklists/pl_bee_checklist.R")
@@ -217,25 +219,59 @@ main <- function() {
     message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R / review_windows.R by hand ==")
   }
 
-  # ---- 4. CLEAN: labeled analysis table (bee) ----
-  # Reads the brain's cabr_inat_raw.csv, joins coords + taxon_id, writes cabr_inat_bee_clean.csv.
-  # Also re-marks Humphreys Rd walk-in obs (off-transect but on the access road) as NOT survey.
-  message("\n== [4] CLEAN: writing cabr_inat_bee_clean.csv ==")
-  inat_bee_clean()
+  # ---- 4. HOLWAY REFERENCE (interactive: resolves Holway -> iNat; prompts as needed) ----
+  # Rebuilds holway_sd_bee_reference_table_v3.csv EVERY run so any Holway change is caught.
+  # Decisions are cached (holway_decisions) so a normal run mostly replays them -- you're only
+  # prompted for the unresolved-"Described" second pass + anything new. Wrapped so an abort or
+  # failure keeps the existing table and never kills the run.
+  message("\n== [4] HOLWAY REFERENCE: (re)building holway_sd_bee_reference_table_v3.csv ==")
+  tryCatch({
+    .hdf <- load_holway(PATHS$holway_combined)
+    .ref <- build_holway_reference(con, .hdf,
+              interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1")
+    write.csv(.ref, PATHS$holway_reference, row.names = FALSE, na = "")
+    message("  wrote ", nrow(.ref), " reference rows -> ", basename(PATHS$holway_reference))
+  }, error = function(e) message("  [4] Holway reference FAILED (non-fatal): ",
+                                 conditionMessage(e), " -- keeping the existing table."))
 
-  # ---- 5. TAXONOMY LOOKUP (restored 2026-07-20) ----
-  # Reads the pre-built Holway reference table + the cache, writes sd_bee_taxonomy_lookup.csv
-  # (+ the internal complex map). The interactive Holway->iNat resolver (holway_reference_build.R)
-  # is a SEPARATE by-hand step -- run it when Holway updates; this stage consumes its output.
-  # Guarded + wrapped so a taxonomy failure never kills the core pipeline above.
+  # ---- 5. TAXONOMY LOOKUP ----
+  # Reads the Holway reference table (step 4) + the cache, writes sd_bee_taxonomy_lookup.csv
+  # (+ the internal complex map). Wrapped so a taxonomy failure never kills the run.
   if (file.exists(PATHS$holway_reference)) {
     message("\n== [5] TAXONOMY LOOKUP: building sd_bee_taxonomy_lookup.csv ==")
     tryCatch(build_taxonomy_lookup(con),
              error = function(e) message("  [5] taxonomy lookup FAILED (non-fatal): ", conditionMessage(e)))
   } else {
-    message("\n== [5] TAXONOMY LOOKUP skipped -- Holway reference table missing; run holway_reference_build.R first ==")
+    message("\n== [5] TAXONOMY LOOKUP skipped -- no Holway reference table ==")
   }
-  # CHECKLISTS (5+): rough drafts, run LAST -- not wired until built.
+
+  # ---- 6. SPECIMENS (lethal-survey record) ----
+  # 6a. Raw hygiene worklist (non-ID'd / missing / duplicate rows to fix by hand).
+  # 6b. Clean -- taxon_id + taxonomy from the lookup (step 5), transect, visited plant ->
+  #     cabr_specimen_bee_record_clean.csv (mirrors the iNat bee schema).
+  message("\n== [6] SPECIMENS: raw worklist + cabr_specimen_bee_record_clean.csv ==")
+  tryCatch(tidy_raw_specimens(),
+           error = function(e) message("  [6a] raw worklist FAILED (non-fatal): ", conditionMessage(e)))
+  tryCatch(clean_specimens(interactive_ok = FALSE),
+           error = function(e) message("  [6b] specimen clean FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 7. CLEAN: labeled iNat BEE table (taxonomy filled from the lookup) ----
+  # Reads the brain's cabr_inat_raw.csv, joins coords + taxon_id, fills taxonomy from the
+  # lookup (step 5) by taxon_id, re-marks Humphreys Rd walk-ins. AFTER the lookup so its
+  # taxonomy columns are populated.
+  message("\n== [7] CLEAN: writing cabr_inat_bee_clean.csv ==")
+  tryCatch(inat_bee_clean(),
+           error = function(e) message("  [7] inat bee clean FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 8. CLEAN: labeled iNat PLANT table (surveyors' plant obs; taxonomy from the plant export) ----
+  # Mirrors stage 7 for plants: brain membership (kind=="plant") scoped to roster surveyors,
+  # flower_flowering annotation, taxonomy straight from export_flat_plant.rds, is_survey marking.
+  message("\n== [8] PLANT CLEAN: writing cabr_inat_plant_clean.csv ==")
+  tryCatch(inat_plant_clean(),
+           error = function(e) message("  [8] inat plant clean FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 9. CHECKLISTS: sd / pl / cabr ----
+  message("\n== [9] CHECKLISTS: PENDING -- sd/pl/cabr checklists not built yet (placeholder) ==")
 
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   message("\n========================================")

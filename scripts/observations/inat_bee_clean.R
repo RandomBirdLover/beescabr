@@ -28,11 +28,12 @@
 #   optional; absent either one, nothing is re-marked. (The pin-map visualising this is kept as a
 #   reference artifact next to the road layer, not run in the pipeline.)
 #
-# SCAFFOLD NOTE (2026-07-20) -- columns exist now, values land later:
-#   * TAXONOMY (scientific_name, common_name, kingdom..subspecies) is BLANK -- filled from the
-#     taxonomy lookup (by taxon_id) once that table is built.
-#   * is_10min / is_metadata are BLANK -- the crosswalk has no NOTE variants yet.
-#   taxon_id is the real identity we compare bees on; taxon_rank rides along.
+# TAXONOMY (2026-07-20) -- now FILLED, not a scaffold:
+#   * scientific_name, common_name, kingdom..subspecies are filled from the taxonomy lookup by
+#     taxon_id (ibc_fill_taxonomy) -- the lookup is built EARLIER in the run. A taxon_id absent
+#     from the lookup leaves that row's taxonomy blank.
+#   * is_10min / is_metadata are STILL BLANK -- the crosswalk has no NOTE variants yet.
+#   taxon_id is the real identity we compare bees on; taxon_rank rides along from the iNat export.
 #
 # INPUTS   data/observations/cabr_inat_raw.csv                         (the brain's per-obs lookup)
 #          data/observations/cache/export_flat.rds                     (taxon_id + coords + fields/tags)
@@ -51,6 +52,7 @@ IBC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
 IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
+IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
 
@@ -60,7 +62,7 @@ IBC_BOOL_ANNOT <- c("bee_on_flower", "pollen_on_bee", "feeding", "mating",
                     "cabr_bee_lethal_collection")             # yes/no
 IBC_ANNOT_COLS <- c("flower_visited", IBC_BOOL_ANNOT)          # flower_visited (value) first
 
-# taxonomy columns -- BLANK placeholders now, filled from the taxonomy lookup (by taxon_id) later
+# taxonomy columns -- filled from the taxonomy lookup by taxon_id (ibc_fill_taxonomy)
 IBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
                        "kingdom", "phylum", "subphylum", "class", "subclass", "order",
                        "suborder", "infraorder", "superfamily", "family", "epifamily",
@@ -68,12 +70,36 @@ IBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
                        "species", "subspecies")
 
 # final column order for the clean table
-IBC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note",
+IBC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
                       "survey_type", "survey_year", "transect", "is_10min", "is_metadata",
                       IBC_ANNOT_COLS, "location_needs_fix",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IBC_TAXONOMY_COLS,
                       "latitude", "longitude", "positional_accuracy", "url")
+
+# ---- taxonomy fill ---------------------------------------------------------
+# ibc_fill_taxonomy(): PURE. Fill scientific_name / common_name / kingdom..subspecies from the
+# taxonomy lookup, joined by taxon_id (the lookup is the source of truth for the names). A taxon_id
+# absent from the lookup leaves that row's taxonomy blank. Every IBC_TAXONOMY_COLS column is
+# guaranteed present (blank when the lookup is NULL/empty or lacks it) so the schema stays stable,
+# and any stale taxonomy columns already on df are dropped first so a re-run never duplicates one.
+ibc_fill_taxonomy <- function(df, lookup) {
+  df$taxon_id <- as.character(df$taxon_id)
+  ensure_blank <- function(d) {
+    for (col in IBC_TAXONOMY_COLS) if (!col %in% names(d)) d[[col]] <- NA_character_
+    d
+  }
+  if (is.null(lookup) || !nrow(lookup) || !"taxon_id" %in% names(lookup))
+    return(ensure_blank(df))
+  tcols <- intersect(IBC_TAXONOMY_COLS, names(lookup))
+  if (!length(tcols)) return(ensure_blank(df))
+  lk2 <- lookup |>
+    mutate(taxon_id = as.character(taxon_id)) |>
+    filter(!is.na(taxon_id), taxon_id != "") |>
+    select(taxon_id, all_of(tcols)) |>
+    distinct(taxon_id, .keep_all = TRUE)
+  df |> select(-any_of(IBC_TAXONOMY_COLS)) |> left_join(lk2, by = "taxon_id") |> ensure_blank()
+}
 
 # TP / TP1 / TP2 -> TP, etc. (same rule the brain + resolver use)
 ibc_norm_transect <- function(x) {
@@ -215,10 +241,20 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
     TRUE ~ NA_character_)
   df$location_needs_fix <- df$is_survey & df$spatial_cat == "bad_coord"
 
-  # blank scaffolding: taxonomy (from lookup later) + notes-derived flags (after note variants)
-  for (col in IBC_TAXONOMY_COLS) df[[col]] <- NA_character_
+  # taxonomy: fill from the lookup by taxon_id (the lookup is built EARLIER in the run now).
+  # A taxon_id not in the lookup stays blank; is_10min/is_metadata blank until note variants.
+  if (file.exists(IBC_LOOKUP)) {
+    lk <- suppressMessages(read_csv(IBC_LOOKUP, show_col_types = FALSE))
+    df <- ibc_fill_taxonomy(df, lk)
+    message(sprintf("  taxonomy: filled %d/%d rows from the lookup",
+                    sum(!is.na(df$scientific_name)), nrow(df)))
+  } else {
+    df <- ibc_fill_taxonomy(df, NULL)
+    message("  taxonomy: lookup not found (", IBC_LOOKUP, ") -- columns left blank")
+  }
   df$is_10min    <- NA
   df$is_metadata <- NA
+  if (!"survey_source" %in% names(df)) df$survey_source <- NA_character_   # tag / inferred_on_transect
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
 

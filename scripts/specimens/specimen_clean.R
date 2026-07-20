@@ -1,0 +1,276 @@
+# =============================================================
+# specimens/specimen_clean.R
+# beescabr pipeline -- CABR bee specimen cleaning (pure helpers)
+# Restored 2026-07-20 from _to_delete/specimen_clean.R.bak (was clean/specimen_clean.R).
+#
+# The testable, side-effect-free transforms behind specimen cleaning. The
+# orchestrator (specimen_bee_clean.R) does the I/O (read the .xlsx, read the
+# lookup/complex-map CSVs, run the review gate, write outputs) and calls these.
+# Every function here is df-in / df-out (or a small decision), so the QC logic is
+# unit-tested in tests/testthat/test-specimen.R.
+#
+# Depends on: dplyr, stringr, lubridate.
+# =============================================================
+
+suppressWarnings(suppressMessages({ library(dplyr); library(stringr); library(lubridate) }))
+
+# Parse the specimen date column into date_clean + month/day/year, and turn
+# empty strings into NA across character columns.
+parse_specimen_dates <- function(df) {
+  df |>
+    mutate(
+      date_clean = as_date(date),
+      month = month(date_clean),
+      day   = day(date_clean),
+      year  = year(date_clean),
+      across(where(is.character), ~ na_if(.x, ""))
+    )
+}
+
+# Standard scientific-name casing: Genus title-case, species/subspecies lower.
+# Fixes a real source-data problem (ANDRENA / andrena) that broke downstream
+# case-sensitive joins.
+standardize_specimen_names <- function(df) {
+  df |>
+    mutate(
+      genus      = str_to_title(genus),
+      species    = str_to_lower(species),
+      subspecies = str_to_lower(subspecies)
+    )
+}
+
+# Fill blank order/family/subfamily/tribe from the taxonomy lookup (Holway-derived
+# authority). Source values win when present; the lookup only fills blanks. ROBUST
+# to a lookup that omits some of those columns (e.g. no `order`): a rank whose
+# `*_lookup` column is absent after the join is simply left as-is (bugfix vs the
+# old version, which referenced order_lookup unconditionally and errored).
+fill_specimen_taxonomy <- function(df, tax_lookup) {
+  if (!"order" %in% names(df)) df$order <- NA_character_   # bees are all Hymenoptera
+  joined <- df |>
+    left_join(tax_lookup, by = c("genus", "species", "subspecies"), suffix = c("", "_lookup"))
+  fill_from <- function(col) {
+    lk <- paste0(col, "_lookup")
+    base <- na_if(joined[[col]], "")
+    if (lk %in% names(joined)) coalesce(base, joined[[lk]]) else base
+  }
+  joined |>
+    mutate(order = fill_from("order"), family = fill_from("family"),
+           subfamily = fill_from("subfamily"), tribe = fill_from("tribe")) |>
+    select(-ends_with("_lookup"))
+}
+
+# Build the "known names" sets used by the spell-check, from the taxonomy lookup +
+# the SD County iNat checklist (second authority for valid names not yet in
+# Holway). Returns list(genera, genus_species).
+build_known_names <- function(tax_check, inat_species) {
+  known_genera <- unique(c(tax_check$genus, inat_species$genus))
+  known_genus_species <- bind_rows(
+    tax_check |> filter(!is.na(species), species != "") |> distinct(genus, species),
+    inat_species
+  ) |> distinct(genus, species)
+  list(genera = known_genera, genus_species = known_genus_species)
+}
+
+# Spell-check: flag (1) genus not in the known set, (2) known genus but the
+# genus+species combo isn't known. Returns one row per flagged specimen.
+compute_taxonomy_flags <- function(df, known_genera, known_genus_species) {
+  df |>
+    filter(!is.na(genus), genus != "") |>
+    mutate(
+      flag_unknown_genus   = !(genus %in% known_genera),
+      flag_unknown_species = !flag_unknown_genus & !is.na(species) & species != "" &
+        !paste(genus, species) %in% paste(known_genus_species$genus, known_genus_species$species)
+    ) |>
+    filter(flag_unknown_genus | flag_unknown_species) |>
+    mutate(flag_reason = case_when(
+      flag_unknown_genus   ~ "genus not in taxonomy lookup",
+      flag_unknown_species ~ "genus+species combo not in taxonomy lookup"
+    )) |>
+    select(any_of(c("ucsd_id", "sdnhm_id")), genus, species, subspecies, flag_reason) |>
+    distinct()
+}
+
+# Decide what to do about spell-check flags. PURE (prompt injected):
+#   0 flags            -> "clean"
+#   flags, batch mode  -> "continue" (log & proceed; the automated pipeline)
+#   flags, interactive -> prompt; "continue" on y, "stop" otherwise
+resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
+  if (n_flags == 0) return("clean")
+  if (!interactive_ok) return("continue")
+  ans <- prompt_fn("  Have you reviewed the flags above and fixed the source .xlsx? (y = fixed / confirmed, n = stop and fix now): ")
+  if (tolower(trimws(ans)) == "y") "continue" else "stop"
+}
+
+# QC flags: which required-data fields are missing. genus is the one rank expected
+# on every specimen; species is deliberately NOT flagged.
+add_qc_flags <- function(df) {
+  df |>
+    mutate(
+      missing_latlong  = is.na(latitude) | is.na(longitude),
+      missing_date     = is.na(date),
+      missing_sdnhm_id = is.na(sdnhm_id) | sdnhm_id == "",
+      missing_ucsd_id  = is.na(ucsd_id) | ucsd_id == "",
+      missing_genus    = is.na(genus) | genus == ""
+    )
+}
+
+# Duplicate ID detection: any repeated ucsd_id (should be unique), or repeated
+# sdnhm_id excluding 0/NA (0 is the intentional "needs new tag" sentinel).
+detect_duplicate_ids <- function(df) {
+  dup_ucsd <- df |>
+    filter(duplicated(ucsd_id) | duplicated(ucsd_id, fromLast = TRUE)) |>
+    mutate(duplicate_reason = "duplicate ucsd_id")
+  dup_sdnhm <- df |>
+    filter(!is.na(sdnhm_id), sdnhm_id != 0, sdnhm_id != "") |>
+    filter(duplicated(sdnhm_id) | duplicated(sdnhm_id, fromLast = TRUE)) |>
+    mutate(duplicate_reason = "duplicate sdnhm_id")
+  bind_rows(dup_ucsd, dup_sdnhm) |>
+    distinct(ucsd_id, .keep_all = TRUE) |>
+    arrange(sdnhm_id, ucsd_id)
+}
+
+# Build the species-level complex match lookup from the SD County iNat checklist
+# (only species rows that belong to a complex are valid targets).
+build_complex_lookup <- function(checklist) {
+  checklist |>
+    filter(!is.na(species), species != "", !is.na(complex), complex != "") |>
+    transmute(
+      genus   = str_to_lower(genus),
+      species = str_to_lower(species),
+      complex_match          = complex,
+      complex_taxon_id_match = complex_taxon_id
+    ) |>
+    distinct()
+}
+
+# Apply the complex match -- gated on BOTH genus and species present. Matched names
+# are prefixed "(Complex) " so a complex-level id isn't misread as a confirmed
+# species.
+match_specimen_complex <- function(df, complex_lookup) {
+  df |>
+    mutate(.mg = str_to_lower(genus), .ms = str_to_lower(species)) |>
+    left_join(complex_lookup, by = c(".mg" = "genus", ".ms" = "species")) |>
+    mutate(
+      complex = ifelse(!is.na(genus) & genus != "" & !is.na(species) & species != "" & !is.na(complex_match),
+                       paste0("(Complex) ", complex_match), NA_character_),
+      complex_taxon_id = ifelse(!is.na(genus) & genus != "" & !is.na(species) & species != "",
+                                complex_taxon_id_match, NA)
+    ) |>
+    select(-.mg, -.ms, -complex_match, -complex_taxon_id_match)
+}
+
+# Build old_scientific_name from old_genus_name + old_species_name (blank/genus-
+# only/binomial cases), for advisor-facing name-change tracking.
+build_old_scientific_name <- function(df) {
+  df |>
+    mutate(old_scientific_name = case_when(
+      (is.na(old_genus_name) | old_genus_name == "") &
+        (is.na(old_species_name) | old_species_name == "") ~ NA_character_,
+      (is.na(old_species_name) | old_species_name == "")   ~ old_genus_name,
+      TRUE                                                  ~ paste(old_genus_name, old_species_name)
+    ))
+}
+
+# Defensive: strip embedded control/null bytes from character columns so the saved
+# CSV re-reads cleanly.
+strip_control_chars <- function(df) {
+  df |> mutate(across(where(is.character), ~ str_replace_all(.x, "[\\x00-\\x1F]", "")))
+}
+
+# flag_raw_clutter(): PURE. The RAW-record hygiene worklist -- rows that clutter the
+# source .xlsx and need a human decision: non-ID'd (blank genus) and physically
+# missing (missing_specimen == "Y"). Returns the flagged rows + a clutter_reason.
+# (Duplicates are a separate axis -- see detect_duplicate_ids.)
+flag_raw_clutter <- function(df) {
+  g  <- if ("genus" %in% names(df)) as.character(df$genus) else rep(NA_character_, nrow(df))
+  needs_id <- is.na(g) | trimws(g) == ""
+  ms <- if ("missing_specimen" %in% names(df))
+    toupper(trimws(as.character(df$missing_specimen))) else rep(NA_character_, nrow(df))
+  missing <- !is.na(ms) & ms == "Y"
+  keep    <- needs_id | missing
+  reason  <- ifelse(needs_id & missing, "needs_id; missing",
+             ifelse(needs_id, "needs_id",
+             ifelse(missing, "missing", NA_character_)))
+  out <- df[keep, , drop = FALSE]
+  out$clutter_reason <- reason[keep]
+  out
+}
+
+# ------------------------------------------------------------
+# TRANSECT from the specimen `plot` text, via the master_crosswalk transect rows.
+# The crosswalk already carries the plot strings under specimen_label_variants
+# (e.g. tp: "Cabrillo NM: Tide Pool Trail; TPT1; ..."), so the mapping is
+# data-driven -- no hardcoded plot list. Plots that match no variant (plain
+# "Cabrillo NM") are left NA here and resolved spatially by the orchestrator.
+# ------------------------------------------------------------
+# transect_variant_map(): PURE. Long (transect, variant) table from the crosswalk's
+# transect rows, transect UPPER-cased (TP/UPMON/BST/OT) and variants lowercased,
+# longest-variant-first so the most specific match wins.
+transect_variant_map <- function(crosswalk) {
+  empty <- tibble(transect = character(0), variant = character(0))
+  if (is.null(crosswalk) || nrow(crosswalk) == 0 ||
+      !all(c("name", "what_for", "specimen_label_variants") %in% names(crosswalk))) return(empty)
+  tr <- crosswalk |>
+    filter(tolower(what_for) == "transect",
+           !is.na(specimen_label_variants), specimen_label_variants != "")
+  if (nrow(tr) == 0) return(empty)
+  rows <- lapply(seq_len(nrow(tr)), function(i) {
+    vars <- tolower(trimws(unlist(strsplit(tr$specimen_label_variants[i], ";"))))
+    vars <- vars[vars != ""]
+    if (length(vars)) tibble(transect = toupper(trimws(tr$name[i])), variant = vars) else NULL
+  })
+  bind_rows(rows) |> arrange(desc(nchar(variant)))
+}
+
+# match_plot_transect(): PURE. For each plot string, the transect whose (longest)
+# variant is a substring of it, else NA. Vectorized.
+match_plot_transect <- function(plot, variant_map) {
+  if (is.null(variant_map) || nrow(variant_map) == 0) return(rep(NA_character_, length(plot)))
+  p <- tolower(trimws(as.character(plot)))
+  out <- rep(NA_character_, length(p))
+  for (i in seq_along(p)) {
+    if (is.na(p[i]) || p[i] == "") next
+    for (j in seq_len(nrow(variant_map))) {
+      if (grepl(variant_map$variant[j], p[i], fixed = TRUE)) { out[i] <- variant_map$transect[j]; break }
+    }
+  }
+  out
+}
+
+# ------------------------------------------------------------
+# attach_lookup_taxonomy(): PURE. Join the taxonomy lookup at the specimen's finest
+# ID rank (NA matches NA in the join, so a genus-only specimen matches the lookup's
+# genus row). Pulls taxon_id, taxon_rank, scientific_name, common_name, and every
+# rank name -- the specimen's own genus/subgenus/complex/species/subspecies win;
+# the lookup fills the higher ranks and any blanks. This is what gives specimens
+# the taxon_id the iNat comparison joins on.
+# ------------------------------------------------------------
+SPECIMEN_LOOKUP_RANKS <- c("kingdom", "phylum", "subphylum", "class", "subclass", "order",
+                           "suborder", "infraorder", "superfamily", "family", "epifamily",
+                           "subfamily", "tribe", "subtribe", "genus", "subgenus", "complex",
+                           "species", "subspecies")
+attach_lookup_taxonomy <- function(df, lookup) {
+  b2na <- function(x) { x <- as.character(x); ifelse(is.na(x) | x == "", NA_character_, x) }
+  d <- df |> mutate(.g = b2na(genus), .s = b2na(species), .ss = b2na(subspecies))
+  keep <- intersect(c("taxon_id", "rank", "scientific_name", "common_name", SPECIMEN_LOOKUP_RANKS),
+                    names(lookup))
+  # Match only genus-and-below rows: a blank-genus (unidentified) specimen must NOT
+  # collide with the lookup's all-NA higher-rank rows (family/order/...) and inherit
+  # a spurious id. Genus-only specimens still match the lookup's genus row.
+  lk <- lookup |>
+    filter(!is.na(genus), genus != "") |>
+    mutate(.g = b2na(genus), .s = b2na(species), .ss = b2na(subspecies)) |>
+    select(.g, .s, .ss, all_of(keep)) |>
+    distinct(.g, .s, .ss, .keep_all = TRUE)
+  j <- d |> left_join(lk, by = c(".g", ".s", ".ss"), suffix = c("", "_lk"))
+  j$taxon_id        <- if ("taxon_id" %in% names(j))        j$taxon_id        else NA
+  j$taxon_rank      <- if ("rank" %in% names(j))            j$rank            else NA_character_
+  j$scientific_name <- if ("scientific_name" %in% names(j)) j$scientific_name else NA_character_
+  j$common_name     <- if ("common_name" %in% names(j))     j$common_name     else NA_character_
+  for (rc in SPECIMEN_LOOKUP_RANKS) {
+    lkc <- paste0(rc, "_lk")
+    if (rc %in% names(j) && lkc %in% names(j)) j[[rc]] <- coalesce(b2na(j[[rc]]), j[[lkc]])
+    else if (lkc %in% names(j))                j[[rc]] <- j[[lkc]]
+  }
+  j |> select(-.g, -.s, -.ss, -any_of("rank"), -ends_with("_lk"))
+}

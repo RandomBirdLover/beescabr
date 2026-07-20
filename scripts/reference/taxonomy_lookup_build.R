@@ -22,7 +22,25 @@
 # Modules wired here:
 #   config.R, pipelines/read_inat.R, reference/holway.R,
 #   checklists/checklist_build.R, reference/taxonomy_reference.R,
-#   (specimen_species_table / tier2_merge.R retired -- in_cabr_specimens pending, see below)
+#   (no specimen join -- this lookup is Holway + iNat only, by design)
+#
+# TODO (deferred -- GATED on the raw-specimen cleanup): fold specimen-only species in so
+# the lookup becomes  Holway + iNat + specimen additions.
+#   * WHY  : specimen_bee_clean.R nets real bees the Holway checklist AND the iNat SD obs
+#            both miss (species no one photographed). They surface in
+#            data/specimens/cleaned/cabr_specimen_bee_taxonomy_flags.csv as
+#            "genus+species combo not in taxonomy lookup" -- those flags are the candidates.
+#   * WHERE: a curated specimen_additions.csv, MERGED here at build time. Do NOT hand-edit
+#            sd_bee_taxonomy_lookup.csv -- stage 5 rewrites it every run and would wipe
+#            manual rows (same reason the Holway reference table can't hold them either).
+#   * GATE : only AFTER the tidy_raw_specimens worklist is worked (add IDs, dedupe, drop
+#            missing). Raw is still dirty, so some flagged names may be misspellings
+#            (e.g. Lasioglossum 'daggetti' vs 'daggettii') -- verify each before adding.
+#   * IDS  : each addition needs an iNat taxon_id resolved, or kept id-less like the Holway
+#            "no iNat id yet" cases. Holway's reference table stays a pure copy of the checklist.
+#   * MERGE: specimen_additions_to_lookup() (reference/taxonomy_reference.R) already does the merge
+#            (tested): it appends leaf taxa and LINKS parents that exist but NEVER fabricates a
+#            missing parent -- it returns those in $missing_parents to resolve. NOT wired in yet.
 #
 # Run standalone: Rscript scripts/reference/taxonomy_lookup_build.R
 #   BEESCABR_SKIP_INGEST=1 reuses the cache without hitting the API.
@@ -113,13 +131,9 @@ build_taxonomy_lookup <- function(con) {
   message("Wrote internal complex map (", nrow(complex_map), " species) -> ",
           basename(PATHS$complex_map))
 
-  # CABR specimens -> the lookup's in_cabr_specimens column. PENDING: specimen_bee_clean.R
-  # isn't built yet, and specimen_species_table() retired with tier2_merge.R, so
-  # in_cabr_specimens stays blank/FALSE for now. TODO (when the specimen side is rebuilt):
-  # restore specimen_species_table (into checklist_build.R), feed it here, and add the
-  # in_cabr_specimen column to the CABR official + CABR specimen checklists.
-  specimen_species <- NULL
-  message("\nNOTE: in_cabr_specimens wiring pending -- left blank until specimen_bee_clean.R is built.")
+  # NOTE: this lookup is intentionally HOLWAY + iNAT ONLY -- no specimen join. CABR
+  # specimen evidence lives downstream in the checklists (built from a CLEANED
+  # specimen record), never in this reference table.
 
   # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
   # The enriched Holway reference table (holway_sd_bee_reference_table.csv, built
@@ -136,23 +150,23 @@ build_taxonomy_lookup <- function(con) {
   holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
   message("Holway base from reference table: ", basename(PATHS$holway_reference),
           " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
-  # Ancestry side-table (holway_taxon_ancestry.csv, written by holway_reference_build.R):
-  # distinct (taxon_id, rank, name) for every ancestor of every resolved Holway taxon.
-  # It's what lets each PARENT taxon get its OWN iNat id even when it was never
-  # observed in SD County -- so no species row has to borrow a parent's id.
-  ancestry_ids <- if (file.exists(PATHS$holway_ancestry))
-    readr::read_csv(PATHS$holway_ancestry, show_col_types = FALSE) else NULL
-  if (is.null(ancestry_ids))
-    message("NOTE: no ancestry side-table (", basename(PATHS$holway_ancestry),
-            ") -- parent ids fall back to observed taxa only; rebuild the ",
-            "Holway reference to populate it.")
-  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_resolved, cl_sd, bees,
+  # The reference table now CONTAINS the ancestor taxa as their own rows (tagged
+  # source_sheet == "iNat ancestry"). Split them out: the Holway ENTRIES are the
+  # lookup's base (unchanged behavior); the ancestor rows are the id source that
+  # gives each parent taxon its own iNat id. The id map is derived from every
+  # id-bearing reference row (name at each row's own rank).
+  is_ancestry    <- !is.na(holway_resolved$source_sheet) &
+                    holway_resolved$source_sheet == "iNat ancestry"
+  holway_entries <- holway_resolved[!is_ancestry, , drop = FALSE]
+  ancestry_ids   <- ancestry_ids_from_reference(holway_resolved)
+  message("Reference base: ", nrow(holway_entries), " Holway entries + ",
+          sum(is_ancestry), " ancestor rows (", nrow(ancestry_ids), " id-bearing taxa).")
+  bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_entries, cl_sd, bees,
                                                    verified_ids = verified_ids,
-                                                   specimen_species = specimen_species,
                                                    ancestry_ids = ancestry_ids)
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
-          sum(!bee_taxonomy_lookup$verified), " unverified).")
+          sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")
 
   invisible(list(lookup = nrow(bee_taxonomy_lookup)))
 }

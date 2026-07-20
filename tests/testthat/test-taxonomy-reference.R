@@ -43,24 +43,23 @@ test_that("lookup base is the reference table; iNat adds observed-only taxa + fl
     genus = NA_character_, family = "Halictidae",
     subfamily = NA_character_, tribe = NA_character_, subtribe = NA_character_)
 
-  spec <- tibble::tibble(genus = "melissodes", species = "robustior", has_cabr_specimen = TRUE)
-  lookup <- build_bee_taxonomy_lookup(ref, checklist_sd, bees, specimen_species = spec)
+  lookup <- build_bee_taxonomy_lookup(ref, checklist_sd, bees)
 
   expect_true(all(c("genus","species","subgenus","family") %in% lookup$rank))
   expect_true("Agapostemon subtilior" %in% lookup$scientific_name)
   # qualifier now sits right after holway_status; itis_valid right after it
-  expect_equal(names(lookup)[1:11],
+  expect_equal(names(lookup)[1:10],
                c("taxon_id","scientific_name","common_name","rank","verified","holway_status",
-                 "qualifier","itis_valid","in_holway","in_inat","in_cabr_specimens"))
+                 "qualifier","itis_valid","in_holway","in_inat"))
   expect_true("subtribe" %in% names(lookup))
 
   mr <- filter(lookup, scientific_name == "Melissodes robustior")
   ag <- filter(lookup, scientific_name == "Agapostemon subtilior")
   expect_equal(nrow(mr), 1)   # reference row + iNat twin collapse to one
   expect_true(mr$verified[1]); expect_true(mr$in_holway[1])
-  expect_true(mr$in_inat[1]);  expect_true(mr$in_cabr_specimens[1])
+  expect_true(mr$in_inat[1])
   expect_false(ag$verified[1]); expect_false(ag$in_holway[1])
-  expect_true(ag$in_inat[1]);   expect_false(ag$in_cabr_specimens[1])
+  expect_true(ag$in_inat[1])
 })
 
 test_that("slash pick: only the resolved name reaches the lookup (no 'pensylvanicus' leak)", {
@@ -228,8 +227,7 @@ test_that("reconcile_lookup_dupes leaves non-duplicate and NA-taxon rows intact"
     rank = "species", genus = c("Aa", "Bb", "Cc"),
     species = c("a", "b", "c"), subspecies = NA_character_,
     holway_status = "", verified = c(TRUE, TRUE, TRUE),
-    in_holway = c(TRUE, FALSE, TRUE), in_inat = c(FALSE, TRUE, FALSE),
-    in_cabr_specimens = FALSE)
+    in_holway = c(TRUE, FALSE, TRUE), in_inat = c(FALSE, TRUE, FALSE))
   expect_equal(nrow(reconcile_lookup_dupes(df)), 3)
 })
 
@@ -240,4 +238,85 @@ test_that("merge_holway_resolved is a no-op when the reference table is absent/e
                       subspecies = NA_character_)
   expect_identical(merge_holway_resolved(d, NULL), d)
   expect_identical(merge_holway_resolved(d, d[0, ]), d)
+})
+
+# --- specimen additions: append leaf taxa, never fabricate a missing parent -------------
+test_that("specimen_additions_to_lookup appends leaf species and never creates a missing parent", {
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
+
+  # lookup already holds family Colletidae + genus Colletes (+ a species) -- but NOT Zzyzxia/Andrenidae
+  lookup <- tibble::tibble(
+    taxon_id = c("10","11","12"),
+    rank     = c("family","genus","species"),
+    family   = c("Colletidae","Colletidae","Colletidae"),
+    genus    = c(NA, "Colletes", "Colletes"),
+    species  = c(NA, NA, "fulgidus"))
+
+  additions <- tibble::tibble(
+    taxon_id = c("900", NA),
+    rank     = c("species","species"),
+    family   = c("Colletidae","Andrenidae"),
+    genus    = c("Colletes","Zzyzxia"),
+    species  = c("phaceliae","weirdus"))
+
+  res <- specimen_additions_to_lookup(lookup, additions)
+
+  # both are new species -> both leaf rows appended, and NOTHING else
+  expect_equal(nrow(res$added), 2L)
+  expect_equal(nrow(res$lookup), nrow(lookup) + 2L)
+
+  # Colletes phaceliae: parent genus Colletes + family Colletidae already exist -> no missing parents
+  expect_false("phaceliae" %in% res$missing_parents$taxon)
+
+  # Zzyzxia weirdus: genus Zzyzxia AND family Andrenidae are absent -> REPORTED, not created
+  mp <- res$missing_parents[res$missing_parents$taxon == "weirdus", ]
+  expect_true("Zzyzxia"    %in% mp$missing_parent_name)
+  expect_true("Andrenidae" %in% mp$missing_parent_name)
+
+  # crucially: NO genus/family row was fabricated for the missing parents
+  expect_false(any(res$lookup$rank == "genus"  & res$lookup$genus  == "Zzyzxia"))
+  expect_false(any(res$lookup$rank == "family" & res$lookup$family == "Andrenidae"))
+})
+
+test_that("specimen_additions_to_lookup skips an addition that already exists (dedupe)", {
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
+  lookup <- tibble::tibble(taxon_id = "12", rank = "species",
+                           family = "Colletidae", genus = "Colletes", species = "fulgidus")
+  additions <- tibble::tibble(taxon_id = "12", rank = "species",
+                              family = "Colletidae", genus = "Colletes", species = "fulgidus")
+  res <- specimen_additions_to_lookup(lookup, additions)
+  expect_equal(nrow(res$added), 0L)
+  expect_equal(nrow(res$lookup), 1L)
+  expect_equal(nrow(res$missing_parents), 0L)
+})
+
+test_that("specimen_additions_to_lookup links a subgenus parent through paren/spelling variants", {
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
+  # lookup subgenus row stored bare; addition names it parenthesized -> should still count as existing
+  lookup <- tibble::tibble(
+    taxon_id = c("20","21"), rank = c("subgenus","genus"),
+    genus = c("Chelostoma","Chelostoma"), subgenus = c("Neochelostoma", NA))
+  additions <- tibble::tibble(
+    taxon_id = "930", rank = "species",
+    genus = "Chelostoma", subgenus = "(Neochelostoma)", species = "phaceliae")
+  res <- specimen_additions_to_lookup(lookup, additions)
+  expect_equal(nrow(res$added), 1L)
+  # subgenus (Neochelostoma) already present -> not reported missing
+  expect_false("subgenus" %in% res$missing_parents$missing_parent_rank)
+})
+
+test_that("specimen_additions_to_lookup treats the same epithet in different genera as distinct", {
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
+  # Colletes phaceliae (Colletidae) and Chelostoma phaceliae (Megachilidae) share the epithet
+  # but are DIFFERENT bees -- both must be added, not collapsed to one.
+  lookup <- tibble::tibble(
+    taxon_id = c("1","2"), rank = c("genus","genus"),
+    family = c("Colletidae","Megachilidae"), genus = c("Colletes","Chelostoma"))
+  additions <- tibble::tibble(
+    taxon_id = c("62587","540802"), rank = c("species","species"),
+    family = c("Colletidae","Megachilidae"),
+    genus = c("Colletes","Chelostoma"), species = c("phaceliae","phaceliae"))
+  res <- specimen_additions_to_lookup(lookup, additions)
+  expect_equal(nrow(res$added), 2L)                       # both phaceliae kept -- not deduped
+  expect_setequal(res$added$genus, c("Colletes","Chelostoma"))
 })

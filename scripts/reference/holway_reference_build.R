@@ -437,20 +437,221 @@ unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE,
 
 # ------------------------------------------------------------
 # ANCESTRY CAPTURE (replaces the rejected "species inherits parent id" roll-up).
-# An unresolved species keeps taxon_id = NA. Instead of stamping a parent's id
-# onto the species row, we harvest the full iNat ancestry (id + rank + name for
-# every ancestor) of each RESOLVED taxon. Those ancestor taxa are written to a
-# side-table (holway_taxon_ancestry.csv) and the taxonomy lookup uses them to give
-# every parent taxon -- genus, subgenus, complex, family, ... -- its OWN row with
-# its OWN iNat taxon_id, even when that parent was never observed in SD County.
-# accumulate_ancestry(): PURE. Grow a distinct (taxon_id, rank, name) table from a
-# resolved taxon's parse_taxon_ancestry() rows.
+# An unresolved species keeps taxon_id = NA. Instead of stamping a parent's id onto
+# the species row, we harvest each RESOLVED taxon's ancestors and turn every one
+# into its OWN full row -- appended to the SAME reference table (no side-file) -- so
+# every parent taxon from kingdom down to subgenus appears as its own id-bearing
+# row, even when that parent was never observed in SD County.
+#
+# ancestor_reference_rows(): PURE. One reference-layout row per ANCESTOR of `taxon`
+# (not the taxon itself -- that IS the Holway row). Each ancestor is rebuilt as a
+# synthetic taxon carrying the ancestors ABOVE it, so parse_taxon_ranks fills its
+# levels down to its own rank. Tagged source_sheet = "iNat ancestry" so the lookup
+# can tell an ancestor row from a Holway entry.
 # ------------------------------------------------------------
-accumulate_ancestry <- function(acc, taxon) {
+ancestor_reference_rows <- function(taxon) {
+  ancs <- taxon$ancestors %||% list()
+  if (length(ancs) == 0) return(NULL)
+  rows <- vector("list", length(ancs))
+  for (k in seq_along(ancs)) {
+    a <- ancs[[k]]
+    if (!is.list(a)) next
+    synth <- list(id = a$id, rank = a$rank, name = a$name,
+                  ancestors = if (k > 1) ancs[seq_len(k - 1)] else list())
+    ranks <- tryCatch(parse_taxon_ranks(synth), error = function(e) NULL)
+    if (is.null(ranks) || is.na(ranks$taxon_id)) next
+    rows[[k]] <- tidy_holway_ref_row(
+      ranks, scientific_name = .scalar(a$name, NA_character_),
+      common_name = NA_character_, source_sheet = "iNat ancestry",
+      itis_valid = NA, qualifier = NA_character_, holway_subgenus = NA_character_)
+  }
+  dplyr::bind_rows(rows)
+}
+
+# accumulate_ancestor_rows(): grow a taxon_id-distinct table of ancestor rows.
+accumulate_ancestor_rows <- function(acc, taxon) {
   if (is.null(taxon)) return(acc)
-  anc <- tryCatch(parse_taxon_ancestry(taxon), error = function(e) NULL)
-  if (is.null(anc) || nrow(anc) == 0) return(acc)
-  dplyr::distinct(dplyr::bind_rows(acc, anc), taxon_id, .keep_all = TRUE)
+  rows <- tryCatch(ancestor_reference_rows(taxon), error = function(e) NULL)
+  if (is.null(rows) || nrow(rows) == 0) return(acc)
+  dplyr::distinct(dplyr::bind_rows(acc, rows), taxon_id, .keep_all = TRUE)
+}
+
+# ------------------------------------------------------------
+# WALK-BACK: an unresolved (unpublished) species keeps taxon_id = NA, but its empty
+# higher-taxonomy NAME columns are filled from its parent's ancestry, so the row is
+# fully placed in the tree by name. The lineage above genus is identical for every
+# species in a genus, so we key on genus.
+# ------------------------------------------------------------
+# The above-genus lineage + genus itself -- copied onto an unresolved row (its own
+# subgenus/complex/species/subspecies columns are kept as Holway has them).
+ANCESTRY_LINEAGE_COLS <- c("kingdom", "phylum", "subphylum", "class", "subclass",
+                           "order", "suborder", "infraorder", "superfamily",
+                           "family", "epifamily", "subfamily", "tribe", "subtribe",
+                           "genus")
+
+# genus_lineage_map(): PURE. One lineage per genus from id-bearing rows (resolved
+# Holway + ancestor rows), preferring the clean genus-rank row. Keyed on .gkey
+# (lowercased genus).
+genus_lineage_map <- function(id_rows) {
+  if (is.null(id_rows) || nrow(id_rows) == 0)
+    return(tibble::tibble(.gkey = character(0)))
+  id_rows |>
+    dplyr::filter(!is.na(genus), genus != "") |>
+    dplyr::mutate(.gkey = tolower(trimws(genus)),
+                  .isgenus = !is.na(rank) & rank == "genus") |>
+    dplyr::arrange(.gkey, dplyr::desc(.isgenus)) |>
+    dplyr::group_by(.gkey) |> dplyr::slice(1) |> dplyr::ungroup() |>
+    dplyr::select(.gkey, dplyr::any_of(ANCESTRY_LINEAGE_COLS))
+}
+
+# fill_unresolved_lineage(): PURE. Fill each unresolved row's (taxon_id NA) blank
+# lineage columns from its genus's lineage -- coalesce, so Holway's own family/
+# subfamily/tribe are kept and only the gaps (kingdom..superfamily, etc.) fill in.
+# taxon_id STAYS NA -- no id is borrowed, only names.
+fill_unresolved_lineage <- function(ref, gmap) {
+  if (is.null(gmap) || nrow(gmap) == 0) return(ref)
+  lut <- gmap
+  names(lut)[names(lut) != ".gkey"] <- paste0(".p_", names(lut)[names(lut) != ".gkey"])
+  ref <- ref |>
+    dplyr::mutate(.gkey = tolower(trimws(genus))) |>
+    dplyr::left_join(lut, by = ".gkey")
+  for (col in ANCESTRY_LINEAGE_COLS) {
+    pc <- paste0(".p_", col)
+    if (!pc %in% names(ref)) next
+    need_fill <- is.na(ref$taxon_id) & (is.na(ref[[col]]) | ref[[col]] == "")
+    ref[[col]][need_fill] <- ref[[pc]][need_fill]
+  }
+  ref |> dplyr::select(-dplyr::starts_with(".p_"), -.gkey)
+}
+
+# resolve_missing_genera(): IMPURE (fetches). For unresolved-row genera not already
+# covered by a resolved sibling, look the genus up on iNat (exact genus-rank match),
+# pull its FULL taxon (with ancestors), and return the genus row + its ancestor rows
+# to append. Best-effort: a genus that doesn't resolve is left blank.
+resolve_missing_genera <- function(unresolved_genera, known_gkeys, con,
+                                   request_fn = inat_request) {
+  need <- setdiff(unique(tolower(trimws(unresolved_genera))), known_gkeys)
+  need <- need[!is.na(need) & need != ""]
+  if (length(need) == 0) return(NULL)
+  out <- list()
+  for (g in need) {
+    res <- tryCatch(get_taxa_by_name(con, g, request_fn = request_fn),
+                    error = function(e) list())
+    hit <- NULL
+    for (t in res)
+      if (identical(t$rank %||% "", "genus") &&
+          identical(.norm_name(t$name %||% ""), .norm_name(g))) { hit <- t; break }
+    if (is.null(hit)) next
+    full <- tryCatch(get_taxon_by_id(con, hit$id, request_fn = request_fn),
+                     error = function(e) NULL)
+    if (is.null(full)) next
+    genus_row <- tryCatch(tidy_holway_ref_row(
+      parse_taxon_ranks(full), scientific_name = .scalar(full$name, NA_character_),
+      common_name = NA_character_, source_sheet = "iNat ancestry",
+      itis_valid = NA, qualifier = NA_character_, holway_subgenus = NA_character_),
+      error = function(e) NULL)
+    out[[length(out) + 1]] <- dplyr::bind_rows(genus_row, ancestor_reference_rows(full))
+  }
+  if (length(out)) dplyr::bind_rows(out) else NULL
+}
+
+# ------------------------------------------------------------
+# SECOND PASS -- after the whole sheet is resolved, revisit the rows that SHOULD be
+# on iNat but came back blank: the "Described" species + subspecies. The human either
+# types the iNat taxon_id directly, or types a corrected/renamed name to search
+# (e.g. Calliopsis anthidius -> "Calliopsis anthida"). Slash "A / B" rows are handled
+# in the first pass and are NOT revisited; aff./sp.nov. rows are left alone (nothing
+# to resolve them to). The pick is cached so a later run reuses it with no prompt.
+# ------------------------------------------------------------
+# .second_pass_resolve(): IMPURE. Resolve ONE unresolved Described row interactively.
+# Returns the chosen FULL taxon (with ancestors) or NULL if skipped / not found.
+.second_pass_resolve <- function(con, r, request_fn = inat_request, prompt_fn = readline) {
+  key   <- holway_search_term(r$source_sheet, r$genus, r$species_raw)
+  label <- trimws(paste(r$genus %||% "", r$species_raw %||% ""))
+  subg  <- .strip_parens(r$subgenus %||% NA_character_)
+  message(sprintf("\n[2nd pass] Unresolved: '%s'%s", label,
+                  if (!is.na(subg)) sprintf("  subgenus (%s)", subg) else ""))
+  raw <- trimws(prompt_fn("  taxon_id, a name to search, 'n' = no iNat id yet, or blank to skip: "))
+  if (raw == "" || tolower(raw) %in% c("skip", "s")) return(NULL)
+  if (tolower(raw) %in% c("n", "no", "noid", "none")) {
+    decision_put(con, key, "no_inat_id")
+    message("  marked 'no iNat id yet' -- won't prompt again until it's cleared.")
+    return("no_inat_id")
+  }
+
+  # a bare number -> a taxon_id the human looked up on iNaturalist.org
+  if (grepl("^[0-9]+$", raw)) {
+    id    <- as.integer(raw)
+    taxon <- tryCatch(get_taxon_by_id(con, id, request_fn = request_fn), error = function(e) NULL)
+    if (is.null(taxon)) { message("  no iNat taxon for id ", id, " -- skipped."); return(NULL) }
+    message(sprintf("  -> id %s = %s (%s)", id, .scalar(taxon$name, "?"),
+                    parse_taxon_ranks(taxon)$rank %||% "?"))
+    decision_put(con, key, "pick", id)
+    return(taxon)
+  }
+
+  # otherwise a (possibly renamed) name -> search, list candidates, pick one
+  results <- tryCatch(get_taxa_by_name(con, raw, request_fn = request_fn), error = function(e) list())
+  if (length(results) == 0) { message("  no matches for '", raw, "' -- skipped."); return(NULL) }
+  for (j in seq_along(results)) {
+    t <- results[[j]]
+    message(sprintf("   [%d] id=%s  %s  (%s)", j, t$id %||% "?", t$name %||% "?", t$rank %||% "?"))
+  }
+  pj <- suppressWarnings(as.integer(trimws(prompt_fn("  pick a number (or blank to skip): "))))
+  if (is.na(pj) || pj < 1 || pj > length(results)) { message("  skipped."); return(NULL) }
+  chosen <- results[[pj]]
+  full   <- tryCatch(get_taxon_by_id(con, as.integer(chosen$id), request_fn = request_fn),
+                     error = function(e) NULL)
+  decision_put(con, key, "pick", as.integer(chosen$id))
+  full %||% chosen
+}
+
+# run_described_second_pass(): loop the unresolved Described rows through
+# .second_pass_resolve(), rebuilding each row and capturing its ancestry on success.
+# Returns the updated list(rows, ancestry). No-op when non-interactive or none remain.
+run_described_second_pass <- function(con, holway_df, rows, ancestry,
+                                      request_fn = inat_request, prompt_fn = readline,
+                                      interactive_ok = TRUE) {
+  if (!isTRUE(interactive_ok)) return(list(rows = rows, ancestry = ancestry))
+  # Described + unresolved, but NOT slash "A / B" rows (those prompt in the first pass).
+  is_todo <- function(i) {
+    if (!identical(holway_df$source_sheet[i], "Described")) return(FALSE)
+    sr <- holway_df$species_raw[i]; if (is.na(sr)) sr <- ""
+    if (grepl("/", sr, fixed = TRUE)) return(FALSE)
+    if (is.null(rows[[i]]) || !is.na(rows[[i]]$taxon_id)) return(FALSE)
+    # skip ones already tagged 'no iNat id yet' (cached) -- no re-nagging.
+    d <- tryCatch(decision_get(con, holway_search_term(holway_df$source_sheet[i],
+                    holway_df$genus[i], sr)), error = function(e) NULL)
+    !(!is.null(d) && identical(d$action, "no_inat_id"))
+  }
+  todo <- which(vapply(seq_len(nrow(holway_df)), is_todo, logical(1)))
+  if (length(todo) == 0) return(list(rows = rows, ancestry = ancestry))
+
+  message(sprintf("\n=== Second pass: %d unresolved Described row(s) to review ===", length(todo)))
+  for (i in todo) {
+    r <- holway_df[i, ]
+    is_ss <- !grepl("/", r$species_raw %||% "", fixed = TRUE) &&
+             !is.na(split_holway_species(r$species_raw %||% "")$subspecies)
+    qual  <- holway_qualifier(r$species_raw %||% "")
+    out <- tryCatch(.second_pass_resolve(con, r, request_fn = request_fn, prompt_fn = prompt_fn),
+                    error = function(e) NULL)
+    if (is.character(out) && length(out) == 1L && out == "no_inat_id") {
+      # human confirmed there's no iNat taxon yet -> keep it blank but mark it valid
+      # (itis_valid = TRUE) so future runs stop prompting (cache carries the decision).
+      rows[[i]] <- unresolved_holway_ref_row(r, itis_valid = TRUE,
+                                             is_subspecies = is_ss, qualifier = qual)
+      next
+    }
+    if (is.null(out)) next
+    rows[[i]] <- tidy_holway_ref_row(
+      parse_taxon_ranks(out),
+      scientific_name = .scalar(out$name, NA_character_),
+      common_name     = .scalar(out$preferred_common_name, NA_character_),
+      source_sheet    = r$source_sheet, itis_valid = NA,
+      qualifier = qual, holway_subgenus = r$subgenus %||% NA_character_)
+    ancestry <- accumulate_ancestor_rows(ancestry, out)
+  }
+  list(rows = rows, ancestry = ancestry)
 }
 
 # ------------------------------------------------------------
@@ -493,10 +694,10 @@ build_holway_reference <- function(con, holway_df,
       taxon <- if (!is.na(res$taxon_id))
         get_taxon_by_id(con, res$taxon_id, request_fn = request_fn) else NULL
     }
-    # Harvest THIS resolved taxon's full iNat ancestry (id/rank/name per ancestor).
-    # A resolved sibling species is what gives an unobserved parent genus/subgenus/
-    # family its real id later -- so even an unresolved species' parents get placed.
-    ancestry <- accumulate_ancestry(ancestry, taxon)
+    # Harvest THIS resolved taxon's ancestors as full id-bearing rows. A resolved
+    # sibling is what lets an unobserved parent genus/family appear as its own row
+    # AND lets an unresolved sibling's lineage names be walked back below.
+    ancestry <- accumulate_ancestor_rows(ancestry, taxon)
     # a two-word entry that reached keep/skip was a confirmed subspecies (but a
     # slash "A / B" pair is never a subspecies)
     is_ss <- !grepl("/", r$species_raw %||% "", fixed = TRUE) &&
@@ -516,26 +717,69 @@ build_holway_reference <- function(con, holway_df,
       # their OWN id-bearing row in the taxonomy lookup (filled from the ancestry
       # side-table below), so the bee is still placed in the tree without the
       # species row borrowing an id it doesn't own.
-      itis <- switch(res$action %||% "skip", keep = TRUE, skip = FALSE, NA)
+      itis <- switch(res$action %||% "skip", keep = TRUE, no_inat_id = TRUE, skip = FALSE, NA)
       unresolved_holway_ref_row(r, itis_valid = itis, is_subspecies = is_ss, qualifier = qual)
     }
     if (i %% 25 == 0) message(sprintf("  Holway resolve: %d / %d", i, nrow(holway_df)))
   }
+
+  # SECOND PASS: revisit unresolved Described rows (subspecies + renamed species like
+  # Calliopsis anthidius -> anthida). Runs before the walk-back/append so a newly
+  # resolved row contributes its own ancestry too.
+  sp2 <- run_described_second_pass(con, holway_df, rows, ancestry,
+                                   request_fn = request_fn, interactive_ok = interactive_ok)
+  rows <- sp2$rows; ancestry <- sp2$ancestry
+
   ref <- dplyr::bind_rows(rows) |> dplyr::select(dplyr::any_of(HOLWAY_REF_COLUMNS))
-  # Attach the harvested ancestry (distinct id/rank/name for every ancestor of
-  # every resolved taxon). The runner writes it beside the reference table; the
-  # taxonomy lookup reads it to give each parent taxon its OWN id-bearing row --
-  # no parent id is ever borrowed onto a species row.
-  attr(ref, "ancestry") <- ancestry %||%
-    tibble::tibble(taxon_id = integer(0), rank = character(0), name = character(0))
+  anc_rows <- ancestry
+
+  # WALK-BACK (Goal 2): fetch ancestry for any unresolved-row genus not already
+  # covered by a resolved sibling, so every unpublished bee's lineage can be filled.
+  unresolved_genera <- ref$genus[is.na(ref$taxon_id) & !is.na(ref$genus)]
+  known_gkeys <- unique(tolower(trimws(c(
+    ref$genus[!is.na(ref$taxon_id)],
+    if (!is.null(anc_rows)) anc_rows$genus else character(0)))))
+  known_gkeys <- known_gkeys[!is.na(known_gkeys) & known_gkeys != ""]
+  fetched <- tryCatch(resolve_missing_genera(unresolved_genera, known_gkeys, con,
+                                             request_fn = request_fn),
+                      error = function(e) NULL)
+  if (!is.null(fetched))
+    anc_rows <- dplyr::distinct(dplyr::bind_rows(anc_rows, fetched), taxon_id, .keep_all = TRUE)
+
+  # Fill each unresolved (unpublished) row's blank lineage names from its genus's
+  # ancestry. taxon_id stays NA -- names only, never an id.
+  id_rows <- dplyr::bind_rows(dplyr::filter(ref, !is.na(taxon_id)), anc_rows)
+  ref <- fill_unresolved_lineage(ref, genus_lineage_map(id_rows))
+
+  # APPEND ancestor taxa (Goal 1): each parent gets its OWN row with its OWN iNat id,
+  # in the SAME table. Drop any ancestor whose taxon_id already belongs to a Holway
+  # row (the Holway entry wins, keeping its source_sheet/qualifier).
+  if (!is.null(anc_rows) && nrow(anc_rows) > 0) {
+    have_ids <- ref$taxon_id[!is.na(ref$taxon_id)]
+    add <- anc_rows |>
+      dplyr::filter(!is.na(taxon_id), !(taxon_id %in% have_ids)) |>
+      dplyr::select(dplyr::any_of(HOLWAY_REF_COLUMNS))
+    ref <- dplyr::bind_rows(ref, add)
+  }
   ref
 }
 
 # ------------------------------------------------------------
-# Runner (only when executed directly, not when sourced for tests).
+# Runner (only when executed directly, not when sourced for tests OR by the pipeline).
 # ------------------------------------------------------------
-if (identical(environment(), globalenv()) &&
-    !is.na(Sys.getenv("BEESCABR_RUN_HOLWAY", unset = NA))) {
+# .holway_autorun_ok(): should the bottom-of-file runner fire? TRUE only when this file is
+# run/sourced at top level (env is globalenv) with BEESCABR_RUN_HOLWAY set AND the pipeline
+# runner is NOT the one sourcing it. run_pipeline.R sets BEESCABR_SOURCED_BY_RUNNER (and calls
+# build_holway_reference itself at stage 4); without this sentinel guard -- if BEESCABR_RUN_HOLWAY
+# lingers in the session env -- the table built TWICE (once at source-time, once at stage 4).
+# Pure so the branching is unit-tested; pass environment() from the call site (top level).
+.holway_autorun_ok <- function(env,
+                               run_flag = Sys.getenv("BEESCABR_RUN_HOLWAY", unset = NA),
+                               sourced_by_runner = exists("BEESCABR_SOURCED_BY_RUNNER")) {
+  identical(env, globalenv()) && !is.na(run_flag) && !isTRUE(sourced_by_runner)
+}
+
+if (.holway_autorun_ok(environment())) {
   source("scripts/config.R")
   source("scripts/observations/engine/db/store_conn.R"); source("scripts/observations/engine/db/taxon_store.R")
   source("scripts/observations/engine/db/decision_store.R"); source("scripts/observations/engine/api/inat_http.R")
@@ -548,11 +792,8 @@ if (identical(environment(), globalenv()) &&
   interactive_ok <- Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"
   ref <- build_holway_reference(con, holway_df, interactive_ok = interactive_ok)
   write.csv(ref, PATHS$holway_reference, row.names = FALSE, na = "")
-  message("Wrote ", sum(ref$resolved), " resolved of ", nrow(ref), " Holway rows.")
-  anc <- attr(ref, "ancestry")
-  if (!is.null(anc) && nrow(anc) > 0) {
-    dir.create(dirname(PATHS$holway_ancestry), recursive = TRUE, showWarnings = FALSE)
-    write.csv(anc, PATHS$holway_ancestry, row.names = FALSE, na = "")
-    message("Wrote ", nrow(anc), " ancestor taxa -> ", basename(PATHS$holway_ancestry))
-  }
+  is_anc <- !is.na(ref$source_sheet) & ref$source_sheet == "iNat ancestry"
+  message("Wrote ", sum(ref$resolved[!is_anc], na.rm = TRUE), " resolved of ",
+          sum(!is_anc), " Holway rows + ", sum(is_anc), " ancestor rows = ",
+          nrow(ref), " total -> ", basename(PATHS$holway_reference))
 }

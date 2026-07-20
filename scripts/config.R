@@ -115,12 +115,6 @@ PATHS <- list(
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
   holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
-  # Side-table written by holway_reference_build.R: distinct (taxon_id, rank, name)
-  # for every ANCESTOR of every resolved Holway taxon. The taxonomy lookup reads it
-  # to give each parent taxon (genus/subgenus/complex/family/...) its OWN iNat id,
-  # even when that parent was never observed in SD County. A species/subspecies row
-  # never borrows a parent id -- the parents carry their own here.
-  holway_ancestry = "data/reference/holway_taxon_ancestry.csv",
   verified_taxa = "data/reference/verified_taxa.csv",
   checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
