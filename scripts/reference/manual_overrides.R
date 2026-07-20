@@ -119,48 +119,91 @@ apply_manual_overrides <- function(df, overrides = NULL) {
   df
 }
 
-# write_review_worklist(): the "please look these up" prompt. Reads the RESOLVER'S verdict cache
-# (resolved_missing_ids.csv) and lists exactly the taxa it marked not_found_or_ambiguous -- the
-# ones the automated iNat search tried and couldn't resolve (e.g. Holcopasites minima). Each row
-# carries the rank, name, an iNaturalist SEARCH URL, and blank taxon_id / correct_name columns to
-# fill and paste into manual_taxon_overrides.csv. Taxa you've ALREADY answered (present in the
-# overrides) are dropped, so the list only ever shows what's genuinely still open.
-write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL, path = TAXON_REVIEW_PATH) {
-  empty <- tibble(rank = character(), name = character(), taxon_id = integer(),
-                  correct_name = character(), note = character(), inat_search_url = character())
-  finish <- function(wl) {
-    dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-    suppressWarnings(readr::write_csv(wl, path, na = ""))
-    message(sprintf("  taxon review worklist: %d taxa the auto-search couldn't resolve -> %s",
-                    nrow(wl), basename(path)))
-    invisible(wl)
-  }
+# .mo_open_worklist(): the resolver's not_found taxa (from resolved_missing_ids.csv) that are NOT
+# yet answered in the overrides -> tibble(rank, name, inat_search_url), title-cased + sorted. Shared
+# by the worklist writer and the interactive prompt so both show the exact same open set.
+.mo_open_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL) {
+  empty <- tibble(rank = character(), name = character(), inat_search_url = character())
   cache <- if (file.exists(cache_path))
     tryCatch(suppressWarnings(read_csv(cache_path, show_col_types = FALSE)), error = function(e) NULL) else NULL
-  if (is.null(cache) || !nrow(cache) || !all(c("key", "status") %in% names(cache))) return(finish(empty))
+  if (is.null(cache) || !nrow(cache) || !all(c("key", "status") %in% names(cache))) return(empty)
   nf <- cache[grepl("not_found|ambiguous", cache$status, ignore.case = TRUE), , drop = FALSE]
-  if (!nrow(nf)) return(finish(empty))
-
+  if (!nrow(nf)) return(empty)
   # key format from resolve_missing_ids.R: "rank|name|parent". Recover rank + name.
   parts <- strsplit(as.character(nf$key), "|", fixed = TRUE)
   rank  <- vapply(parts, function(p) if (length(p) >= 1) p[1] else NA_character_, character(1))
   name  <- vapply(parts, function(p) if (length(p) >= 2) p[2] else NA_character_, character(1))
-
   if (is.null(overrides)) overrides <- load_manual_overrides()
   answered <- if (nrow(overrides)) paste(tolower(trimws(overrides$rank)), .mo_norm(overrides$name)) else character(0)
   key  <- paste(tolower(trimws(rank)), .mo_norm(name))
   keep <- !is.na(name) & trimws(name) != "" & !(key %in% answered)   # drop already-answered taxa
-  if (!any(keep)) return(finish(empty))
-
-  wl <- tibble(
-    rank         = tolower(trimws(rank[keep])),
-    name         = .mo_titlecase1(trimws(name[keep])),   # "holcopasites minima" -> "Holcopasites minima"
-    taxon_id     = NA_integer_,
-    correct_name = NA_character_,
-    note         = NA_character_,
+  if (!any(keep)) return(empty)
+  tibble(
+    rank = tolower(trimws(rank[keep])),
+    name = .mo_titlecase1(trimws(name[keep])),           # "holcopasites minima" -> "Holcopasites minima"
     inat_search_url = paste0("https://www.inaturalist.org/taxa/search?q=",
                              vapply(trimws(name[keep]), function(s) utils::URLencode(s, reserved = TRUE),
                                     character(1), USE.NAMES = FALSE))
   ) |> distinct(rank, name, .keep_all = TRUE) |> arrange(rank, name)
-  finish(wl)
+}
+
+# write_review_worklist(): the file version of the prompt -- writes the open not_found set to
+# cabr_taxon_ids_needs_review.csv with blank taxon_id / correct_name columns to fill in. Always runs
+# (the non-interactive fallback for the interactive prompt below).
+write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL, path = TAXON_REVIEW_PATH) {
+  open <- .mo_open_worklist(cache_path, overrides)
+  wl <- tibble(rank = open$rank, name = open$name, taxon_id = NA_integer_,
+               correct_name = NA_character_, note = NA_character_, inat_search_url = open$inat_search_url)
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  suppressWarnings(readr::write_csv(wl, path, na = ""))
+  message(sprintf("  taxon review worklist: %d taxa the auto-search couldn't resolve -> %s",
+                  nrow(wl), basename(path)))
+  invisible(wl)
+}
+
+# prompt_missing_taxon_ids(): INTERACTIVE. Walk the open not_found taxa and ASK the user for each
+# one's iNaturalist taxon_id (+ optional current name), appending answers to manual_taxon_overrides.csv
+# so they apply at BOTH levels on the next build. Mirrors the Holway second-pass prompt; a no-op when
+# non-interactive (then the worklist file is the fallback). Returns the count of ids recorded.
+prompt_missing_taxon_ids <- function(cache_path = RMI_CACHE_PATH, overrides_path = MANUAL_OVERRIDES_PATH,
+                                     interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
+                                     prompt_fn = readline) {
+  if (!isTRUE(interactive_ok)) return(0L)
+  open <- .mo_open_worklist(cache_path, load_manual_overrides(overrides_path))
+  if (!nrow(open)) return(0L)
+  message(sprintf("\n=== Fill missing taxon_ids: %d taxa the auto-search couldn't resolve ===", nrow(open)))
+  message("   Look each up on iNaturalist (URL shown). Enter its taxon_id, or 'id Current name' to")
+  message("   also correct the name; 'n' = no id yet, blank = skip, 'q' = stop (keep what's entered).")
+  cols <- c("rank", "name", "taxon_id", "correct_name", "note")
+  answers <- list()
+  for (i in seq_len(nrow(open))) {
+    o <- open[i, ]
+    message(sprintf("\n[%d/%d] %s  (%s)\n   %s", i, nrow(open), o$name, o$rank, o$inat_search_url))
+    raw <- trimws(prompt_fn("   taxon_id (or 'id Current name'), n = none, blank = skip: "))
+    if (tolower(raw) == "q") break
+    if (raw == "" || tolower(raw) %in% c("n", "no", "skip")) next
+    toks <- strsplit(raw, "\\s+")[[1]]
+    id <- suppressWarnings(as.integer(toks[1]))
+    if (is.na(id)) { message("   (not a number -- skipped)"); next }
+    cn <- if (length(toks) > 1) paste(toks[-1], collapse = " ") else NA_character_
+    answers[[length(answers) + 1L]] <- tibble(rank = o$rank, name = o$name, taxon_id = id,
+                                              correct_name = cn, note = "added via prompt")
+  }
+  if (!length(answers)) { message("   no ids entered."); return(0L) }
+  new <- bind_rows(answers)
+  existing <- if (file.exists(overrides_path))
+    tryCatch(suppressWarnings(read_csv(overrides_path, show_col_types = FALSE)), error = function(e) NULL) else NULL
+  if (!is.null(existing)) for (c in cols) if (!c %in% names(existing))
+    existing[[c]] <- if (c == "taxon_id") NA_integer_ else NA_character_
+  existing <- if (is.null(existing)) new[0, cols] else existing[, cols]
+  existing$taxon_id <- suppressWarnings(as.integer(existing$taxon_id))
+  # new answers win over any existing row for the same (rank, name)
+  combined <- bind_rows(new[, cols], existing) |>
+    mutate(.k = paste(tolower(trimws(rank)), .mo_norm(name))) |>
+    distinct(.k, .keep_all = TRUE) |> select(-.k) |> arrange(rank, name)
+  dir.create(dirname(overrides_path), recursive = TRUE, showWarnings = FALSE)
+  suppressWarnings(readr::write_csv(combined, overrides_path, na = ""))
+  message(sprintf("   recorded %d id(s) -> %s (applies at both levels next build)",
+                  nrow(new), basename(overrides_path)))
+  nrow(new)
 }

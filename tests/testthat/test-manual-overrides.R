@@ -80,3 +80,41 @@ test_that("write_review_worklist surfaces the resolver's not_found taxa, droppin
   expect_true(all(grepl("inaturalist.org/taxa/search", wl$inat_search_url)))
   expect_true(all(is.na(wl$taxon_id)))                    # blank column to fill in
 })
+
+test_that("prompt_missing_taxon_ids records an entered id (+ name) to the overrides file", {
+  src("reference/manual_overrides.R")
+  cache <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble(key = "species|holcopasites minima|252959",
+                          taxon_id = NA_integer_, status = "not_found_or_ambiguous"), cache)
+  ovp <- tempfile(fileext = ".csv")
+  pf <- function(prompt) "3480489 Holcopasites minimus"   # id + corrected name
+  n <- prompt_missing_taxon_ids(cache_path = cache, overrides_path = ovp,
+                                interactive_ok = TRUE, prompt_fn = pf)
+  expect_equal(n, 1L)
+  ov <- readr::read_csv(ovp, show_col_types = FALSE)
+  expect_equal(ov$taxon_id[ov$name == "Holcopasites minima"], 3480489L)
+  expect_equal(ov$correct_name[ov$name == "Holcopasites minima"], "Holcopasites minimus")
+})
+
+test_that("prompt_missing_taxon_ids is a no-op when non-interactive", {
+  src("reference/manual_overrides.R")
+  cache <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble(key = "species|holcopasites minima|1",
+                          taxon_id = NA_integer_, status = "not_found_or_ambiguous"), cache)
+  ovp <- tempfile(fileext = ".csv")
+  n <- prompt_missing_taxon_ids(cache_path = cache, overrides_path = ovp,
+                                interactive_ok = FALSE, prompt_fn = function(p) "999")
+  expect_equal(n, 0L)
+  expect_false(file.exists(ovp))            # nothing written when non-interactive
+})
+
+test_that("prompt_missing_taxon_ids skips blank / 'n' answers", {
+  src("reference/manual_overrides.R")
+  cache <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble(key = "species|holcopasites minima|1",
+                          taxon_id = NA_integer_, status = "not_found_or_ambiguous"), cache)
+  ovp <- tempfile(fileext = ".csv")
+  n <- prompt_missing_taxon_ids(cache_path = cache, overrides_path = ovp,
+                                interactive_ok = TRUE, prompt_fn = function(p) "n")
+  expect_equal(n, 0L)                       # 'n' = no id yet -> nothing recorded
+})

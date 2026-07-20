@@ -120,9 +120,13 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   specimens_path <- read_latest(SBC_RECORDS_DIR, SBC_RECORDS_PATTERN)
   message("Loading specimens: ", basename(specimens_path))
   raw <- suppressMessages(readxl::read_excel(specimens_path))
+  # missing_specimen is OPTIONAL: a record with nothing missing may drop the column entirely.
+  # Default it to NA (= none missing) so its absence never hard-stops the clean (line ~204 already
+  # treats NA as not-missing). Everything else is genuinely required.
+  if (!"missing_specimen" %in% names(raw)) raw$missing_specimen <- NA_character_
   require_columns(raw, c("date", "latitude", "longitude", "sdnhm_id", "ucsd_id", "collector",
                          "plot", "method_or_plant", "genus", "subgenus", "complex", "species",
-                         "subspecies", "sex", "missing_specimen"), "raw specimens")
+                         "subspecies", "sex"), "raw specimens")
   message("Loaded ", nrow(raw), " specimen rows")
 
   df <- raw |> parse_specimen_dates() |> standardize_specimen_names()

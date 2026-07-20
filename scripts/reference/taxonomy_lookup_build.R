@@ -175,7 +175,12 @@ build_taxonomy_lookup <- function(con) {
   # correct the name for renamed / synonym taxa. Then write the review worklist -- the prompt listing
   # whatever is STILL missing an id (one list; it already includes the Holway taxa) for you to look up.
   bee_taxonomy_lookup <- apply_manual_overrides(bee_taxonomy_lookup)
-  write_review_worklist()   # reads the resolver's not_found cache -> the "look these up" prompt
+  # INTERACTIVE: ask you for the ids the auto-search couldn't find (appends to manual_taxon_overrides.csv),
+  # then re-apply so anything you enter fills THIS run's lookup. Non-interactive (Rscript) -> skipped,
+  # and the worklist file below is the fallback.
+  prompt_missing_taxon_ids()
+  bee_taxonomy_lookup <- apply_manual_overrides(bee_taxonomy_lookup)
+  write_review_worklist()   # the still-open not_found set (after your answers) -> the "look these up" file
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")
