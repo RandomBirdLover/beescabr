@@ -761,6 +761,12 @@ build_holway_reference <- function(con, holway_df,
       dplyr::select(dplyr::any_of(HOLWAY_REF_COLUMNS))
     ref <- dplyr::bind_rows(ref, add)
   }
+  # user-curated manual overrides (name-changed / synonym taxa, e.g. Holway 'Holcopasites minima'
+  # == iNat 'minimus') win over the automated resolution, so a hand-recorded id + corrected name
+  # land in the Holway reference table too -- not just the lookup. Sourced by the pipeline /
+  # standalone runner; guarded so isolated unit tests that don't source it still run.
+  if (!exists("apply_manual_overrides")) source(file.path("scripts", "reference/manual_overrides.R"))
+  ref <- apply_manual_overrides(ref)
   ref
 }
 
@@ -785,6 +791,7 @@ if (.holway_autorun_ok(environment())) {
   source("scripts/observations/engine/db/decision_store.R"); source("scripts/observations/engine/api/inat_http.R")
   source("scripts/observations/engine/api/inat_flatten.R"); source("scripts/observations/engine/api/inat_cache.R")
   source("scripts/reference/holway.R")
+  source("scripts/reference/manual_overrides.R")
 
   con <- store_connect()
   on.exit(store_disconnect(con), add = TRUE)

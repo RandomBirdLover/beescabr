@@ -68,6 +68,7 @@ local({
   need("build_checklist",          "checklists/checklist_build.R")
   need("build_bee_taxonomy_lookup","reference/taxonomy_reference.R")
   need("resolve_missing_taxon_ids","reference/resolve_missing_ids.R")
+  need("apply_manual_overrides",   "reference/manual_overrides.R")
   need("load_verified_taxa",       "reference/verify.R")
 })
 
@@ -170,6 +171,11 @@ build_taxonomy_lookup <- function(con) {
   # matches, everything else stays blank; cached to resolved_missing_ids.csv (auditable, no re-hits).
   bee_taxonomy_lookup <- tryCatch(resolve_missing_taxon_ids(bee_taxonomy_lookup),
     error = function(e) { message("  (resolve_missing_taxon_ids skipped: ", conditionMessage(e), ")"); bee_taxonomy_lookup })
+  # Your recorded answers (manual_taxon_overrides.csv) win over the automated search: fill the id +
+  # correct the name for renamed / synonym taxa. Then write the review worklist -- the prompt listing
+  # whatever is STILL missing an id (one list; it already includes the Holway taxa) for you to look up.
+  bee_taxonomy_lookup <- apply_manual_overrides(bee_taxonomy_lookup)
+  write_review_worklist()   # reads the resolver's not_found cache -> the "look these up" prompt
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")

@@ -67,6 +67,7 @@ source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_c
 # Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in
 # the pipeline now (stages 4 + 5); they pull their own deps (holway.R, taxonomy_reference.R,
 # verify.R, checklist_build.R) via need().
+source("scripts/reference/manual_overrides.R")        # apply_manual_overrides / write_review_worklist (name-change fixes)
 source("scripts/reference/holway_reference_build.R")  # defines build_holway_reference() -- stage 4 (interactive)
 source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
 source("scripts/specimens/specimen_clean.R")          # pure specimen-cleaning helpers
