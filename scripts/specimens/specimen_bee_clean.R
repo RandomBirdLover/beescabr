@@ -9,7 +9,7 @@
 #   attaches taxon_id + full taxonomy from the taxonomy lookup (by name), resolves
 #   the transect from the `plot` text (via the master_crosswalk specimen_label_variants,
 #   with a lat/long spatial fallback for plain "Cabrillo NM"), pulls the visited
-#   plant out of method_or_plant, and writes cabr_specimen_bee_record_clean.csv plus
+#   plant out of method_or_plant, and writes cabr_specimen_bee_clean.csv plus
 #   QC side files (taxonomy flags, missing, duplicates).
 #
 # COLUMN MAP (iNat -> specimen)

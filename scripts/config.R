@@ -126,7 +126,7 @@ PATHS <- list(
   inat_clean = "data/observations/inat_clean/cabr_inat_bee_clean.csv",
   inat_unknown_tags = "data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
   inat_to_verify = "data/observations/inat_clean/qc/cabr_inat_to_verify.csv",
-  specimen_clean = "data/specimens/cleaned/cabr_specimen_bee_record_clean.csv",
+  specimen_clean = "data/specimens/cleaned/cabr_specimen_bee_clean.csv",
   holway_combined = "data/reference/source/holway_2026/holway_v3_combined.csv"
 )
 

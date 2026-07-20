@@ -126,28 +126,16 @@ run_qc <- function(checklist, label) {
 combine_checklists <- function(sources) {
   sources <- sources[!vapply(sources, is.null, logical(1))]
   if (!length(sources)) return(NULL)
-
-  tax_cols <- c("taxon_id", "scientific_name", "common_name",
-                "kingdom", "phylum", "class", "order", "superfamily",
-                "family", "subfamily", "tribe", "subtribe",
-                "genus", "subgenus", "complex", "complex_taxon_id", "species", "subspecies")
-  kc <- "combine_key"
-  key_of <- function(df) {
-    g <- str_to_lower(trimws(as.character(df$genus)))
-    s <- str_to_lower(trimws(as.character(df$species))); s[is.na(s)] <- ""
-    ifelse(is.na(g) | g == "", NA_character_, paste(g, s, sep = "_"))
-  }
-
-  backbone <- bind_rows(lapply(sources, function(df) { df[[kc]] <- key_of(df); df })) |>
-    filter(!is.na(.data[[kc]])) |>
-    select(any_of(c(kc, tax_cols))) |>
-    distinct(.data[[kc]], .keep_all = TRUE)
-
-  for (nm in names(sources))
-    backbone[[paste0("in_", nm)]] <- backbone[[kc]] %in% key_of(sources[[nm]])
-
-  backbone[[kc]] <- NULL
-  arrange(backbone, family, genus, species)
+  keyed <- lapply(sources, function(df) { d <- cl_format(df); d$.k <- .cl_own_key(d); d[!is.na(d$.k), , drop = FALSE] })
+  backbone <- do.call(rbind, keyed)
+  backbone <- backbone[!duplicated(backbone$.k), , drop = FALSE]     # one row per taxon
+  for (nm in names(sources)) backbone[[nm]] <- backbone$.k %in% keyed[[nm]]$.k   # boolean flag per source
+  backbone$.k <- NULL
+  ord <- order(backbone$family, backbone$genus, match(backbone$taxon_rank, CL_LINEAGE_RANKS),
+               backbone$species, na.last = TRUE, method = "radix")
+  backbone <- backbone[ord, c(CHECKLIST_COLS, names(sources)), drop = FALSE]
+  rownames(backbone) <- NULL
+  backbone
 }
 
 # ------------------------------------------------------------
@@ -163,4 +151,72 @@ build_specimen_checklist <- function(specimens) {
     distinct() |>
     filter(!is.na(genus), genus != "") |>
     arrange(across(any_of(c("family", "genus", "subgenus", "species"))))
+}
+
+# ============================================================================
+# NORMALIZED-TREE checklists (2026-07-20): each checklist carries PARENT taxa as their own rows
+# (genus, subfamily, family, ...), exactly like the taxonomy lookup / Holway reference. taxon_id,
+# taxon_rank, scientific_name/common_name, and taxonomy all come from the taxonomy lookup.
+# ============================================================================
+CHECKLIST_COLS <- c("taxon_id", "taxon_rank", "scientific_name", "common_name",
+                    "order", "family", "subfamily", "tribe", "genus", "subgenus", "complex",
+                    "species", "subspecies")
+CL_LINEAGE_RANKS <- c("kingdom", "phylum", "subphylum", "class", "subclass", "order", "suborder",
+                      "infraorder", "superfamily", "family", "epifamily", "subfamily", "tribe",
+                      "subtribe", "genus", "subgenus", "complex", "species", "subspecies")
+
+.cl_rankcol <- function(df) if ("rank" %in% names(df)) as.character(df$rank) else
+  if ("taxon_rank" %in% names(df)) as.character(df$taxon_rank) else rep(NA_character_, nrow(df))
+
+# normalized (rank, name) identity key -- subgenus loses parens + keeps last word; NA/blank -> NA
+.cl_key <- function(rank, name) {
+  rk <- tolower(trimws(as.character(rank))); nm <- trimws(as.character(name))
+  is_sub <- !is.na(rk) & rk == "subgenus"
+  nm[is_sub] <- sub(".*\\s", "", trimws(gsub("[()]", "", nm[is_sub])))
+  nm <- tolower(nm)
+  ifelse(is.na(rk) | rk == "" | is.na(nm) | nm == "", NA_character_, paste(rk, nm, sep = "\t"))
+}
+# value a row carries at its OWN rank
+.cl_name_at_own_rank <- function(df) {
+  out <- rep(NA_character_, nrow(df)); rk <- .cl_rankcol(df)
+  for (lv in CL_LINEAGE_RANKS) { if (!lv %in% names(df)) next
+    hit <- !is.na(rk) & rk == lv; if (any(hit)) out[hit] <- as.character(df[[lv]][hit]) }
+  out
+}
+.cl_own_key <- function(df) .cl_key(.cl_rankcol(df), .cl_name_at_own_rank(df))
+
+# every (rank, name) key present in the lineages of df's rows
+checklist_lineage_keys <- function(df) {
+  keys <- character(0)
+  for (lv in CL_LINEAGE_RANKS) { if (!lv %in% names(df)) next
+    k <- .cl_key(lv, df[[lv]]); keys <- c(keys, k[!is.na(k)]) }
+  unique(keys)
+}
+# format any lookup/present-shaped frame to CHECKLIST_COLS (taxon_rank <- rank)
+cl_format <- function(df) {
+  df <- as.data.frame(df, stringsAsFactors = FALSE)
+  if (!"taxon_rank" %in% names(df)) df$taxon_rank <- .cl_rankcol(df)
+  for (cc in CHECKLIST_COLS) if (!cc %in% names(df)) df[[cc]] <- NA
+  df[, CHECKLIST_COLS, drop = FALSE]
+}
+
+# lookup_subtree(): the normalized subtree (leaves + ALL ancestor rows) of present_df's taxa,
+# taken from the lookup. A present leaf whose own (rank,name) isn't in the lookup (e.g. a
+# specimen-only species) is kept with its own taxonomy + taxon_id (blank). One row per taxon.
+lookup_subtree <- function(lookup, present_df, label = "", verbose = TRUE) {
+  pres_keys <- checklist_lineage_keys(present_df)
+  lk_own    <- .cl_own_key(lookup)
+  in_lk     <- lookup[!is.na(lk_own) & lk_own %in% pres_keys, , drop = FALSE]
+  pdf_own   <- .cl_own_key(present_df)
+  keep_extra <- !is.na(pdf_own) & !(pdf_own %in% unique(stats::na.omit(lk_own)))
+  extra <- present_df[keep_extra, , drop = FALSE]
+  extra <- extra[!duplicated(.cl_own_key(extra)), , drop = FALSE]
+  out <- rbind(cl_format(in_lk), cl_format(extra))
+  out <- out[!duplicated(.cl_own_key(out)), , drop = FALSE]              # one row per taxon
+  ord <- order(out$family, out$genus, match(out$taxon_rank, CL_LINEAGE_RANKS),
+               out$species, na.last = TRUE, method = "radix")
+  out <- out[ord, , drop = FALSE]; rownames(out) <- NULL
+  if (verbose) message(sprintf("%-14s: %d taxa (%d from lookup tree, %d not-in-lookup leaves)",
+                               label, nrow(out), nrow(in_lk), nrow(extra)))
+  out
 }

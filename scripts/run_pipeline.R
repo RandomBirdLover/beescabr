@@ -248,8 +248,8 @@ main <- function() {
   # ---- 6. SPECIMENS (lethal-survey record) ----
   # 6a. Raw hygiene worklist (non-ID'd / missing / duplicate rows to fix by hand).
   # 6b. Clean -- taxon_id + taxonomy from the lookup (step 5), transect, visited plant ->
-  #     cabr_specimen_bee_record_clean.csv (mirrors the iNat bee schema).
-  message("\n== [6] SPECIMENS: raw worklist + cabr_specimen_bee_record_clean.csv ==")
+  #     cabr_specimen_bee_clean.csv (mirrors the iNat bee schema).
+  message("\n== [6] SPECIMENS: raw worklist + cabr_specimen_bee_clean.csv ==")
   tryCatch(tidy_raw_specimens(),
            error = function(e) message("  [6a] raw worklist FAILED (non-fatal): ", conditionMessage(e)))
   tryCatch(clean_specimens(interactive_ok = FALSE),

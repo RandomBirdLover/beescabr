@@ -55,3 +55,57 @@ test_that("taxonomy_lookup_from_bees derives the subgenus/complex map", {
   expect_equal(nrow(lk), 2)
   expect_equal(lk$subgenus[lk$taxon_id == 1], "Melissodes")
 })
+
+# --- normalized-tree builder (parent rows from the lookup) ------------------------------
+mini_lookup <- function() tibble::tibble(
+  taxon_id = c(10,11,12,13,14),
+  rank = c("family","genus","species","genus","species"),
+  scientific_name = c("Apidae","Bombus","Bombus vosnesenskii","Anthophora","Anthophora urbana"),
+  common_name = c(NA,NA,"Yellow-faced Bumble Bee",NA,NA),
+  order="Hymenoptera", family="Apidae",
+  subfamily=c(NA,"Apinae","Apinae","Apinae","Apinae"),
+  tribe=c(NA,"Bombini","Bombini","Anthophorini","Anthophorini"),
+  genus=c(NA,"Bombus","Bombus","Anthophora","Anthophora"),
+  subgenus=c(NA,NA,"Pyrobombus",NA,NA), complex=NA_character_,
+  species=c(NA,NA,"vosnesenskii",NA,"urbana"), subspecies=NA_character_)
+
+test_that("lookup_subtree includes the ancestor rows of present taxa, not unrelated ones", {
+  src("checklists/checklist_build.R")
+  lk <- mini_lookup()
+  present <- lk |> filter(taxon_id == 12)                 # only Bombus vosnesenskii observed
+  out <- suppressMessages(lookup_subtree(lk, present, "T"))
+  expect_setequal(out$taxon_id, c(10,11,12))              # species + genus Bombus + family Apidae
+  expect_false(any(out$taxon_id %in% c(13,14)))           # Anthophora branch excluded
+  expect_true(all(c("taxon_id","taxon_rank","scientific_name","common_name",
+                    "order","family","subfamily","tribe","genus","subgenus",
+                    "complex","species","subspecies") %in% names(out)))
+  expect_equal(out$taxon_rank[out$taxon_id==11], "genus") # parent row carries its own rank
+})
+
+test_that("lookup_subtree keeps a specimen-only leaf that isn't in the lookup (blank taxon_id)", {
+  src("checklists/checklist_build.R")
+  lk <- mini_lookup()
+  present <- tibble::tibble(taxon_id=NA_integer_, rank="species",
+    scientific_name="Colletes phaceliae", common_name=NA_character_, order="Hymenoptera",
+    family="Colletidae", subfamily="Colletinae", tribe="Colletini",
+    genus="Colletes", subgenus=NA_character_, complex=NA_character_,
+    species="phaceliae", subspecies=NA_character_)
+  out <- suppressMessages(lookup_subtree(lk, present, "spec"))
+  expect_true("phaceliae" %in% out$species)               # specimen-only leaf kept
+  expect_true(is.na(out$taxon_id[out$species=="phaceliae" & !is.na(out$species)][1]))
+})
+
+test_that("combine_checklists unions taxa with per-source boolean flags named after the sources", {
+  src("checklists/checklist_build.R")
+  lk <- mini_lookup()
+  inat <- suppressMessages(lookup_subtree(lk, lk |> filter(taxon_id==12)))   # Bombus tree
+  spec <- suppressMessages(lookup_subtree(lk, lk |> filter(taxon_id==14)))   # Anthophora tree
+  comb <- combine_checklists(list(specimen=spec, inat=inat))
+  expect_true(all(c("specimen","inat") %in% names(comb)))
+  # family Apidae is in BOTH trees -> both TRUE
+  ap <- comb[comb$taxon_rank=="family", ]
+  expect_true(ap$specimen && ap$inat)
+  # Bombus genus only in inat
+  bb <- comb[comb$genus=="Bombus" & comb$taxon_rank=="genus", ]
+  expect_true(bb$inat && !bb$specimen)
+})
