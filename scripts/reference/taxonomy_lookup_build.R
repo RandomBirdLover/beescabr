@@ -67,6 +67,7 @@ local({
   need("load_holway",              "reference/holway.R")
   need("build_checklist",          "checklists/checklist_build.R")
   need("build_bee_taxonomy_lookup","reference/taxonomy_reference.R")
+  need("resolve_missing_taxon_ids","reference/resolve_missing_ids.R")
   need("load_verified_taxa",       "reference/verify.R")
 })
 
@@ -164,6 +165,11 @@ build_taxonomy_lookup <- function(con) {
   bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_entries, cl_sd, bees,
                                                    verified_ids = verified_ids,
                                                    ancestry_ids = ancestry_ids)
+  # Fill any STILL-missing taxon_ids by iNaturalist name-search (Holway-only taxa never observed in
+  # SD, so no observation ancestry carried their id). Safe: assigns only unambiguous rank+name+parent
+  # matches, everything else stays blank; cached to resolved_missing_ids.csv (auditable, no re-hits).
+  bee_taxonomy_lookup <- tryCatch(resolve_missing_taxon_ids(bee_taxonomy_lookup),
+    error = function(e) { message("  (resolve_missing_taxon_ids skipped: ", conditionMessage(e), ")"); bee_taxonomy_lookup })
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")
