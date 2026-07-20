@@ -156,10 +156,15 @@ flatten_observation <- function(o) {
 .RANK_TO_COLUMN <- c(
   kingdom     = "taxon_kingdom_name",
   phylum      = "taxon_phylum_name",
+  subphylum   = "taxon_subphylum_name",
   class       = "taxon_class_name",
+  subclass    = "taxon_subclass_name",
   order       = "taxon_order_name",
+  suborder    = "taxon_suborder_name",
+  infraorder  = "taxon_infraorder_name",
   superfamily = "taxon_superfamily_name",
   family      = "taxon_family_name",
+  epifamily   = "taxon_epifamily_name",
   subfamily   = "taxon_subfamily_name",
   tribe       = "taxon_tribe_name",
   subtribe    = "taxon_subtribe_name",
@@ -169,12 +174,10 @@ flatten_observation <- function(o) {
 )
 
 parse_taxon_ranks <- function(taxon) {
-  rank_cols <- c(
-    "taxon_kingdom_name", "taxon_phylum_name", "taxon_class_name",
-    "taxon_order_name", "taxon_superfamily_name", "taxon_family_name",
-    "taxon_subfamily_name", "taxon_tribe_name", "taxon_subtribe_name",
-    "taxon_genus_name", "taxon_species_name", "taxon_subspecies_name"
-  )
+  # Derived from .RANK_TO_COLUMN so the two never drift out of sync (the 5 sub-
+  # ranks -- subphylum, subclass, suborder, infraorder, epifamily -- were added
+  # 2026-07 and flow through everywhere these standard columns do).
+  rank_cols <- unname(.RANK_TO_COLUMN)
   row <- as.list(rep(NA_character_, length(rank_cols)))
   names(row) <- rank_cols
 
@@ -214,4 +217,27 @@ parse_taxon_ranks <- function(taxon) {
   # separate lookup join.
   out$rank             <- .scalar(taxon$rank, NA_character_)
   out
+}
+
+# ------------------------------------------------------------
+# parse_taxon_ancestry()
+# Given one /taxa/{id} result object (with its `ancestors` array), return a long
+# tibble -- one row per ancestor taxon AND the taxon itself -- of (taxon_id, rank,
+# name). This is the raw material for the taxonomy lookup's normalized tree: every
+# parent taxon (genus, subgenus, complex, family, ...) can be given its OWN row
+# with its OWN iNat id from here, instead of a species row borrowing a parent's id.
+# PURE: same taxon in, same rows out.
+# ------------------------------------------------------------
+parse_taxon_ancestry <- function(taxon) {
+  entries <- c(list(taxon), taxon$ancestors %||% list())
+  ids <- integer(0); ranks <- character(0); nms <- character(0)
+  for (a in entries) {
+    if (!is.list(a)) next
+    id <- suppressWarnings(as.integer(.scalar(a$id, NA_integer_)))
+    rk <- .scalar(a$rank, NA_character_)
+    nm <- .scalar(a$name, NA_character_)
+    if (is.na(id) || is.na(rk)) next
+    ids <- c(ids, id); ranks <- c(ranks, rk); nms <- c(nms, nm)
+  }
+  tibble(taxon_id = ids, rank = ranks, name = nms)
 }

@@ -30,10 +30,19 @@ BEE_CLASS       <- "Insecta"
 BEE_ORDER       <- "Hymenoptera"
 BEE_SUPERFAMILY <- "Apoidea"
 
+# The 5 sub-ranks are invariant across all bees, but per the design we take the
+# EXACT names from the captured iNat ancestry at build time; these are only the
+# fallback used when the ancestry side-table is unavailable.
+BEE_SUBRANK_FALLBACK <- c(
+  subphylum = "Hexapoda", subclass = "Pterygota", suborder = "Apocrita",
+  infraorder = "Aculeata", epifamily = "Anthophila"
+)
+
 TAXONOMY_COLUMN_ORDER <- c(
   "taxon_id", "scientific_name", "common_name",
-  "kingdom", "phylum", "class", "order", "superfamily",
-  "family", "subfamily", "tribe",
+  "kingdom", "phylum", "subphylum", "class", "subclass",
+  "order", "suborder", "infraorder", "superfamily",
+  "family", "epifamily", "subfamily", "tribe",
   "genus", "subgenus", "complex", "complex_taxon_id",
   "species", "subspecies", "rank"
 )
@@ -222,6 +231,69 @@ reference_name_sets <- function(ref) {
   )
 }
 
+# ------------------------------------------------------------
+# derive_bee_subranks(): PURE. The EXACT names for the 5 invariant sub-ranks
+# (subphylum, subclass, suborder, infraorder, epifamily) taken from the captured
+# iNat ancestry -- the most common name seen at each rank -- falling back to the
+# known bee constants only when the ancestry side-table has no entry there.
+# ------------------------------------------------------------
+derive_bee_subranks <- function(ancestry_ids) {
+  pick <- function(rk) {
+    if (is.null(ancestry_ids) || !nrow(ancestry_ids) ||
+        !all(c("rank", "name") %in% names(ancestry_ids)))
+      return(unname(BEE_SUBRANK_FALLBACK[[rk]]))
+    v <- ancestry_ids$name[!is.na(ancestry_ids$rank) & ancestry_ids$rank == rk &
+                           !is.na(ancestry_ids$name) & ancestry_ids$name != ""]
+    if (length(v)) names(sort(table(v), decreasing = TRUE))[1]
+    else unname(BEE_SUBRANK_FALLBACK[[rk]])
+  }
+  c(subphylum = pick("subphylum"), subclass = pick("subclass"),
+    suborder = pick("suborder"), infraorder = pick("infraorder"),
+    epifamily = pick("epifamily"))
+}
+
+# ------------------------------------------------------------
+# fill_parent_ids(): PURE. Give every blank-id PARENT row (genus / subgenus /
+# complex / family / subfamily / tribe / subtribe / epifamily / superfamily) its
+# real iNat taxon_id from the ancestry side-table, matched on rank + the name at
+# that rank. Species/subspecies rows are LEFT ALONE -- an unresolved species keeps
+# taxon_id = NA rather than borrowing a parent's id. subgenus matches on the last
+# word (iNat may name a subgenus "Genus Subgenus"); everything else on full name.
+# This is what fixes the blank-id parents: a parent never observed in SD County
+# still gets its own id because a resolved child carried it in the ancestry.
+# ------------------------------------------------------------
+fill_parent_ids <- function(df, ancestry_ids) {
+  if (is.null(ancestry_ids) || !nrow(ancestry_ids) ||
+      !all(c("taxon_id", "rank", "name") %in% names(ancestry_ids))) return(df)
+  last_word <- function(x) ifelse(is.na(x) | x == "", NA_character_, str_trim(word(x, -1)))
+  amap <- ancestry_ids |>
+    filter(!is.na(taxon_id), !is.na(rank), !is.na(name), name != "") |>
+    mutate(.rk = tolower(rank),
+           .nm = tolower(ifelse(rank == "subgenus", last_word(name), name))) |>
+    group_by(.rk, .nm) |>
+    summarise(.aid = as.integer(dplyr::first(taxon_id)), .groups = "drop")
+
+  PARENT_RANKS <- c("genus", "subgenus", "complex", "family", "subfamily",
+                    "tribe", "subtribe", "epifamily", "superfamily")
+  name_at_rank <- dplyr::case_when(
+    df$rank == "genus"       ~ df$genus,
+    df$rank == "subgenus"    ~ df$subgenus,
+    df$rank == "complex"     ~ df$complex,
+    df$rank == "family"      ~ df$family,
+    df$rank == "subfamily"   ~ df$subfamily,
+    df$rank == "tribe"       ~ df$tribe,
+    df$rank == "subtribe"    ~ df$subtribe,
+    df$rank == "epifamily"   ~ df$epifamily,
+    df$rank == "superfamily" ~ df$superfamily,
+    TRUE ~ NA_character_)
+  df$.rk <- ifelse(df$rank %in% PARENT_RANKS, tolower(df$rank), NA_character_)
+  df$.nm <- tolower(ifelse(df$rank == "subgenus", last_word(name_at_rank), name_at_rank))
+  df |>
+    left_join(amap, by = c(".rk", ".nm")) |>
+    mutate(taxon_id = dplyr::coalesce(taxon_id, .aid)) |>
+    select(-.rk, -.nm, -.aid)
+}
+
 # ============================================================================
 # build_bee_taxonomy_lookup(): the reference table is the START of the lookup.
 #
@@ -239,7 +311,8 @@ reference_name_sets <- function(ref) {
 # ============================================================================
 build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees,
                                       verified_ids = integer(0),
-                                      specimen_species = NULL) {
+                                      specimen_species = NULL,
+                                      ancestry_ids = NULL) {
 
   if (is.null(holway_resolved) || nrow(holway_resolved) == 0)
     stop("build_bee_taxonomy_lookup(): the cleaned Holway reference table is REQUIRED ",
@@ -444,6 +517,24 @@ build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees
       mutate(subtribe = coalesce(subtribe, obs_subtribe)) |> select(-obs_subtribe)
   }
   if (!"subtribe" %in% names(combined)) combined$subtribe <- NA_character_
+
+  # 5 sub-rank columns (subphylum/subclass/suborder/infraorder/epifamily): create
+  # them if absent, then stamp the EXACT bee-wide value taken from the iNat
+  # ancestry (coalesced so any per-row value already present is kept).
+  bee_sub <- derive_bee_subranks(ancestry_ids)
+  for (nm in names(bee_sub))
+    if (!nm %in% names(combined)) combined[[nm]] <- NA_character_
+  combined <- combined |>
+    mutate(subphylum  = dplyr::coalesce(subphylum,  bee_sub[["subphylum"]]),
+           subclass   = dplyr::coalesce(subclass,   bee_sub[["subclass"]]),
+           suborder   = dplyr::coalesce(suborder,   bee_sub[["suborder"]]),
+           infraorder = dplyr::coalesce(infraorder, bee_sub[["infraorder"]]),
+           epifamily  = dplyr::coalesce(epifamily,  bee_sub[["epifamily"]]))
+
+  # Give each PARENT taxon its own iNat id from the ancestry side-table (a species
+  # never borrows one). Done before in_inat/dedupe so a newly-filled parent id can
+  # collapse duplicates yet still read in_inat = FALSE when it was never observed.
+  combined <- fill_parent_ids(combined, ancestry_ids)
 
   # in_inat: observed on iNat -- NOT merely "has a taxon_id". A resolved-but-
   # unobserved Holway taxon (Andrena annectens, 573509, 0 obs) stays in_inat=FALSE.

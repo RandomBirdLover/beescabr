@@ -115,6 +115,12 @@ PATHS <- list(
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
   holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
+  # Side-table written by holway_reference_build.R: distinct (taxon_id, rank, name)
+  # for every ANCESTOR of every resolved Holway taxon. The taxonomy lookup reads it
+  # to give each parent taxon (genus/subgenus/complex/family/...) its OWN iNat id,
+  # even when that parent was never observed in SD County. A species/subspecies row
+  # never borrows a parent id -- the parents carry their own here.
+  holway_ancestry = "data/reference/holway_taxon_ancestry.csv",
   verified_taxa = "data/reference/verified_taxa.csv",
   checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
@@ -131,18 +137,23 @@ PATHS <- list(
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the
-# exact order and naming the retired CSV export used (subtribe added 2026-07).
+# exact order and naming the retired CSV export used (subtribe added 2026-07;
+# subphylum/subclass/suborder/infraorder/epifamily added 2026-07 -- all sourced
+# from the iNat ancestry walk, never guessed).
 TAXON_RANK_COLUMNS <- c(
-  "taxon_kingdom_name", "taxon_phylum_name", "taxon_class_name",
-  "taxon_order_name", "taxon_superfamily_name", "taxon_family_name",
+  "taxon_kingdom_name", "taxon_phylum_name", "taxon_subphylum_name",
+  "taxon_class_name", "taxon_subclass_name",
+  "taxon_order_name", "taxon_suborder_name", "taxon_infraorder_name",
+  "taxon_superfamily_name", "taxon_family_name", "taxon_epifamily_name",
   "taxon_subfamily_name", "taxon_tribe_name", "taxon_subtribe_name",
   "taxon_genus_name", "taxon_species_name", "taxon_subspecies_name"
 )
 
 # The taxonomic hierarchy column order requested for the reference/lookup
-# outputs, with metadata columns first.
+# outputs, with metadata columns first. 19 levels (the full sub-rank set).
 TAXONOMY_LEVELS <- c(
-  "kingdom", "phylum", "class", "order", "superfamily",
-  "family", "subfamily", "tribe", "subtribe",
+  "kingdom", "phylum", "subphylum", "class", "subclass",
+  "order", "suborder", "infraorder", "superfamily",
+  "family", "epifamily", "subfamily", "tribe", "subtribe",
   "genus", "subgenus", "complex", "species", "subspecies"
 )

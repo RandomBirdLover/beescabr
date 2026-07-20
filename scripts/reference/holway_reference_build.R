@@ -313,12 +313,14 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
 # ------------------------------------------------------------
 # Clean reference-table layout -- mirrors sd_bee_taxonomy_lookup.csv (minus the
 # lookup-only computed columns verified/holway_status/in_*): taxon_id,
-# scientific_name, common_name, rank, then the 14 taxonomic levels in order,
-# complex_taxon_id, source_sheet, resolved.
+# scientific_name, common_name, rank, then the 19 taxonomic levels in order,
+# complex_taxon_id, source_sheet, resolved. (2026-07: added subphylum, subclass,
+# suborder, infraorder, epifamily -- sourced straight from the iNat ancestry.)
 # ------------------------------------------------------------
-HOLWAY_REF_LEVELS <- c("kingdom", "phylum", "class", "order", "superfamily",
-                       "family", "subfamily", "tribe", "subtribe", "genus",
-                       "subgenus", "complex", "species", "subspecies")
+HOLWAY_REF_LEVELS <- c("kingdom", "phylum", "subphylum", "class", "subclass",
+                       "order", "suborder", "infraorder", "superfamily",
+                       "family", "epifamily", "subfamily", "tribe", "subtribe",
+                       "genus", "subgenus", "complex", "species", "subspecies")
 # complex_taxon_id is intentionally omitted from the reference-table output
 # (human-facing); the value still exists internally for the checklists.
 HOLWAY_REF_COLUMNS <- c("taxon_id", "scientific_name", "common_name", "rank",
@@ -371,12 +373,15 @@ tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_shee
     scientific_name = sci,
     common_name     = common_name %||% NA_character_,
     rank            = ranks$rank %||% NA_character_,
-    kingdom     = ranks$taxon_kingdom_name,     phylum = ranks$taxon_phylum_name,
-    class       = ranks$taxon_class_name,       order  = ranks$taxon_order_name,
-    superfamily = ranks$taxon_superfamily_name, family = ranks$taxon_family_name,
-    subfamily   = ranks$taxon_subfamily_name,   tribe  = ranks$taxon_tribe_name,
-    subtribe    = ranks$taxon_subtribe_name,    genus  = ranks$taxon_genus_name,
-    subgenus    = subg,                         complex = ranks$complex,
+    kingdom     = ranks$taxon_kingdom_name,     phylum      = ranks$taxon_phylum_name,
+    subphylum   = ranks$taxon_subphylum_name,   class       = ranks$taxon_class_name,
+    subclass    = ranks$taxon_subclass_name,    order       = ranks$taxon_order_name,
+    suborder    = ranks$taxon_suborder_name,    infraorder  = ranks$taxon_infraorder_name,
+    superfamily = ranks$taxon_superfamily_name, family      = ranks$taxon_family_name,
+    epifamily   = ranks$taxon_epifamily_name,   subfamily   = ranks$taxon_subfamily_name,
+    tribe       = ranks$taxon_tribe_name,       subtribe    = ranks$taxon_subtribe_name,
+    genus       = ranks$taxon_genus_name,       subgenus    = subg,
+    complex     = ranks$complex,
     species     = sp_ep,
     subspecies  = ss_ep,
     complex_taxon_id = ranks$complex_taxon_id,
@@ -415,9 +420,12 @@ unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE,
   tibble::tibble(
     taxon_id = NA_integer_, scientific_name = sci,
     common_name = NA_character_, rank = rank,
-    kingdom = NA_character_, phylum = NA_character_, class = NA_character_,
-    order = NA_character_, superfamily = NA_character_,
-    family = r$family %||% NA_character_, subfamily = r$subfamily %||% NA_character_,
+    kingdom = NA_character_, phylum = NA_character_, subphylum = NA_character_,
+    class = NA_character_, subclass = NA_character_,
+    order = NA_character_, suborder = NA_character_, infraorder = NA_character_,
+    superfamily = NA_character_,
+    family = r$family %||% NA_character_, epifamily = NA_character_,
+    subfamily = r$subfamily %||% NA_character_,
     tribe = r$tribe %||% NA_character_, subtribe = NA_character_,
     genus = genus, subgenus = .strip_parens(r$subgenus %||% NA_character_),
     complex = NA_character_, species = species_col, subspecies = subspecies_col,
@@ -428,77 +436,21 @@ unresolved_holway_ref_row <- function(r, itis_valid = NA, is_subspecies = FALSE,
 }
 
 # ------------------------------------------------------------
-# ROLL-UP: a Holway species NOT on iNat inherits the nearest PARENT taxon's id +
-# full ancestry -- the same-named species-complex (prompted), else Holway's subgenus,
-# else Holway's genus. Fixes the "unresolved rows have no taxon_id / no higher
-# taxonomy" gap: every Holway bee ends up placed in the tree with an id.
+# ANCESTRY CAPTURE (replaces the rejected "species inherits parent id" roll-up).
+# An unresolved species keeps taxon_id = NA. Instead of stamping a parent's id
+# onto the species row, we harvest the full iNat ancestry (id + rank + name for
+# every ancestor) of each RESOLVED taxon. Those ancestor taxa are written to a
+# side-table (holway_taxon_ancestry.csv) and the taxonomy lookup uses them to give
+# every parent taxon -- genus, subgenus, complex, family, ... -- its OWN row with
+# its OWN iNat taxon_id, even when that parent was never observed in SD County.
+# accumulate_ancestry(): PURE. Grow a distinct (taxon_id, rank, name) table from a
+# resolved taxon's parse_taxon_ancestry() rows.
 # ------------------------------------------------------------
-# .pick_rank(): PURE. First result whose rank is in `want`; with strict=TRUE ONLY an
-# exact (ssp-normalized) name match on want_name qualifies. Returns the taxon or NULL.
-.pick_rank <- function(results, want, want_name = NULL, strict = FALSE) {
-  if (length(results) == 0) return(NULL)
-  rnk  <- vapply(results, function(t) t$rank %||% "", character(1))
-  elig <- which(rnk %in% want)
-  if (!length(elig)) return(NULL)
-  if (!is.null(want_name)) {
-    nm <- vapply(results, function(t) .norm_name(t$name %||% ""), character(1))
-    ex <- elig[nm[elig] == .norm_name(want_name)]
-    if (length(ex)) return(results[[ex[[1]]]])
-    if (strict) return(NULL)
-  }
-  results[[elig[[1]]]]
-}
-
-# rollup_parent(): nearest on-iNat parent for an unresolved Holway row. Impure
-# (fetches + may prompt). complex (PROMPT; auto when non-interactive) -> subgenus ->
-# genus, each requiring an EXACT name match. Returns a taxon or NULL.
-rollup_parent <- function(con, r, request_fn = inat_request,
-                          prompt_fn = readline, interactive_ok = TRUE) {
-  fetch <- function(term) if (is.null(term) || is.na(term) || !nzchar(trimws(term))) list()
-                          else get_taxa_by_name(con, term, request_fn = request_fn)
-  sp_ep <- clean_holway_species(r$species_raw %||% "")
-  binom <- trimws(paste(r$genus %||% "", if (is.na(sp_ep)) "" else sp_ep))
-  cx <- .pick_rank(fetch(binom), "complex", want_name = binom, strict = TRUE)
-  if (!is.null(cx)) {
-    if (!isTRUE(interactive_ok)) return(cx)
-    if (.yn(prompt_fn, sprintf("'%s' is not a species on iNat, but the complex '%s' (id %s) matches. Roll up to it? (y/n): ",
-                               binom, cx$name %||% "?", cx$id))) return(cx)
-  }
-  subg <- .strip_parens(r$subgenus %||% NA_character_)
-  if (!is.na(subg)) {
-    sg <- .pick_rank(fetch(subg), "subgenus", want_name = subg, strict = TRUE)
-    if (!is.null(sg)) return(sg)
-  }
-  g <- .pick_rank(fetch(r$genus %||% NA_character_), "genus", want_name = r$genus, strict = TRUE)
-  if (!is.null(g)) return(g)
-  NULL
-}
-
-# build_rollup_row(): PURE (given the parent taxon). Reshape the parent into a
-# reference row, then stamp the Holway species/subspecies epithet + binomial name.
-# resolved = FALSE marks it a roll-up (taxon_id present, not a direct species hit);
-# `rank` stays the parent's rank (complex/subgenus/genus) so the level is visible.
-build_rollup_row <- function(parent_taxon, r, is_subspecies = FALSE,
-                             qualifier = NA_character_, itis_valid = NA) {
-  ranks <- parse_taxon_ranks(parent_taxon)
-  sp <- split_holway_species(r$species_raw %||% "")
-  if (isTRUE(is_subspecies)) { sp_col <- sp$species; ss_col <- sp$subspecies }
-  else {
-    sp_col <- clean_holway_species(r$species_raw %||% "")
-    sp_col <- if (is.na(sp_col) || sp_col == "") NA_character_ else sp_col
-    ss_col <- NA_character_
-  }
-  gen <- r$genus %||% ranks$taxon_genus_name
-  sci <- .ssp_scientific_name(gen, sp_col, ss_col)
-  row <- tidy_holway_ref_row(ranks, scientific_name = sci, common_name = NA_character_,
-                             source_sheet = r$source_sheet %||% NA_character_,
-                             itis_valid = itis_valid, qualifier = qualifier,
-                             holway_subgenus = r$subgenus %||% NA_character_)
-  row$species         <- sp_col
-  row$subspecies      <- ss_col
-  row$scientific_name <- sci
-  row$resolved        <- FALSE
-  row
+accumulate_ancestry <- function(acc, taxon) {
+  if (is.null(taxon)) return(acc)
+  anc <- tryCatch(parse_taxon_ancestry(taxon), error = function(e) NULL)
+  if (is.null(anc) || nrow(anc) == 0) return(acc)
+  dplyr::distinct(dplyr::bind_rows(acc, anc), taxon_id, .keep_all = TRUE)
 }
 
 # ------------------------------------------------------------
@@ -524,6 +476,7 @@ build_holway_reference <- function(con, holway_df,
   }
 
   rows <- vector("list", nrow(holway_df))
+  ancestry <- NULL   # grows to distinct (taxon_id, rank, name) over resolved taxa
   for (i in seq_len(nrow(holway_df))) {
     r <- holway_df[i, ]
     res <- resolve_holway_row(con, r$source_sheet, r$genus, r$species_raw,
@@ -540,6 +493,10 @@ build_holway_reference <- function(con, holway_df,
       taxon <- if (!is.na(res$taxon_id))
         get_taxon_by_id(con, res$taxon_id, request_fn = request_fn) else NULL
     }
+    # Harvest THIS resolved taxon's full iNat ancestry (id/rank/name per ancestor).
+    # A resolved sibling species is what gives an unobserved parent genus/subgenus/
+    # family its real id later -- so even an unresolved species' parents get placed.
+    ancestry <- accumulate_ancestry(ancestry, taxon)
     # a two-word entry that reached keep/skip was a confirmed subspecies (but a
     # slash "A / B" pair is never a subspecies)
     is_ss <- !grepl("/", r$species_raw %||% "", fixed = TRUE) &&
@@ -554,20 +511,24 @@ build_holway_reference <- function(con, holway_df,
         source_sheet    = r$source_sheet, itis_valid = NA,
         qualifier = qual, holway_subgenus = r$subgenus %||% NA_character_)
     } else {
-      # No direct iNat species/subspecies -> ROLL UP to the nearest parent
-      # (complex -> subgenus -> genus) so the row still gets a taxon_id + ancestry.
-      itis   <- switch(res$action %||% "skip", keep = TRUE, skip = FALSE, NA)
-      parent <- tryCatch(rollup_parent(con, r, request_fn = request_fn,
-                                       interactive_ok = interactive_ok),
-                         error = function(e) NULL)
-      if (!is.null(parent))
-        build_rollup_row(parent, r, is_subspecies = is_ss, qualifier = qual, itis_valid = itis)
-      else
-        unresolved_holway_ref_row(r, itis_valid = itis, is_subspecies = is_ss, qualifier = qual)
+      # No direct iNat species/subspecies match. This row keeps taxon_id = NA --
+      # a species/subspecies NEVER inherits a parent's id. Its parent taxa each get
+      # their OWN id-bearing row in the taxonomy lookup (filled from the ancestry
+      # side-table below), so the bee is still placed in the tree without the
+      # species row borrowing an id it doesn't own.
+      itis <- switch(res$action %||% "skip", keep = TRUE, skip = FALSE, NA)
+      unresolved_holway_ref_row(r, itis_valid = itis, is_subspecies = is_ss, qualifier = qual)
     }
     if (i %% 25 == 0) message(sprintf("  Holway resolve: %d / %d", i, nrow(holway_df)))
   }
-  dplyr::bind_rows(rows) |> dplyr::select(dplyr::any_of(HOLWAY_REF_COLUMNS))
+  ref <- dplyr::bind_rows(rows) |> dplyr::select(dplyr::any_of(HOLWAY_REF_COLUMNS))
+  # Attach the harvested ancestry (distinct id/rank/name for every ancestor of
+  # every resolved taxon). The runner writes it beside the reference table; the
+  # taxonomy lookup reads it to give each parent taxon its OWN id-bearing row --
+  # no parent id is ever borrowed onto a species row.
+  attr(ref, "ancestry") <- ancestry %||%
+    tibble::tibble(taxon_id = integer(0), rank = character(0), name = character(0))
+  ref
 }
 
 # ------------------------------------------------------------
@@ -588,4 +549,10 @@ if (identical(environment(), globalenv()) &&
   ref <- build_holway_reference(con, holway_df, interactive_ok = interactive_ok)
   write.csv(ref, PATHS$holway_reference, row.names = FALSE, na = "")
   message("Wrote ", sum(ref$resolved), " resolved of ", nrow(ref), " Holway rows.")
+  anc <- attr(ref, "ancestry")
+  if (!is.null(anc) && nrow(anc) > 0) {
+    dir.create(dirname(PATHS$holway_ancestry), recursive = TRUE, showWarnings = FALSE)
+    write.csv(anc, PATHS$holway_ancestry, row.names = FALSE, na = "")
+    message("Wrote ", nrow(anc), " ancestor taxa -> ", basename(PATHS$holway_ancestry))
+  }
 }

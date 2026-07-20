@@ -136,9 +136,20 @@ build_taxonomy_lookup <- function(con) {
   holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
   message("Holway base from reference table: ", basename(PATHS$holway_reference),
           " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
+  # Ancestry side-table (holway_taxon_ancestry.csv, written by holway_reference_build.R):
+  # distinct (taxon_id, rank, name) for every ancestor of every resolved Holway taxon.
+  # It's what lets each PARENT taxon get its OWN iNat id even when it was never
+  # observed in SD County -- so no species row has to borrow a parent's id.
+  ancestry_ids <- if (file.exists(PATHS$holway_ancestry))
+    readr::read_csv(PATHS$holway_ancestry, show_col_types = FALSE) else NULL
+  if (is.null(ancestry_ids))
+    message("NOTE: no ancestry side-table (", basename(PATHS$holway_ancestry),
+            ") -- parent ids fall back to observed taxa only; rebuild the ",
+            "Holway reference to populate it.")
   bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_resolved, cl_sd, bees,
                                                    verified_ids = verified_ids,
-                                                   specimen_species = specimen_species)
+                                                   specimen_species = specimen_species,
+                                                   ancestry_ids = ancestry_ids)
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified).")

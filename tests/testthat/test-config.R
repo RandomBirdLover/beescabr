@@ -21,14 +21,17 @@ test_that("flower-visited sources list the authoritative field first", {
   expect_true("field:nectar plant" %in% FLOWER_VISITED_SOURCES)
 })
 
-test_that("the export rank columns are present and ordered (incl. subtribe)", {
+test_that("the export rank columns are present and ordered (incl. sub-ranks)", {
   src("config.R")
-  expect_length(TAXON_RANK_COLUMNS, 12)
+  expect_length(TAXON_RANK_COLUMNS, 17)
   expect_equal(TAXON_RANK_COLUMNS[1], "taxon_kingdom_name")
   expect_true("taxon_subtribe_name" %in% TAXON_RANK_COLUMNS)
-  expect_equal(TAXON_RANK_COLUMNS[12], "taxon_subspecies_name")
-  # config also exposes the requested 14-level taxonomic order
+  expect_true(all(c("taxon_subphylum_name", "taxon_subclass_name", "taxon_suborder_name",
+                    "taxon_infraorder_name", "taxon_epifamily_name") %in% TAXON_RANK_COLUMNS))
+  expect_equal(TAXON_RANK_COLUMNS[17], "taxon_subspecies_name")
+  # config also exposes the requested 19-level taxonomic order
+  expect_length(TAXONOMY_LEVELS, 19)
   expect_equal(TAXONOMY_LEVELS[1], "kingdom")
-  expect_equal(TAXONOMY_LEVELS[9], "subtribe")
-  expect_equal(TAXONOMY_LEVELS[14], "subspecies")
+  expect_equal(TAXONOMY_LEVELS[14], "subtribe")
+  expect_equal(TAXONOMY_LEVELS[19], "subspecies")
 })

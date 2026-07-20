@@ -207,8 +207,10 @@ test_that("reference rows carry the CF/MSN/aff. qualifier and keep subgenus", {
   # a RESOLVED tentative row: qualifier passed through; Holway subgenus fills in
   # when iNat's ancestry omits it.
   ranks <- tibble::tibble(taxon_id=573509L,
-    taxon_kingdom_name="Animalia", taxon_phylum_name="Arthropoda", taxon_class_name="Insecta",
-    taxon_order_name="Hymenoptera", taxon_superfamily_name="Apoidea", taxon_family_name="Andrenidae",
+    taxon_kingdom_name="Animalia", taxon_phylum_name="Arthropoda", taxon_subphylum_name="Hexapoda",
+    taxon_class_name="Insecta", taxon_subclass_name="Pterygota",
+    taxon_order_name="Hymenoptera", taxon_suborder_name="Apocrita", taxon_infraorder_name="Aculeata",
+    taxon_superfamily_name="Apoidea", taxon_family_name="Andrenidae", taxon_epifamily_name="Anthophila",
     taxon_subfamily_name="Andreninae", taxon_tribe_name="Andrenini", taxon_subtribe_name=NA_character_,
     taxon_genus_name="Andrena", taxon_species_name="Andrena annectens", taxon_subspecies_name=NA_character_,
     subgenus=NA_character_, complex=NA_character_, complex_taxon_id=NA_integer_, rank="species")
@@ -245,8 +247,12 @@ test_that("tidy_holway_ref_row reshapes to the clean lookup layout", {
   ranks <- tibble::tibble(
     taxon_id = 42L,
     taxon_kingdom_name = "Animalia", taxon_phylum_name = "Arthropoda",
-    taxon_class_name = "Insecta", taxon_order_name = "Hymenoptera",
+    taxon_subphylum_name = "Hexapoda",
+    taxon_class_name = "Insecta", taxon_subclass_name = "Pterygota",
+    taxon_order_name = "Hymenoptera", taxon_suborder_name = "Apocrita",
+    taxon_infraorder_name = "Aculeata",
     taxon_superfamily_name = "Apoidea", taxon_family_name = "Andrenidae",
+    taxon_epifamily_name = "Anthophila",
     taxon_subfamily_name = "Andreninae", taxon_tribe_name = "Andrenini",
     taxon_subtribe_name = NA_character_, taxon_genus_name = "Andrena",
     taxon_species_name = "Andrena annectens", taxon_subspecies_name = NA_character_,
@@ -260,6 +266,10 @@ test_that("tidy_holway_ref_row reshapes to the clean lookup layout", {
   expect_equal(row$species, "annectens")                  # bare epithet, not the binomial
   expect_equal(row$genus, "Andrena")
   expect_equal(row$family, "Andrenidae")
+  # the 5 sub-ranks flow straight through from the iNat ancestry
+  expect_equal(row$suborder, "Apocrita")
+  expect_equal(row$infraorder, "Aculeata")
+  expect_equal(row$epifamily, "Anthophila")
   expect_true(row$resolved)
 })
 
