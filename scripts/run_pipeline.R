@@ -26,7 +26,7 @@
 #   Rscript scripts/run_pipeline.R      (or Source in RStudio)
 #
 # Flags (env vars):
-#   BEESCABR_SKIP_INGEST=1         skip the API pull (bees AND plants), use caches
+#   BEESCABR_SKIP_INGEST=1         skip the API pull (bees AND plants), use caches <-- used if you don't want to update old/pull new observations
 #   BEESCABR_SKIP_PLANTS=1         skip the plant step entirely (bees only)
 #   BEESCABR_FULL_INGEST=1         re-walk the whole place (not incremental)
 #   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table
