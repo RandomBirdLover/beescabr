@@ -564,15 +564,26 @@ build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees
               i_id = as.integer(taxon_id), i_sci = scientific_name,
               i_common = common_name, i_cplx = complex_taxon_id)
 
+  # A complex row has no complex-LEVEL observation to borrow a taxon_id from (people ID to species),
+  # but the complex's iNat id rides on its SPECIES as complex_taxon_id. Map it by (genus, complex)
+  # so complex rows aren't left blank -- e.g. (Complex) Colletes inaequalis -> 1438690.
+  complex_id_map <- inat_ref |>
+    filter(!is.na(i_cplx), !is.na(complex), complex != "") |>
+    distinct(genus, complex, i_cplx) |>
+    group_by(genus, complex) |>
+    summarise(cx_id = dplyr::first(i_cplx), .groups = "drop")
+
   # higher-group rows (genus/subgenus/complex) attach on the 5 name keys
   higher_group <- bind_rows(genus_rows, subgenus_rows, complex_rows) |>
     left_join(inat_ref, by = c("genus","subgenus","complex","species","subspecies"),
               relationship = "many-to-many") |>
+    left_join(complex_id_map, by = c("genus","complex")) |>
     mutate(taxon_id = coalesce(taxon_id, i_id),
+           taxon_id = coalesce(taxon_id, dplyr::if_else(rank == "complex", cx_id, NA_integer_)),
            scientific_name = coalesce(scientific_name, i_sci),
            common_name = coalesce(common_name, i_common),
            complex_taxon_id = coalesce(complex_taxon_id, i_cplx)) |>
-    select(-i_id, -i_sci, -i_common, -i_cplx) |> distinct()
+    select(-i_id, -i_sci, -i_common, -i_cplx, -cx_id) |> distinct()
 
   # species-group rows attach on 3 keys (genus+species+subspecies); Holway has no
   # complex + subgenus can differ, so those are not part of the species key.

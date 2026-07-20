@@ -320,3 +320,24 @@ test_that("specimen_additions_to_lookup treats the same epithet in different gen
   expect_equal(nrow(res$added), 2L)                       # both phaceliae kept -- not deduped
   expect_setequal(res$added$genus, c("Colletes","Chelostoma"))
 })
+
+test_that("a complex row inherits its taxon_id from the species' complex_taxon_id (iNat complex id)", {
+  src("config.R"); src("reference/verify.R"); src("reference/holway.R"); src("reference/taxonomy_reference.R")
+  ref <- tibble::tibble(
+    taxon_id=199041L, scientific_name="Colletes inaequalis", rank="species",
+    source_sheet="Described", qualifier=NA_character_, itis_valid=NA,
+    family="Colletidae", subfamily="Colletinae", tribe="Colletini",
+    genus="Colletes", subgenus=NA_character_, complex=NA_character_,
+    species="inaequalis", subspecies=NA_character_)
+  # iNat observed the species; its obs carries the COMPLEX id as complex_taxon_id (1438690)
+  checklist_sd <- tibble::tibble(
+    taxon_id=199041L, scientific_name="Colletes inaequalis", common_name=NA_character_,
+    kingdom="Animalia", phylum="Arthropoda", class="Insecta", order="Hymenoptera", superfamily="Apoidea",
+    family="Colletidae", subfamily="Colletinae", tribe="Colletini",
+    genus="Colletes", subgenus=NA_character_, complex="Colletes inaequalis", complex_taxon_id=1438690L,
+    species="inaequalis", subspecies=NA_character_)
+  lk <- build_bee_taxonomy_lookup(ref, checklist_sd, empty_bees())
+  cx <- lk[lk$rank == "complex" & grepl("inaequalis", lk$complex), ]
+  expect_equal(nrow(cx), 1)
+  expect_equal(cx$taxon_id[1], 1438690L)     # complex row now carries the iNat complex id
+})
