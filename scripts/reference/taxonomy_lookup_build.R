@@ -198,6 +198,9 @@ build_taxonomy_lookup <- function(con) {
   prompt_missing_taxon_ids()
   bee_taxonomy_lookup <- apply_manual_overrides(bee_taxonomy_lookup)
   write_review_worklist()   # the still-open not_found set (after your answers) -> the "look these up" file
+  # in_cabr_specimens is appended last by the specimen-additions merge; move it up beside in_holway.
+  if (all(c("in_cabr_specimens", "in_holway") %in% names(bee_taxonomy_lookup)))
+    bee_taxonomy_lookup <- dplyr::relocate(bee_taxonomy_lookup, in_cabr_specimens, .after = in_holway)
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")
