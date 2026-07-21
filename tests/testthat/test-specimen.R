@@ -12,6 +12,43 @@ test_that("standardize_specimen_names fixes casing", {
   expect_equal(out$subspecies, c(NA, "foo"))
 })
 
+test_that(".parse_specimen_date_vec converts Excel serials and parses normal dates", {
+  src("specimens/specimen_clean.R")
+  out <- .parse_specimen_date_vec(c("2021-04-24", "44310", "", NA_character_))
+  expect_equal(out[1], as.Date("2021-04-24"))
+  expect_equal(out[2], as.Date("2021-04-24"))   # 44310 = Excel serial -> 2021-04-24
+  expect_true(is.na(out[3]))                     # blank -> NA
+  expect_true(is.na(out[4]))                     # NA -> NA
+})
+
+test_that("parse_specimen_dates fills date/year from an Excel-serial date cell", {
+  src("specimens/specimen_clean.R")
+  out <- parse_specimen_dates(tibble::tibble(date = c("2021-04-24", "44310")))
+  expect_equal(out$date_clean, as.Date(c("2021-04-24", "2021-04-24")))
+  expect_equal(out$year, c(2021, 2021))
+})
+
+test_that(".parse_specimen_date_vec ignores numbers outside the Excel-serial window", {
+  src("specimens/specimen_clean.R")
+  # 100 is not a plausible collection-date serial -> NOT converted via Excel origin
+  expect_true(is.na(suppressWarnings(.parse_specimen_date_vec("100"))))
+})
+
+test_that("sbc_bee_situation maps flower_visited / ground / aerial like the iNat side", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(
+    flower_visited  = c("Encelia californica", NA_character_, NA_character_, NA_character_),
+    method_or_plant = c("ex. Encelia californica", "Ground Grab", "Aerial Net", ""))
+  expect_equal(sbc_bee_situation(df), c("on_flower", "on_ground", "aerial", NA))
+})
+
+test_that("sbc_bee_situation: 'On ground' -> on_ground, 'In air' -> aerial, blank method -> NA", {
+  src("specimens/specimen_clean.R")
+  df <- tibble::tibble(flower_visited = NA_character_,
+                       method_or_plant = c("On ground", "In air", NA_character_))
+  expect_equal(sbc_bee_situation(df), c("on_ground", "aerial", NA))
+})
+
 test_that("fill_specimen_taxonomy coalesces blanks from the lookup only", {
   src("specimens/specimen_clean.R")
   df <- tibble::tibble(genus = "Colletes", species = "hyalinus", subspecies = NA_character_,

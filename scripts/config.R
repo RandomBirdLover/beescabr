@@ -116,6 +116,7 @@ PATHS <- list(
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
   holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
   verified_taxa = "data/reference/verified_taxa.csv",
+  specimen_additions = "data/reference/specimen_additions.csv",   # curated specimen-only species merged into the lookup
   checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
   checklist_cabr_inat = "data/checklists/cabr/cabr_inat_bee_checklist.csv",

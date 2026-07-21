@@ -430,6 +430,17 @@ specimen_additions_to_lookup <- function(lookup, additions) {
   list(lookup = bind_rows(lookup, added), added = added, missing_parents = missing_parents)
 }
 
+# load_specimen_additions(): read the curated specimen-only additions CSV (lookup-shaped rows:
+# rank + rank-name columns, blank taxon_id). Missing/empty file -> 0-row tibble. taxon_id coerced
+# to integer to match the lookup so the append doesn't clash types. Only rows with a rank are kept.
+load_specimen_additions <- function(path) {
+  if (is.null(path) || !file.exists(path)) return(tibble(rank = character()))
+  a <- tryCatch(suppressWarnings(readr::read_csv(path, show_col_types = FALSE)), error = function(e) NULL)
+  if (is.null(a) || !nrow(a) || !"rank" %in% names(a)) return(tibble(rank = character()))
+  if ("taxon_id" %in% names(a)) a$taxon_id <- suppressWarnings(as.integer(a$taxon_id))
+  a[!is.na(a$rank) & trimws(a$rank) != "", , drop = FALSE]
+}
+
 # ============================================================================
 # build_bee_taxonomy_lookup(): the reference table is the START of the lookup.
 #

@@ -14,12 +14,30 @@
 
 suppressWarnings(suppressMessages({ library(dplyr); library(stringr); library(lubridate) }))
 
+# .parse_specimen_date_vec(): PURE. Parse a specimen date column robustly. A cell that is a bare
+# number (e.g. "44310") is an EXCEL SERIAL date that lost its formatting -- convert it via the Excel
+# 1900 origin; a normal "YYYY-MM-DD" string parses as a date; blanks / "NA" -> NA. Genuinely
+# unparseable text still yields NA and warns (a useful heads-up, not a crash). Serials are recognised
+# only in a plausible collection-date window (~1954-2064) so a real number is never mistaken for a date.
+.parse_specimen_date_vec <- function(x) {
+  x <- trimws(as.character(x))
+  x[x == "" | toupper(x) == "NA"] <- NA_character_
+  out <- rep(as.Date(NA), length(x))
+  ser <- suppressWarnings(as.numeric(x))                      # non-numeric -> NA (coercion warning muffled)
+  is_serial <- !is.na(ser) & grepl("^[0-9]+(\\.0+)?$", x) & ser >= 20000 & ser <= 60000
+  out[is_serial] <- as.Date(ser[is_serial], origin = "1899-12-30")   # Excel 1900 date system
+  rest <- !is_serial & !is.na(x)
+  out[rest] <- as_date(x[rest])                              # real dates parse; true typos -> NA + warn
+  out
+}
+
 # Parse the specimen date column into date_clean + month/day/year, and turn
-# empty strings into NA across character columns.
+# empty strings into NA across character columns. Excel serials (mis-formatted date cells) are
+# auto-converted so one bad cell never derails the run.
 parse_specimen_dates <- function(df) {
   df |>
     mutate(
-      date_clean = as_date(date),
+      date_clean = .parse_specimen_date_vec(date),
       month = month(date_clean),
       day   = day(date_clean),
       year  = year(date_clean),
@@ -61,6 +79,25 @@ keep_bee_specimens <- function(df) {
   }
   fam <- tolower(trimws(as.character(df$family)))
   df[fam %in% tolower(BEE_FAMILIES), , drop = FALSE]
+}
+
+# sbc_bee_situation(): PURE. The specimen's collection situation, mirroring inat_bee_clean's
+# bee_situation so the lethal and non-lethal tables line up. A specimen with a visited plant
+# (method "ex. <plant>", already parsed into flower_visited) is on_flower; a "ground" method is
+# on_ground; an aerial-net / in-air method is aerial (caught in flight); a blank method -> NA.
+# Specimens carry no nest concept. Uses the already-set flower_visited + the raw method_or_plant.
+sbc_bee_situation <- function(df) {
+  n   <- nrow(df)
+  fv  <- if ("flower_visited"  %in% names(df)) trimws(as.character(df$flower_visited))  else rep(NA_character_, n)
+  mth <- if ("method_or_plant" %in% names(df)) tolower(trimws(as.character(df$method_or_plant))) else rep(NA_character_, n)
+  on_flower <- !is.na(fv)  & fv  != ""
+  has_mth   <- !is.na(mth) & mth != ""
+  on_ground <- has_mth & grepl("ground", mth)
+  dplyr::case_when(
+    on_flower ~ "on_flower",
+    on_ground ~ "on_ground",
+    has_mth   ~ "aerial",     # aerial net / in air -> caught in flight, not on a substrate
+    TRUE      ~ NA_character_)
 }
 
 # Fill blank order/family/subfamily/tribe from the taxonomy lookup (Holway-derived

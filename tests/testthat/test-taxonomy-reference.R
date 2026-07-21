@@ -357,3 +357,20 @@ test_that("infer_higher_rank labels a subtribe taxon subtribe, not tribe", {
   expect_equal(infer_higher_rank(c("Halictidae", "Apidae"), c("", "Apinae"),
                                  c("", ""), c("", "")), c("family", "subfamily"))
 })
+
+test_that("load_specimen_additions reads lookup-shaped rows, drops blank-rank, coerces taxon_id", {
+  src("reference/taxonomy_reference.R")
+  p <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble::tibble(
+    rank = c("species", ""), scientific_name = c("Colletes phaceliae", "junk"),
+    genus = c("Colletes", ""), species = c("phaceliae", ""), taxon_id = c(NA, NA)), p)
+  a <- load_specimen_additions(p)
+  expect_equal(nrow(a), 1L)                    # blank-rank row dropped
+  expect_equal(a$genus, "Colletes")
+  expect_true(is.integer(a$taxon_id))          # coerced to integer to match the lookup
+})
+
+test_that("load_specimen_additions returns empty on a missing file", {
+  src("reference/taxonomy_reference.R")
+  expect_equal(nrow(load_specimen_additions(tempfile(fileext = ".csv"))), 0L)
+})

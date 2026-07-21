@@ -166,6 +166,23 @@ build_taxonomy_lookup <- function(con) {
   bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_entries, cl_sd, bees,
                                                    verified_ids = verified_ids,
                                                    ancestry_ids = ancestry_ids)
+  # Merge curated SPECIMEN-ONLY species (data/reference/specimen_additions.csv, e.g. Colletes
+  # phaceliae, Lasioglossum daggetti) as new leaf rows -- linked to EXISTING parents, never
+  # fabricating a parent. Runs BEFORE id-resolution so the new species' ids/names get filled by the
+  # resolver + your overrides just like everything else. A missing parent is reported, not created.
+  .adds <- load_specimen_additions(PATHS$specimen_additions)
+  if (nrow(.adds)) {
+    .merged <- specimen_additions_to_lookup(bee_taxonomy_lookup, .adds)
+    bee_taxonomy_lookup <- .merged$lookup
+    message(sprintf("Specimen additions: appended %d new taxa.", nrow(.merged$added)))
+    # Only a MISSING GENUS orphans a species; higher lineage ranks lacking a standalone lookup row
+    # is normal (the lookup stores genus-and-below), so those are not flagged.
+    .mp_g <- .merged$missing_parents[.merged$missing_parents$missing_parent_rank == "genus", , drop = FALSE]
+    if (nrow(.mp_g)) {
+      message("  WARNING: added taxa whose GENUS is not in the lookup (orphaned -- add the genus too):")
+      print(as.data.frame(.mp_g))
+    }
+  }
   # Fill any STILL-missing taxon_ids by iNaturalist name-search (Holway-only taxa never observed in
   # SD, so no observation ancestry carried their id). Safe: assigns only unambiguous rank+name+parent
   # matches, everything else stays blank; cached to resolved_missing_ids.csv (auditable, no re-hits).

@@ -58,7 +58,7 @@ SBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
 # final column order -- inat_bee_clean's IBC_COLUMN_ORDER, obs_id -> ucsd_id+sdnhm_id, + sex
 SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_survey", "survey_note",
                       "survey_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      "flower_visited", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
+                      "flower_visited", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
                       "location_needs_fix", "taxon_id", "taxon_rank", "quality_grade",
                       SBC_TAXONOMY_COLS, "latitude", "longitude", "positional_accuracy",
                       "url", "sex")
@@ -195,6 +195,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   df$survey_year <- df$year
   df$is_10min <- NA; df$is_metadata <- NA
   df$flower_visited <- .sbc_flower_from_method(df$method_or_plant)
+  df$bee_situation  <- sbc_bee_situation(df)   # on_flower / on_ground / aerial (mirrors inat_bee_clean)
   for (b in SBC_BLANK_BOOL) df[[b]] <- NA
   df$cabr_bee_lethal_collection <- TRUE
   df$location_needs_fix <- is.na(df$latitude) | is.na(df$longitude)
