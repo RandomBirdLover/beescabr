@@ -34,6 +34,7 @@ IPC_ROSTER         <- "data/project_info/surveyor_roster.csv"
 IPC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_plant_clean.csv"
+IPC_ALL_TAXA       <- "data/observations/inat_clean/cabr_inat_plant_all_taxa.csv"  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
 IPC_OFF_TRANSECT_M <- 50
 IPC_ROAD_BUFFER_M  <- 10
 
@@ -59,7 +60,7 @@ IPC_EXPORT_RANKMAP <- c(
 # final column order for the clean plant table (mirrors inat_bee_clean; flower_flowering is the
 # only annotation, and there is no lethal-collection column -- plants are non-lethal by nature)
 IPC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
-                      "survey_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
+                      "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
                       IPC_ANNOT_COLS, "location_needs_fix",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IPC_TAXONOMY_COLS,
@@ -191,6 +192,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   if ("kind" %in% names(mem)) mem <- mem |> filter(kind == "plant")
   mem <- mem |> filter(status %in% c("keep", "flag"))   # in the CABR box, not a hard exclude
   mem$obs_id <- as.character(mem$obs_id)
+  mem_all <- mem   # BEFORE surveyor scoping: every in-box plant obs, ANY observer (in-park truth)
 
   # SCOPE: surveyors' plant obs only (observer on the roster)
   if (file.exists(roster_path)) {
@@ -216,6 +218,24 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
 
   tax  <- ipc_taxonomy_from_export(ex_full) |> distinct(obs_id, .keep_all = TRUE)
   flow <- ipc_flowering(ex_full, crosswalk_path) |> distinct(obs_id, .keep_all = TRUE)
+
+  # BROAD in-park truth: every distinct plant taxon observed anywhere in the CABR
+  # box by ANY observer (mem_all = pre-surveyor-scope). The plant taxonomy lookup
+  # reads this to decide in_cabr_park_at_all. Written here because only this stage
+  # has the RDS export (taxon names) loaded.
+  if (write) {
+    tcols <- intersect(c("scientific_name", "common_name", "kingdom", "phylum", "class",
+                         "order", "family", "genus", "species"), names(tax))
+    all_taxa <- ex |> select(obs_id, taxon_id, taxon_rank) |>
+      inner_join(tax |> select(obs_id, all_of(tcols)), by = "obs_id") |>
+      filter(obs_id %in% mem_all$obs_id, !is.na(scientific_name), scientific_name != "") |>
+      distinct(scientific_name, .keep_all = TRUE) |>
+      select(taxon_id, taxon_rank, all_of(tcols)) |>
+      arrange(scientific_name)
+    dir.create(dirname(IPC_ALL_TAXA), recursive = TRUE, showWarnings = FALSE)
+    write.csv(all_taxa, IPC_ALL_TAXA, row.names = FALSE, na = "")
+    message(sprintf("               all-observer in-park plant taxa: %d -> %s", nrow(all_taxa), IPC_ALL_TAXA))
+  }
 
   df <- mem |> left_join(ex, by = "obs_id") |> left_join(tax, by = "obs_id") |> left_join(flow, by = "obs_id")
 

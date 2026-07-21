@@ -29,11 +29,11 @@
 suppressWarnings(suppressMessages({library(dplyr); library(tibble); library(sf)}))
 
 # fpi_surveyday_transect(): PURE. From the KEEP obs, the single resolved transect each surveyor
-# worked each day (majority of their stamped transect values), plus that day's survey_type/year.
+# worked each day (majority of their stamped transect values), plus that day's surveyor_type/year.
 # One row per (observer, day). Flag/exclude obs never contribute.
 fpi_surveyday_transect <- function(membership) {
   empty <- tibble(observer = character(), day = as.Date(character()),
-                  resolved_transect = character(), survey_type = character(), survey_year = character())
+                  resolved_transect = character(), surveyor_type = character(), survey_year = character())
   if (!nrow(membership) || !"status" %in% names(membership)) return(empty)
   keep <- membership |>
     filter(status == "keep") |>
@@ -43,7 +43,7 @@ fpi_surveyday_transect <- function(membership) {
   keep |>
     group_by(observer, day) |>
     summarise(resolved_transect = names(sort(table(transect), decreasing = TRUE))[1],
-              survey_type = dplyr::first(stats::na.omit(survey_type)),
+              surveyor_type = dplyr::first(stats::na.omit(surveyor_type)),
               survey_year = dplyr::first(stats::na.omit(survey_year)),
               .groups = "drop")
 }
@@ -62,7 +62,7 @@ fpi_rescue_on_transect <- function(membership, coords, transects_sf, off_m = 50)
   if (!nrow(sdt) || is.null(transects_sf) || !nrow(transects_sf) || !"T" %in% names(transects_sf))
     return(m)
 
-  sdt <- sdt |> rename(sd_type = survey_type, sd_year = survey_year)         # avoid clashing with m's cols
+  sdt <- sdt |> rename(sd_type = surveyor_type, sd_year = survey_year)         # avoid clashing with m's cols
   cand <- m |>
     mutate(day = as.Date(observed_on)) |>
     filter(status == "flag") |>
@@ -89,7 +89,7 @@ fpi_rescue_on_transect <- function(membership, coords, transects_sf, off_m = 50)
   m$status[ridx]        <- "keep"
   m$survey_source[ridx] <- "inferred_on_transect"
   m$transect[ridx]      <- resc$resolved_transect
-  m$survey_type[ridx]   <- ifelse(is.na(resc$sd_type), m$survey_type[ridx], resc$sd_type)
+  m$surveyor_type[ridx]   <- ifelse(is.na(resc$sd_type), m$surveyor_type[ridx], resc$sd_type)
   m$survey_year[ridx]   <- ifelse(is.na(resc$sd_year), m$survey_year[ridx], resc$sd_year)
   m$status_reason[ridx] <- sprintf("inferred survey: within %dm of transect %s on a survey day (tag missing)",
                                     as.integer(off_m), resc$resolved_transect)

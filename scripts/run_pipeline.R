@@ -70,6 +70,9 @@ source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_c
 source("scripts/reference/manual_overrides.R")        # apply_manual_overrides / write_review_worklist (name-change fixes)
 source("scripts/reference/holway_reference_build.R")  # defines build_holway_reference() -- stage 4 (interactive)
 source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
+source("scripts/reference/plant_lookup_join.R")           # attach_flower_ids() -- flower taxon_id + in_park
+source("scripts/reference/plant_taxonomy_lookup_build.R") # defines build_plant_taxonomy_lookup() -- stage 5c
+source("scripts/project_info/collect_plant_names.R")      # defines review_plant_names() -- stage 7b
 source("scripts/specimens/specimen_clean.R")          # pure specimen-cleaning helpers
 source("scripts/specimens/specimen_bee_clean.R")      # defines clean_specimens() -- stage 6b
 source("scripts/specimens/tidy_raw_specimens.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
@@ -243,6 +246,16 @@ main <- function() {
     message("\n== [5] TAXONOMY LOOKUP skipped -- no Holway reference table ==")
   }
 
+  # ---- 5b. PLANT CLEAN (moved up so the plant lookup + flower-id joins below can use it) ----
+  message("\n== [5b] PLANT CLEAN: cabr_inat_plant_clean.csv + all-observer in-park taxa ==")
+  tryCatch(inat_plant_clean(),
+           error = function(e) message("  [5b] inat plant clean FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 5c. PLANT TAXONOMY LOOKUP (genus+species tree: crosswalk canonicals + broad obs) ----
+  message("\n== [5c] PLANT LOOKUP: cabr_plant_taxonomy_lookup.csv ==")
+  tryCatch(build_plant_taxonomy_lookup(verbose = TRUE),
+           error = function(e) message("  [5c] plant lookup FAILED (non-fatal): ", conditionMessage(e)))
+
   # ---- 6. SPECIMENS (lethal-survey record) ----
   # 6a. Raw hygiene worklist (non-ID'd / missing / duplicate rows to fix by hand).
   # 6b. Clean -- taxon_id + taxonomy from the lookup (step 5), transect, visited plant ->
@@ -261,12 +274,12 @@ main <- function() {
   tryCatch(inat_bee_clean(),
            error = function(e) message("  [7] inat bee clean FAILED (non-fatal): ", conditionMessage(e)))
 
-  # ---- 8. CLEAN: labeled iNat PLANT table (surveyors' plant obs; taxonomy from the plant export) ----
-  # Mirrors stage 7 for plants: brain membership (kind=="plant") scoped to roster surveyors,
-  # flower_flowering annotation, taxonomy straight from export_flat_plant.rds, is_survey marking.
-  message("\n== [8] PLANT CLEAN: writing cabr_inat_plant_clean.csv ==")
-  tryCatch(inat_plant_clean(),
-           error = function(e) message("  [8] inat plant clean FAILED (non-fatal): ", conditionMessage(e)))
+  # ---- 7b. PLANT NAMES: review any NEW plant name not yet in the crosswalk ----
+  # After the cleaners so specimen flower labels exist; files your decisions into master_crosswalk
+  # for the next run (non-interactive runs just drop a worklist).
+  message("\n== [7b] PLANT NAMES: review unknown plant names ==")
+  tryCatch(review_plant_names(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
+           error = function(e) message("  [7b] plant-name review FAILED (non-fatal): ", conditionMessage(e)))
 
   # ---- 9. CHECKLISTS: cabr / pl / sd native-bee checklists (normalized tree from the lookup) ----
   # Each checklist carries parent taxa as their own rows (taxon_id/taxon_rank/names/taxonomy from the

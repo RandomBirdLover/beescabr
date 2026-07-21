@@ -117,6 +117,12 @@ PATHS <- list(
   holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
   verified_taxa = "data/reference/verified_taxa.csv",
   specimen_additions = "data/reference/specimen_additions.csv",   # curated specimen-only species merged into the lookup
+  plant_taxonomy_lookup = "data/reference/cabr_plant_taxonomy_lookup.csv",       # basic-rank plant lookup (obs + specimen flowers)
+  plant_specimen_overrides = "data/reference/plant_specimen_overrides.csv",      # curated expert corrections for specimen-label plants
+  plant_not_in_park = "data/reference/cabr_plant_specimen_not_in_park.csv",       # worklist: specimen-label plants not confirmed in park
+  plant_name_cache = "data/reference/plant_name_resolution_cache.csv",           # name -> iNat taxon resolution cache
+  plant_all_taxa = "data/observations/inat_clean/cabr_inat_plant_all_taxa.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
+  plant_park_confirmed = "data/reference/plant_park_confirmed.csv",               # curated: species the botanist confirms are in the park (e.g. obscured threatened taxa)
   checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
   checklist_cabr_inat = "data/checklists/cabr/cabr_inat_bee_checklist.csv",
@@ -125,6 +131,7 @@ PATHS <- list(
   checklist_cabr_v2 = "data/checklists/cabr/cabr_combined_native_bee_checklist.csv",
   checklist_cabr_specimen = "data/checklists/cabr/cabr_specimen_bee_checklist.csv",
   inat_clean = "data/observations/inat_clean/cabr_inat_bee_clean.csv",
+  inat_plant_clean = "data/observations/inat_clean/cabr_inat_plant_clean.csv",
   inat_unknown_tags = "data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
   inat_to_verify = "data/observations/inat_clean/qc/cabr_inat_to_verify.csv",
   specimen_clean = "data/specimens/cleaned/cabr_specimen_bee_clean.csv",

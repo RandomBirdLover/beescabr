@@ -283,6 +283,34 @@ transect_variant_map <- function(crosswalk) {
   bind_rows(rows) |> arrange(desc(nchar(variant)))
 }
 
+# plant_variant_map(): from the crosswalk's plant rows (what_for == "plant_taxon"),
+# a variant(lowercased) -> canonical-name lookup, so a raw flower label folds to the
+# accepted plant name. Mirrors transect_variant_map. Lets specimen_bee_clean make
+# flower_visited uniform with the plant observations + plant taxonomy lookup.
+plant_variant_map <- function(crosswalk) {
+  empty <- tibble(canonical = character(0), variant = character(0))
+  if (is.null(crosswalk) || nrow(crosswalk) == 0 ||
+      !all(c("name", "what_for", "specimen_label_variants") %in% names(crosswalk))) return(empty)
+  pl <- crosswalk |>
+    filter(tolower(what_for) == "plant_taxon",
+           !is.na(specimen_label_variants), specimen_label_variants != "")
+  if (nrow(pl) == 0) return(empty)
+  rows <- lapply(seq_len(nrow(pl)), function(i) {
+    vars <- tolower(trimws(unlist(strsplit(pl$specimen_label_variants[i], ";"))))
+    vars <- vars[vars != ""]
+    if (length(vars)) tibble(canonical = trimws(pl$name[i]), variant = vars) else NULL
+  })
+  bind_rows(rows)
+}
+
+# normalize_flower_name(): map each raw flower label to its canonical plant name via
+# the crosswalk plant-variant map; unmapped names pass through unchanged. PURE + vectorized.
+normalize_flower_name <- function(x, variant_map) {
+  if (is.null(variant_map) || nrow(variant_map) == 0) return(x)
+  hit <- variant_map$canonical[match(tolower(trimws(x)), variant_map$variant)]
+  ifelse(is.na(hit), x, hit)
+}
+
 # match_plot_transect(): PURE. For each plot string, the transect whose (longest)
 # variant is a substring of it, else NA. Vectorized.
 match_plot_transect <- function(plot, variant_map) {

@@ -15,8 +15,8 @@
 # COLUMN MAP (iNat -> specimen)
 #   obs_id            -> ucsd_id + sdnhm_id
 #   observer          -> collector          observed_on -> date       survey_year -> year
-#   is_survey         -> TRUE (all)         survey_type -> "intern"   survey_note -> blank
-#   survey_method     -> "lethal" (all)     (lethal/non-lethal axis; survey_type is the surveyor)
+#   is_survey         -> TRUE (all)         surveyor_type -> "intern"   survey_note -> blank
+#   survey_method     -> "lethal" (all)     (lethal/non-lethal axis; surveyor_type is the surveyor)
 #   transect          -> from `plot` (crosswalk variants) + spatial fallback
 #   flower_visited    -> the "ex. <plant>" value of method_or_plant (methods -> blank)
 #   cabr_bee_lethal_collection -> TRUE      the 8 other behavior flags -> blank
@@ -57,8 +57,8 @@ SBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
                        "species", "subspecies")
 # final column order -- inat_bee_clean's IBC_COLUMN_ORDER, obs_id -> ucsd_id+sdnhm_id, + sex
 SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_survey", "survey_note",
-                      "survey_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      "flower_visited", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
+                      "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
+                      "flower_visited", "flower_visited_raw", "flower_taxon_id", "flower_in_park", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
                       "location_needs_fix", "taxon_id", "taxon_rank", "quality_grade",
                       SBC_TAXONOMY_COLS, "latitude", "longitude", "positional_accuracy",
                       "url", "sex")
@@ -190,11 +190,15 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   df$observed_on <- df$date_clean
   df$is_survey  <- TRUE
   df$survey_note <- NA_character_
-  df$survey_type <- "intern"     # surveyor category (interns collect the specimens)
+  df$surveyor_type <- "intern"     # surveyor category (interns collect the specimens)
   df$survey_method <- "lethal"   # specimens are the LETHAL survey
   df$survey_year <- df$year
   df$is_10min <- NA; df$is_metadata <- NA
-  df$flower_visited <- .sbc_flower_from_method(df$method_or_plant)
+  df$flower_visited     <- .sbc_flower_from_method(df$method_or_plant)
+  df$flower_visited_raw <- df$flower_visited                                              # the intern's label, verbatim
+  df$flower_visited     <- normalize_flower_name(df$flower_visited, plant_variant_map(cw)) # -> canonical name via master_crosswalk
+  if (!exists("attach_flower_ids")) source("scripts/reference/plant_lookup_join.R")
+  df <- attach_flower_ids(df)                                                             # flower_taxon_id + flower_in_park from the plant lookup
   df$bee_situation  <- sbc_bee_situation(df)   # on_flower / on_ground / aerial (mirrors inat_bee_clean)
   for (b in SBC_BLANK_BOOL) df[[b]] <- NA
   df$cabr_bee_lethal_collection <- TRUE

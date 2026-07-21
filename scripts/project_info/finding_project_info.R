@@ -116,6 +116,7 @@ fpi_build_tagmap <- function(crosswalk) {
   # Variants may be separated by ; OR , so split on both. what_for is the group.
   crosswalk |>
     filter(!is.na(name), trimws(name) != "") |>
+    filter(tolower(trimws(what_for)) != "plant_taxon") |>   # plant taxa are flower names, not survey tags
     transmute(concept = name, what_for = tolower(trimws(what_for)),
               variants = paste(name, coalesce(inat_tag_variants, ""), sep = "; ")) |>
     separate_rows(variants, sep = "[;,]\\s*") |>   # TAGS: plain split (NOT paren-aware)
@@ -267,16 +268,16 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
                          has_survey ~ "keep",
                          coalesce(in_cabr, FALSE) ~ "flag",
                          TRUE ~ "not_survey"),
-      survey_type  = if_else(status == "keep", coalesce(role, "unknown"), NA_character_),
+      surveyor_type  = if_else(status == "keep", coalesce(role, "unknown"), NA_character_),
       survey_year  = if_else(status == "keep", as.character(year), NA_character_),
       status_reason = case_when(
         status == "exclude" ~ paste0("exclude tag: ", exclude_tag),
-        status == "keep" & survey_type == "unknown" ~ "tagged, but observer not in roster for this year -> onboard",
+        status == "keep" & surveyor_type == "unknown" ~ "tagged, but observer not in roster for this year -> onboard",
         status == "keep" ~ "valid Cabrillo survey tag",
         status == "flag" ~ "in CABR, no survey tag -- review",
         TRUE ~ "outside CABR, no survey tag")
     ) |>
-    transmute(obs_id, kind, observer, observed_on, survey_type, survey_year,
+    transmute(obs_id, kind, observer, observed_on, surveyor_type, survey_year,
               transect, is_10min, is_metadata, status, status_reason, in_cabr, obscured) |>
     arrange(observed_on, obs_id)
 }

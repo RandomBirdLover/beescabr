@@ -72,8 +72,8 @@ IBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
 
 # final column order for the clean table
 IBC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
-                      "survey_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      IBC_ANNOT_COLS, "bee_situation", "location_needs_fix",
+                      "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
+                      IBC_ANNOT_COLS, "flower_taxon_id", "flower_in_park", "bee_situation", "location_needs_fix",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IBC_TAXONOMY_COLS,
                       "latitude", "longitude", "positional_accuracy", "url")
@@ -280,6 +280,8 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   if (!"survey_source" %in% names(df)) df$survey_source <- NA_character_   # tag / inferred_on_transect
   df$survey_method <- "nonlethal"   # iNaturalist observations are the NON-lethal survey
   df$bee_situation <- ibc_bee_situation(df)   # on_flower / on_ground / nest / missing
+  if (!exists("attach_flower_ids")) source("scripts/reference/plant_lookup_join.R")
+  df <- attach_flower_ids(df)                 # flower_taxon_id + flower_in_park from the plant lookup
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
 

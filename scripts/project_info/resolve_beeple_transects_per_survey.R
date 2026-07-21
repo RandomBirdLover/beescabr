@@ -21,7 +21,7 @@
 #       the brain re-runs at stage 3f so master_per_survey_info.csv reflects it THIS run.
 #
 #   INTERNS are LEFT ALONE -- they walk a multi-transect route, so their obs keep their own tags
-#   (only status=="keep" & survey_type=="beeple" obs are resolved).
+#   (only status=="keep" & surveyor_type=="beeple" obs are resolved).
 #
 # Pure tag counting -- no shapefiles. Outputs: mistags -> data/observations/review/ (per-obs
 # fixes); ties -> data/project_info/review/ (the ruling that sets the survey-record transect).
@@ -47,7 +47,7 @@ st_norm_transect <- function(x) {
 resolve_transects <- function(membership, ties_path = ST_TIES_OUT) {
   m <- membership
   if (!"transect_tagged" %in% names(m)) m$transect_tagged <- m$transect   # preserve the raw tag
-  st <- if ("survey_type" %in% names(m)) as.character(m$survey_type) else rep(NA_character_, nrow(m))
+  st <- if ("surveyor_type" %in% names(m)) as.character(m$surveyor_type) else rep(NA_character_, nrow(m))
 
   base <- tibble(
     .row = seq_len(nrow(m)), obs_id = as.character(m$obs_id), observer = m$observer,
