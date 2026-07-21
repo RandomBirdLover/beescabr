@@ -84,3 +84,28 @@ test_that("ibc_bee_situation returns 'missing' when the behavior columns are abs
   src("observations/inat_bee_clean.R")
   expect_equal(ibc_bee_situation(tibble(obs_id = c("1", "2"))), c("missing", "missing"))
 })
+
+# ibc_fix_behavior(): hand-back worklist -- a flower_visited with no flower_taxon_id
+# (non-plant/typo, e.g. a butterfly mis-tagged as a flower) OR a survey obs that
+# recorded no behavior at all.
+
+test_that("ibc_fix_behavior flags a non-plant flower and a survey obs missing all fields", {
+  src("observations/inat_bee_clean.R")
+  clean <- tibble(
+    obs_id          = c("a", "b", "c", "d"),
+    is_survey       = c(TRUE, TRUE, FALSE, TRUE),
+    bee_situation   = c("on_flower", "missing", "on_flower", "on_flower"),
+    flower_visited  = c("Apodemia virgulti", NA, "Encelia californica", "Encelia californica"),
+    flower_taxon_id = c(NA, NA, "106", "106"),
+    url             = "u")
+  fx <- ibc_fix_behavior(clean)
+  expect_equal(fx$fix_reason[fx$obs_id == "a"], "flower_not_a_plant_or_unresolved")  # butterfly tag
+  expect_equal(fx$fix_reason[fx$obs_id == "b"], "missing_all_behavior_fields")       # survey, nothing recorded
+  expect_false(any(fx$obs_id %in% c("c", "d")))                                       # good flowers -> not flagged
+  expect_true("flower_visited" %in% names(fx))                                        # the bad value is shown for the fixer
+})
+
+test_that("ibc_fix_behavior is column-safe when optional columns are absent", {
+  src("observations/inat_bee_clean.R")
+  expect_equal(nrow(ibc_fix_behavior(tibble(obs_id = c("x", "y")))), 0L)
+})

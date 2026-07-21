@@ -22,6 +22,18 @@ local({
   if (!exists("PATHS")) source(file.path(sdir, "config.R"))
 })
 
+# roll a plant name up to AT MOST species so a subspecies/variety flower matches
+# the lookup's species row (the lookup is genus+species only): a trinomial+ folds to
+# its binomial; a binomial, genus, or "Genus sp." is left alone. NA/blank -> NA.
+.aff_roll_to_species <- function(name) {
+  x <- trimws(gsub("\\s+", " ", as.character(name)))
+  vapply(x, function(s) {
+    if (is.na(s) || s == "") return(NA_character_)
+    w <- strsplit(s, " ", fixed = TRUE)[[1]]
+    if (length(w) >= 3 && !(tolower(w[2]) %in% c("sp", "sp.", "spp", "spp.", "x", "×"))) paste(w[1], w[2]) else s
+  }, character(1), USE.NAMES = FALSE)
+}
+
 attach_flower_ids <- function(df, lookup_path = NULL) {
   if (is.null(lookup_path))
     lookup_path <- if (exists("PATHS") && !is.null(PATHS$plant_taxonomy_lookup)) PATHS$plant_taxonomy_lookup
@@ -34,7 +46,11 @@ attach_flower_ids <- function(df, lookup_path = NULL) {
   # species rows first, then genus, so a name that is both keys to the finer row
   ord <- order(match(tolower(lk$rank %||% rep("", nrow(lk))), c("species", "genus")), na.last = TRUE)
   lk  <- lk[ord, , drop = FALSE]
-  m <- match(tolower(trimws(as.character(df$flower_visited))), tolower(trimws(lk$scientific_name)))
+  lkn <- tolower(trimws(lk$scientific_name))
+  fv  <- tolower(trimws(as.character(df$flower_visited)))
+  m   <- match(fv, lkn)                                          # exact name
+  mr  <- match(tolower(.aff_roll_to_species(df$flower_visited)), lkn)   # subspecies -> its species row
+  m   <- ifelse(is.na(m), mr, m)
   df$flower_taxon_id <- lk$taxon_id[m]
   df$flower_in_park  <- ifelse(is.na(m), NA, toupper(trimws(lk$in_cabr_park_at_all[m])) == "TRUE")
   df

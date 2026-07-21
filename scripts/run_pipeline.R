@@ -63,6 +63,7 @@ source("scripts/project_info/review_crosswalk.R")         # interactive review o
 source("scripts/project_info/review_windows.R")           # interactive review of survey-date windows
 source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
 source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
+source("scripts/observations/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
 # ---- TAXONOMY + SPECIMENS + CHECKLISTS ----
 # Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in
 # the pipeline now (stages 4 + 5); they pull their own deps (holway.R, taxonomy_reference.R,
@@ -251,7 +252,12 @@ main <- function() {
   tryCatch(inat_plant_clean(),
            error = function(e) message("  [5b] inat plant clean FAILED (non-fatal): ", conditionMessage(e)))
 
-  # ---- 5c. PLANT TAXONOMY LOOKUP (genus+species tree: crosswalk canonicals + broad obs) ----
+  # ---- 5b2. BEE FORAGE (plants bees were recorded on in-park -> in-park truth for the lookup) ----
+  message("\n== [5b2] BEE FORAGE: cabr_inat_bee_forage.csv (bee-obs flower_visited plants) ==")
+  tryCatch(write_bee_forage(),
+           error = function(e) message("  [5b2] bee forage FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 5c. PLANT TAXONOMY LOOKUP (genus+species tree: crosswalk canonicals + broad obs + bee forage) ----
   message("\n== [5c] PLANT LOOKUP: cabr_plant_taxonomy_lookup.csv ==")
   tryCatch(build_plant_taxonomy_lookup(verbose = TRUE),
            error = function(e) message("  [5c] plant lookup FAILED (non-fatal): ", conditionMessage(e)))

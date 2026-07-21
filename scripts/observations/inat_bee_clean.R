@@ -52,7 +52,7 @@ IBC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
 IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
-IBC_MISSING_BEHAVIOR <- "data/observations/inat_clean/qc/cabr_inat_bee_missing_behavior.csv"  # hand-back worklist
+IBC_FIX_BEHAVIOR   <- "data/observations/inat_clean/qc/cabr_inat_bee_fix_behavior.csv"  # hand-back worklist: fields to fix (missing OR wrong)
 IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
@@ -173,6 +173,35 @@ ibc_bee_situation <- function(df) {
                    TRUE      ~ "missing")
 }
 
+# ---- fix-behavior worklist -------------------------------------------------
+# ibc_fix_behavior(): PURE. From the clean table, the hand-back worklist of obs
+# whose behavioral fields need FIXING (scientists open each on iNat and correct it):
+#   * flower_not_a_plant_or_unresolved -- a flower_visited that carries no
+#     flower_taxon_id, i.e. it isn't a plant in the lookup. The plant lookup ingests
+#     every real bee-forage plant, so a missing id means the tag is wrong (e.g. a
+#     butterfly mis-entered in the flower field) or the name is a typo.
+#   * missing_all_behavior_fields -- a SURVEY obs that recorded no behavior at all
+#     (bee_situation == "missing").
+# NA-safe; a bad flower takes priority over "missing" (a bad flower can't be missing).
+ibc_fix_behavior <- function(clean) {
+  n   <- nrow(clean)
+  col <- function(c) if (c %in% names(clean)) clean[[c]] else rep(NA, n)
+  fv   <- col("flower_visited"); ftid <- col("flower_taxon_id")
+  has_flower <- !is.na(fv) & trimws(as.character(fv)) != ""
+  bad_flower <- has_flower & (is.na(ftid) | trimws(as.character(ftid)) == "")
+  is_surv <- as.logical(col("is_survey")) %in% TRUE
+  sit     <- as.character(col("bee_situation"))
+  reason  <- dplyr::case_when(
+    bad_flower                 ~ "flower_not_a_plant_or_unresolved",
+    is_surv & sit == "missing" ~ "missing_all_behavior_fields",
+    TRUE                       ~ NA_character_)
+  clean |>
+    mutate(fix_reason = reason) |>
+    filter(!is.na(fix_reason)) |>
+    select(any_of(c("obs_id", "observer", "observed_on", "transect", "taxon_id",
+                    "scientific_name", "flower_visited", "fix_reason", "url")))
+}
+
 # ---- spatial survey flags --------------------------------------------------
 # on_transect / walk_in (off transect but on Humphreys Rd) / bad_coord (off transect AND off road).
 # Missing shapefile / coords -> "on_transect" (nothing re-marked).
@@ -285,29 +314,26 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
 
-  # hand-back worklist: SURVEY obs missing EVERY behavioral field -- scientists open each
-  # on iNaturalist (url) and add the observation field manually.
-  missing_behavior <- clean |>
-    filter(is_survey, bee_situation == "missing") |>
-    select(any_of(c("obs_id", "observer", "observed_on", "transect",
-                    "taxon_id", "scientific_name", "url")))
+  # hand-back worklist: obs whose behavioral fields need FIXING (see ibc_fix_behavior).
+  fix_behavior <- ibc_fix_behavior(clean)
   if (write) {
     dir.create(dirname(out_clean), recursive = TRUE, showWarnings = FALSE)
     write.csv(clean, out_clean, row.names = FALSE, na = "")
-    dir.create(dirname(IBC_MISSING_BEHAVIOR), recursive = TRUE, showWarnings = FALSE)
-    write.csv(missing_behavior, IBC_MISSING_BEHAVIOR, row.names = FALSE, na = "")
+    dir.create(dirname(IBC_FIX_BEHAVIOR), recursive = TRUE, showWarnings = FALSE)
+    write.csv(fix_behavior, IBC_FIX_BEHAVIOR, row.names = FALSE, na = "")
   }
   n_walk    <- sum(df$status == "keep" & df$spatial_cat == "walk_in")
   n_bad     <- sum(df$location_needs_fix)
   n_fv      <- sum(!is.na(clean$flower_visited))
-  n_missing <- nrow(missing_behavior)
+  n_missing <- sum(fix_behavior$fix_reason == "missing_all_behavior_fields")
+  n_badflow <- sum(fix_behavior$fix_reason == "flower_not_a_plant_or_unresolved")
   message(sprintf("inat_bee_clean: %d CABR bee rows | %d survey / %d not-survey -> %s",
                   nrow(clean), sum(clean$is_survey), sum(!clean$is_survey), out_clean))
   message(sprintf("               spatial: %d walk-in re-marked NOT survey | %d location_needs_fix", n_walk, n_bad))
   message(sprintf("               annotations: %d obs with flower_visited", n_fv))
-  message(sprintf("               behavior: %d survey obs missing a behavioral field -> %s",
-                  n_missing, basename(IBC_MISSING_BEHAVIOR)))
-  invisible(list(clean = clean, missing_behavior = missing_behavior))
+  message(sprintf("               fix_behavior: %d missing all fields + %d non-plant/unresolved flower -> %s",
+                  n_missing, n_badflow, basename(IBC_FIX_BEHAVIOR)))
+  invisible(list(clean = clean, fix_behavior = fix_behavior))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0)

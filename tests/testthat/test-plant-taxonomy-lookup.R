@@ -77,7 +77,11 @@ mock_resolve <- function(name) {
             "deinandra" = list(id="305", sci="Deinandra", rank="genus", genus="Deinandra", family="Asteraceae"),
             "encelia"   = list(id="306", sci="Encelia",   rank="genus", genus="Encelia",   family="Asteraceae"),
             "euphorbia misera" = list(id="401", sci="Euphorbia misera", rank="species", genus="Euphorbia", family="Euphorbiaceae"),
-            "euphorbia" = list(id="402", sci="Euphorbia", rank="genus", genus="Euphorbia", family="Euphorbiaceae"))[[plt_norm(name)]]
+            "euphorbia" = list(id="402", sci="Euphorbia", rank="genus", genus="Euphorbia", family="Euphorbiaceae"),
+            "bergerocactus emoryi" = list(id="501", sci="Bergerocactus emoryi", rank="species", genus="Bergerocactus", family="Cactaceae"),
+            "bergerocactus" = list(id="502", sci="Bergerocactus", rank="genus", genus="Bergerocactus", family="Cactaceae"),
+            "isocoma menziesii" = list(id="601", sci="Isocoma menziesii", rank="species", genus="Isocoma", family="Asteraceae"),
+            "isocoma" = list(id="602", sci="Isocoma", rank="genus", genus="Isocoma", family="Asteraceae"))[[plt_norm(name)]]
   if (is.null(m)) return(tibble(input_name=name, taxon_id=NA_character_, scientific_name=NA_character_,
                                 common_name=NA_character_, rank=NA_character_, kingdom=NA_character_,
                                 phylum=NA_character_, class=NA_character_, order=NA_character_,
@@ -92,6 +96,7 @@ mock_resolve <- function(name) {
                               crosswalk_path = .mk_cw(tempfile(fileext=".csv")),
                               cache_path = tempfile(fileext=".csv"),
                               confirmed_path = tempfile(fileext=".csv"),   # absent -> no overrides
+                              forage_fn = function() character(0),         # no bee forage
                               resolve_fn = mock_resolve, write = FALSE, verbose = FALSE)
 }
 .mk_confirmed <- function(path) {
@@ -104,6 +109,15 @@ mock_resolve <- function(name) {
                               crosswalk_path = .mk_cw(tempfile(fileext=".csv")),
                               cache_path = tempfile(fileext=".csv"),
                               confirmed_path = .mk_confirmed(tempfile(fileext=".csv")),
+                              forage_fn = function() character(0),
+                              resolve_fn = mock_resolve, write = FALSE, verbose = FALSE)
+}
+.run_forage <- function(names_vec) {
+  build_plant_taxonomy_lookup(all_taxa_path = .mk_all_taxa(tempfile(fileext=".csv")),
+                              crosswalk_path = .mk_cw(tempfile(fileext=".csv")),
+                              cache_path = tempfile(fileext=".csv"),
+                              confirmed_path = tempfile(fileext=".csv"),
+                              forage_fn = function() names_vec,
                               resolve_fn = mock_resolve, write = FALSE, verbose = FALSE)
 }
 

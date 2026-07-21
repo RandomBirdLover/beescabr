@@ -123,6 +123,7 @@ PATHS <- list(
   plant_name_cache = "data/reference/plant_name_resolution_cache.csv",           # name -> iNat taxon resolution cache
   plant_all_taxa = "data/observations/inat_clean/cabr_inat_plant_all_taxa.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
   plant_park_confirmed = "data/reference/plant_park_confirmed.csv",               # curated: species the botanist confirms are in the park (e.g. obscured threatened taxa)
+  inat_bee_forage = "data/observations/inat_clean/cabr_inat_bee_forage.csv",       # plants bees were recorded foraging on in-park (bee-obs flower_visited) -- in-park truth
   checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
   checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
   checklist_cabr_inat = "data/checklists/cabr/cabr_inat_bee_checklist.csv",

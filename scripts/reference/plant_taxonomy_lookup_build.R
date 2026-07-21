@@ -53,9 +53,10 @@ PLT_CACHE        <- .plt_path("plant_name_cache",       "data/reference/plant_na
 PLT_LOOKUP_OUT   <- .plt_path("plant_taxonomy_lookup",  "data/reference/cabr_plant_taxonomy_lookup.csv")
 PLT_WORKLIST_OUT <- .plt_path("plant_not_in_park",      "data/reference/cabr_plant_specimen_not_in_park.csv")
 PLT_CONFIRMED    <- .plt_path("plant_park_confirmed",   "data/reference/plant_park_confirmed.csv")
+PLT_FORAGE       <- .plt_path("inat_bee_forage",        "data/observations/inat_clean/cabr_inat_bee_forage.csv")
 
 PLT_LOOKUP_COLS <- c("taxon_id", "scientific_name", "common_name", "rank",
-                     "in_cabr_park_at_all", "in_specimens", "in_observations",
+                     "in_cabr_park_at_all", "in_specimens", "in_observations", "in_bee_forage",
                      PLANT_BASIC_RANKS)
 
 # =============================================================
@@ -134,6 +135,7 @@ plt_reduce_lookup <- function(allrows) {
     common_name = fna(common_name), rank = fna(rank),
     in_cabr_park_at_all = anyT(in_cabr_park_at_all),
     in_specimens = anyT(in_specimens), in_observations = anyT(in_observations),
+    in_bee_forage = anyT(in_bee_forage),
     kingdom = fna(kingdom), phylum = fna(phylum), class = fna(class), order = fna(order),
     family = fna(family), genus = fna(genus), species = fna(species), .groups = "drop") %>%
     select(all_of(PLT_LOOKUP_COLS)) %>%
@@ -159,6 +161,27 @@ plt_load_confirmed <- function(path = PLT_CONFIRMED) {
   if (!"taxon_id" %in% names(cf)) cf$taxon_id <- NA_character_
   cf %>% filter(!is.na(scientific_name), trimws(scientific_name) != "") %>%
     transmute(scientific_name = trimws(scientific_name), taxon_id = as.character(taxon_id))
+}
+
+# roll a plant name up to AT MOST species: a trinomial+ (subspecies/variety) folds
+# to its binomial; a binomial or genus is left as-is; "Genus sp." is left alone.
+# Keeps the lookup at the genus+species granularity the design asks for, so e.g.
+# "Isocoma menziesii sedoides" (136 bee obs) confirms the species "Isocoma menziesii".
+plt_roll_to_species <- function(name) {
+  x <- trimws(gsub("\\s+", " ", as.character(name)))
+  if (is.na(x) || x == "") return(NA_character_)
+  w <- strsplit(x, " ", fixed = TRUE)[[1]]
+  if (length(w) >= 3 && !(tolower(w[2]) %in% c("sp", "sp.", "spp", "spp.", "x", "×"))) return(paste(w[1], w[2]))
+  x
+}
+
+# distinct bee-forage plant names (from cabr_inat_bee_forage.csv): the plants bees
+# were recorded foraging on inside the park -> a second in-park truth source.
+plt_load_forage <- function(forage_path = PLT_FORAGE) {
+  if (!file.exists(forage_path)) return(character(0))
+  fg <- suppressWarnings(suppressMessages(read_csv(forage_path, show_col_types = FALSE, col_types = cols(.default = "c"))))
+  if (!"scientific_name" %in% names(fg)) return(character(0))
+  unique(fg$scientific_name[!is.na(fg$scientific_name) & trimws(fg$scientific_name) != ""])
 }
 
 # =============================================================
@@ -252,6 +275,8 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
                                         crosswalk_path = PLT_CROSSWALK,
                                         cache_path     = PLT_CACHE,
                                         confirmed_path = PLT_CONFIRMED,
+                                        forage_path    = PLT_FORAGE,
+                                        forage_fn      = NULL,
                                         resolve_fn     = plt_resolve_one,
                                         write = TRUE, verbose = TRUE) {
   stopifnot(file.exists(all_taxa_path))
@@ -305,6 +330,50 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
     }
   }
 
+  # ---- bee-forage in-park source (plants bees were recorded on, in-park) ----
+  # A bee photographed ON a flower inside the park is direct proof the plant is
+  # here -- and it names plants the standalone plant pull misses, incl. the
+  # obscured threatened taxa. Forage names roll to species; the resolver keeps
+  # only Plantae (a non-plant flower tag -> NA taxon_id -> dropped here, and the
+  # bee cleaner flags that obs for a fix). Observed plants that are ALSO foraged
+  # just get in_bee_forage = TRUE for provenance.
+  forage_names <- if (!is.null(forage_fn)) forage_fn() else {
+    if (!file.exists(forage_path)) {
+      if (!exists("write_bee_forage")) try(source("scripts/observations/bee_forage.R"), silent = TRUE)
+      if (exists("write_bee_forage")) try(write_bee_forage(out_path = forage_path, verbose = verbose), silent = TRUE)
+    }
+    plt_load_forage(forage_path)
+  }
+  obs$in_bee_forage <- FALSE
+  forage_leaves <- NULL
+  if (length(forage_names)) {
+    froll   <- vapply(forage_names, plt_roll_to_species, character(1))
+    froll_n <- plt_norm(froll)
+    obs_roll_n <- plt_norm(vapply(obs$scientific_name, plt_roll_to_species, character(1)))
+    obs$in_bee_forage <- obs_roll_n %in% froll_n                 # observed plants that are also foraged
+    fkeep <- unique(froll[!(froll_n %in% obs_roll_n)])           # foraged plants missing from the plant-obs pull
+    if (length(fkeep)) {
+      fres  <- plt_resolve_names(fkeep, cache = cache, resolve_fn = resolve_fn, cache_path = cache_path, verbose = verbose)
+      cache <- fres$cache
+      forage_leaves <- fres$rows %>%
+        filter(!is.na(taxon_id), taxon_id != "") %>%            # resolver returns no taxon_id for non-plants -> dropped
+        transmute(taxon_id = as.character(taxon_id),
+                  scientific_name = coalesce(scientific_name, input_name),
+                  common_name = common_name,
+                  rank = coalesce(rank, vapply(input_name, plt_label_rank, character(1))),
+                  kingdom, phylum, class, order, family,
+                  genus = coalesce(genus, vapply(input_name, plt_genus_token, character(1))),
+                  species = species,
+                  in_observations = FALSE, in_specimens = FALSE, in_bee_forage = TRUE,
+                  in_cabr_park_at_all = TRUE)
+      if (nrow(forage_leaves)) {
+        park$taxon_ids <- unique(c(park$taxon_ids, forage_leaves$taxon_id))
+        park$sci   <- unique(c(park$sci,   plt_norm(forage_leaves$scientific_name)))
+        park$genus <- unique(c(park$genus, plt_norm(forage_leaves$genus)))
+      }
+    }
+  }
+
   # ---- specimen leaf taxa (crosswalk canonicals) ----
   canon <- plt_crosswalk_canonicals(crosswalk_path)
   need_resolve <- unique(canon[!(plt_norm(canon) %in% obs_n)])
@@ -316,7 +385,8 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
 
   # ---- genus normalization: every genus its own row + taxon_id ----
   gd <- bind_rows(obs %>% transmute(genus), spec %>% transmute(genus),
-                  if (!is.null(confirmed_leaves)) confirmed_leaves %>% transmute(genus)) %>%
+                  if (!is.null(confirmed_leaves)) confirmed_leaves %>% transmute(genus),
+                  if (!is.null(forage_leaves))    forage_leaves %>% transmute(genus)) %>%
     filter(!is.na(genus), genus != "") %>% mutate(.n = plt_norm(genus)) %>% distinct(.n, .keep_all = TRUE)
   have_genus <- plt_norm(c(obs$scientific_name[!is.na(obs$rank) & tolower(obs$rank) == "genus"],
                            spec$scientific_name[!is.na(spec$rank) & tolower(spec$rank) == "genus"]))
@@ -332,7 +402,7 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
 
   if (write) { dir.create(dirname(cache_path), recursive = TRUE, showWarnings = FALSE); write_fresh(cache, cache_path, na = "") }
 
-  lookup <- plt_reduce_lookup(bind_rows(obs, spec, genus_rows, confirmed_leaves))
+  lookup <- plt_reduce_lookup(bind_rows(obs, spec, genus_rows, confirmed_leaves, forage_leaves))
 
   worklist <- lookup %>%
     filter(in_specimens %in% TRUE, in_cabr_park_at_all %in% FALSE) %>%
@@ -353,6 +423,9 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
     message(sprintf("  -> %s", PLT_LOOKUP_OUT)); message(sprintf("  -> %s", PLT_WORKLIST_OUT))
     if (!is.null(confirmed_leaves) && nrow(confirmed_leaves))
       message(sprintf("  confirmed-in-park overrides applied: %d", nrow(confirmed_leaves)))
+    nf <- sum(lookup$in_bee_forage %in% TRUE)
+    if (nf) message(sprintf("  in-park via bee forage: %d plants (%d added by forage alone)",
+                            nf, if (is.null(forage_leaves)) 0L else nrow(forage_leaves)))
   }
   invisible(list(lookup = lookup, worklist = worklist, cache = cache))
 }
