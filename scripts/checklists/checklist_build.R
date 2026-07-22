@@ -218,10 +218,25 @@ cl_format <- function(df) {
   df[, CHECKLIST_COLS, drop = FALSE]
 }
 
+# .cl_drop_apis(): the honey bee (genus Apis) is non-native; this project is native-bees-only.
+# Drop the ENTIRE Apis genus -- genus row (47220), subgenus (578086), Apis mellifera (47219), and
+# any Apis-level obs -- from a lookup/present frame so it can never enter a checklist, no matter the
+# source (iNat genus-level obs that dodge the species-level ingest exclusion, Holway's published
+# list, or a specimen). Genus "Apis" uniquely names the honey bee; higher-rank ancestor rows
+# (Apidae / Apinae) carry a BLANK genus and are kept -- they're shared with native bees. Applied
+# inside lookup_subtree(), the single point every one of the 7 checklists flows through.
+.cl_drop_apis <- function(df) {
+  if (is.null(df) || !"genus" %in% names(df) || !nrow(df)) return(df)
+  g <- tolower(trimws(as.character(df$genus)))
+  df[is.na(g) | g != "apis", , drop = FALSE]
+}
+
 # lookup_subtree(): the normalized subtree (leaves + ALL ancestor rows) of present_df's taxa,
 # taken from the lookup. A present leaf whose own (rank,name) isn't in the lookup (e.g. a
 # specimen-only species) is kept with its own taxonomy + taxon_id (blank). One row per taxon.
 lookup_subtree <- function(lookup, present_df, label = "", verbose = TRUE) {
+  present_df <- .cl_drop_apis(present_df)   # native-only: honey bee never enters a checklist ...
+  lookup     <- .cl_drop_apis(lookup)       # ... and its Apini ancestor is never pulled as an orphan
   pres_keys <- checklist_lineage_keys(present_df)
   lk_own    <- .cl_own_key(lookup)
   in_lk     <- lookup[!is.na(lk_own) & lk_own %in% pres_keys, , drop = FALSE]

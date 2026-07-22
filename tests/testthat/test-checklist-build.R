@@ -110,6 +110,26 @@ test_that("combine_checklists unions taxa with per-source boolean flags named af
   expect_true(bb$inat && !bb$specimen)
 })
 
+test_that("lookup_subtree drops the honey bee (genus Apis) from every checklist -- native-only", {
+  src("checklists/checklist_build.R")
+  lk <- tibble::tibble(
+    taxon_id = c(20,21,22,23,24,25),
+    rank = c("family","genus","species","genus","subgenus","species"),
+    scientific_name = c("Apidae","Bombus","Bombus vosnesenskii","Apis","Apis","Apis mellifera"),
+    common_name = NA_character_, order = "Hymenoptera", family = "Apidae",
+    subfamily = c(NA,"Apinae","Apinae","Apinae","Apinae","Apinae"),
+    tribe = c(NA,"Bombini","Bombini","Apini","Apini","Apini"),
+    genus = c(NA,"Bombus","Bombus","Apis","Apis","Apis"),
+    subgenus = c(NA,NA,NA,NA,"Apis",NA), complex = NA_character_,
+    species = c(NA,NA,"vosnesenskii",NA,NA,"mellifera"), subspecies = NA_character_)
+  present <- lk |> filter(taxon_id %in% c(22,25))          # Bombus vosnesenskii + Apis mellifera observed
+  out <- suppressMessages(lookup_subtree(lk, present, "T"))
+  expect_false(any(tolower(out$genus) == "apis", na.rm = TRUE))  # no Apis genus/subgenus/species rows
+  expect_false("Apini" %in% out$tribe)                           # honey-bee-only tribe not left orphaned
+  expect_true(all(c(20,21,22) %in% out$taxon_id))                # native Bombus tree intact (+ family)
+  expect_false(any(c(23,24,25) %in% out$taxon_id))               # every Apis row gone
+})
+
 test_that("lookup_subtree keeps same-epithet species in different genera as distinct rows", {
   src("checklists/checklist_build.R")
   lk <- tibble::tibble(
