@@ -207,10 +207,14 @@ write.csv(spec_tbl, file.path(OUT_DIR, "interactions_bee_specialization.csv"), r
 h2prime_test <- function(M, nsim = 999) {
   M <- M[rowSums(M) > 0, colSums(M) > 0, drop = FALSE]
   rs <- rowSums(M); cs <- colSums(M)
+  H2obs <- .h2_entropy(M)
   H2max <- .shannon(rs) + .shannon(cs)
-  H2min <- .h2min_entropy(rs, cs)
+  # observed matrix is achievable, so true H2min <= H2obs -> bound the packing
+  # heuristic by it; keeps H2' in [0,1]. (No effect on these networks, where the
+  # packing minimum is already below observed.)
+  H2min <- min(.h2min_entropy(rs, cs), H2obs)
   h2p   <- function(H2) if (H2max > H2min) (H2max - H2) / (H2max - H2min) else NA_real_
-  obs   <- h2p(.h2_entropy(M))
+  obs   <- h2p(H2obs)
   sims  <- r2dtable(nsim, rs, cs)
   nullv <- vapply(sims, function(x) h2p(.h2_entropy(x)), numeric(1))
   list(H2prime = obs, null_mean = mean(nullv), null_sd = sd(nullv),
