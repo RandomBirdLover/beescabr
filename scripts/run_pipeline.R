@@ -64,6 +64,7 @@ source("scripts/project_info/review_windows.R")           # interactive review o
 source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
 source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
 source("scripts/observations/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
+source("scripts/observations/qc/inat_misid_qc.R")         # defines inat_misid_qc() -- stage 10 (misID review queue)
 # ---- TAXONOMY + SPECIMENS + CHECKLISTS ----
 # Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in
 # the pipeline now (stages 4 + 5); they pull their own deps (holway.R, taxonomy_reference.R,
@@ -325,6 +326,14 @@ main <- function() {
     build_sd_bee_checklists(.bees_sf, .lk, holway_sub = .hsub)
     message("  checklists -> data/checklists/{cabr,point_loma,sd_county}/ (7 files)")
   }, error = function(e) message("  [9] checklists FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 10. MISID QC: flag likely-misidentified iNat bee obs for review (advisory) ----
+  # Species-level iNat IDs that are non-research-grade, unvouchered by a specimen, AND
+  # absent from Holway -> a review queue for a human to verify on iNaturalist. Needs the
+  # Holway reference + specimen table (built above), so it runs LAST. Changes nothing else.
+  message("\n== [10] MISID QC: flag likely-misID iNat bee obs -> review queue ==")
+  tryCatch(inat_misid_qc(),
+           error = function(e) message("  [10] misID QC FAILED (non-fatal): ", conditionMessage(e)))
 
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   message("\n========================================")

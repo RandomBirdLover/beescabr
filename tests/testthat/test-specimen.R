@@ -142,6 +142,16 @@ test_that("resolve_review_gate: clean / batch-continue / interactive skip vs sto
   expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "", blocking = FALSE), "continue")
 })
 
+test_that("drop_non_native_apis removes honey bees (Apis), keeps natives + NA genus", {
+  src("specimens/specimen_clean.R")
+  df  <- tibble(genus = c("Apis", "apis", "Bombus", NA, "Andrena"),
+                species = c("mellifera", "mellifera", "x", "y", "z"))
+  out <- drop_non_native_apis(df)
+  expect_equal(nrow(out), 3L)                                   # both Apis rows dropped
+  expect_false(any(tolower(out$genus) == "apis", na.rm = TRUE))
+  expect_true(all(c("Bombus", "Andrena") %in% out$genus) && any(is.na(out$genus)))
+})
+
 test_that("flag_raw_clutter tags non-ID'd and missing rows", {
   src("specimens/specimen_clean.R")
   df <- tibble::tibble(ucsd_id = 1:4,

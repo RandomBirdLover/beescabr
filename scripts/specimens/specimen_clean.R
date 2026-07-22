@@ -81,6 +81,16 @@ keep_bee_specimens <- function(df) {
   df[fam %in% tolower(BEE_FAMILIES), , drop = FALSE]
 }
 
+# drop_non_native_apis(): PURE. Remove the non-native honey bee (Apis mellifera + any
+# subspecies). The project is NATIVE bees only, and the iNat side already excludes Apis
+# via without_taxon_id in the ingest -- this keeps the specimen table consistent. Matches
+# on genus so every honey-bee form goes; NA / absent genus is kept (it isn't a honey bee).
+drop_non_native_apis <- function(df) {
+  if (!"genus" %in% names(df)) return(df)
+  gen <- tolower(trimws(as.character(df$genus)))
+  df[is.na(gen) | gen != "apis", , drop = FALSE]
+}
+
 # sbc_bee_situation(): PURE. The specimen's collection situation, mirroring inat_bee_clean's
 # bee_situation so the lethal and non-lethal tables line up. A specimen with a visited plant
 # (method "ex. <plant>", already parsed into flower_visited) is on_flower; a "ground" method is

@@ -146,6 +146,12 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   message(sprintf("  bee filter: kept %d bee-family rows, dropped %d non-bee / unidentified",
                   nrow(df), n_pre_bee - nrow(df)))
 
+  # NATIVE bees only -- drop the honey bee (Apis mellifera), mirroring the iNat ingest.
+  n_pre_apis <- nrow(df)
+  df <- drop_non_native_apis(df)
+  if (n_pre_apis - nrow(df) > 0)
+    message(sprintf("  honey-bee filter: dropped %d Apis mellifera (non-native) specimen(s)", n_pre_apis - nrow(df)))
+
   # --- taxon_id + full taxonomy + spell-check (needs the lookup) ---
   n_taxonomy <- 0L
   if (file.exists(PATHS$taxonomy_lookup)) {
