@@ -347,7 +347,7 @@ main <- function() {
     if (file.exists(.chk_cabr) && file.exists(PATHS$specimen_clean) && file.exists(PATHS$inat_clean)) {
       .spec_nb <- utils::read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
       .inat_nb <- utils::read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
-      .noh <- not_on_holway_bees(.chk_cabr, .spec_nb, .inat_nb)
+      .noh <- not_on_holway_bees(.chk_cabr, .spec_nb, .inat_nb, holway_path = PATHS$holway_reference)
       .newbees <- .noh[.noh$group %in% c("inat_only", "inat_and_collected"), , drop = FALSE]
       if (nrow(.newbees)) {
         writeLines(format_new_bees(.noh, mode = "review"))

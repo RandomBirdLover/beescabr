@@ -73,3 +73,44 @@ test_that("format_new_bees returns nothing when everything is on Holway / no iNa
                           stringsAsFactors = FALSE)
   expect_length(format_new_bees(spec_only), 0)                           # specimen-only -> nothing to verify
 })
+
+make_holway <- function() {
+  f <- tempfile(fileext = ".csv")
+  write.csv(data.frame(
+    scientific_name = c("Diadasia australis", "Nomada formula"),
+    rank            = c("species", "species"),
+    complex         = c("(Complex) Diadasia australis", "(Complex) Nomada vegana"),  # real Holway format: "(Complex) " tag
+    stringsAsFactors = FALSE), f, row.names = FALSE)
+  f
+}
+
+test_that("holway_name_set collects binomials from scientific_name AND the complex column", {
+  s <- holway_name_set(make_holway())
+  expect_true("diadasia australis" %in% s)   # from scientific_name
+  expect_true("nomada vegana"      %in% s)   # from complex column (its members are on Holway)
+  expect_true("nomada formula"     %in% s)
+  expect_length(holway_name_set(NULL), 0)    # missing path -> empty, no correction applied
+})
+
+test_that("not_on_holway_bees drops rank/complex mismatches Holway actually lists, keeps true new names", {
+  ck <- tempfile(fileext = ".csv")
+  write.csv(data.frame(
+    taxon_id = c(1, 2, 3), taxon_rank = "complex",
+    scientific_name = c("Diadasia australis", "Nomada vegana", "Perdita nova"),  # #1 species, #2 complex, #3 truly new
+    genus = c("Diadasia", "Nomada", "Perdita"), holway = FALSE, stringsAsFactors = FALSE), ck, row.names = FALSE)
+  inat <- tibble::tibble(taxon_id = c(1, 2, 3),
+                         scientific_name = c("Diadasia australis", "Nomada vegana", "Perdita nova"),
+                         quality_grade = "needs_id")
+  spec <- tibble::tibble(taxon_id = integer(), scientific_name = character())
+  noh <- not_on_holway_bees(ck, spec, inat, holway_path = make_holway())
+  expect_setequal(noh$scientific_name, "Perdita nova")   # only the name Holway never lists survives
+})
+
+test_that("not_on_holway_bees skips the name correction when no Holway path (backward compatible)", {
+  ck <- tempfile(fileext = ".csv")
+  write.csv(data.frame(taxon_id = 1, taxon_rank = "complex", scientific_name = "Diadasia australis",
+                       genus = "Diadasia", holway = FALSE, stringsAsFactors = FALSE), ck, row.names = FALSE)
+  inat <- tibble::tibble(taxon_id = 1, scientific_name = "Diadasia australis", quality_grade = "needs_id")
+  noh <- not_on_holway_bees(ck, tibble::tibble(taxon_id = integer(), scientific_name = character()), inat)
+  expect_equal(nrow(noh), 1)                              # no holway_path -> flag trusted as-is
+})
