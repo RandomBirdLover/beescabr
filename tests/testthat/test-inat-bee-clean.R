@@ -109,3 +109,19 @@ test_that("ibc_fix_behavior is column-safe when optional columns are absent", {
   src("observations/inat_bee_clean.R")
   expect_equal(nrow(ibc_fix_behavior(tibble(obs_id = c("x", "y")))), 0L)
 })
+
+# location_needs_fix moved OUT of the clean table into a review worklist (ibc_location_review),
+# mirroring the specimen side. The flag must NOT be a clean-table column any more.
+test_that("location_needs_fix is not a clean-table column, and ibc_location_review lists bad pins", {
+  src("observations/inat_bee_clean.R")
+  expect_false("location_needs_fix" %in% IBC_COLUMN_ORDER)      # dropped from the clean schema
+  df <- tibble(
+    obs_id = c("a", "b", "c"), observer = "x", observed_on = "2024-01-01", transect = "TP",
+    taxon_id = c("1","2","3"), scientific_name = "Bombus sp", latitude = 1, longitude = 2, url = "u",
+    location_needs_fix = c(TRUE, FALSE, TRUE))
+  rev <- ibc_location_review(df)
+  expect_setequal(rev$obs_id, c("a", "c"))                      # only the flagged pins
+  expect_true(all(grepl("check the pin", rev$fix_reason)))
+  expect_false("location_needs_fix" %in% names(rev))            # the flag itself isn't carried
+  expect_equal(nrow(ibc_location_review(df[df$location_needs_fix == FALSE, ])), 0)  # none flagged -> empty
+})

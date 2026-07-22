@@ -53,6 +53,7 @@ IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: 
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
 IBC_FIX_BEHAVIOR   <- "data/observations/review/cabr_inat_bee_fix_behavior.csv"  # hand-back worklist: fields to fix (missing OR wrong)
+IBC_LOCATION_REVIEW <- "data/observations/review/cabr_inat_bee_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat
 IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
@@ -73,7 +74,7 @@ IBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
 # final column order for the clean table
 IBC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
                       "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      IBC_ANNOT_COLS, "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation", "location_needs_fix",
+                      IBC_ANNOT_COLS, "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IBC_TAXONOMY_COLS,
                       "latitude", "longitude", "positional_accuracy", "url")
@@ -202,6 +203,23 @@ ibc_fix_behavior <- function(clean) {
                     "scientific_name", "flower_visited", "fix_reason", "url")))
 }
 
+# ---- location-fix worklist ------------------------------------------------
+# ibc_location_review(): PURE. Survey obs flagged location_needs_fix (a GPS pin far from every
+# transect -- likely a bad pin) -> a heads-up worklist so a scientist re-checks the pin on
+# iNaturalist. Kept OUT of the clean table (a review artifact, not a data column), mirroring the
+# specimen side. Each row carries its url so the reviewer can open it. Takes the pre-select `df`
+# (which still has location_needs_fix). NA-safe.
+IBC_LOCATION_COLS <- c("obs_id", "observer", "observed_on", "transect", "taxon_id",
+                       "scientific_name", "latitude", "longitude", "url")
+ibc_location_review <- function(df) {
+  if (!"location_needs_fix" %in% names(df))
+    return(df[0, intersect(IBC_LOCATION_COLS, names(df)), drop = FALSE])
+  out <- df[which(as.logical(df$location_needs_fix) %in% TRUE),
+            intersect(IBC_LOCATION_COLS, names(df)), drop = FALSE]
+  if (nrow(out)) out$fix_reason <- "bad_coord: survey pin far from any transect -- check the pin on iNaturalist"
+  out
+}
+
 # ---- spatial survey flags --------------------------------------------------
 # on_transect / walk_in (off transect but on Humphreys Rd) / bad_coord (off transect AND off road).
 # Missing shapefile / coords -> "on_transect" (nothing re-marked).
@@ -314,13 +332,17 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
 
-  # hand-back worklist: obs whose behavioral fields need FIXING (see ibc_fix_behavior).
-  fix_behavior <- ibc_fix_behavior(clean)
+  # hand-back worklists (review artifacts, kept OUT of the clean table):
+  #   * fix_behavior    -- behavioral fields to fix (see ibc_fix_behavior)
+  #   * location_review -- survey pins to re-check (location_needs_fix, see ibc_location_review)
+  fix_behavior    <- ibc_fix_behavior(clean)
+  location_review <- ibc_location_review(df)
   if (write) {
     dir.create(dirname(out_clean), recursive = TRUE, showWarnings = FALSE)
     write.csv(clean, out_clean, row.names = FALSE, na = "")
     dir.create(dirname(IBC_FIX_BEHAVIOR), recursive = TRUE, showWarnings = FALSE)
     write.csv(fix_behavior, IBC_FIX_BEHAVIOR, row.names = FALSE, na = "")
+    write.csv(location_review, IBC_LOCATION_REVIEW, row.names = FALSE, na = "")
   }
   n_walk    <- sum(df$status == "keep" & df$spatial_cat == "walk_in")
   n_bad     <- sum(df$location_needs_fix)
@@ -329,11 +351,12 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   n_badflow <- sum(fix_behavior$fix_reason == "flower_not_a_plant_or_unresolved")
   message(sprintf("inat_bee_clean: %d CABR bee rows | %d survey / %d not-survey -> %s",
                   nrow(clean), sum(clean$is_survey), sum(!clean$is_survey), out_clean))
-  message(sprintf("               spatial: %d walk-in re-marked NOT survey | %d location_needs_fix", n_walk, n_bad))
+  message(sprintf("               spatial: %d walk-in re-marked NOT survey | %d location_needs_fix -> %s",
+                  n_walk, n_bad, basename(IBC_LOCATION_REVIEW)))
   message(sprintf("               annotations: %d obs with flower_visited", n_fv))
   message(sprintf("               fix_behavior: %d missing all fields + %d non-plant/unresolved flower -> %s",
                   n_missing, n_badflow, basename(IBC_FIX_BEHAVIOR)))
-  invisible(list(clean = clean, fix_behavior = fix_behavior))
+  invisible(list(clean = clean, fix_behavior = fix_behavior, location_review = location_review))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0)

@@ -374,3 +374,54 @@ test_that("load_specimen_additions returns empty on a missing file", {
   src("reference/taxonomy_reference.R")
   expect_equal(nrow(load_specimen_additions(tempfile(fileext = ".csv"))), 0L)
 })
+
+# backfill_parent_taxonomy(): fill blank ANCESTOR ranks of specimen-only leaves from their genus/
+# family/order kin already in the normalized-tree lookup -- unambiguous fills only, adds no taxa.
+test_that("backfill_parent_taxonomy fills a species' blank ancestor ranks from its genus row", {
+  src("reference/taxonomy_reference.R")
+  lk <- data.frame(
+    taxon_id   = c("1", "2"), rank = c("genus", "species"),
+    kingdom = "Animalia", phylum = "Arthropoda",
+    subphylum  = c("Hexapoda", NA), class = "Insecta",
+    subclass   = c("Pterygota", NA), order = "Hymenoptera",
+    suborder   = c("Apocrita", NA), infraorder = c("Aculeata", NA),
+    superfamily = "Apoidea", family = "Halictidae",
+    epifamily  = c("Anthophila", NA), subfamily = "Halictinae", tribe = "Halictini",
+    subtribe   = c("Halictina", NA),
+    genus = "Lasioglossum", species = c(NA, "daggetti"),
+    stringsAsFactors = FALSE)
+  sp <- backfill_parent_taxonomy(lk)[2, ]
+  expect_equal(sp$subphylum, "Hexapoda");  expect_equal(sp$subclass, "Pterygota")
+  expect_equal(sp$suborder, "Apocrita");   expect_equal(sp$infraorder, "Aculeata")
+  expect_equal(sp$epifamily, "Anthophila"); expect_equal(sp$subtribe, "Halictina")
+})
+
+test_that("backfill_parent_taxonomy won't fabricate an ambiguous rank on a higher-level row", {
+  src("reference/taxonomy_reference.R")
+  lk <- data.frame(
+    taxon_id = c("1","2","3"), rank = c("family","species","species"),
+    kingdom = "Animalia", family = "Halictidae",
+    tribe = c(NA, "Halictini", "Augochlorini"),          # family blank; two tribes below it
+    genus = c(NA, "Lasioglossum", "Augochlora"),
+    species = c(NA, "daggetti", "aurata"),
+    stringsAsFactors = FALSE)
+  fam <- backfill_parent_taxonomy(lk)[1, ]
+  expect_true(is.na(fam$tribe))                          # ambiguous within family -> left blank
+})
+
+test_that("backfill_parent_taxonomy does NOT bleed a fine rank across families (subtribe)", {
+  src("reference/taxonomy_reference.R")
+  # Colletidae has no subtribe; Halictidae's Lasioglossum has subtribe Halictina. A Colletes species
+  # must NOT inherit Halictina just because it's the only subtribe present order-wide.
+  lk <- data.frame(
+    taxon_id = c("1","2","3","4"), rank = c("genus","species","genus","species"),
+    kingdom = "Animalia", order = "Hymenoptera",
+    family = c("Colletidae","Colletidae","Halictidae","Halictidae"),
+    subtribe = c(NA, NA, "Halictina", NA),
+    genus = c("Colletes","Colletes","Lasioglossum","Lasioglossum"),
+    species = c(NA,"phaceliae",NA,"daggetti"),
+    stringsAsFactors = FALSE)
+  out <- backfill_parent_taxonomy(lk)
+  expect_true(is.na(out$subtribe[out$species == "phaceliae" & !is.na(out$species)]))  # Colletidae -> still NA
+  expect_equal(out$subtribe[out$species == "daggetti" & !is.na(out$species)], "Halictina")  # Halictidae -> filled
+})

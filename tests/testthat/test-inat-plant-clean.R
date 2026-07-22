@@ -49,3 +49,16 @@ test_that("ipc_norm_transect collapses transect variants like the bee cleaner", 
   expect_equal(ipc_norm_transect(c("TP1", "#tp2", "UPMON-A", "OT", "")),
                c("TP", "TP", "UPMON", "OT", NA))
 })
+
+# location_needs_fix moved OUT of the clean plant table into a review worklist (ipc_location_review).
+test_that("location_needs_fix is not a clean plant column, and ipc_location_review lists bad pins", {
+  src("observations/inat_plant_clean.R")
+  expect_false("location_needs_fix" %in% IPC_COLUMN_ORDER)
+  df <- tibble(
+    obs_id = c("a", "b"), observer = "x", observed_on = "2024-01-01", transect = "TP",
+    taxon_id = c("1","2"), scientific_name = "Salvia sp", latitude = 1, longitude = 2, url = "u",
+    location_needs_fix = c(TRUE, FALSE))
+  rev <- ipc_location_review(df)
+  expect_setequal(rev$obs_id, "a")
+  expect_true(all(grepl("check the pin", rev$fix_reason)))
+})

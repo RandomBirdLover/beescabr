@@ -75,6 +75,7 @@ local({
 # ------------------------------------------------------------
 # build_taxonomy_lookup(con): build sd_bee_taxonomy_lookup.csv (+ the internal
 # complex map) against a populated cache. Returns an invisible summary list.
+# backfill_parent_taxonomy() lives in reference/taxonomy_reference.R (sourced above via need()).
 # ------------------------------------------------------------
 build_taxonomy_lookup <- function(con) {
   # Boundaries (reads shapefiles) loaded lazily so merely sourcing this file
@@ -201,6 +202,9 @@ build_taxonomy_lookup <- function(con) {
   # in_cabr_specimens is appended last by the specimen-additions merge; move it up beside in_holway.
   if (all(c("in_cabr_specimens", "in_holway") %in% names(bee_taxonomy_lookup)))
     bee_taxonomy_lookup <- dplyr::relocate(bee_taxonomy_lookup, in_cabr_specimens, .after = in_holway)
+  # LAST STEP: backfill blank ancestor ranks (specimen-only leaves can arrive missing intermediate
+  # ranks their genus/family rows already carry). Adds no taxa; only fills gaps.
+  bee_taxonomy_lookup <- backfill_parent_taxonomy(bee_taxonomy_lookup)
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
   message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
           sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")
@@ -211,7 +215,7 @@ build_taxonomy_lookup <- function(con) {
 # ------------------------------------------------------------
 # Standalone entrypoint (skipped when sourced by run_pipeline.R).
 # ------------------------------------------------------------
-if (!exists("BEESCABR_SOURCED_BY_RUNNER")) {
+if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0) {
   main <- function() {
     con <- store_connect()
     on.exit(store_disconnect(con), add = TRUE)

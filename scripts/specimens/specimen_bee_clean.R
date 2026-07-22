@@ -57,6 +57,24 @@ SBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
                        "subfamily", "tribe", "subtribe", "genus", "subgenus", "complex",
                        "species", "subspecies")
 # final column order -- inat_bee_clean's IBC_COLUMN_ORDER, obs_id -> ucsd_id+sdnhm_id, + sex
+# mask_out_of_park_flowers(): PURE. For specimen rows whose resolved flower is NOT in the park
+# (flower_in_park == FALSE -- an expert-flagged label misID / plant absent from CABR), hide the
+# specific plant so scientists aren't shown an out-of-park identification: flower_visited becomes
+# "flower - angiosperm" and flower_taxon_id / plant_genus / plant_species are cleared. The raw label
+# stays in flower_visited_raw for provenance; flower_in_park stays FALSE. In-park or unresolved
+# flowers (TRUE / NA) are left untouched.
+SBC_ANGIOSPERM <- "flower - angiosperm"
+mask_out_of_park_flowers <- function(df) {
+  if (!all(c("flower_in_park", "flower_visited") %in% names(df))) return(df)
+  out <- !is.na(df$flower_in_park) & tolower(trimws(as.character(df$flower_in_park))) == "false"
+  if (any(out)) {
+    df$flower_visited[out] <- SBC_ANGIOSPERM
+    for (cc in c("flower_taxon_id", "plant_genus", "plant_species"))
+      if (cc %in% names(df)) df[[cc]][out] <- NA
+  }
+  df
+}
+
 SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_survey", "survey_note",
                       "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
                       "flower_visited", "flower_visited_raw", "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
@@ -208,6 +226,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   df$flower_visited     <- normalize_flower_name(df$flower_visited, plant_variant_map(cw)) # -> canonical name via master_crosswalk
   if (!exists("attach_flower_ids")) source("scripts/reference/plant_lookup_join.R")
   df <- attach_flower_ids(df)                                                             # flower_taxon_id + flower_in_park from the plant lookup
+  df <- mask_out_of_park_flowers(df)                                                      # not-in-park plants -> "flower - angiosperm" (don't show scientists an out-of-park ID)
   df$bee_situation  <- sbc_bee_situation(df)   # on_flower / on_ground / aerial (mirrors inat_bee_clean)
   for (b in SBC_BLANK_BOOL) df[[b]] <- NA
   df$cabr_bee_lethal_collection <- TRUE

@@ -73,6 +73,41 @@ infer_higher_rank <- function(family, subfamily, tribe, subtribe = NA_character_
 }
 
 # ------------------------------------------------------------
+# backfill_parent_taxonomy(lk): fill blank ANCESTOR-rank columns from kin already in the lookup.
+# The lookup is a normalized tree (every parent taxon has its own, complete row), but a specimen-only
+# species can arrive with intermediate ranks blank (e.g. subphylum Hexapoda, subclass Pterygota,
+# suborder Apocrita, infraorder Aculeata, epifamily Anthophila, subtribe) while its OWN genus/family
+# rows carry them. For each blank ancestor rank we copy the value shared by the taxon's genus, then
+# family -- but ONLY when that value is unambiguous within the group. We deliberately stop at family:
+# an order-wide pass would over-generalize a fine rank (e.g. copy one family's subtribe onto another
+# family's species). Adds NO taxa; never overwrites a populated cell.
+# Run as the LAST step of build_taxonomy_lookup(), after every taxon + id is merged.
+# ------------------------------------------------------------
+backfill_parent_taxonomy <- function(lk) {
+  anc <- intersect(c("kingdom","phylum","subphylum","class","subclass","order","suborder",
+                     "infraorder","superfamily","family","epifamily","subfamily","tribe","subtribe"),
+                   names(lk))
+  if (!length(anc)) return(lk)
+  blank <- function(x) is.na(x) | !nzchar(trimws(as.character(x)))
+  fill_by <- function(lk, key) {
+    if (!key %in% names(lk)) return(lk)
+    k <- trimws(as.character(lk[[key]])); keyed <- !blank(k)
+    for (r in anc) {
+      if (identical(r, key)) next
+      col <- as.character(lk[[r]]); need <- blank(col) & keyed; have <- !blank(col) & keyed
+      if (!any(need) || !any(have)) next
+      donor <- tapply(col[have], k[have], function(v) { u <- unique(v); if (length(u) == 1L) u else NA_character_ })
+      idx <- k[need]; hit <- idx %in% names(donor) & !is.na(donor[idx])
+      col[which(need)[hit]] <- donor[idx[hit]]
+      lk[[r]] <- col
+    }
+    lk
+  }
+  for (key in c("genus", "family")) lk <- fill_by(lk, key)
+  lk
+}
+
+# ------------------------------------------------------------
 # merge_holway_resolved(): fill taxon_id + scientific_name on the lookup's
 # Holway genus/species rows from the enriched Holway reference table
 # (holway_sd_bee_reference_table.csv, built by holway_reference_build.R).

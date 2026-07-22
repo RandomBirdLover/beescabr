@@ -18,7 +18,7 @@
 suppressWarnings(suppressMessages({library(dplyr); library(readr)}))
 
 `%||%` <- if (exists("%||%")) `%||%` else function(a, b) if (is.null(a) || length(a) == 0) b else a
-RMI_CACHE <- "data/reference/resolved_missing_ids.csv"
+RMI_CACHE <- "data/reference/generated/resolved_missing_ids.csv"
 
 # .rmi_norm(): diacritic-insensitive, lowercase, letters+spaces only ("Schönnherria" -> "schonnherria").
 # Maps accented letters to their BASE letter (o, not oe) to match Holway's diacritic-stripped names.

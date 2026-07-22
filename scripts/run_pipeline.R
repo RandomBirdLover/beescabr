@@ -291,16 +291,21 @@ main <- function() {
 
   # ---- 7c. OBSERVATION REVIEW: prompt for the iNat obs that need fixing ON iNaturalist ----
   # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + review_mistagged_transects.csv
-  # (stray transect tag). Each row carries the observation's url, so you open it and fix it there;
-  # the next iNat pull picks up your fix. Non-blocking: surfaces + prompts, then continues.
+  # (stray transect tag) + the bee/plant location_review files (survey pins far from any transect).
+  # Each row carries the observation's url, so you open it and fix it there; the next iNat pull picks
+  # up your fix. Non-blocking: surfaces + prompts, then continues.
   message("\n== [7c] OBSERVATION REVIEW: iNat obs to fix (open each url) ==")
   tryCatch({
     obs_rev   <- "data/observations/review"
     obs_items <- data.frame(
-      label = c("bee flower fields to fix", "stray transect tags"),
+      label = c("bee flower fields to fix", "stray transect tags",
+                "bee pins to re-check", "plant pins to re-check"),
       count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior.csv")),
-                .n_rows(file.path(obs_rev, "review_mistagged_transects.csv"))),
-      file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv"),
+                .n_rows(file.path(obs_rev, "review_mistagged_transects.csv")),
+                .n_rows(file.path(obs_rev, "cabr_inat_bee_location_review.csv")),
+                .n_rows(file.path(obs_rev, "cabr_inat_plant_location_review.csv"))),
+      file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv",
+                "cabr_inat_bee_location_review.csv", "cabr_inat_plant_location_review.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",

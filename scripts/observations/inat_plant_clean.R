@@ -35,6 +35,7 @@ IPC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_plant_clean.csv"
 IPC_ALL_TAXA       <- "data/observations/reference/cabr_inat_plant_all_taxa.csv"  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
+IPC_LOCATION_REVIEW <- "data/observations/review/cabr_inat_plant_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat
 IPC_OFF_TRANSECT_M <- 50
 IPC_ROAD_BUFFER_M  <- 10
 
@@ -61,11 +62,26 @@ IPC_EXPORT_RANKMAP <- c(
 # only annotation, and there is no lethal-collection column -- plants are non-lethal by nature)
 IPC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
                       "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      IPC_ANNOT_COLS, "location_needs_fix",
+                      IPC_ANNOT_COLS,
                       "taxon_id", "taxon_rank", "quality_grade",
                       IPC_TAXONOMY_COLS,
                       "plant_genus", "plant_species",
                       "latitude", "longitude", "positional_accuracy", "url")
+
+# ipc_location_review(): PURE. Survey obs flagged location_needs_fix (a GPS pin far from every
+# transect) -> a heads-up worklist so a scientist re-checks the pin on iNaturalist. Kept OUT of the
+# clean table (a review artifact, not a data column), mirroring inat_bee + the specimen side. Takes
+# the pre-select `df` (which still has location_needs_fix). NA-safe.
+IPC_LOCATION_COLS <- c("obs_id", "observer", "observed_on", "transect", "taxon_id",
+                       "scientific_name", "latitude", "longitude", "url")
+ipc_location_review <- function(df) {
+  if (!"location_needs_fix" %in% names(df))
+    return(df[0, intersect(IPC_LOCATION_COLS, names(df)), drop = FALSE])
+  out <- df[which(as.logical(df$location_needs_fix) %in% TRUE),
+            intersect(IPC_LOCATION_COLS, names(df)), drop = FALSE]
+  if (nrow(out)) out$fix_reason <- "bad_coord: survey pin far from any transect -- check the pin on iNaturalist"
+  out
+}
 
 # TP / TP1 / TP2 -> TP, etc. (same rule the brain + bee cleaner use)
 ipc_norm_transect <- function(x) {
@@ -265,18 +281,22 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   df$plant_genus <- .pp$plant_genus; df$plant_species <- .pp$plant_species
 
   clean <- df |> select(any_of(IPC_COLUMN_ORDER))
+  location_review <- ipc_location_review(df)   # survey pins to re-check -- review artifact, not a clean column
 
   if (write) {
     dir.create(dirname(out_clean), recursive = TRUE, showWarnings = FALSE)
     write.csv(clean, out_clean, row.names = FALSE, na = "")
+    dir.create(dirname(IPC_LOCATION_REVIEW), recursive = TRUE, showWarnings = FALSE)
+    write.csv(location_review, IPC_LOCATION_REVIEW, row.names = FALSE, na = "")
   }
   n_walk <- sum(df$status == "keep" & df$spatial_cat == "walk_in")
+  n_bad  <- sum(as.logical(df$location_needs_fix) %in% TRUE)
   n_flow <- sum(!is.na(clean$flower_flowering))
   message(sprintf("inat_plant_clean: %d surveyor plant rows | %d survey / %d not-survey -> %s",
                   nrow(clean), sum(clean$is_survey), sum(!clean$is_survey), out_clean))
-  message(sprintf("               spatial: %d walk-in re-marked NOT survey | annotations: %d with flower_flowering",
-                  n_walk, n_flow))
-  invisible(list(clean = clean))
+  message(sprintf("               spatial: %d walk-in re-marked NOT survey | %d location_needs_fix -> %s | annotations: %d with flower_flowering",
+                  n_walk, n_bad, basename(IPC_LOCATION_REVIEW), n_flow))
+  invisible(list(clean = clean, location_review = location_review))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0)

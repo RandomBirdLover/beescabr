@@ -310,3 +310,23 @@ test_that("fill_above_genus_ids does NOT coarsen a genus-or-finer specimen", {
   out <- fill_above_genus_ids(df, lk)
   expect_true(is.na(out$taxon_id[1]))                # has_genus -> skipped
 })
+
+# mask_out_of_park_flowers(): specimen rows whose flower isn't in the park (flower_in_park == FALSE)
+# get flower_visited -> "flower - angiosperm" with plant identity cleared; raw label preserved.
+test_that("mask_out_of_park_flowers hides not-in-park plants as 'flower - angiosperm'", {
+  src("specimens/specimen_bee_clean.R")
+  df <- data.frame(
+    flower_visited     = c("Deinandra conjugens", "Encelia californica", "unresolved"),
+    flower_visited_raw = c("Deinandra conjugens", "Encelia californica", "unresolved"),
+    flower_taxon_id    = c("58821", "50000", NA),
+    flower_in_park     = c(FALSE, TRUE, NA),
+    plant_genus        = c("Deinandra", "Encelia", NA),
+    plant_species      = c("Deinandra conjugens", "Encelia californica", NA),
+    stringsAsFactors = FALSE)
+  out <- mask_out_of_park_flowers(df)
+  expect_equal(out$flower_visited[1], "flower - angiosperm")                       # FALSE -> masked
+  expect_true(all(is.na(c(out$flower_taxon_id[1], out$plant_genus[1], out$plant_species[1]))))
+  expect_equal(out$flower_visited_raw[1], "Deinandra conjugens")                   # raw label preserved
+  expect_equal(out$flower_visited[2], "Encelia californica")                       # TRUE untouched
+  expect_equal(out$flower_visited[3], "unresolved")                                # NA untouched
+})
