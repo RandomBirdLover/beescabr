@@ -50,30 +50,34 @@ fpi_norm_transect <- function(x) {
 
 fpi_survey_dates <- function(membership, windows, roster,
                              existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW,
+                             intern_log_path = FPI_INTERN_LOG,
                              tol_days = SD_WINDOW_TOL_DAYS) {
   blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
 
-  # ---- INTERNS: preserved as-is from master_per_survey_info.csv (people edit them there) ----
-  # >>> TODO -- FIND THE SURVEY DATES THEY WERE HIRED FOR <<<
-  # Interns are PAID for their survey days, so an authoritative date should always exist.
-  # They live IN master_per_survey_info.csv as the source=="intern-log" rows -- BOTH lethal net days
-  # AND non-lethal iNat days. The brain NEVER invents or regenerates them: it carries every
-  # source=="intern-log" row forward UNCHANGED and rebuilds only the beeple rows around
-  # them. Add / fix intern surveys by editing master_per_survey_info.csv.
-  interns <- tibble()
-  if (file.exists(existing_path)) {
-    ex <- suppressWarnings(read_csv(existing_path, show_col_types = FALSE))
-    if ("source" %in% names(ex)) {
-      it <- ex |> filter(source == "intern-log")
-      if (nrow(it) > 0) {
-        for (col in SD_COLUMNS) if (!col %in% names(it)) it[[col]] <- NA
-        interns <- it |>
-          mutate(date = as.Date(date), confirmed = as.logical(confirmed),
-                 n_obs = as.character(n_obs), n_speci = as.character(n_speci)) |>
-          select(any_of(SD_COLUMNS))
-      }
-    }
+  # ---- INTERNS: read from the curated intern-survey-day LOG (master_intern_survey_log.csv) ----
+  # Interns' survey days (BOTH lethal net days AND non-lethal iNat days) live in a curated
+  # INPUT file -- data/project_info/sources/master_intern_survey_log.csv -- as the source=="intern-log"
+  # rows. The brain reads them UNCHANGED and rebuilds only the beeple rows around them; the
+  # master is pure generated output. Interns are PAID, so an authoritative date should always
+  # exist -- add / fix intern surveys by editing master_intern_survey_log.csv (NOT the master, which is
+  # OVERWRITTEN every run: a hand-added intern row kept only there is silently wiped on the next
+  # regeneration -- that is how 2024-05-05, a tagged intern iNat day that is neither in the
+  # beeple tag-rebuild nor a specimen date, kept vanishing). FALLBACK: if the log file is absent,
+  # read the legacy intern-log rows straight from the existing master (old in-place design).
+  read_intern_log <- function(path) {
+    if (is.null(path) || is.na(path) || !file.exists(path)) return(tibble())
+    ex <- suppressWarnings(read_csv(path, show_col_types = FALSE))
+    if (!"source" %in% names(ex)) return(tibble())
+    it <- ex |> filter(source == "intern-log")
+    if (!nrow(it)) return(tibble())
+    for (col in SD_COLUMNS) if (!col %in% names(it)) it[[col]] <- NA
+    it |>
+      mutate(date = as.Date(date), confirmed = as.logical(confirmed),
+             n_obs = as.character(n_obs), n_speci = as.character(n_speci)) |>
+      select(any_of(SD_COLUMNS))
   }
+  interns <- read_intern_log(intern_log_path)                    # curated source of truth (preferred)
+  if (!nrow(interns)) interns <- read_intern_log(existing_path)  # fallback: legacy in-master rows
 
   # ---- SPECIMENS: per-date lethal-net specimen counts (from the specimen record) ----
   # finding_specimen_dates() returns the aggregated specimen record (date, n_specimens,

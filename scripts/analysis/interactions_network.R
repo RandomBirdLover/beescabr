@@ -175,15 +175,54 @@ write.csv(spec_tbl, file.path(OUT_DIR, "interactions_bee_specialization.csv"), r
 #   * NODF nestedness       -- do specialists interact with subsets of what
 #     generalists use? Tested against a null model (vegan::oecosimu, quasiswap =
 #     fixed row & column totals) -> p-value.
-#   * H2' specialization    -- network-level niche partitioning (only if bipartite
-#     is installed); 0 = no specialization, 1 = complete.
+#   * H2' specialization    -- network-level niche partitioning (Bluthgen et al.
+#     2006); 0 = no specialization, 1 = complete. Computed self-contained (no
+#     bipartite dependency) and tested for significance against a fixed-marginal
+#     null model, so the p-value asks: is the web MORE specialized than webs with
+#     the same plant & bee totals but interactions shuffled at random?
+#
+# H2' internals (all fully self-contained):
+#   H2   = two-dimensional Shannon entropy of the weighted interaction matrix.
+#   H2max = row-entropy + col-entropy -- the exact maximum joint entropy given the
+#           marginal totals (joint entropy is maximized under independence).
+#   H2min = entropy of the most concentrated matrix with those marginals, built by
+#           the sorted-margin north-west-corner packing.
+#   H2'  = (H2max - H2) / (H2max - H2min), bounded [0, 1].
+#   Null = r2dtable() (Patefield's algorithm: random tables with the SAME row and
+#          column totals) -- the same fixed-marginal null bipartite uses by default.
+#   p    = fraction of null webs whose H2' is >= observed (one-sided: specialized).
+.shannon <- function(x) { p <- x / sum(x); p <- p[p > 0]; -sum(p * log(p)) }
+.h2_entropy <- function(M) .shannon(as.numeric(M))
+.h2min_entropy <- function(rs, cs) {           # min entropy: NW-corner concentrated fill
+  ri <- sort(rs, decreasing = TRUE); cj <- sort(cs, decreasing = TRUE)
+  i <- 1L; j <- 1L; vals <- numeric(0)
+  while (i <= length(ri) && j <= length(cj)) {
+    x <- min(ri[i], cj[j]); vals <- c(vals, x)
+    ri[i] <- ri[i] - x; cj[j] <- cj[j] - x
+    if (ri[i] == 0) i <- i + 1L
+    if (j <= length(cj) && cj[j] == 0) j <- j + 1L
+  }
+  .shannon(vals)
+}
+h2prime_test <- function(M, nsim = 999) {
+  M <- M[rowSums(M) > 0, colSums(M) > 0, drop = FALSE]
+  rs <- rowSums(M); cs <- colSums(M)
+  H2max <- .shannon(rs) + .shannon(cs)
+  H2min <- .h2min_entropy(rs, cs)
+  h2p   <- function(H2) if (H2max > H2min) (H2max - H2) / (H2max - H2min) else NA_real_
+  obs   <- h2p(.h2_entropy(M))
+  sims  <- r2dtable(nsim, rs, cs)
+  nullv <- vapply(sims, function(x) h2p(.h2_entropy(x)), numeric(1))
+  list(H2prime = obs, null_mean = mean(nullv), null_sd = sd(nullv),
+       p = (1 + sum(nullv >= obs)) / (nsim + 1))
+}
 network_stats <- function(M, label) {
   Mb <- (M > 0) * 1L
   conn <- sum(Mb) / prod(dim(Mb))
   out <- data.frame(network = label, n_plant_genera = nrow(M), n_bee_taxa = ncol(M),
                     links = sum(Mb), connectance = round(conn, 3),
                     NODF = NA_real_, NODF_null_mean = NA_real_, NODF_p = NA_real_,
-                    H2prime = NA_real_)
+                    H2prime = NA_real_, H2prime_null_mean = NA_real_, H2prime_p = NA_real_)
   if (HAVE_VEGAN) {
     on <- try(vegan::oecosimu(Mb, vegan::nestednodf, method = "quasiswap", nsimul = 499),
               silent = TRUE)
@@ -194,9 +233,11 @@ network_stats <- function(M, label) {
       out$NODF_p         <- signif(on$oecosimu$pval[i], 3)
     }
   }
-  if (HAVE_BIPARTITE) {
-    h2 <- try(bipartite::networklevel(M, index = "H2"), silent = TRUE)
-    if (!inherits(h2, "try-error")) out$H2prime <- round(as.numeric(h2[[1]]), 3)
+  h2 <- try(h2prime_test(M, nsim = 999), silent = TRUE)
+  if (!inherits(h2, "try-error")) {
+    out$H2prime           <- round(h2$H2prime, 3)
+    out$H2prime_null_mean <- round(h2$null_mean, 3)
+    out$H2prime_p         <- signif(h2$p, 3)
   }
   out
 }

@@ -22,7 +22,7 @@
 #   bipartite        -- interactions_network.R (plotweb visitation webs)
 #   ggplot2          -- interactions_network.R heatmaps + phenology figures
 #   ggridges         -- phenology_activity.R (ridgeline density plots)
-ANALYSIS_PACKAGES <- c("dplyr", "stringr", "vegan", "igraph", "bipartite", "ggplot2", "ggridges")
+ANALYSIS_PACKAGES <- c("dplyr", "stringr", "vegan", "igraph", "bipartite", "ggplot2", "ggridges", "sf")
 
 for (pkg in ANALYSIS_PACKAGES) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
