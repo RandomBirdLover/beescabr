@@ -32,7 +32,7 @@
 
 # ---- dependency guard (install-guarded HERE, not in utils.R -- the pipeline
 #      never needs network packages) -----------------------------------------
-for (pkg in c("igraph", "bipartite")) {
+for (pkg in c("igraph", "bipartite", "ggplot2", "vegan")) {
   if (!requireNamespace(pkg, quietly = TRUE))
     try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
 }
@@ -40,10 +40,12 @@ suppressPackageStartupMessages({
   library(dplyr); library(stringr); library(igraph)
 })
 HAVE_BIPARTITE <- requireNamespace("bipartite", quietly = TRUE)
+HAVE_GGPLOT    <- requireNamespace("ggplot2",   quietly = TRUE)
+HAVE_VEGAN     <- requireNamespace("vegan",     quietly = TRUE)
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-OUT_DIR       <- "data/analysis"
+OUT_DIR       <- "data/analysis/interactions"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 SPECIALIST_MAX_PLANTS <- 2      # visits <= this many plant genera -> "specialist"
@@ -79,26 +81,48 @@ write.csv(data.frame(plant_genus = rownames(Mg), Mg, check.names = FALSE),
 write.csv(data.frame(plant_genus = rownames(Ms), Ms, check.names = FALSE),
           file.path(OUT_DIR, "interactions_species_matrix.csv"), row.names = FALSE)
 
-# ---- 2. heatmaps (dependency-free; top plant genera for legibility) ----------
-heatmap_png <- function(M, file, rank_label, top_plants = 30) {
-  ord_p <- order(rowSums(M), decreasing = TRUE)
-  ord_b <- order(colSums(M), decreasing = TRUE)
-  M2 <- M[head(ord_p, top_plants), ord_b, drop = FALSE]
-  M2 <- M2[nrow(M2):1, , drop = FALSE]                     # top plant at top of image
-  png(file, width = max(1400, 60 * ncol(M2) + 500),
-      height = max(1100, 34 * nrow(M2) + 350), res = 200)
-  op <- par(mar = c(10, 9, 3, 1))
-  image(x = seq_len(ncol(M2)), y = seq_len(nrow(M2)), z = t(log1p(M2)),
-        col = hcl.colors(24, "YlGnBu", rev = TRUE), axes = FALSE,
-        xlab = "", ylab = "",
-        main = sprintf("Plant genus x bee %s -- visitation intensity (log records)", rank_label))
-  axis(1, seq_len(ncol(M2)), colnames(M2), las = 2, cex.axis = 0.7)
-  axis(2, seq_len(nrow(M2)), rownames(M2), las = 1, cex.axis = 0.7)
-  mtext(sprintf("top %d plant genera by total visits", nrow(M2)), side = 3, cex = 0.8)
-  par(op); dev.off()
+# ---- 2. FULL interaction heatmaps -- EVERY plant genus x EVERY bee taxon -----
+# The whole network, legibly: a ggplot2 tile map of the complete matrix (busiest
+# plant/bee sorted to the corner). Falls back to a base-R top-30 image if ggplot2
+# is somehow unavailable.
+heatmap_gg <- function(M, file, rank_label) {
+  df <- as.data.frame(as.table(M)); names(df) <- c("plant_genus", "bee", "n")
+  df$n[df$n == 0] <- NA                                       # blank the empty cells
+  df$plant_genus <- factor(df$plant_genus, levels = names(sort(rowSums(M))))
+  df$bee         <- factor(df$bee,         levels = names(sort(colSums(M), decreasing = TRUE)))
+  g <- ggplot2::ggplot(df, ggplot2::aes(bee, plant_genus, fill = n)) +
+    ggplot2::geom_tile(color = "grey90", linewidth = 0.1) +
+    ggplot2::scale_fill_viridis_c(option = "D", trans = "log", na.value = "white",
+                                  name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +
+    ggplot2::labs(
+      title = sprintf("Plant genus × bee %s — visitation network (all taxa)", rank_label),
+      subtitle = sprintf("%d plant genera × %d bee %s pooled across both methods",
+                         nrow(M), ncol(M), rank_label),
+      x = paste("bee", rank_label), y = "plant genus") +
+    ggplot2::theme_minimal(base_size = 8) +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6),
+      axis.text.y = ggplot2::element_text(size = 6),
+      panel.grid  = ggplot2::element_blank(),
+      plot.title  = ggplot2::element_text(face = "bold"))
+  ggplot2::ggsave(file, g, dpi = 200, limitsize = FALSE,
+                  width  = max(6, 0.17 * ncol(M) + 3),
+                  height = max(6, 0.13 * nrow(M) + 2))
 }
-heatmap_png(Mg, file.path(OUT_DIR, "interactions_heatmap_genus.png"),   "genus")
-heatmap_png(Ms, file.path(OUT_DIR, "interactions_heatmap_species.png"), "species")
+heatmap_base <- function(M, file, rank_label, top_plants = 30) {   # fallback if no ggplot2
+  ord_p <- order(rowSums(M), decreasing = TRUE); ord_b <- order(colSums(M), decreasing = TRUE)
+  M2 <- M[head(ord_p, top_plants), ord_b, drop = FALSE]; M2 <- M2[nrow(M2):1, , drop = FALSE]
+  png(file, width = max(1400, 60 * ncol(M2) + 500), height = max(1100, 34 * nrow(M2) + 350), res = 200)
+  op <- par(mar = c(10, 9, 3, 1))
+  image(seq_len(ncol(M2)), seq_len(nrow(M2)), t(log1p(M2)),
+        col = hcl.colors(24, "YlGnBu", rev = TRUE), axes = FALSE, xlab = "", ylab = "",
+        main = sprintf("Plant genus x bee %s (top %d plants)", rank_label, top_plants))
+  axis(1, seq_len(ncol(M2)), colnames(M2), las = 2, cex.axis = 0.7)
+  axis(2, seq_len(nrow(M2)), rownames(M2), las = 1, cex.axis = 0.7); par(op); dev.off()
+}
+write_heatmap <- if (HAVE_GGPLOT) heatmap_gg else heatmap_base
+write_heatmap(Mg, file.path(OUT_DIR, "interactions_heatmap_genus.png"),   "genus")
+write_heatmap(Ms, file.path(OUT_DIR, "interactions_heatmap_species.png"), "species")
 
 # ---- 3. bee-genus shared-forage network (igraph one-mode projection) ---------
 # two bee genera are linked if they visit the same plant genera; edge weight =
@@ -145,16 +169,116 @@ spec_tbl <- data.frame(
 spec_tbl <- spec_tbl[order(spec_tbl$n_plant_genera, -spec_tbl$n_records), ]
 write.csv(spec_tbl, file.path(OUT_DIR, "interactions_bee_specialization.csv"), row.names = FALSE)
 
-# ---- 5. OPTIONAL bipartite::plotweb figures (only if the package is present) --
+# ---- 4b. NETWORK-LEVEL STATISTICS + significance tests -----------------------
+# Reportable structure metrics for each network:
+#   * connectance          -- realized fraction of possible links (descriptive)
+#   * NODF nestedness       -- do specialists interact with subsets of what
+#     generalists use? Tested against a null model (vegan::oecosimu, quasiswap =
+#     fixed row & column totals) -> p-value.
+#   * H2' specialization    -- network-level niche partitioning (only if bipartite
+#     is installed); 0 = no specialization, 1 = complete.
+network_stats <- function(M, label) {
+  Mb <- (M > 0) * 1L
+  conn <- sum(Mb) / prod(dim(Mb))
+  out <- data.frame(network = label, n_plant_genera = nrow(M), n_bee_taxa = ncol(M),
+                    links = sum(Mb), connectance = round(conn, 3),
+                    NODF = NA_real_, NODF_null_mean = NA_real_, NODF_p = NA_real_,
+                    H2prime = NA_real_)
+  if (HAVE_VEGAN) {
+    on <- try(vegan::oecosimu(Mb, vegan::nestednodf, method = "quasiswap", nsimul = 499),
+              silent = TRUE)
+    if (!inherits(on, "try-error")) {
+      i <- which(names(on$statistic$statistic) == "NODF")
+      out$NODF           <- round(on$statistic$statistic[["NODF"]], 2)
+      out$NODF_null_mean <- round(mean(on$oecosimu$simulated[i, ]), 2)
+      out$NODF_p         <- signif(on$oecosimu$pval[i], 3)
+    }
+  }
+  if (HAVE_BIPARTITE) {
+    h2 <- try(bipartite::networklevel(M, index = "H2"), silent = TRUE)
+    if (!inherits(h2, "try-error")) out$H2prime <- round(as.numeric(h2[[1]]), 3)
+  }
+  out
+}
+net_stats <- rbind(network_stats(Mg, "genus"), network_stats(Ms, "species"))
+write.csv(net_stats, file.path(OUT_DIR, "interactions_network_stats.csv"), row.names = FALSE)
+message("\nNetwork-level statistics:")
+print(net_stats, row.names = FALSE)
+
+# ---- 5. bipartite visitation web (plants bottom, bees top) -- base R ---------
+# The classic plotweb look, DEPENDENCY-FREE (no bipartite needed): plant genera as
+# bars along the bottom, bee taxa as bars along the top, links weighted by visit
+# count, seriated by reciprocal averaging to reduce crossings. Trimmed to the
+# busiest plants x bees so labels stay legible (full data live in the matrices).
+web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30) {
+  M <- M[order(rowSums(M), decreasing = TRUE), , drop = FALSE]
+  if (nrow(M) > top_plants) M <- M[seq_len(top_plants), , drop = FALSE]
+  M <- M[, order(colSums(M), decreasing = TRUE), drop = FALSE]
+  if (ncol(M) > top_bees) M <- M[, seq_len(top_bees), drop = FALSE]
+  M <- M[rowSums(M) > 0, colSums(M) > 0, drop = FALSE]
+  np <- nrow(M); nb <- ncol(M)
+  pr <- seq_len(np); bc <- seq_len(nb)                 # reciprocal-averaging seriation
+  for (it in 1:8) {
+    bc <- rank((t(M) %*% pr) / colSums(M), ties.method = "first")
+    pr <- rank((M %*% bc) / rowSums(M),   ties.method = "first")
+  }
+  M  <- M[order(pr), order(bc), drop = FALSE]
+  px <- if (np > 1) seq(0.03, 0.97, length.out = np) else 0.5
+  bx <- if (nb > 1) seq(0.03, 0.97, length.out = nb) else 0.5
+  yP <- 0.04; yB <- 0.96; wmax <- max(M)
+  png(file, width = max(1700, 58 * max(np, nb)), height = 1700, res = 200)
+  op <- par(mar = c(9, 1, 9, 1), xpd = NA)
+  plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
+  for (i in seq_len(np)) for (j in seq_len(nb)) if (M[i, j] > 0)
+    segments(px[i], yP, bx[j], yB, lwd = 0.4 + 3.4 * M[i, j] / wmax,
+             col = adjustcolor("#c9a227", 0.35))
+  pw <- 0.008 + 0.02 * sqrt(rowSums(M) / max(rowSums(M)))
+  bw <- 0.008 + 0.02 * sqrt(colSums(M) / max(colSums(M)))
+  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = "#1a9850", border = "white")
+  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = "#4575b4", border = "white")
+  text(px, yP - 0.02, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#1a6b39")
+  text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = "#2c5aa0", font = 3)
+  mtext(sprintf("Plant genus (bottom) - bee %s (top): visitation web  [top %d x %d]",
+                rank_label, np, nb), side = 3, line = 6.5, font = 2, cex = 1.05)
+  par(op); dev.off()
+}
+web_plot(Mg, file.path(OUT_DIR, "interactions_web_genus.png"),   "genus",   30, 28)
+web_plot(Ms, file.path(OUT_DIR, "interactions_web_species.png"), "species", 30, 30)
+
+# ---- 5b. OPTIONAL bipartite::plotweb figures (only if the package is present) --
 if (HAVE_BIPARTITE) {
   message("bipartite present -- writing plotweb figures.")
+  WEB_TOP_PLANTS <- 15    # trim to the most-visited plant genera + most-connected
+  WEB_TOP_BEES   <- 18    # bees so the two-row web stays legible (full data in the CSVs)
+  # bipartite >= 2.2x rewrote plotweb with NEW arg names (sorting / higher_color /
+  # lower_color / link_color / text_size / srt); the classic ones (method / col.high /
+  # col.low / text.rot / labsize) were removed. Use the new API, fall back to the
+  # legacy API, then to a bare call, so any bipartite version produces a figure.
   plotweb_png <- function(M, file, rank_label) {
-    png(file, width = max(1800, 26 * ncol(M) + 400), height = 1200, res = 170)
-    bipartite::plotweb(M, method = "normal",
-                       col.low = "#762a83", col.high = "#1b7837",
-                       text.rot = 90, labsize = 0.7)
-    title(main = sprintf("Plant genus (bottom) - bee %s (top) visitation web", rank_label))
-    dev.off()
+    pr <- head(order(rowSums(M), decreasing = TRUE), WEB_TOP_PLANTS)
+    bc <- head(order(colSums(M), decreasing = TRUE), WEB_TOP_BEES)
+    Mt <- M[sort(pr), sort(bc), drop = FALSE]
+    Mt <- Mt[rowSums(Mt) > 0, colSums(Mt) > 0, drop = FALSE]
+    ttl <- sprintf("Top plant genera (bottom) x bee %s (top) -- visitation web", rank_label)
+    png(file, width = 2000, height = 1250, res = 170)
+    on.exit(dev.off())
+    tryCatch({                                            # new bipartite API (>= 2.2x)
+      bipartite::plotweb(Mt, sorting = "normal",
+                         higher_color = "#4575b4", lower_color = "#1a9850",
+                         link_color = adjustcolor("#d8b365", 0.7),
+                         text_size = 0.8, srt = 90,
+                         higher_italic = TRUE, lower_italic = TRUE, main = ttl)
+    }, error = function(e) tryCatch({                     # legacy bipartite API
+      message("  new-API plotweb failed (", conditionMessage(e), ") -- legacy args.")
+      bipartite::plotweb(Mt, method = "normal", text.rot = 90,
+                         col.high = "#4575b4", col.low = "#1a9850",
+                         col.interaction = adjustcolor("#d8b365", 0.7), labsize = 0.8)
+      title(main = ttl)
+    }, error = function(e2) tryCatch({                    # bare call -- proven to run
+      message("  styled plotweb failed -- bare call.")
+      bipartite::plotweb(Mt); title(main = ttl)
+    }, error = function(e3)
+      message("  plotweb skipped for ", rank_label, ": ", conditionMessage(e3)))))
   }
   plotweb_png(Mg, file.path(OUT_DIR, "interactions_plotweb_genus.png"),   "genus")
   plotweb_png(Ms, file.path(OUT_DIR, "interactions_plotweb_species.png"), "species")

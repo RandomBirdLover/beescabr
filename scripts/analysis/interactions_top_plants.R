@@ -26,7 +26,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-OUT_DIR   <- "data/analysis"
+OUT_DIR   <- "data/analysis/interactions"
 TOP_N     <- 10          # top plants for the headline table/figure
 TOP_MONTH <- 12          # plants shown in the month heatmap
 COL_LETHAL <- "#1b7837"; COL_NONLETHAL <- "#762a83"

@@ -35,7 +35,7 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-OUT_DIR       <- "data/analysis"
+OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 COL_LETHAL    <- "#1b7837"   # green  = lethal / specimen (net)
@@ -112,6 +112,37 @@ mtext("CABR native bees -- lethal vs non-lethal overlap", outer = TRUE,
 mtext("centre = shared; left = lethal only; right = non-lethal only",
       side = 1, outer = TRUE, cex = 0.85)
 par(op); dev.off()
+
+# ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------
+# Chi-square on a 2x2 contingency (method x resolution), where resolution =
+# "species-level" (species/subspecies) vs "coarser". Tests the Q2 hypothesis that
+# nets reach species more often than photos. Uses every bee record with a genus.
+res_cat <- function(df, method) {
+  df <- df[!is.na(df$genus) & df$genus != "", ]
+  data.frame(method = method,
+             resolution = ifelse(df$taxon_rank %in% SPECIES_RANKS, "species-level", "coarser"))
+}
+rc   <- rbind(res_cat(spec, "lethal"), res_cat(inat, "nonlethal"))
+ctab <- table(method = rc$method, resolution = rc$resolution)
+chi  <- suppressWarnings(chisq.test(ctab))
+pct_species <- prop.table(ctab, 1)[, "species-level"] * 100
+write.csv(data.frame(method = rownames(ctab), n_records = as.integer(rowSums(ctab)),
+                     n_species_level = as.integer(ctab[, "species-level"]),
+                     pct_species_level = round(pct_species, 1), row.names = NULL),
+          file.path(OUT_DIR, "coverage_method_resolution.csv"), row.names = FALSE)
+writeLines(c(
+  "TEST: taxonomic resolution (species-level vs coarser) x survey method",
+  "Pearson chi-square test of independence on the 2x2 contingency table.",
+  "",
+  sprintf("  X-squared = %.1f, df = %d, p = %s",
+          chi$statistic, chi$parameter, format.pval(chi$p.value, digits = 3, eps = 1e-16)),
+  sprintf("  lethal (net) reaches species: %.1f%%   non-lethal (photo): %.1f%%",
+          pct_species["lethal"], pct_species["nonlethal"]),
+  "",
+  "Interpretation: p < 0.05 -> ID resolution is not independent of method."),
+  file.path(OUT_DIR, "coverage_method_resolution_chisq.txt"))
+message(sprintf("\nResolution x method chi-square: X2=%.1f, df=%d, p=%.2e  (lethal %.0f%% vs non-lethal %.0f%% species-level)",
+                chi$statistic, chi$parameter, chi$p.value, pct_species["lethal"], pct_species["nonlethal"]))
 
 # ---- 4. console summary -----------------------------------------------------
 for (rk in c("species", "genus")) {

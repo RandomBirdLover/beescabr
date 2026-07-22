@@ -38,7 +38,7 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 CHECKLIST_CABR <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
-OUT_DIR        <- "data/analysis"
+OUT_DIR        <- "data/analysis/coverage"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 norm <- function(x) str_squish(as.character(x))            # trim/collapse whitespace

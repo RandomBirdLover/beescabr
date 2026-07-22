@@ -51,7 +51,7 @@ if (!exists("PATHS")) source("scripts/config.R")   # PATHS$specimen_clean, PATHS
 # master_per_survey_info.csv is not in config's PATHS list; name it here.
 PER_SURVEY_INFO <- "data/project_info/master_per_survey_info.csv"
 
-OUT_DIR         <- "data/analysis"
+OUT_DIR         <- "data/analysis/accumulation"
 TRANSECTS       <- c("BST", "UPMON", "TP", "OT")          # the lines, in legend order
 SPECIES_RANKS   <- c("species", "subspecies")             # ranks that resolve to a species
 GENUS_RANKS     <- c("species", "subspecies", "subgenus", # ranks that pin a genus
