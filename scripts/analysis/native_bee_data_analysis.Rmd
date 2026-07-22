@@ -20,6 +20,8 @@ scripts (scripts/bee_specimen_clean.R, scripts/bee_inat_clean.R)
 so this stays focused on comparison, not data wrangling.
 -->
 
+install ggplot
+
 #Questions
 ####Reminder for comparison surveys, you can only compare months through April/March-September because interns were not surveying throughout the entire year
 
@@ -32,10 +34,16 @@ so this stays focused on comparison, not data wrangling.
 
 #4. Network analysis what flowers to what bees visit to get those unique bees (rarer bee, what plant does it visit?).
 ####4. a. Need species rank for finding specialist relationships 
+#a. Take plant taxon_ids that are ID'd to genus 
+#b. Take bee taxon_ids that are ID'd to species
+#c. Put them in a matrix, plant genus taxon ID is in rows, bees species taxon_ids are in columns
+#d. Add a 1 to each cell every time there is evidence of their relationship/crossing on a given data point (lethal and nonlethal)
+#e. Then project the relationships in a graph
+
 
 #5. Have we accumulated all the species there is to find at Cabrillo? (Graph a species accumulation curve)
 
-#6.Are there bees in the park that weren't found on the transects? Do we need more transects? (suveyors vs. whole park) Which bees were those? What are the observations url's associated with them to see what plants they were on?
+#6.Are there bees in the park that weren't found on the transects? Do we need more transects? (suveyors vs. whole park) Which bees were those? What are the observations url's associated with them to see what plants they were on? 
 
 #7. What needs ID in our lethal and non-lethal specimens most frequently? (Target identification)
 
@@ -45,7 +53,9 @@ so this stays focused on comparison, not data wrangling.
 
 #11. What surveys captured more bees by species rank, beeple vs. interns, lethal vs. nonlethal?
 
-#12. Give plant phenology based on the survey data (nonlethal only)
+#12. Give plant phenology based on the survey data (nonlethal only as lethal is incorrect). 
+
+#13. #Observations / #Trip by Month
 
 
 
