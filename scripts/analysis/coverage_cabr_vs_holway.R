@@ -170,5 +170,13 @@ print(summary_tbl[, c("scientific_name", "taxon_rank", "n_specimen_records",
 message("\nWrote: coverage_cabr_not_on_holway.csv (summary), ",
         "coverage_cabr_not_on_holway_inat_records.csv (URLs to verify), ",
         "coverage_cabr_not_on_holway.png")
+
+# ---- 7. park-facing "new bees not in Holway" summary (shared formatter) ------
+# Same taxa as the pipeline's stage-11 review prompt, but framed as our confirmed
+# finds for the park. iNat-evidenced only; grouped iNat-only vs also-collected.
+source("scripts/analysis/not_on_holway.R")
+.newbees <- format_new_bees(summary_tbl, mode = "report")
+if (length(.newbees)) { message(""); writeLines(.newbees) }
+
 message("Done. Outputs in: ", normalizePath(OUT_DIR))
 

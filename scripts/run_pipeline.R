@@ -85,6 +85,7 @@ source("scripts/checklists/checklist_build.R")        # spatial_split / lookup_s
 source("scripts/checklists/cabr_bee_checklist.R")     # defines build_cabr_bee_checklists()
 source("scripts/checklists/pl_bee_checklist.R")       # defines build_pl_bee_checklists()
 source("scripts/checklists/sd_bee_checklist.R")       # defines build_sd_bee_checklists()
+source("scripts/analysis/not_on_holway.R")            # not_on_holway_bees() + format_new_bees() -- stage 11
 
 main <- function() {
   t0 <- Sys.time()
@@ -335,11 +336,35 @@ main <- function() {
   tryCatch(inat_misid_qc(),
            error = function(e) message("  [10] misID QC FAILED (non-fatal): ", conditionMessage(e)))
 
+  # ---- 11. NEW BEES NOT ON HOLWAY: review prompt (any rank) ----
+  # CABR official-checklist taxa with holway == FALSE that ALSO have iNat records -> "new" bees
+  # (genuine park/county additions OR misIDs). Advisory: a human opens each on iNaturalist to confirm
+  # a trusted scientist ID'd it. Unlike stage 10 (species-rank only), this catches complex/genus-rank
+  # finds too. Same set the analysis script reports to the park; here it's the "double-check" prompt.
+  message("\n== [11] NEW BEES NOT ON HOLWAY: review these on iNaturalist ==")
+  tryCatch({
+    .chk_cabr <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
+    if (file.exists(.chk_cabr) && file.exists(PATHS$specimen_clean) && file.exists(PATHS$inat_clean)) {
+      .spec_nb <- utils::read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
+      .inat_nb <- utils::read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
+      .noh <- not_on_holway_bees(.chk_cabr, .spec_nb, .inat_nb)
+      .newbees <- .noh[.noh$group %in% c("inat_only", "inat_and_collected"), , drop = FALSE]
+      if (nrow(.newbees)) {
+        writeLines(format_new_bees(.noh, mode = "review"))
+        dir.create("data/observations/review", showWarnings = FALSE, recursive = TRUE)
+        write.csv(.newbees[, c("scientific_name", "taxon_rank", "group", "n_inat_records",
+                               "n_inat_research_grade", "n_specimen_records", "taxon_id")],
+                  "data/observations/review/cabr_new_bees_not_on_holway.csv", row.names = FALSE, na = "")
+        message("  -> data/observations/review/cabr_new_bees_not_on_holway.csv")
+      } else message("  none - every CABR bee with iNat records is on Holway's checklist")
+    } else message("  skipped (need the CABR official checklist + cleaned specimen/iNat tables)")
+  }, error = function(e) message("  [11] new-bees review FAILED (non-fatal): ", conditionMessage(e)))
+
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   message("\n========================================")
   message("PIPELINE COMPLETE (core stages) in ", dt, " min")
   message("  Cache observations   : ", count_observations(con))
-  message("  All 9 stages live: brain (+rescue) -> Holway -> lookup -> specimens -> inat bee/plant clean -> 7 checklists.")
+  message("  Stages live: brain (+rescue) -> Holway -> lookup -> specimens -> inat bee/plant clean -> 7 checklists -> misID QC -> new-bees review.")
   message("Outputs under data/. Done.")
 }
 
