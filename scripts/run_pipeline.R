@@ -125,10 +125,10 @@ main <- function() {
   }
 
   # ---- 2c. FIELD MAP: refresh the obs-field name -> iNat id map from the cache ----
-  # Keeps data/observations/inat_field_id_map.csv (the crosswalk's stable-id reference)
-  # in step with freshly-ingested fields. Cheap DuckDB query; skipped when ingest was
-  # skipped and the map already exists. Reuses the bee `con` (2b used its own plant con).
-  FIELD_MAP_PATH <- "data/observations/inat_field_id_map.csv"
+  # Keeps data/observations/reference/inat_field_id_map.csv (the crosswalk's stable-id
+  # reference) in step with freshly-ingested fields. Cheap DuckDB query; skipped when ingest
+  # was skipped and the map already exists. Reuses the bee `con` (2b used its own plant con).
+  FIELD_MAP_PATH <- "data/observations/reference/inat_field_id_map.csv"
   if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1" || !file.exists(FIELD_MAP_PATH)) {
     message("\n== [2c] FIELD MAP: refresh inat_field_id_map.csv ==")
     build_field_id_map(con = con)
@@ -269,7 +269,7 @@ main <- function() {
   message("\n== [6] SPECIMENS: raw worklist + cabr_specimen_bee_clean.csv ==")
   tryCatch(tidy_raw_specimens(),
            error = function(e) message("  [6a] raw worklist FAILED (non-fatal): ", conditionMessage(e)))
-  tryCatch(clean_specimens(interactive_ok = FALSE),
+  tryCatch(clean_specimens(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
            error = function(e) message("  [6b] specimen clean FAILED (non-fatal): ", conditionMessage(e)))
 
   # ---- 7. CLEAN: labeled iNat BEE table (taxonomy filled from the lookup) ----
@@ -286,6 +286,24 @@ main <- function() {
   message("\n== [7b] PLANT NAMES: review unknown plant names ==")
   tryCatch(review_plant_names(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
            error = function(e) message("  [7b] plant-name review FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 7c. OBSERVATION REVIEW: prompt for the iNat obs that need fixing ON iNaturalist ----
+  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + review_mistagged_transects.csv
+  # (stray transect tag). Each row carries the observation's url, so you open it and fix it there;
+  # the next iNat pull picks up your fix. Non-blocking: surfaces + prompts, then continues.
+  message("\n== [7c] OBSERVATION REVIEW: iNat obs to fix (open each url) ==")
+  tryCatch({
+    obs_rev   <- "data/observations/review"
+    obs_items <- data.frame(
+      label = c("bee flower fields to fix", "stray transect tags"),
+      count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior.csv")),
+                .n_rows(file.path(obs_rev, "review_mistagged_transects.csv"))),
+      file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv"),
+      stringsAsFactors = FALSE)
+    resolve_review_gate(obs_items, obs_rev,
+                        interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
+                        fix_hint = "iNaturalist", blocking = FALSE)
+  }, error = function(e) message("  [7c] observation review FAILED (non-fatal): ", conditionMessage(e)))
 
   # ---- 9. CHECKLISTS: cabr / pl / sd native-bee checklists (normalized tree from the lookup) ----
   # Each checklist carries parent taxa as their own rows (taxon_id/taxon_rank/names/taxonomy from the

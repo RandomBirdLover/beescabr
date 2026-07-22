@@ -129,6 +129,19 @@ test_that("resolve_flag_gate: clean / continue / stop", {
   expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "n"), "stop")
 })
 
+test_that("resolve_review_gate: clean / batch-continue / interactive skip vs stop", {
+  src("specimens/specimen_clean.R")
+  none <- data.frame(label = "x", count = 0L, file = "f.csv", stringsAsFactors = FALSE)
+  some <- data.frame(label = c("taxonomy", "dupes"), count = c(2L, 1L),
+                     file = c("a.csv", "b.csv"), stringsAsFactors = FALSE)
+  expect_equal(resolve_review_gate(none, "review", interactive_ok = TRUE),  "clean")     # nothing flagged
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = FALSE), "continue")  # batch: log + go
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "s"), "continue")  # skip
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) ""),  "stop")      # else stops
+  # non-blocking (iNat): a heads-up only -- always continues, whatever is typed
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "", blocking = FALSE), "continue")
+})
+
 test_that("flag_raw_clutter tags non-ID'd and missing rows", {
   src("specimens/specimen_clean.R")
   df <- tibble::tibble(ucsd_id = 1:4,

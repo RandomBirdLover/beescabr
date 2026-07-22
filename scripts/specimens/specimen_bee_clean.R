@@ -20,7 +20,8 @@
 #   transect          -> from `plot` (crosswalk variants) + spatial fallback
 #   flower_visited    -> the "ex. <plant>" value of method_or_plant (methods -> blank)
 #   cabr_bee_lethal_collection -> TRUE      the 8 other behavior flags -> blank
-#   location_needs_fix-> TRUE if lat/long missing (none should be)
+#   (specimens with missing lat/long are NOT a column -- they go to the review folder:
+#    data/specimens/specimens_clean/review/cabr_specimen_bee_location_missing.csv)
 #   taxon_id/taxon_rank + taxonomy -> from the lookup by name       sex -> kept
 #   is_10min / is_metadata / quality_grade / positional_accuracy / url -> blank
 #
@@ -58,8 +59,8 @@ SBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
 # final column order -- inat_bee_clean's IBC_COLUMN_ORDER, obs_id -> ucsd_id+sdnhm_id, + sex
 SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_survey", "survey_note",
                       "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      "flower_visited", "flower_visited_raw", "flower_taxon_id", "flower_in_park", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
-                      "location_needs_fix", "taxon_id", "taxon_rank", "quality_grade",
+                      "flower_visited", "flower_visited_raw", "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
+                      "taxon_id", "taxon_rank", "quality_grade",
                       SBC_TAXONOMY_COLS, "latitude", "longitude", "positional_accuracy",
                       "url", "sex")
 
@@ -111,11 +112,14 @@ sbc_transect_spatial <- function(df, transect_path = SBC_TRANSECTS, off_m = SBC_
 # ------------------------------------------------------------
 clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
                             prompt_fn = readline, verbose = TRUE) {
-  cleaned_dir <- "data/specimens/cleaned"
-  flags_out   <- file.path(cleaned_dir, "cabr_specimen_bee_taxonomy_flags.csv")
-  missing_out <- file.path(cleaned_dir, "cabr_specimen_bee_missing.csv")
-  dupes_out   <- file.path(cleaned_dir, "cabr_specimen_bee_duplicates.csv")
-  clean_out   <- PATHS$specimen_clean
+  cleaned_dir <- "data/specimens/specimens_clean"
+  review_dir  <- file.path(cleaned_dir, "review")   # QC side files, grouped for someone to review
+  flags_out    <- file.path(review_dir, "cabr_specimen_bee_taxonomy_flags.csv")
+  missing_out  <- file.path(review_dir, "cabr_specimen_bee_missing.csv")
+  dupes_out    <- file.path(review_dir, "cabr_specimen_bee_duplicates.csv")
+  locmiss_out  <- file.path(review_dir, "cabr_specimen_bee_location_missing.csv")
+  clean_out    <- PATHS$specimen_clean
+  dir.create(review_dir, recursive = TRUE, showWarnings = FALSE)
 
   specimens_path <- read_latest(SBC_RECORDS_DIR, SBC_RECORDS_PATTERN)
   message("Loading specimens: ", basename(specimens_path))
@@ -143,6 +147,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
                   nrow(df), n_pre_bee - nrow(df)))
 
   # --- taxon_id + full taxonomy + spell-check (needs the lookup) ---
+  n_taxonomy <- 0L
   if (file.exists(PATHS$taxonomy_lookup)) {
     lookup <- suppressMessages(read_csv(PATHS$taxonomy_lookup, show_col_types = FALSE))
     df <- attach_lookup_taxonomy(df, lookup)
@@ -156,12 +161,10 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
     } else tibble(genus = character(), species = character())
     known <- build_known_names(tax_check, inat_species)
     flags <- compute_taxonomy_flags(df, known$genera, known$genus_species)
-    dir.create(cleaned_dir, recursive = TRUE, showWarnings = FALSE)
     write_fresh(flags, flags_out, row.names = FALSE)
-    message(sprintf("  taxonomy spell-check: %d flag(s) -> %s", nrow(flags), basename(flags_out)))
-    if (nrow(flags) > 0 && verbose) print(as.data.frame(flags))
-    if (resolve_flag_gate(nrow(flags), interactive_ok, prompt_fn) == "stop")
-      stop("Stopping: fix the flagged names in the source .xlsx, then re-run.")
+    n_taxonomy <- nrow(flags)
+    message(sprintf("  taxonomy spell-check: %d flag(s) -> %s", n_taxonomy, basename(flags_out)))
+    if (n_taxonomy > 0 && verbose) print(as.data.frame(flags))
   } else {
     message("WARNING: taxonomy lookup not found (", PATHS$taxonomy_lookup,
             ") -- taxon_id + taxonomy left blank. Run the lookup (stage 5) first.")
@@ -208,18 +211,34 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   df$url <- NA_character_
   for (col in SBC_TAXONOMY_COLS) if (!col %in% names(df)) df[[col]] <- NA_character_
 
-  # --- QC side files ---
+  # --- QC side files (data/specimens/specimens_clean/review/ -- for someone to review + fix in the raw .xlsx) ---
   qc <- add_qc_flags(df)
-  write_fresh(qc |> filter(!is.na(missing_specimen) & missing_specimen == "Y"), missing_out, row.names = FALSE)
-  write_fresh(detect_duplicate_ids(df), dupes_out, row.names = FALSE)
+  miss_rows   <- qc |> filter(!is.na(missing_specimen) & missing_specimen == "Y")
+  dupe_rows   <- detect_duplicate_ids(df)
+  loc_missing <- df |> filter(is.na(latitude) | is.na(longitude)) |>
+    select(any_of(c("ucsd_id", "sdnhm_id", "collector", "observed_on", "plot", "transect", "latitude", "longitude")))
+  write_fresh(miss_rows,   missing_out, row.names = FALSE)
+  write_fresh(dupe_rows,   dupes_out,   row.names = FALSE)
+  write_fresh(loc_missing, locmiss_out, row.names = FALSE)
+
+  # --- ONE review checkpoint: surface every review-folder issue so none is silently missed ---
+  review_items <- data.frame(
+    label = c("taxonomy name flags", "duplicate IDs", "missing lat/long", "missing specimens"),
+    count = c(n_taxonomy, nrow(dupe_rows), nrow(loc_missing), nrow(miss_rows)),
+    file  = basename(c(flags_out, dupes_out, locmiss_out, missing_out)),
+    stringsAsFactors = FALSE)
+  if (resolve_review_gate(review_items, review_dir, interactive_ok, prompt_fn,
+                          fix_hint = "the raw .xlsx (find each row by ucsd_id / sdnhm_id)") == "stop")
+    stop("Stopping so you can fix the flagged rows in the raw .xlsx, then re-run. Review files: ", review_dir)
 
   clean <- df |> strip_control_chars() |> select(any_of(SBC_COLUMN_ORDER))
   dir.create(dirname(clean_out), recursive = TRUE, showWarnings = FALSE)
   write.csv(clean, clean_out, row.names = FALSE, na = "")
 
   message(sprintf("specimen_bee_clean: %d specimen rows -> %s", nrow(clean), clean_out))
-  message(sprintf("               %d with taxon_id | %d with flower_visited | %d missing lat/long (flagged)",
-                  sum(!is.na(clean$taxon_id)), sum(!is.na(clean$flower_visited)), sum(clean$location_needs_fix)))
+  message(sprintf("               %d with taxon_id | %d with flower_visited | %d missing lat/long -> review/%s",
+                  sum(!is.na(clean$taxon_id)), sum(!is.na(clean$flower_visited)),
+                  sum(df$location_needs_fix), basename(locmiss_out)))
   invisible(list(clean = clean))
 }
 

@@ -34,12 +34,38 @@ local({
   }, character(1), USE.NAMES = FALSE)
 }
 
+# plant_name_parts(x): split a plant name into genus + FULL-BINOMIAL species. Vectorized.
+#   "Encelia californica"         -> genus "Encelia",  species "Encelia californica"
+#   "Isocoma menziesii sedoides"  -> genus "Isocoma",  species "Isocoma menziesii"  (rolled to binomial)
+#   "Madia" / "Madia sp."         -> genus "Madia",    species NA  (no species named)
+#   "Cactaceae" (family)          -> genus NA,         species NA  (not a genus)
+plant_name_parts <- function(x) {
+  x  <- trimws(gsub("\\s+", " ", as.character(x)))
+  gs <- lapply(x, function(s) {
+    if (is.na(s) || s == "") return(c(NA_character_, NA_character_))
+    w <- strsplit(s, " ", fixed = TRUE)[[1]]
+    if (grepl("aceae$", w[1], ignore.case = TRUE)) return(c(NA_character_, NA_character_))  # family, not a genus
+    sp <- if (length(w) >= 2 && !(tolower(w[2]) %in% c("sp", "sp.", "spp", "spp.", "x", "×", "cf", "cf.", "aff", "aff.")))
+            paste(w[1], w[2]) else NA_character_
+    c(w[1], sp)
+  })
+  list(plant_genus   = vapply(gs, `[`, character(1), 1),
+       plant_species = vapply(gs, `[`, character(1), 2))
+}
+
 attach_flower_ids <- function(df, lookup_path = NULL) {
   if (is.null(lookup_path))
     lookup_path <- if (exists("PATHS") && !is.null(PATHS$plant_taxonomy_lookup)) PATHS$plant_taxonomy_lookup
                    else "data/reference/cabr_plant_taxonomy_lookup.csv"
   if (!"flower_taxon_id" %in% names(df)) df$flower_taxon_id <- NA_character_
   if (!"flower_in_park"  %in% names(df)) df$flower_in_park  <- NA
+  # plant_genus + full-binomial plant_species from the flower name (independent of the lookup)
+  if ("flower_visited" %in% names(df)) {
+    pp <- plant_name_parts(df$flower_visited); df$plant_genus <- pp$plant_genus; df$plant_species <- pp$plant_species
+  } else {
+    if (!"plant_genus"   %in% names(df)) df$plant_genus   <- NA_character_
+    if (!"plant_species" %in% names(df)) df$plant_species <- NA_character_
+  }
   if (is.null(lookup_path) || !file.exists(lookup_path) || !"flower_visited" %in% names(df)) return(df)
   lk <- suppressWarnings(suppressMessages(read_csv(lookup_path, show_col_types = FALSE, col_types = cols(.default = "c"))))
   if (!all(c("scientific_name", "taxon_id", "in_cabr_park_at_all") %in% names(lk))) return(df)

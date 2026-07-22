@@ -47,13 +47,13 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 |
 PLANT_BASIC_RANKS <- c("kingdom", "phylum", "class", "order", "family", "genus", "species")
 
 .plt_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
-PLT_ALL_TAXA     <- .plt_path("plant_all_taxa",         "data/observations/inat_clean/cabr_inat_plant_all_taxa.csv")
+PLT_ALL_TAXA     <- .plt_path("plant_all_taxa",         "data/observations/reference/cabr_inat_plant_all_taxa.csv")
 PLT_CROSSWALK    <- "data/project_info/master_crosswalk.csv"
 PLT_CACHE        <- .plt_path("plant_name_cache",       "data/reference/plant_name_resolution_cache.csv")
 PLT_LOOKUP_OUT   <- .plt_path("plant_taxonomy_lookup",  "data/reference/cabr_plant_taxonomy_lookup.csv")
 PLT_WORKLIST_OUT <- .plt_path("plant_not_in_park",      "data/reference/cabr_plant_specimen_not_in_park.csv")
 PLT_CONFIRMED    <- .plt_path("plant_park_confirmed",   "data/reference/plant_park_confirmed.csv")
-PLT_FORAGE       <- .plt_path("inat_bee_forage",        "data/observations/inat_clean/cabr_inat_bee_forage.csv")
+PLT_FORAGE       <- .plt_path("inat_bee_forage",        "data/observations/reference/cabr_inat_bee_forage.csv")
 
 PLT_LOOKUP_COLS <- c("taxon_id", "scientific_name", "common_name", "rank",
                      "in_cabr_park_at_all", "in_specimens", "in_observations", "in_bee_forage",

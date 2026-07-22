@@ -37,7 +37,7 @@ BF_CROSSWALK  <- "data/project_info/master_crosswalk.csv"
 # must be scoped to bees INSIDE the park, not the whole county export -- an
 # unscoped pull would import plants bees visit anywhere in San Diego.
 BF_MEMBERSHIP <- "data/observations/cabr_inat_raw.csv"
-BF_OUT        <- .bf_path("inat_bee_forage", "data/observations/inat_clean/cabr_inat_bee_forage.csv")
+BF_OUT        <- .bf_path("inat_bee_forage", "data/observations/reference/cabr_inat_bee_forage.csv")
 
 # bee_forage_names(): distinct flower_visited PLANT names + obs counts from the
 # flattened bee export. Mirrors the flower coalesce in ibc_annotations (most-

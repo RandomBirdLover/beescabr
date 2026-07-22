@@ -52,7 +52,7 @@ IBC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
 IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
-IBC_FIX_BEHAVIOR   <- "data/observations/inat_clean/qc/cabr_inat_bee_fix_behavior.csv"  # hand-back worklist: fields to fix (missing OR wrong)
+IBC_FIX_BEHAVIOR   <- "data/observations/review/cabr_inat_bee_fix_behavior.csv"  # hand-back worklist: fields to fix (missing OR wrong)
 IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
@@ -73,7 +73,7 @@ IBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
 # final column order for the clean table
 IBC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
                       "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
-                      IBC_ANNOT_COLS, "flower_taxon_id", "flower_in_park", "bee_situation", "location_needs_fix",
+                      IBC_ANNOT_COLS, "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation", "location_needs_fix",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IBC_TAXONOMY_COLS,
                       "latitude", "longitude", "positional_accuracy", "url")

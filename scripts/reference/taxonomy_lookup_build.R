@@ -28,7 +28,7 @@
 # the lookup becomes  Holway + iNat + specimen additions.
 #   * WHY  : specimen_bee_clean.R nets real bees the Holway checklist AND the iNat SD obs
 #            both miss (species no one photographed). They surface in
-#            data/specimens/cleaned/cabr_specimen_bee_taxonomy_flags.csv as
+#            data/specimens/specimens_clean/review/cabr_specimen_bee_taxonomy_flags.csv as
 #            "genus+species combo not in taxonomy lookup" -- those flags are the candidates.
 #   * WHERE: a curated specimen_additions.csv, MERGED here at build time. Do NOT hand-edit
 #            sd_bee_taxonomy_lookup.csv -- stage 5 rewrites it every run and would wipe

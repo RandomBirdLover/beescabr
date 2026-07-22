@@ -205,7 +205,7 @@ fpi_unknown_fields <- function(df, crosswalk, our_users) {
   }) |> filter(n_our > 0) |> arrange(desc(n_our), desc(n_obs))
 
   # attach real iNat field IDs if the map has been built (build_field_id_map.R)
-  idmap_path <- "data/observations/inat_field_id_map.csv"
+  idmap_path <- "data/observations/reference/inat_field_id_map.csv"
   if (nrow(res) && file.exists(idmap_path)) {
     idmap <- read_csv(idmap_path, show_col_types = FALSE) |>
       transmute(k = tolower(trimws(field_name)), inat_field_id)

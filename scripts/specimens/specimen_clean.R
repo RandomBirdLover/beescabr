@@ -162,6 +162,28 @@ resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
   if (tolower(trimws(ans)) == "y") "continue" else "stop"
 }
 
+# ONE consolidated review checkpoint so nothing in the review folder gets silently
+# missed. PURE (prompt injected). `items` is a data.frame(label, count, file):
+#   0 issues total       -> "clean" (silent)
+#   issues, batch mode    -> print the summary loudly, return "continue" (never blocks automation)
+#   issues, interactive   -> print the summary; 's'/'skip' continues as-is (for errors that
+#                            can't be fixed), anything else stops so the person fixes the .xlsx.
+resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = readline,
+                                fix_hint = "the raw .xlsx", blocking = TRUE) {
+  items <- items[!is.na(items$count) & items$count > 0, , drop = FALSE]
+  if (!nrow(items)) return("clean")
+  message("\n  ⚠ REVIEW NEEDED -- ", review_dir)
+  for (i in seq_len(nrow(items)))
+    message(sprintf("     %-24s %4d  -> %s", items$label[i], items$count[i], items$file[i]))
+  if (!interactive_ok) { message("     (batch mode: logged above, continuing)"); return("continue") }
+  if (!blocking) {   # heads-up only -- the run never stops here; the fix happens elsewhere, later
+    prompt_fn(sprintf("  Fix these on %s when you can (each row has its url). Press Enter to continue: ", fix_hint))
+    return("continue")
+  }
+  ans <- tolower(trimws(prompt_fn(sprintf("  Type 's' to skip and continue, or Enter to STOP and fix them in %s: ", fix_hint))))
+  if (ans %in% c("s", "skip", "c", "continue", "y", "yes")) "continue" else "stop"
+}
+
 # QC flags: which required-data fields are missing. genus is the one rank expected
 # on every specimen; species is deliberately NOT flagged.
 add_qc_flags <- function(df) {

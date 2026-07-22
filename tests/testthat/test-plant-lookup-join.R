@@ -38,6 +38,23 @@ test_that("attach_flower_ids folds a subspecies flower onto its species row", {
   expect_true(out$flower_in_park)
 })
 
+test_that("plant_name_parts splits a name into genus + full binomial (blank species for genus-only)", {
+  p <- plant_name_parts(c("Encelia californica", "Madia", "Madia sp.",
+                          "Isocoma menziesii sedoides", "Cactaceae", NA, ""))
+  expect_equal(p$plant_genus,   c("Encelia", "Madia", "Madia", "Isocoma", NA, NA, NA))
+  expect_equal(p$plant_species, c("Encelia californica", NA, NA, "Isocoma menziesii", NA, NA, NA))
+})
+
+test_that("attach_flower_ids adds plant_genus + full-binomial plant_species from the flower name", {
+  lk <- tempfile(fileext = ".csv")
+  write.csv(tibble(taxon_id = "101", scientific_name = "Acmispon glaber",
+                   rank = "species", in_cabr_park_at_all = "TRUE"), lk, row.names = FALSE, na = "")
+  out <- attach_flower_ids(tibble(flower_visited = c("Acmispon glaber", "Madia sp.", "Isocoma menziesii sedoides", NA)),
+                           lookup_path = lk)
+  expect_equal(out$plant_genus,   c("Acmispon", "Madia", "Isocoma", NA))
+  expect_equal(out$plant_species, c("Acmispon glaber", NA, "Isocoma menziesii", NA))
+})
+
 test_that("attach_flower_ids adds NA columns when the lookup file is absent", {
   out <- attach_flower_ids(tibble(flower_visited = "x"), lookup_path = tempfile(fileext = ".csv"))
   expect_true(all(c("flower_taxon_id", "flower_in_park") %in% names(out)))

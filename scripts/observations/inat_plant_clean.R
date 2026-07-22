@@ -34,7 +34,7 @@ IPC_ROSTER         <- "data/project_info/surveyor_roster.csv"
 IPC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_plant_clean.csv"
-IPC_ALL_TAXA       <- "data/observations/inat_clean/cabr_inat_plant_all_taxa.csv"  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
+IPC_ALL_TAXA       <- "data/observations/reference/cabr_inat_plant_all_taxa.csv"  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
 IPC_OFF_TRANSECT_M <- 50
 IPC_ROAD_BUFFER_M  <- 10
 
@@ -64,6 +64,7 @@ IPC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_
                       IPC_ANNOT_COLS, "location_needs_fix",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IPC_TAXONOMY_COLS,
+                      "plant_genus", "plant_species",
                       "latitude", "longitude", "positional_accuracy", "url")
 
 # TP / TP1 / TP2 -> TP, etc. (same rule the brain + bee cleaner use)
@@ -256,6 +257,12 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   if (!"flower_flowering" %in% names(df)) df$flower_flowering <- NA_character_
   if (!"survey_source" %in% names(df)) df$survey_source <- NA_character_   # tag / inferred_on_transect
   df$survey_method <- "nonlethal"   # iNaturalist observations are the NON-lethal survey
+
+  # plant_genus + full-binomial plant_species (the plant IS the taxon here) -- uniform
+  # with the bee + specimen tables so analysis can group on the same two columns everywhere.
+  if (!exists("plant_name_parts")) source("scripts/reference/plant_lookup_join.R")
+  .pp <- plant_name_parts(df$scientific_name)
+  df$plant_genus <- .pp$plant_genus; df$plant_species <- .pp$plant_species
 
   clean <- df |> select(any_of(IPC_COLUMN_ORDER))
 

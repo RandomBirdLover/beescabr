@@ -31,7 +31,7 @@ local({
 
 TRS_RECORDS_DIR     <- "data/specimens/records"
 TRS_RECORDS_PATTERN <- "^cabr_bee_specimens_record_V"
-TRS_WORKLIST_OUT    <- "data/specimens/cleaned/cabr_specimen_raw_cleanup_worklist.csv"
+TRS_WORKLIST_OUT    <- "data/specimens/specimens_clean/review/cabr_specimen_raw_cleanup_worklist.csv"
 
 # tidy_raw_specimens(): read the newest raw record, flag the cluttered rows
 # (non-ID'd, missing, duplicate ids), and write the worklist. Returns it invisibly.

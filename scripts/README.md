@@ -33,7 +33,7 @@ The runner sources modules in this order and calls them from `main()`:
 |---|---|---|---|
 | 1–2 | **Ingest + export** | `observations/engine/**` | `observations/cache/inat_cache.duckdb`, `export_flat.rds` |
 | 2b | **Plants** | `observations/engine/pipelines/ingest_plants.R` | `observations/cache/export_flat_plant.rds` |
-| 2c | **Field map** | `observations/build_field_id_map.R` | `observations/inat_field_id_map.csv` |
+| 2c | **Field map** | `observations/build_field_id_map.R` | `observations/reference/inat_field_id_map.csv` |
 | 2d | **Beeple calendars** | `project_info/finding_beeple_calendar.R` | `project_info/sources/beeple_calendar_windows/beeple_calendar_windows.csv` |
 | 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `observations/cabr_inat_raw.csv`, `project_info/master_per_survey_info.csv`, the review queues |
 | 3b–3e | **Review** (interactive) | `project_info/review_crosswalk.R`, `project_info/review_windows.R` (+ optional y/N notes review → `project_info/review_notes.R`) | updates `project_info/master_crosswalk.csv` + `*/review/*` |
