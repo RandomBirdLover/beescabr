@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>How to clear your flagged survey pins — CABR bee monitoring</title>
+<style>
+  :root{--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#3f3e3b;--muted:#898781;--bee:#eb6834;--plant:#2a78d6;
+        --zone:#1baf7a;--line:rgba(11,11,11,.12);--paper:#f4f3ef;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55;}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 22px 60px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 22px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:18px 20px;margin:16px 0;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+  .q{background:#fff8f2;border:1px solid rgba(235,104,52,.28);}
+  .q h2{margin:0 0 6px;font-size:16px;}
+  .q p{margin:0;font-size:14.5px;}
+  .opt{border-left:5px solid var(--c,#ccc);}
+  .A{--c:var(--bee);} .B{--c:var(--plant);}
+  .opt h2{margin:0 0 2px;font-size:16px;display:flex;align-items:center;gap:9px;}
+  .tag{font-size:11px;font-weight:700;color:#fff;background:var(--c);border-radius:20px;padding:2px 9px;letter-spacing:.3px;}
+  .opt .lead{margin:2px 0 12px;color:var(--ink2);font-size:14px;}
+  ol{margin:0;padding-left:20px;} li{margin:5px 0;font-size:14px;}
+  code{background:#eceae4;border-radius:4px;padding:1px 6px;font-size:12.5px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .chip{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:2px;border:1.5px solid #fff;box-shadow:0 0 0 1px var(--line);}
+  .foot{color:var(--muted);font-size:13px;margin-top:22px;border-top:1px solid var(--line);padding-top:14px;}
+  b{color:var(--ink);}
+  @media print{body{background:#fff;} .card{box-shadow:none;} .wrap{padding-top:12px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fixing your flagged survey pins 🐝</h1>
+  <p class="sub">Cabrillo National Monument bee monitoring · location cleanup on iNaturalist</p>
+
+  <div class="card">
+    <p style="margin:0;font-size:14.5px;">You got a map with some of your iNaturalist observations flagged
+    (<span class="chip" style="background:var(--bee)"></span> bee, <span class="chip" style="background:var(--plant)"></span> plant).
+    Their location pin landed <b>more than 50&nbsp;m from any survey transect</b>. Nothing has been deleted — we
+    just want the map to be accurate. For <b>each</b> flagged pin, ask one question and pick A or B.</p>
+  </div>
+
+  <div class="card q">
+    <h2>Ask yourself: “Was I actually doing a transect survey right there?”</h2>
+    <p>Open the observation (use the link on your map), then decide:</p>
+  </div>
+
+  <div class="card opt A">
+    <h2><span class="tag">A</span> The pin is in the WRONG place</h2>
+    <p class="lead">You <b>were</b> on the transect — iNaturalist just dropped the pin off it (a GPS glitch).
+      → <b>Move the pin onto the transect.</b></p>
+    <ol>
+      <li>On the observation page, click <b>Edit</b>.</li>
+      <li>On the location map, <b>drag the marker</b> to where you actually were on the transect (or type the correct coordinates).</li>
+      <li>Click <b>Save</b>. Leave all your tags and fields exactly as they are.</li>
+    </ol>
+  </div>
+
+  <div class="card opt B">
+    <h2><span class="tag">B</span> The pin is in the RIGHT place</h2>
+    <p class="lead">The location is correct — you just <b>weren’t on a transect</b> (a personal / opportunistic
+      sighting), and it picked up a survey tag by mistake. → <b>Remove the survey tag(s).</b> Don’t move the pin.</p>
+    <ol>
+      <li>On the observation page, click <b>Edit</b>.</li>
+      <li>In <b>Tags</b>, remove the Cabrillo survey hashtag — e.g. <code>Cabrillo2024BeeSurvey</code>,
+        <code>Cabrillo2025BeeSurvey</code>, or <code>CabrilloBee10MinuteSurvey</code> (whatever’s on it).</li>
+      <li>Scroll to <b>Observation Fields</b> and remove <b>“Bee Survey Transect Name”</b> (TP/BST/UPMON/OT)
+        if it’s there — plus any <code>#TP</code> / <code>#BST</code>-style transect tag.</li>
+      <li>Click <b>Save</b>. The observation stays on iNaturalist — it just won’t count as a transect survey.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <p style="margin:0;font-size:14px;"><b>Edge case:</b> if you <b>were</b> surveying but tagged the
+    <b>wrong transect</b>, don’t remove anything — just fix the <b>“Bee Survey Transect Name”</b> field to the
+    correct one (TP / BST / UPMON / OT). If you truly can’t remember, leave it and let Brandi know.</p>
+  </div>
+
+  <p class="foot">That’s it — no need to tell anyone when you finish. The next data pull picks up your fix and the
+  pin drops off the list. Questions → reach out to Brandi. Thanks for helping keep the survey clean! 🐝</p>
+</div>
+</body>
+</html>

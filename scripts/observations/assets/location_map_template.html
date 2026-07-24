@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>@@TITLE@@</title>
+<style>__LFCSS__</style>
+<script>__LFJS__</script>
+<style>
+  :root{--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--bee:#eb6834;--plant:#2a78d6;--transect:#111827;--zone:#1baf7a;--line:rgba(11,11,11,.12);}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);}
+  #map{position:absolute;inset:0;background:var(--surface);}
+  .panel{position:absolute;z-index:1000;background:rgba(252,252,251,.94);border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.08);backdrop-filter:blur(3px);}
+  #title{top:12px;left:12px;max-width:350px;padding:12px 14px;}
+  #title h1{margin:0 0 4px;font-size:15px;font-weight:650;}
+  #title p{margin:0;font-size:12px;line-height:1.5;color:var(--ink2);}
+  #title .n{font-weight:650;color:var(--ink);}
+  #legend{bottom:20px;right:12px;padding:10px 12px;font-size:12px;color:var(--ink2);}
+  #legend .row{display:flex;align-items:center;gap:8px;margin:3px 0;}
+  #legend .dot{width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px var(--line);}
+  #legend .ln{width:16px;height:0;border-top:3px solid var(--transect);}
+  #legend .zn{width:14px;height:10px;border-radius:2px;background:rgba(27,175,122,.16);border:1px dashed rgba(27,175,122,.7);}
+  #legend .bd{width:14px;height:10px;border-radius:2px;border:1.5px dashed var(--muted);}
+  .leaflet-popup-content{font-size:12.5px;line-height:1.5;color:var(--ink);margin:10px 12px;}
+  .leaflet-popup-content .sci{font-style:italic;font-weight:600;}
+  .leaflet-popup-content .k{color:var(--muted);}
+  .leaflet-popup-content a{color:var(--plant);font-weight:600;text-decoration:none;}
+  .trlabel{background:transparent;border:none;box-shadow:none;color:var(--transect);font-weight:700;font-size:11px;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;}
+  .howbtn{margin-top:9px;font:inherit;font-size:12px;font-weight:650;color:#fff;background:var(--bee);border:none;border-radius:7px;padding:6px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .howbtn:hover{filter:brightness(1.06);}
+  #backdrop{position:absolute;inset:0;z-index:1500;background:rgba(11,11,11,.32);display:none;}
+  #backdrop.open{display:block;}
+  #howto{position:absolute;z-index:1600;top:50%;left:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:86vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:18px 20px;display:none;}
+  #howto.open{display:block;}
+  #howto h2{margin:0 0 8px;font-size:16px;}
+  #howto .close{position:absolute;top:8px;right:12px;border:none;background:none;font-size:22px;line-height:1;color:var(--muted);cursor:pointer;}
+  #howto .ask{background:#fff8f2;border:1px solid rgba(235,104,52,.28);border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5;margin:0 0 6px;}
+  #howto .step{border-left:4px solid var(--c,#ccc);padding:1px 0 1px 11px;margin:12px 0;}
+  #howto .step.A{--c:var(--bee);} #howto .step.B{--c:var(--plant);}
+  #howto .step h3{margin:0 0 2px;font-size:13.5px;display:flex;align-items:center;gap:7px;}
+  #howto .step .tg{font-size:10px;font-weight:700;color:#fff;border-radius:20px;padding:1px 7px;background:var(--c);}
+  #howto .step p{margin:2px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);}
+  #howto code{background:#eceae4;border-radius:4px;padding:1px 5px;font-size:11px;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .leaflet-popup-content .log{margin-top:5px;padding:5px 7px;border-radius:6px;font-size:12px;line-height:1.45;}
+  .leaflet-popup-content .log.ok{background:#eefaf3;border:1px solid rgba(27,175,122,.4);}
+  .leaflet-popup-content .log.warn{background:#fff8f2;border:1px solid rgba(235,104,52,.4);}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="title" class="panel"><h1>@@TITLE@@</h1><p>@@SUBTITLE@@</p><button id="howBtn" class="howbtn">📍 How do I fix these?</button></div>
+<div id="backdrop"></div>
+<div id="howto">
+  <button class="close" id="howClose" aria-label="Close">×</button>
+  <h2>How to fix a flagged pin</h2>
+  @@HOWNOTE@@
+  <div class="ask">For each pin, ask: <b>“Was I actually surveying that transect right there?”</b> Open the observation (click its dot → the iNaturalist link), then pick A or B.</div>
+  <div class="step A"><h3><span class="tg">A</span> Pin is in the WRONG place</h3>
+    <p>You <b>were</b> on the transect — GPS just dropped the pin off it. On iNaturalist: <b>Edit → drag the marker onto the transect → Save.</b> Keep all your tags.</p></div>
+  <div class="step B"><h3><span class="tg">B</span> Pin is in the RIGHT place</h3>
+    <p>Correct spot, but it <b>wasn’t a transect survey</b> — it got tagged by mistake. On iNaturalist: <b>Edit</b>, remove the <code>Cabrillo…BeeSurvey</code> / <code>CabrilloBee10MinuteSurvey</code> hashtag and the <b>“Bee Survey Transect Name”</b> field (or a <code>#TP</code>-style tag), then <b>Save</b>. Don’t move the pin.</p></div>
+  <div class="step"><h3>Surveyed, but tagged the wrong transect?</h3>
+    <p>Don’t remove anything — just fix the <b>“Bee Survey Transect Name”</b> field to the correct one (TP / BST / UPMON / OT).</p></div>
+</div>
+<div id="legend" class="panel">
+  <div class="row"><span class="dot" style="background:var(--bee)"></span> Bee observation</div>
+  <div class="row"><span class="dot" style="background:var(--plant)"></span> Plant observation</div>
+  <div class="row"><span class="ln"></span> Transect line</div>
+  <div class="row"><span class="zn"></span> 50&nbsp;m on-transect zone</div>
+  <div class="row"><span class="bd"></span> Park boundary (NPS)</div>
+</div>
+<script>
+const D = __DATA__;
+const C = {bee:'#eb6834', plant:'#2a78d6', transect:'#111827', zone:'#1baf7a', muted:'#898781'};
+const map = L.map('map', {zoomControl:true, preferCanvas:true});
+const light = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);
+const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'Esri, Maxar'});
+const bd = L.geoJSON(D.boundary, {style:{color:C.muted, weight:1.5, dashArray:'5,4', fill:false}});
+const zone = L.geoJSON(D.buffer, {style:{color:C.zone, weight:1, dashArray:'4,3', fillColor:C.zone, fillOpacity:.12}});
+const casing = L.geoJSON(D.transects, {style:{color:'#fff', weight:6, opacity:.85}});
+const core = L.geoJSON(D.transects, {style:{color:C.transect, weight:2.5, opacity:.95}, onEachFeature:(f,l)=>{const nm=f.properties&&f.properties.Name; if(nm) l.bindTooltip(nm,{permanent:true,direction:'center',className:'trlabel'});}});
+const transects = L.layerGroup([casing, core]);
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function logline(p){
+  if(p.assigned) return `<div class="log ok">📋 Survey log: you logged <b>${esc(p.assigned)}</b> this day. Were you <b>on</b> ${esc(p.assigned)} right here? Drag the pin onto it, keep your tags. <b>Just nearby</b>, not surveying? Remove the survey tag instead.</div>`;
+  if(p.multi)    return `<div class="log warn">📋 That day you covered <b>${esc(p.multi)}</b>. Were you <b>on</b> one of them right here? Drag the pin onto it. <b>Just nearby</b>, not surveying? Remove the survey tag.</div>`;
+  if(p.offlog)   return `<div class="log warn">\u26A0 This date isn't in the survey log \u2014 likely not a transect survey; consider removing the tag.</div>`;
+  return '';
+}
+function pinLayer(rows,color){return L.layerGroup(rows.map(p=>L.circleMarker([p.lat,p.lon],{radius:6,color:'#fff',weight:1.5,fillColor:color,fillOpacity:.9}).bindPopup(`<div class="sci">${esc(p.sci)||'(no ID)'}</div><div><span class="k">date</span> ${esc(p.date)} &nbsp; <span class="k">your tag</span> ${esc(p.tr)||'\u2014'}</div>`+logline(p)+(p.url?`<div style="margin-top:4px"><a href="${esc(p.url)}" target="_blank" rel="noopener">open on iNaturalist \u2197</a></div>`:'')) ));}
+const beeL = pinLayer(D.bee, C.bee).addTo(map);
+const plantL = pinLayer(D.plant, C.plant).addTo(map);
+bd.addTo(map); zone.addTo(map); transects.addTo(map);
+L.control.layers({'Light basemap':light,'Satellite':sat},{'Bee pins':beeL,'Plant pins':plantL,'Transects':transects,'50 m zone':zone,'Park boundary':bd},{collapsed:true,position:'topright'}).addTo(map);
+let bounds = L.latLngBounds(D.bee.concat(D.plant).map(p=>[p.lat,p.lon]));
+bounds.extend(core.getBounds());
+map.fitBounds(bounds, {padding:[35,35], maxZoom:17});
+const bk=document.getElementById('backdrop'), ht=document.getElementById('howto');
+function toggleHow(o){bk.classList.toggle('open',o); ht.classList.toggle('open',o);}
+document.getElementById('howBtn').onclick=()=>toggleHow(true);
+document.getElementById('howClose').onclick=()=>toggleHow(false);
+bk.onclick=()=>toggleHow(false);
+</script>
+</body>
+</html>

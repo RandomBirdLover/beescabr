@@ -63,6 +63,7 @@ source("scripts/project_info/review_crosswalk.R")         # interactive review o
 source("scripts/project_info/review_windows.R")           # interactive review of survey-date windows
 source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
 source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
+source("scripts/observations/build_location_review_maps.R") # defines build_location_review_maps() -- stage 7d (per-observer maps)
 source("scripts/observations/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
 source("scripts/observations/qc/inat_misid_qc.R")         # defines inat_misid_qc() -- stage 10 (misID review queue)
 # ---- TAXONOMY + SPECIMENS + CHECKLISTS ----
@@ -302,15 +303,23 @@ main <- function() {
                 "bee pins to re-check", "plant pins to re-check"),
       count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior.csv")),
                 .n_rows(file.path(obs_rev, "review_mistagged_transects.csv")),
-                .n_rows(file.path(obs_rev, "cabr_inat_bee_location_review.csv")),
-                .n_rows(file.path(obs_rev, "cabr_inat_plant_location_review.csv"))),
+                .n_rows(file.path(obs_rev, "review_location", "cabr_inat_bee_location_review.csv")),
+                .n_rows(file.path(obs_rev, "review_location", "cabr_inat_plant_location_review.csv"))),
       file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv",
-                "cabr_inat_bee_location_review.csv", "cabr_inat_plant_location_review.csv"),
+                "review_location/cabr_inat_bee_location_review.csv", "review_location/cabr_inat_plant_location_review.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
                         fix_hint = "iNaturalist", blocking = FALSE)
   }, error = function(e) message("  [7c] observation review FAILED (non-fatal): ", conditionMessage(e)))
+
+  # ---- 7d. LOCATION-REVIEW MAPS: one self-contained iNaturalist "pins to fix" map per
+  # observer, written next to the two location_review CSVs + the shared instruction page,
+  # under data/observations/review/review_location/. The per-pin survey-log annotation is
+  # computed from the master, so tag-only intern days (e.g. 2024-05-05) label correctly. ----
+  message("\n== [7d] LOCATION MAPS: per-observer 'pins to fix' maps -> review_location/ ==")
+  tryCatch(build_location_review_maps(),
+           error = function(e) message("  [7d] location maps FAILED (non-fatal): ", conditionMessage(e)))
 
   # ---- 9. CHECKLISTS: cabr / pl / sd native-bee checklists (normalized tree from the lookup) ----
   # Each checklist carries parent taxa as their own rows (taxon_id/taxon_rank/names/taxonomy from the

@@ -53,7 +53,7 @@ IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: 
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
 IBC_FIX_BEHAVIOR   <- "data/observations/review/cabr_inat_bee_fix_behavior.csv"  # hand-back worklist: fields to fix (missing OR wrong)
-IBC_LOCATION_REVIEW <- "data/observations/review/cabr_inat_bee_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat
+IBC_LOCATION_REVIEW <- "data/observations/review/review_location/cabr_inat_bee_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
 IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
@@ -342,6 +342,7 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
     write.csv(clean, out_clean, row.names = FALSE, na = "")
     dir.create(dirname(IBC_FIX_BEHAVIOR), recursive = TRUE, showWarnings = FALSE)
     write.csv(fix_behavior, IBC_FIX_BEHAVIOR, row.names = FALSE, na = "")
+    dir.create(dirname(IBC_LOCATION_REVIEW), recursive = TRUE, showWarnings = FALSE)
     write.csv(location_review, IBC_LOCATION_REVIEW, row.names = FALSE, na = "")
   }
   n_walk    <- sum(df$status == "keep" & df$spatial_cat == "walk_in")

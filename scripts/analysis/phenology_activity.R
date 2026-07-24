@@ -10,8 +10,9 @@
 #
 # RIDGELINE plots (one smooth activity curve per taxon, stacked and indexed by
 # peak day, filled on a spring->fall gradient), three views:
-#   * PLANT phenology  -- per plant GENUS (non-lethal plant table; lethal plant
-#     dates are unreliable).
+#   * FLOWERING-PLANT phenology -- per plant GENUS, restricted to FLOWERING records
+#     (survey plant records; by protocol a plant is only logged when in flower, so
+#     this is bloom timing, not year-round presence). See section 1.
 #   * BEE phenology    -- per bee GENUS and per bee SPECIES (both methods pooled),
 #     the same two-rank split as the accumulation + network runs.
 #
@@ -47,7 +48,7 @@ MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- ridgeline phenology: one density curve per taxon, peak-ordered ----------
-phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS) {
+phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL) {
   df <- df[!is.na(df$taxon) & df$taxon != "" & !is.na(df$doy), ]
   keep <- names(which(table(df$taxon) >= min_records))
   df <- df[df$taxon %in% keep, ]
@@ -73,10 +74,11 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS) {
     labs(title = sprintf("%s phenology - seasonal activity (ridgeline)", label),
          subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
                             length(ord), min_records),
-         x = NULL, y = NULL) +
+         caption = scope, x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
-          plot.title  = element_text(face = "bold"))
+          plot.title  = element_text(face = "bold"),
+          plot.caption = element_text(color = "#b2182b", hjust = 0, size = 8, face = "bold"))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 
@@ -107,11 +109,25 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS) {
 
 doy_of <- function(x) suppressWarnings(as.integer(format(as.Date(x), "%j")))
 
-# ---- 1. PLANT phenology (per plant genus; non-lethal plant table) ------------
-plants <- read.csv(PATHS$inat_plant_clean, stringsAsFactors = FALSE, check.names = FALSE)
-message("Building phenology ridgelines:")
+# ---- 1. FLOWERING-PLANT phenology (per plant genus; survey records = flowering) -
+# A plant is around all year, so "recorded" != "flowering". By survey protocol a
+# plant is only photographed/logged WHEN IT IS FLOWERING, so survey records are the
+# flowering signal. The flower_flowering y/n column is almost never filled (only ~68
+# of 9,243 rows), so it can't be the filter on its own -- we use it only to DROP the
+# handful explicitly marked "no". Flowering set = is_survey TRUE and flower_flowering
+# is not "no". This makes the curves seasonal BLOOM timing, not mere presence.
+is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
+plants_all <- read.csv(PATHS$inat_plant_clean, stringsAsFactors = FALSE, check.names = FALSE)
+plants <- plants_all %>%
+  filter(is_true(is_survey), tolower(str_squish(flower_flowering)) != "no")
+message(sprintf("Building phenology ridgelines:\n  Flowering plants: %d of %d records (survey-only; dropped %d non-survey, %d flower_flowering='no')",
+                nrow(plants), nrow(plants_all),
+                sum(!is_true(plants_all$is_survey)),
+                sum(is_true(plants_all$is_survey) & tolower(str_squish(plants_all$flower_flowering)) == "no")))
 phenology_ridge(data.frame(taxon = str_squish(plants$plant_genus), doy = doy_of(plants$observed_on)),
-                file.path(OUT_DIR, "phenology_plant_genus.png"), "Plant genus")
+                file.path(OUT_DIR, "phenology_plant_genus.png"), "Flowering plant genus",
+                scope = paste0("Scope: FLOWERING records only - survey plant records are in-flower by protocol\n",
+                               "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."))
 
 # ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)

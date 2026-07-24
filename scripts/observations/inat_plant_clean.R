@@ -35,7 +35,7 @@ IPC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_plant_clean.csv"
 IPC_ALL_TAXA       <- "data/observations/reference/cabr_inat_plant_all_taxa.csv"  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
-IPC_LOCATION_REVIEW <- "data/observations/review/cabr_inat_plant_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat
+IPC_LOCATION_REVIEW <- "data/observations/review/review_location/cabr_inat_plant_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
 IPC_OFF_TRANSECT_M <- 50
 IPC_ROAD_BUFFER_M  <- 10
 
