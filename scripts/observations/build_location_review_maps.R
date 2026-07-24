@@ -243,9 +243,12 @@ build_location_review_maps <- function(write = TRUE) {
   if (write && file.exists(BLRM_INSTRUCT))
     file.copy(BLRM_INSTRUCT, file.path(BLRM_DIR, "cabr_fix_instructions.html"), overwrite = TRUE)
 
-  message(sprintf("  wrote %d observer map(s) + instructions to %s/", length(made), BLRM_DIR))
+  n_bee <- length(bee); n_plant <- length(plant)
+  message(sprintf("  %d bee + %d plant survey pins sit >50 m from any transect — still in the clean data, just flagged to re-check on iNaturalist.",
+                  n_bee, n_plant))
+  message(sprintf("  Built a 'pins to fix' map per surveyor (+ cabr_fix_instructions.html) in %s/", BLRM_DIR))
   if (length(made)) {
-    message("  → SEND each surveyor their own map (plus cabr_fix_instructions.html) so they can fix their pins on iNaturalist:")
+    message("  → SEND each surveyor their own map (with the instructions page) so they can re-check theirs — biggest lists first:")
     ord <- order(-vapply(made, function(s) s$n, numeric(1)))          # biggest lists first (Tom / Phil at the top)
     for (s in made[ord])
       message(sprintf("       %-10s @%-15s %3d pin%s  ->  by_surveyors/cabr_pins_to_fix_%s.html",

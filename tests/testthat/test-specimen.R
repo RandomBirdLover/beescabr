@@ -121,23 +121,34 @@ test_that("build_old_scientific_name handles the three blank cases", {
   expect_equal(out$old_scientific_name[3], "Andrena prunorum")
 })
 
-test_that("resolve_flag_gate: clean / continue / stop", {
+# standard vocabulary: skip|s|continue|c|go|ok|y|yes -> continue ; stop|x|halt|fix|n|no -> stop ;
+# a bare Enter / unrecognized input RE-ASKS (never guesses). A fake that feeds a queue of
+# answers lets us assert the re-ask loop.
+.fake_answers <- function(xs) { i <- 0L; function(...) { i <<- i + 1L; xs[[min(i, length(xs))]] } }
+
+test_that("resolve_flag_gate: clean / continue / stop (standard vocab)", {
   src("specimens/specimen_clean.R")
   expect_equal(resolve_flag_gate(0, interactive_ok = TRUE), "clean")
   expect_equal(resolve_flag_gate(3, interactive_ok = FALSE), "continue")   # non-interactive skips
-  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "y"), "continue")
-  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "n"), "stop")
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "skip"), "continue")
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "stop"), "stop")
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "y"), "continue")  # synonym
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "n"), "stop")       # synonym
 })
 
-test_that("resolve_review_gate: clean / batch-continue / interactive skip vs stop", {
+test_that("resolve_review_gate: clean / batch-continue / standard skip vs stop", {
   src("specimens/specimen_clean.R")
   none <- data.frame(label = "x", count = 0L, file = "f.csv", stringsAsFactors = FALSE)
   some <- data.frame(label = c("taxonomy", "dupes"), count = c(2L, 1L),
                      file = c("a.csv", "b.csv"), stringsAsFactors = FALSE)
   expect_equal(resolve_review_gate(none, "review", interactive_ok = TRUE),  "clean")     # nothing flagged
   expect_equal(resolve_review_gate(some, "review", interactive_ok = FALSE), "continue")  # batch: log + go
-  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "s"), "continue")  # skip
-  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) ""),  "stop")      # else stops
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "skip"), "continue")
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "stop"), "stop")
+  # a bare Enter / garbage RE-ASKS rather than guessing; here: "" then "junk" then "stop"
+  suppressMessages(
+    expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE,
+                                     prompt_fn = .fake_answers(c("", "junk", "stop"))), "stop"))
   # non-blocking (iNat): a heads-up only -- always continues, whatever is typed
   expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "", blocking = FALSE), "continue")
 })

@@ -129,6 +129,16 @@ cw_add_plant_canonical <- function(cw, canonical, variant) {
   cw_append(cw, g$i, "specimen_label_variants", variant)
 }
 
+# On-demand ("?") help -- plain-language key legend (same control keys as the other reviewers).
+.cpn_help <- function() {
+  cat("\n  For each unknown plant name, tell me where it goes:\n")
+  cat("   <Enter>   file it under the highlighted (*) typo guess -- if there's no *, this just skips\n")
+  cat("   <number>  file it under that nearest canonical (e.g. 2)\n")
+  cat("   a         ADD it as a brand-new canonical plant\n")
+  cat("   s         skip for now (stays unreviewed, returns next run)\n")
+  cat("   q         save & quit                       ?  show this help\n\n")
+}
+
 # ------------------------------------------------------------
 # review_plant_names(): the interactive loop (mirrors review_unknowns).
 # ------------------------------------------------------------
@@ -153,7 +163,7 @@ review_plant_names <- function(cw_path = CPN_CW,
 
   message(sprintf("%d unknown plant name(s) to review.", nrow(unk)))
   cat("  For each: <Enter>=accept * guess as a spelling of it | <number>=file under that canonical",
-      "  a=ADD as a new canonical plant | s=skip | q=save & quit\n", sep = "\n")
+      "  a=ADD as a new canonical plant | s=skip | q=save & quit | ?=help\n", sep = "\n")
   changed <- FALSE
   for (k in seq_len(nrow(unk))) {
     it <- unk$name[k]; src <- unk$source[k]
@@ -166,8 +176,8 @@ review_plant_names <- function(cw_path = CPN_CW,
       labs <- sprintf("%d=%s%s", seq_along(near), near, ifelse(!is.na(sugg) & near == sugg, "*", ""))
       cat("  nearest canonicals: ", paste(labs, collapse = "   "), "\n")
     }
-    cat("  <Enter>=accept*   <number>=file under that   a=add-as-new   s=skip   q=save & quit\n")
-    ans <- trimws(prompt_fn("> ")); low <- tolower(ans)
+    cat("  <Enter>=accept*   <number>=file under that   a=add-as-new   s=skip   q=save & quit   ?=help\n")
+    repeat { ans <- trimws(prompt_fn("> ")); low <- tolower(ans); if (low != "?") break; .cpn_help() }
     if (low == "q") break
     if (low == "s") next
     if (low == "a") { cw <- cw_add_plant_canonical(cw, it, it); changed <- TRUE; next }

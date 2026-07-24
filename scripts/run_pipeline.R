@@ -295,29 +295,30 @@ main <- function() {
   # (stray transect tag) + the bee/plant location_review files (survey pins far from any transect).
   # Each row carries the observation's url, so you open it and fix it there; the next iNat pull picks
   # up your fix. Non-blocking: surfaces + prompts, then continues.
-  message("\n== [7c] OBSERVATION REVIEW: iNat obs to fix (open each url) ==")
+  # (The off-transect LOCATION pins are NOT listed here -- they are the whole subject of
+  # stage 7d below, which surfaces them AND builds the per-surveyor maps in one place, so
+  # they aren't split across two prompts.)
+  message("\n== [7c] OBSERVATION REVIEW: iNat field / tag fixes (open each url) ==")
   tryCatch({
     obs_rev   <- "data/observations/review"
     obs_items <- data.frame(
-      label = c("bee flower fields to fix", "stray transect tags",
-                "bee pins to re-check", "plant pins to re-check"),
+      label = c("bee flower fields to fix", "stray transect tags"),
       count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior.csv")),
-                .n_rows(file.path(obs_rev, "review_mistagged_transects.csv")),
-                .n_rows(file.path(obs_rev, "review_location", "cabr_inat_bee_location_review.csv")),
-                .n_rows(file.path(obs_rev, "review_location", "cabr_inat_plant_location_review.csv"))),
-      file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv",
-                "review_location/cabr_inat_bee_location_review.csv", "review_location/cabr_inat_plant_location_review.csv"),
+                .n_rows(file.path(obs_rev, "review_mistagged_transects.csv"))),
+      file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
                         fix_hint = "iNaturalist", blocking = FALSE)
   }, error = function(e) message("  [7c] observation review FAILED (non-fatal): ", conditionMessage(e)))
 
-  # ---- 7d. LOCATION-REVIEW MAPS: one self-contained iNaturalist "pins to fix" map per
-  # observer, written next to the two location_review CSVs + the shared instruction page,
-  # under data/observations/review/review_location/. The per-pin survey-log annotation is
-  # computed from the master, so tag-only intern days (e.g. 2024-05-05) label correctly. ----
-  message("\n== [7d] LOCATION MAPS: per-observer 'pins to fix' maps -> review_location/ ==")
+  # ---- 7d. LOCATION REVIEW: the off-transect survey pins (bee + plant) that sit >50 m from
+  # any transect. This is the SINGLE place they surface: it reports the counts, builds one
+  # self-contained iNaturalist "pins to fix" map per surveyor (next to the two location_review
+  # CSVs + the shared instruction page, under review_location/), and prompts you to send them.
+  # The per-pin survey-log annotation is computed from the master, so tag-only intern days
+  # (e.g. 2024-05-05) label correctly. ----
+  message("\n== [7d] LOCATION REVIEW: off-transect survey pins -> a 'pins to fix' map per surveyor ==")
   tryCatch(build_location_review_maps(),
            error = function(e) message("  [7d] location maps FAILED (non-fatal): ", conditionMessage(e)))
 

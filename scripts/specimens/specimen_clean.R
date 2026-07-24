@@ -161,23 +161,45 @@ compute_taxonomy_flags <- function(df, known_genera, known_genus_species) {
     distinct()
 }
 
+# ------------------------------------------------------------------------------
+# STANDARD review-gate input. ONE vocabulary for every STOP / CONTINUE decision in
+# the pipeline, so a reviewer never has to guess whether Enter means "stop" or "go".
+# Type a word (case-insensitive; a few synonyms accepted). A bare Enter or ANY
+# unrecognized input RE-ASKS instead of guessing -- so a stray keystroke can neither
+# skip a real problem nor halt the run by accident.
+#   continue:  skip | s | continue | c | go | ok | y | yes
+#   stop:      stop | x | halt | fix | n | no
+# Heads-up prompts that have NO stop/continue decision just say "Press Enter to
+# continue" (Enter always means continue there -- there's nothing to decide).
+# ------------------------------------------------------------------------------
+REVIEW_CONTINUE_WORDS <- c("skip", "s", "continue", "c", "go", "ok", "y", "yes")
+REVIEW_STOP_WORDS     <- c("stop", "x", "halt", "fix", "n", "no")
+.review_ask <- function(prompt_fn, lead) {
+  repeat {
+    ans <- tolower(trimws(prompt_fn(paste0(
+      lead, "  Type  skip  to continue, or  stop  to halt and fix now  [skip / stop]: "))))
+    if (ans %in% REVIEW_CONTINUE_WORDS) return("continue")
+    if (ans %in% REVIEW_STOP_WORDS)     return("stop")
+    message("     (please type  skip  or  stop)")
+  }
+}
+
 # Decide what to do about spell-check flags. PURE (prompt injected):
 #   0 flags            -> "clean"
 #   flags, batch mode  -> "continue" (log & proceed; the automated pipeline)
-#   flags, interactive -> prompt; "continue" on y, "stop" otherwise
+#   flags, interactive -> STANDARD skip/stop prompt -> "continue" / "stop"
 resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
   if (n_flags == 0) return("clean")
   if (!interactive_ok) return("continue")
-  ans <- prompt_fn("  Have you reviewed the flags above and fixed the source .xlsx? (y = fixed / confirmed, n = stop and fix now): ")
-  if (tolower(trimws(ans)) == "y") "continue" else "stop"
+  .review_ask(prompt_fn, "  Reviewed the flags above and fixed the source .xlsx?")
 }
 
 # ONE consolidated review checkpoint so nothing in the review folder gets silently
 # missed. PURE (prompt injected). `items` is a data.frame(label, count, file):
 #   0 issues total       -> "clean" (silent)
 #   issues, batch mode    -> print the summary loudly, return "continue" (never blocks automation)
-#   issues, interactive   -> print the summary; 's'/'skip' continues as-is (for errors that
-#                            can't be fixed), anything else stops so the person fixes the .xlsx.
+#   issues, interactive   -> heads-up (blocking = FALSE) is Enter-to-continue; a blocking
+#                            checkpoint uses the STANDARD skip/stop prompt.
 resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = readline,
                                 fix_hint = "the raw .xlsx", blocking = TRUE) {
   items <- items[!is.na(items$count) & items$count > 0, , drop = FALSE]
@@ -190,8 +212,7 @@ resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = r
     prompt_fn(sprintf("  Fix these on %s when you can (each row has its url). Press Enter to continue: ", fix_hint))
     return("continue")
   }
-  ans <- tolower(trimws(prompt_fn(sprintf("  Type 's' to skip and continue, or Enter to STOP and fix them in %s: ", fix_hint))))
-  if (ans %in% c("s", "skip", "c", "continue", "y", "yes")) "continue" else "stop"
+  .review_ask(prompt_fn, sprintf("  These need fixing in %s.", fix_hint))
 }
 
 # QC flags: which required-data fields are missing. genus is the one rank expected
