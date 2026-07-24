@@ -19,6 +19,7 @@
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(jsonlite); library(sf)}))
 
 BLRM_DIR        <- "data/observations/review/review_location"
+BLRM_MAPS_DIR   <- file.path(BLRM_DIR, "by_surveyors")   # the per-surveyor maps live here; CSVs + instructions stay at the top of review_location/
 BLRM_BEE_CSV    <- file.path(BLRM_DIR, "cabr_inat_bee_location_review.csv")
 BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "cabr_inat_plant_location_review.csv")
 BLRM_ROSTER     <- "data/project_info/surveyor_roster.csv"
@@ -183,7 +184,10 @@ build_location_review_maps <- function(write = TRUE) {
   template <- rawToChar(readBin(BLRM_TEMPLATE, "raw", n = file.info(BLRM_TEMPLATE)$size))
   Encoding(template) <- "UTF-8"
 
-  if (write) dir.create(BLRM_DIR, recursive = TRUE, showWarnings = FALSE)
+  if (write) {
+    dir.create(BLRM_DIR, recursive = TRUE, showWarnings = FALSE)
+    dir.create(BLRM_MAPS_DIR, recursive = TRUE, showWarnings = FALSE)
+  }
 
   observers <- unique(vapply(c(bee, plant), function(p) p$obs, character(1)))
   made <- list()
@@ -232,7 +236,7 @@ build_location_review_maps <- function(write = TRUE) {
     html <- .blrm_inject(html, "__LFJS__", lf$js)
 
     if (write)
-      writeBin(charToRaw(enc2utf8(html)), file.path(BLRM_DIR, paste0("cabr_pins_to_fix_", u, ".html")))
+      writeBin(charToRaw(enc2utf8(html)), file.path(BLRM_MAPS_DIR, paste0("cabr_pins_to_fix_", u, ".html")))
     made[[length(made) + 1L]] <- list(fn = fn, u = u, n = n)
   }
 
@@ -244,7 +248,7 @@ build_location_review_maps <- function(write = TRUE) {
     message("  → SEND each surveyor their own map (plus cabr_fix_instructions.html) so they can fix their pins on iNaturalist:")
     ord <- order(-vapply(made, function(s) s$n, numeric(1)))          # biggest lists first (Tom / Phil at the top)
     for (s in made[ord])
-      message(sprintf("       %-10s @%-15s %3d pin%s  ->  cabr_pins_to_fix_%s.html",
+      message(sprintf("       %-10s @%-15s %3d pin%s  ->  by_surveyors/cabr_pins_to_fix_%s.html",
                       s$fn, s$u, s$n, if (s$n != 1) "s" else " ", s$u))
     if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1")
       invisible(readline("  Email each surveyor their map when you can. Press Enter to continue: "))
