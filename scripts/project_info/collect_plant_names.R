@@ -28,6 +28,8 @@
 
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(stringr)}))
 
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
+
 local({
   sdir <- "scripts"
   for (cand in c("scripts", "../scripts", "../../scripts", "../../../scripts"))
@@ -153,15 +155,16 @@ review_plant_names <- function(cw_path = CPN_CW,
 
   collected <- collect_plant_names(specimen_clean_path, plant_clean_path)
   unk <- unknown_plant_names(collected, cw)
-  if (!nrow(unk)) { message("Plant names: all ", nrow(collected), " recognized by the crosswalk. Nothing to review."); return(invisible(cw)) }
+  if (!nrow(unk)) { bx_kv("Plant names", "all ", nrow(collected), " recognized — nothing to review"); return(invisible(cw)) }
 
   if (!interactive_ok) {
     p <- .cpn_write_worklist(unk, cw, worklist_path)
-    message(sprintf("%d unknown plant name(s) -> %s (run review_plant_names() interactively to file them).", nrow(unk), p))
+    bx_kv("Plant names", nrow(unk), " unknown name(s) to review")
+    bx_out(basename(p))
     return(invisible(cw))
   }
 
-  message(sprintf("%d unknown plant name(s) to review.", nrow(unk)))
+  bx_kv("Plant names", nrow(unk), " unknown name(s) to review")
   cat("  For each: <Enter>=accept * guess as a spelling of it | <number>=file under that canonical",
       "  a=ADD as a new canonical plant | s=skip | q=save & quit | ?=help\n", sep = "\n")
   changed <- FALSE

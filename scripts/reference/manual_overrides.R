@@ -156,7 +156,7 @@ write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL,
                correct_name = NA_character_, note = NA_character_, inat_search_url = open$inat_search_url)
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   suppressWarnings(readr::write_csv(wl, path, na = ""))
-  message(sprintf("  taxon review worklist: %d taxa the auto-search couldn't resolve -> %s",
+  message(sprintf("  taxon review worklist: %d bee names need an iNat taxon_id -> %s",
                   nrow(wl), basename(path)))
   invisible(wl)
 }
@@ -171,7 +171,7 @@ prompt_missing_taxon_ids <- function(cache_path = RMI_CACHE_PATH, overrides_path
   if (!isTRUE(interactive_ok)) return(0L)
   open <- .mo_open_worklist(cache_path, load_manual_overrides(overrides_path))
   if (!nrow(open)) return(0L)
-  message(sprintf("\n=== Fill missing taxon_ids: %d taxa the auto-search couldn't resolve ===", nrow(open)))
+  message(sprintf("\n=== Fill missing taxon_ids: %d bee names need an iNat taxon_id ===", nrow(open)))
   message("   Look each up on iNaturalist (URL shown). Enter its taxon_id, or 'id Current name' to")
   message("   also correct the name; 'n' = no id yet, blank = skip, 'q' = stop (keep what's entered).")
   cols <- c("rank", "name", "taxon_id", "correct_name", "note")

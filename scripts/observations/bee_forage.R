@@ -20,6 +20,7 @@
 # Run: source("scripts/observations/bee_forage.R"); write_bee_forage()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readr) }))
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 local({
   sdir <- "scripts"
@@ -51,7 +52,7 @@ bee_forage_names <- function(export_path = BF_EXPORT, crosswalk_path = BF_CROSSW
   # rows). Without it we'd harvest forage from bees across the whole county export,
   # which is not in-park evidence. No membership file -> no forage (fail safe).
   if (!file.exists(membership_path)) {
-    message("  (bee forage: no CABR membership file -- skipped, would otherwise pull county-wide)")
+    bx_note("bee forage: no CABR membership file -- skipped, would otherwise pull county-wide")
     return(empty)
   }
   ex_full <- readRDS(export_path)
@@ -85,7 +86,7 @@ write_bee_forage <- function(export_path = BF_EXPORT, crosswalk_path = BF_CROSSW
   fg <- bee_forage_names(export_path, crosswalk_path, membership_path)
   dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
   write_fresh(fg, out_path, na = "")
-  if (verbose) message(sprintf("bee forage: %d distinct flower plants -> %s", nrow(fg), out_path))
+  if (verbose) { bx_kv("Forage", format(nrow(fg), big.mark = ","), " flower species bees visited"); bx_out(basename(out_path)) }
   invisible(fg)
 }
 

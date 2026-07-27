@@ -26,6 +26,7 @@
 # Run: source("scripts/observations/inat_plant_clean.R"); inat_plant_clean()
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(sf); library(stringr)}))
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 IPC_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"
 IPC_EXPORT         <- "data/observations/cache/export_flat_plant.rds"
@@ -147,7 +148,7 @@ ipc_spatial_flags <- function(keep_rows, transect_path, road_path,
                               off_m = IPC_OFF_TRANSECT_M, road_m = IPC_ROAD_BUFFER_M) {
   base <- tibble(obs_id = as.character(keep_rows$obs_id), spatial_cat = "on_transect")
   if (!file.exists(transect_path)) {
-    message("  (spatial flags: no transect shapefile -- keep rows left as survey)"); return(base)
+    bx_note("spatial flags: no transect shapefile -- keep rows left as survey"); return(base)
   }
   tl <- suppressWarnings(sf::st_read(transect_path, quiet = TRUE))
   names(tl)[tolower(names(tl)) == "name"] <- "Name"
@@ -169,7 +170,7 @@ ipc_spatial_flags <- function(keep_rows, transect_path, road_path,
     rd <- suppressWarnings(sf::st_read(road_path, quiet = TRUE)) |> sf::st_transform(sf::st_crs(tl))
     d_road <- as.numeric(sf::st_distance(pts, sf::st_union(rd)))
   } else {
-    message("  (spatial flags: no access-road shapefile -- walk-in not identified)")
+    bx_note("spatial flags: no access-road shapefile -- walk-in not identified")
     d_road <- rep(Inf, nrow(pts))
   }
 
@@ -217,7 +218,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
     surveyors <- if ("inaturalist_username" %in% names(roster)) roster$inaturalist_username else character(0)
     mem <- ipc_scope_to_surveyors(mem, surveyors)
   } else {
-    message("  (scope: no roster at ", roster_path, " -- keeping all in-box plant obs)")
+    bx_note("scope: no roster at ", roster_path, " -- keeping all in-box plant obs")
   }
 
   ex_full <- readRDS(export_path)
@@ -251,7 +252,8 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
       arrange(scientific_name)
     dir.create(dirname(IPC_ALL_TAXA), recursive = TRUE, showWarnings = FALSE)
     write.csv(all_taxa, IPC_ALL_TAXA, row.names = FALSE, na = "")
-    message(sprintf("               all-observer in-park plant taxa: %d -> %s", nrow(all_taxa), IPC_ALL_TAXA))
+    bx_kv("In-park taxa", format(nrow(all_taxa), big.mark = ","), " (all observers)")
+    bx_out(basename(IPC_ALL_TAXA))
   }
 
   df <- mem |> left_join(ex, by = "obs_id") |> left_join(tax, by = "obs_id") |> left_join(flow, by = "obs_id")
@@ -292,10 +294,11 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   n_walk <- sum(df$status == "keep" & df$spatial_cat == "walk_in")
   n_bad  <- sum(as.logical(df$location_needs_fix) %in% TRUE)
   n_flow <- sum(!is.na(clean$flower_flowering))
-  message(sprintf("inat_plant_clean: %d surveyor plant rows | %d survey / %d not-survey -> %s",
-                  nrow(clean), sum(clean$is_survey), sum(!clean$is_survey), out_clean))
-  message(sprintf("               spatial: %d walk-in re-marked NOT survey | %d location_needs_fix -> %s | annotations: %d with flower_flowering",
-                  n_walk, n_bad, basename(IPC_LOCATION_REVIEW), n_flow))
+  bx_kv("Plants", format(nrow(clean), big.mark = ","), " surveyor rows — ",
+        sum(clean$is_survey), " survey / ", sum(!clean$is_survey), " other")
+  bx_out(basename(out_clean))
+  bx_cont("spatial: ", n_walk, " walk-in re-marked NOT survey · ", n_bad,
+          " pins off-transect → review · annotations: ", format(n_flow, big.mark = ","), " with flower_flowering")
   invisible(list(clean = clean, location_review = location_review))
 }
 

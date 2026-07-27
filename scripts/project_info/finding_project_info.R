@@ -49,6 +49,8 @@ library(tidyr)
 library(readr)
 library(sf)
 
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
+
 # transect resolver (majority rule) -- defines resolve_transects(); guarded so the
 # brain still runs if the file isn't present.
 if (file.exists("scripts/project_info/resolve_beeple_transects_per_survey.R")) source("scripts/project_info/resolve_beeple_transects_per_survey.R")
@@ -303,7 +305,7 @@ finding_project_info <- function(write = TRUE) {
   # plant, before the first plant pull) is skipped -- map_dfr drops the NULL.
   base <- purrr::map_dfr(FPI_EXPORTS, function(s) {
     if (!file.exists(s$path)) {
-      message("  (export absent, skipping ", s$kind, ": ", s$path, ")")
+      bx_note("(export absent, skipping ", s$kind, ": ", s$path, ")")
       return(NULL)
     }
     x <- readRDS(s$path)
@@ -363,15 +365,12 @@ finding_project_info <- function(write = TRUE) {
     write.csv(unknown_tags,   FPI_UNKNOWN_TAGS,   row.names = FALSE, na = "")
     write.csv(unknown_fields, FPI_UNKNOWN_FIELDS, row.names = FALSE, na = "")
     write.csv(unknown_notes,  FPI_UNKNOWN_NOTES,  row.names = FALSE, na = "")
-    message("Wrote:")
-    message("  per_observation_raw_info.csv  ", nrow(membership),     " rows")
-    message("  master_per_survey_info.csv                      ", nrow(survey_dates),   " confirmed surveys")
-    message("  review_beeple_survey_windows.csv          ", nrow(review_windows), " windows to review")
-    if (!is.null(mistags)) message("  review_mistagged_transects.csv     ", nrow(mistags), " stray transect tags to fix")
-    if (!is.null(ties) && nrow(ties)) message("  review_transect_overlap.csv    ", nrow(ties), " tie day(s) to rule")
-    message("  review_inat_unknown_tags.csv        ", nrow(unknown_tags),   " hashtags to review")
-    message("  review_inat_unknown_fields.csv      ", nrow(unknown_fields), " obs-field names to review")
-    message("  review_inat_unknown_notes.csv       ", nrow(unknown_notes),  " notes to review")
+    bx_kv("Classified", format(nrow(membership), big.mark = ","), " observations (bees + plants)")
+    bx_kv("Surveys", nrow(survey_dates), " confirmed")
+    bx_kv("Review queue", nrow(unknown_tags), " unknown tags · ", nrow(unknown_fields), " fields · ", nrow(unknown_notes), " notes · ", nrow(review_windows), " windows")
+    if (!is.null(mistags)) bx_cont(nrow(mistags), " stray transect tags to fix")
+    if (!is.null(ties) && nrow(ties)) bx_cont(nrow(ties), " tie day(s) to rule")
+    bx_out("master_per_survey_info.csv, per_observation_raw_info.csv (+ review files)")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  mistags = mistags, ties = ties, unknown_tags = unknown_tags, unknown_fields = unknown_fields,

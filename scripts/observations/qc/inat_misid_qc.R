@@ -103,8 +103,8 @@ inat_misid_qc <- function(inat_path = IMQ_INAT, specimen_path = IMQ_SPECIMEN,
     write_fresh(out, out_path, na = "")
   }
   if (verbose)
-    message(sprintf("inat misID QC: %d obs flagged as misID candidates (species-level, unvouched, not on Holway) -> %s",
-                    nrow(out), out_path))
+    message(sprintf("misID QC: %d likely-misID bee obs -> %s\n  (what this is: species-level iNaturalist IDs with no specimen to vouch them AND not on Holway's checklist -- flagged for a human to double-check on iNaturalist; nothing is changed)",
+                    nrow(out), basename(out_path)))
   invisible(out)
 }
 

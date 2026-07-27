@@ -22,6 +22,8 @@ library(dplyr)
 library(stringr)
 library(purrr)
 
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
+
 CALENDAR_DIR <- "data/project_info/sources/beeple_calendar_windows"
 WINDOWS_OUT  <- "data/project_info/sources/beeple_calendar_windows/beeple_calendar_windows.csv"
 
@@ -137,18 +139,22 @@ parse_calendar <- function(pdf_path, year) {
 
 finding_beeple_calendar <- function(dir = CALENDAR_DIR, out = WINDOWS_OUT, write = TRUE) {
   pdfs <- list.files(dir, pattern = "\\.pdf$", full.names = TRUE)
+  per_year <- character(0)
   res <- map_dfr(pdfs, function(p) {
     m <- str_match(basename(p), "^(\\d{4})\\s+Cabrillo Bee Survey Calendar\\.pdf$")
-    if (is.na(m[1])) { message("skip (bad name): ", basename(p)); return(tibble()) }
+    if (is.na(m[1])) { bx_note("skip (bad name): ", basename(p)); return(tibble()) }
     r <- parse_calendar(p, as.integer(m[2]))
-    message(sprintf("%s: %d window-assignments", m[2], nrow(r)))
+    per_year <<- c(per_year, sprintf("%s: %d", m[2], nrow(r)))
     r
   }) |> arrange(year, window_start, transect, first_name) |> distinct()
+
+  bx_kv("Calendars", format(nrow(res), big.mark = ","), " beeple survey windows")
+  if (length(per_year)) bx_cont(paste(per_year, collapse = " · "))
 
   if (write) {
     dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
     write.csv(res, out, row.names = FALSE, na = "")
-    message("Wrote ", nrow(res), " rows -> ", out)
+    bx_out(basename(out))
   }
   res
 }

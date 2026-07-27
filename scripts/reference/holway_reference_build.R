@@ -23,6 +23,7 @@
 
 library(dplyr)
 library(jsonlite)
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 if (sys.nframe() == 0L || !exists("select_taxon_candidate")) {
   # allow sourcing just the helpers for tests without pulling the world
@@ -720,7 +721,7 @@ build_holway_reference <- function(con, holway_df,
       itis <- switch(res$action %||% "skip", keep = TRUE, no_inat_id = TRUE, skip = FALSE, NA)
       unresolved_holway_ref_row(r, itis_valid = itis, is_subspecies = is_ss, qualifier = qual)
     }
-    if (i %% 25 == 0) message(sprintf("  Holway resolve: %d / %d", i, nrow(holway_df)))
+    if (i %% 150 == 0 || i == nrow(holway_df)) bx_cont("resolving ", i, " / ", nrow(holway_df), " …")
   }
 
   # SECOND PASS: revisit unresolved Described rows (subspecies + renamed species like

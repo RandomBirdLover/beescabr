@@ -44,6 +44,7 @@ BEESCABR_SOURCED_BY_RUNNER <- TRUE
 
 source("scripts/config.R")
 source("scripts/utils/utils.R")
+source("scripts/utils/console.R")                # phase banners + key/value reporter + NEEDS-YOU rollup
 source("scripts/observations/engine/db/store_conn.R")
 source("scripts/observations/engine/db/observations_store.R")
 source("scripts/observations/engine/db/taxon_store.R")
@@ -93,17 +94,18 @@ main <- function() {
   con <- store_connect()
   on.exit(store_disconnect(con), add = TRUE)
 
+  bx_need_reset()
+  bx_phase(1, "SETUP & FETCH")
+
   # ---- 1. INGEST (once) ----
   if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") == "1") {
-    message("== [1] INGEST skipped (BEESCABR_SKIP_INGEST=1) -- cache holds ",
-            count_observations(con), " obs ==")
+    bx_kv("Fetch bees", "cache: ", count_observations(con), " observations (API pull skipped)")
   } else {
-    message("== [1] INGEST: iNat API -> DuckDB cache ==")
+    bx_kv("Fetch bees", "pulling new + edited observations from iNaturalist…")
     ingest_observations(con, incremental = Sys.getenv("BEESCABR_FULL_INGEST", "0") != "1")
   }
 
   # ---- 2. EXPORT: refresh export_flat.rds (the brain reads it directly) ----
-  message("\n== [2] EXPORT: refresh data/observations/cache/export_flat.rds ==")
   invisible(read_observations_export(con))
 
   # ---- 2b. PLANTS: ingest vascular plants -> export_flat_plant.rds (separate cache) ----
@@ -113,9 +115,8 @@ main <- function() {
   # flower-resource analysis. Own connection; the bee `con` above is untouched.
   # Gated by the same ingest flags as bees (+ BEESCABR_SKIP_PLANTS to skip only plants).
   if (Sys.getenv("BEESCABR_SKIP_PLANTS", "0") == "1") {
-    message("\n== [2b] PLANTS skipped (BEESCABR_SKIP_PLANTS=1) ==")
+    bx_kv("Fetch plants", "skipped (BEESCABR_SKIP_PLANTS=1)")
   } else {
-    message("\n== [2b] PLANTS: iNat -> plant cache -> export_flat_plant.rds ==")
     # Free the bee export frame first: building the plant export (flatten + taxonomy
     # of 40k obs) while the 77k-bee frame was still resident OOM'd R on the first
     # plant run (2026-07-17). The on-disk export_flat.rds is untouched; the later
@@ -133,11 +134,8 @@ main <- function() {
   # was skipped and the map already exists. Reuses the bee `con` (2b used its own plant con).
   FIELD_MAP_PATH <- "data/observations/reference/inat_field_id_map.csv"
   if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1" || !file.exists(FIELD_MAP_PATH)) {
-    message("\n== [2c] FIELD MAP: refresh inat_field_id_map.csv ==")
     build_field_id_map(con = con)
-  } else {
-    message("\n== [2c] FIELD MAP: skipped (ingest skipped, map already present) ==")
-  }
+  }  # else: silently reused (ingest skipped and the map already exists)
 
   # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows.csv from the PDFs ----
   # Re-parses every "YYYY Cabrillo Bee Survey Calendar.pdf" in
@@ -145,17 +143,16 @@ main <- function() {
   # (e.g. 2027) is picked up automatically. The brain reads the resulting windows CSV.
   # Wrapped so a missing pdftools / malformed PDF warns and keeps the existing CSV
   # rather than killing the run.
-  message("\n== [2d] BEEPLE CALENDARS: rebuild beeple_calendar_windows.csv from PDFs ==")
   tryCatch(finding_beeple_calendar(), error = function(e)
-    message("  WARNING: calendar parse failed (", conditionMessage(e),
-            ") -- keeping the existing beeple_calendar_windows.csv."))
+    bx_note("calendar parse failed (", conditionMessage(e),
+            ") — kept the existing beeple_calendar_windows.csv."))
 
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
   # finding_project_info() decides survey membership from crosswalk_master, writes
   # per_observation_raw_info.csv, the THREE unknown reports (review them by
   # hand in order -> update crosswalk_master -> re-run), and builds master_per_survey_info.csv
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
-  message("\n== [3] BRAIN: finding_project_info (membership -> unknown tags/fields/notes -> survey_dates) ==")
+  bx_phase(2, "SURVEY BRAIN — who surveyed, when, which transect")
   finding_project_info()
 
   # ---- 3b. REVIEW: sort unknown tags + fields into crosswalk_master (interactive) ----
@@ -172,11 +169,11 @@ main <- function() {
   }
   if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1") {
     n_tags <- .n_rows(FPI_UNKNOWN_TAGS); n_fields <- .n_rows(FPI_UNKNOWN_FIELDS)
-    message("\n== [3b] REVIEW unknowns: ", n_tags, " tags, ", n_fields, " fields to sort ==")
+    bx_kv("Review", n_tags, " unknown tags · ", n_fields, " unknown fields to sort")
     if (n_tags   > 0) review_unknowns("tags")
     if (n_fields > 0) review_unknowns("fields")
     if (n_tags > 0 || n_fields > 0) {
-      message("\n== [3c] Re-running the brain to apply your crosswalk edits ==")
+      bx_cont("re-running the brain to apply your crosswalk edits…")
       finding_project_info()
     }
     # [3b-notes] Free-text notes are OPTIONAL -- ask whether to review them this run.
@@ -191,7 +188,7 @@ main <- function() {
         source("scripts/project_info/review_notes.R")
         review_notes()
       } else {
-        message("  Proceeding WITHOUT notes (skipped -- reviewer not run).")
+        bx_cont("proceeding without notes (reviewer not run)")
       }
     }
 
@@ -201,7 +198,7 @@ main <- function() {
     # is hand-added; no tag = not a survey day), so there is NO brain re-run after it.
     n_win <- .n_windows(FPI_REVIEW)
     if (n_win > 0) {
-      message("\n== [3d] REVIEW survey windows: ", n_win, " to rule (heads-up only) ==")
+      bx_kv("Windows", n_win, " planned window(s) with no tagged survey nearby — rule them")
       review_windows()
     }
 
@@ -211,17 +208,17 @@ main <- function() {
     # chosen transect lands in master_per_survey_info.csv THIS run (your master truth).
     n_ties <- .n_windows(FPI_TIES)   # reuse the blank/unsure "still to rule" counter
     if (n_ties > 0) {
-      message("\n== [3e] REVIEW transect ties: ", n_ties, " to rule ==")
+      bx_kv("Ties", n_ties, " equal-split day(s) to rule")
       review_transect_ties()
       if (.n_windows(FPI_TIES) < n_ties) {   # a tie was ruled -> apply it now, not next run
-        message("\n== [3f] Re-running the brain to apply your transect-tie ruling(s) ==")
+        bx_cont("re-running the brain to apply your tie ruling(s)…")
         finding_project_info()
       }
     } else {
-      message("\n== [3e] REVIEW transect ties: nothing to rule ==")
+      bx_kv("Ties", "none to rule")
     }
   } else {
-    message("\n== [3b] REVIEW skipped (non-interactive) -- run review_crosswalk.R / review_windows.R by hand ==")
+    bx_kv("Review", "skipped (non-interactive) — run review_crosswalk.R / review_windows.R by hand")
   }
 
   # ---- 4. HOLWAY REFERENCE (interactive: resolves Holway -> iNat; prompts as needed) ----
@@ -229,66 +226,61 @@ main <- function() {
   # Decisions are cached (holway_decisions) so a normal run mostly replays them -- you're only
   # prompted for the unresolved-"Described" second pass + anything new. Wrapped so an abort or
   # failure keeps the existing table and never kills the run.
-  message("\n== [4] HOLWAY REFERENCE: (re)building holway_sd_bee_reference_table_v3.csv ==")
+  bx_phase(3, "TAXONOMY")
+  bx_kv("Holway table", "matching the SD bee checklist names to iNaturalist…")
   tryCatch({
     .hdf <- load_holway(PATHS$holway_combined)
     .ref <- build_holway_reference(con, .hdf,
               interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1")
     write.csv(.ref, PATHS$holway_reference, row.names = FALSE, na = "")
-    message("  wrote ", nrow(.ref), " reference rows -> ", basename(PATHS$holway_reference))
-  }, error = function(e) message("  [4] Holway reference FAILED (non-fatal): ",
-                                 conditionMessage(e), " -- keeping the existing table."))
+    bx_out(basename(PATHS$holway_reference), " (", nrow(.ref), " rows)")
+  }, error = function(e) bx_note("Holway reference failed (", conditionMessage(e),
+                                 ") — kept the existing table."))
 
   # ---- 5. TAXONOMY LOOKUP ----
   # Reads the Holway reference table (step 4) + the cache, writes sd_bee_taxonomy_lookup.csv
   # (+ the internal complex map). Wrapped so a taxonomy failure never kills the run.
   if (file.exists(PATHS$holway_reference)) {
-    message("\n== [5] TAXONOMY LOOKUP: building sd_bee_taxonomy_lookup.csv ==")
     tryCatch(build_taxonomy_lookup(con),
-             error = function(e) message("  [5] taxonomy lookup FAILED (non-fatal): ", conditionMessage(e)))
+             error = function(e) bx_note("taxonomy lookup failed: ", conditionMessage(e)))
   } else {
-    message("\n== [5] TAXONOMY LOOKUP skipped -- no Holway reference table ==")
+    bx_kv("Bee lookup", "skipped — no Holway reference table")
   }
 
   # ---- 5b. PLANT CLEAN (moved up so the plant lookup + flower-id joins below can use it) ----
-  message("\n== [5b] PLANT CLEAN: cabr_inat_plant_clean.csv + all-observer in-park taxa ==")
+  bx_phase(4, "CLEAN TABLES")
   tryCatch(inat_plant_clean(),
-           error = function(e) message("  [5b] inat plant clean FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("plant clean failed: ", conditionMessage(e)))
 
   # ---- 5b2. BEE FORAGE (plants bees were recorded on in-park -> in-park truth for the lookup) ----
-  message("\n== [5b2] BEE FORAGE: cabr_inat_bee_forage.csv (bee-obs flower_visited plants) ==")
   tryCatch(write_bee_forage(),
-           error = function(e) message("  [5b2] bee forage FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("bee forage failed: ", conditionMessage(e)))
 
   # ---- 5c. PLANT TAXONOMY LOOKUP (genus+species tree: crosswalk canonicals + broad obs + bee forage) ----
-  message("\n== [5c] PLANT LOOKUP: cabr_plant_taxonomy_lookup.csv ==")
   tryCatch(build_plant_taxonomy_lookup(verbose = TRUE),
-           error = function(e) message("  [5c] plant lookup FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("plant lookup failed: ", conditionMessage(e)))
 
   # ---- 6. SPECIMENS (lethal-survey record) ----
   # 6a. Raw hygiene worklist (non-ID'd / missing / duplicate rows to fix by hand).
   # 6b. Clean -- taxon_id + taxonomy from the lookup (step 5), transect, visited plant ->
   #     cabr_specimen_bee_clean.csv (mirrors the iNat bee schema).
-  message("\n== [6] SPECIMENS: raw worklist + cabr_specimen_bee_clean.csv ==")
   tryCatch(tidy_raw_specimens(),
-           error = function(e) message("  [6a] raw worklist FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("raw specimen worklist failed: ", conditionMessage(e)))
   tryCatch(clean_specimens(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
-           error = function(e) message("  [6b] specimen clean FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("specimen clean failed: ", conditionMessage(e)))
 
   # ---- 7. CLEAN: labeled iNat BEE table (taxonomy filled from the lookup) ----
   # Reads the brain's cabr_inat_raw.csv, joins coords + taxon_id, fills taxonomy from the
   # lookup (step 5) by taxon_id, re-marks Humphreys Rd walk-ins. AFTER the lookup so its
   # taxonomy columns are populated.
-  message("\n== [7] CLEAN: writing cabr_inat_bee_clean.csv ==")
   tryCatch(inat_bee_clean(),
-           error = function(e) message("  [7] inat bee clean FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("bee clean failed: ", conditionMessage(e)))
 
   # ---- 7b. PLANT NAMES: review any NEW plant name not yet in the crosswalk ----
   # After the cleaners so specimen flower labels exist; files your decisions into master_crosswalk
   # for the next run (non-interactive runs just drop a worklist).
-  message("\n== [7b] PLANT NAMES: review unknown plant names ==")
   tryCatch(review_plant_names(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
-           error = function(e) message("  [7b] plant-name review FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("plant-name review failed: ", conditionMessage(e)))
 
   # ---- 7c. OBSERVATION REVIEW: prompt for the iNat obs that need fixing ON iNaturalist ----
   # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + review_mistagged_transects.csv
@@ -298,7 +290,6 @@ main <- function() {
   # (The off-transect LOCATION pins are NOT listed here -- they are the whole subject of
   # stage 7d below, which surfaces them AND builds the per-surveyor maps in one place, so
   # they aren't split across two prompts.)
-  message("\n== [7c] OBSERVATION REVIEW: iNat field / tag fixes (open each url) ==")
   tryCatch({
     obs_rev   <- "data/observations/review"
     obs_items <- data.frame(
@@ -318,15 +309,15 @@ main <- function() {
   # CSVs + the shared instruction page, under review_location/), and prompts you to send them.
   # The per-pin survey-log annotation is computed from the master, so tag-only intern days
   # (e.g. 2024-05-05) label correctly. ----
-  message("\n== [7d] LOCATION REVIEW: off-transect survey pins -> a 'pins to fix' map per surveyor ==")
+  bx_phase(5, "SURVEYOR MAPS")
   tryCatch(build_location_review_maps(),
-           error = function(e) message("  [7d] location maps FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("location maps failed: ", conditionMessage(e)))
 
   # ---- 9. CHECKLISTS: cabr / pl / sd native-bee checklists (normalized tree from the lookup) ----
   # Each checklist carries parent taxa as their own rows (taxon_id/taxon_rank/names/taxonomy from the
   # lookup), like Holway. iNat lists clip the RAW bee export to each boundary; the specimen + Holway
   # subtrees come from cabr_specimen_bee_clean.csv + the Holway reference. Runs LAST (needs stages 5-8).
-  message("\n== [9] CHECKLISTS: cabr / pl / sd native-bee checklists ==")
+  bx_phase(6, "CHECKLISTS & QC")
   tryCatch({
     .lk <- suppressMessages(readr::read_csv(PATHS$taxonomy_lookup, show_col_types = FALSE)) |>
              dplyr::mutate(taxon_id = as.character(taxon_id))
@@ -340,23 +331,21 @@ main <- function() {
     build_cabr_bee_checklists(.bees_sf, .lk, specimens = .spec, holway_sub = .hsub)
     build_pl_bee_checklists(.bees_sf, .lk)
     build_sd_bee_checklists(.bees_sf, .lk, holway_sub = .hsub)
-    message("  checklists -> data/checklists/{cabr,point_loma,sd_county}/ (7 files)")
-  }, error = function(e) message("  [9] checklists FAILED (non-fatal): ", conditionMessage(e)))
+    bx_out("data/checklists/{cabr, point_loma, sd_county}/  (7 files)")
+  }, error = function(e) bx_note("checklists failed: ", conditionMessage(e)))
 
   # ---- 10. MISID QC: flag likely-misidentified iNat bee obs for review (advisory) ----
   # Species-level iNat IDs that are non-research-grade, unvouchered by a specimen, AND
   # absent from Holway -> a review queue for a human to verify on iNaturalist. Needs the
   # Holway reference + specimen table (built above), so it runs LAST. Changes nothing else.
-  message("\n== [10] MISID QC: flag likely-misID iNat bee obs -> review queue ==")
   tryCatch(inat_misid_qc(),
-           error = function(e) message("  [10] misID QC FAILED (non-fatal): ", conditionMessage(e)))
+           error = function(e) bx_note("misID QC failed: ", conditionMessage(e)))
 
   # ---- 11. NEW BEES NOT ON HOLWAY: review prompt (any rank) ----
   # CABR official-checklist taxa with holway == FALSE that ALSO have iNat records -> "new" bees
   # (genuine park/county additions OR misIDs). Advisory: a human opens each on iNaturalist to confirm
   # a trusted scientist ID'd it. Unlike stage 10 (species-rank only), this catches complex/genus-rank
   # finds too. Same set the analysis script reports to the park; here it's the "double-check" prompt.
-  message("\n== [11] NEW BEES NOT ON HOLWAY: review these on iNaturalist ==")
   tryCatch({
     .chk_cabr <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
     if (file.exists(.chk_cabr) && file.exists(PATHS$specimen_clean) && file.exists(PATHS$inat_clean)) {
@@ -370,17 +359,31 @@ main <- function() {
         write.csv(.newbees[, c("scientific_name", "taxon_rank", "group", "n_inat_records",
                                "n_inat_research_grade", "n_specimen_records", "taxon_id")],
                   "data/observations/review/cabr_new_bees_not_on_holway.csv", row.names = FALSE, na = "")
-        message("  -> data/observations/review/cabr_new_bees_not_on_holway.csv")
-      } else message("  none - every CABR bee with iNat records is on Holway's checklist")
-    } else message("  skipped (need the CABR official checklist + cleaned specimen/iNat tables)")
-  }, error = function(e) message("  [11] new-bees review FAILED (non-fatal): ", conditionMessage(e)))
+        bx_out("data/observations/review/cabr_new_bees_not_on_holway.csv")
+      } else bx_kv("New bees", "none — every CABR bee with iNat records is on Holway")
+    } else bx_kv("New bees", "skipped (need the CABR checklist + cleaned specimen/iNat tables)")
+  }, error = function(e) bx_note("new-bees review failed: ", conditionMessage(e)))
 
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
-  message("\n========================================")
-  message("PIPELINE COMPLETE (core stages) in ", dt, " min")
-  message("  Cache observations   : ", count_observations(con))
-  message("  Stages live: brain (+rescue) -> Holway -> lookup -> specimens -> inat bee/plant clean -> 7 checklists -> misID QC -> new-bees review.")
-  message("Outputs under data/. Done.")
+  # ---- NEEDS-YOU rollup: collect the run's action items from the review artifacts on disk,
+  # so a returning user sees everything that wants their attention in ONE place at the end. ----
+  .maps_dir <- "data/observations/review/review_location/by_surveyors"
+  .n_maps <- if (dir.exists(.maps_dir)) length(list.files(.maps_dir, pattern = "^cabr_pins_to_fix_.*\\.html$")) else 0L
+  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), "review_location/by_surveyors/")
+  .n_tax <- .n_rows("data/reference/generated/cabr_taxon_ids_needs_review.csv")
+  if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax), "cabr_taxon_ids_needs_review.csv")
+  .n_dupe <- .n_rows("data/specimens/specimens_clean/review/cabr_specimen_bee_duplicates.csv")
+  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "cabr_specimen_bee_duplicates.csv")
+  .n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
+  if (.n_notes > 0) bx_need(sprintf("%d obs notes (optional review)", .n_notes), "run review_notes()")
+
+  message("")
+  bx_rule()
+  message(sprintf("  ✓ DONE in %s min      cache: %s observations", dt, count_observations(con)))
+  message("")
+  bx_need_print()
+  message("\n  Everything else is written under  data/")
+  bx_rule()
 }
 
 main()

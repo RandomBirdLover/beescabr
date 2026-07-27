@@ -49,6 +49,7 @@
 library(dplyr)
 library(stringr)
 library(sf)
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
@@ -106,14 +107,14 @@ build_taxonomy_lookup <- function(con) {
   # tier is needed here -- PL / CABR tiers lived in legacy_checklists.R (now in _to_delete/).
   n_missing_coords <- sum(is.na(bees$latitude) | is.na(bees$longitude))
   if (n_missing_coords > 0)
-    message(sprintf("NOTE: %d obs missing coords -- excluded.", n_missing_coords))
+    bx_note(n_missing_coords, " obs missing coords -- excluded.")
 
   bees_sf <- bees |>
     filter(!is.na(latitude), !is.na(longitude)) |>
     st_as_sf(coords = c("longitude", "latitude"), crs = 4326, remove = FALSE) |>
     st_transform(PROJECT_CRS)
 
-  message("\n--- Spatial subset (SD County) ---")
+  bx_kv("Bee lookup", "SD County subset…")
   bees_sd_county <- spatial_split(bees_sf, sd_county_boundary, "SD County")
 
   # STEP 4: SD County checklist IN MEMORY -- the lookup's input (never written).
@@ -131,8 +132,8 @@ build_taxonomy_lookup <- function(con) {
     distinct(genus, species, complex, complex_taxon_id)
   dir.create(dirname(PATHS$complex_map), recursive = TRUE, showWarnings = FALSE)
   write_fresh(complex_map, PATHS$complex_map, na = "")
-  message("Wrote internal complex map (", nrow(complex_map), " species) -> ",
-          basename(PATHS$complex_map))
+  bx_cont(nrow(complex_map), " complex species")
+  bx_out(basename(PATHS$complex_map))
 
   # NOTE: this lookup is intentionally HOLWAY + iNAT ONLY -- no specimen join. CABR
   # specimen evidence lives downstream in the checklists (built from a CLEANED
@@ -144,14 +145,13 @@ build_taxonomy_lookup <- function(con) {
   # lookup -- it supplies iNat taxon_ids + scientific names for Holway species,
   # including ones never observed in SD County. The lookup NEVER reads the raw
   # Holway sheet for names.
-  message("\n--- sd_bee_taxonomy_lookup ---")
   verified_ids <- load_verified_taxa(PATHS$verified_taxa)
   if (!file.exists(PATHS$holway_reference))
     stop("Holway reference table not found (", basename(PATHS$holway_reference), "). It is the ",
          "base of the taxonomy lookup -- build it first (run_pipeline.R step 1b, or ",
          "holway_reference_build.R).")
   holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
-  message("Holway base from reference table: ", basename(PATHS$holway_reference),
+  bx_cont("Holway base from reference table: ", basename(PATHS$holway_reference),
           " (", sum(!is.na(holway_resolved$taxon_id)), " resolved taxa)")
   # The reference table now CONTAINS the ancestor taxa as their own rows (tagged
   # source_sheet == "iNat ancestry"). Split them out: the Holway ENTRIES are the
@@ -162,7 +162,7 @@ build_taxonomy_lookup <- function(con) {
                     holway_resolved$source_sheet == "iNat ancestry"
   holway_entries <- holway_resolved[!is_ancestry, , drop = FALSE]
   ancestry_ids   <- ancestry_ids_from_reference(holway_resolved)
-  message("Reference base: ", nrow(holway_entries), " Holway entries + ",
+  bx_cont("Reference base: ", nrow(holway_entries), " Holway entries + ",
           sum(is_ancestry), " ancestor rows (", nrow(ancestry_ids), " id-bearing taxa).")
   bee_taxonomy_lookup <- build_bee_taxonomy_lookup(holway_entries, cl_sd, bees,
                                                    verified_ids = verified_ids,
@@ -175,7 +175,7 @@ build_taxonomy_lookup <- function(con) {
   if (nrow(.adds)) {
     .merged <- specimen_additions_to_lookup(bee_taxonomy_lookup, .adds)
     bee_taxonomy_lookup <- .merged$lookup
-    message(sprintf("Specimen additions: appended %d new taxa.", nrow(.merged$added)))
+    bx_cont("Specimen additions: appended ", nrow(.merged$added), " new taxa.")
     # Only a MISSING GENUS orphans a species; higher lineage ranks lacking a standalone lookup row
     # is normal (the lookup stores genus-and-below), so those are not flagged.
     .mp_g <- .merged$missing_parents[.merged$missing_parents$missing_parent_rank == "genus", , drop = FALSE]
@@ -206,8 +206,9 @@ build_taxonomy_lookup <- function(con) {
   # ranks their genus/family rows already carry). Adds no taxa; only fills gaps.
   bee_taxonomy_lookup <- backfill_parent_taxonomy(bee_taxonomy_lookup)
   write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
-  message("Wrote ", nrow(bee_taxonomy_lookup), " taxonomy rows (",
-          sum(!bee_taxonomy_lookup$verified), " unverified, not found in Holway Checklist).")
+  bx_kv("Bee lookup", format(nrow(bee_taxonomy_lookup), big.mark = ","), " rows (",
+        sum(!bee_taxonomy_lookup$verified), " unverified)")
+  bx_out(basename(PATHS$taxonomy_lookup))
 
   invisible(list(lookup = nrow(bee_taxonomy_lookup)))
 }
@@ -220,7 +221,7 @@ if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0) {
     con <- store_connect()
     on.exit(store_disconnect(con), add = TRUE)
     if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1") ingest_observations(con)
-    else message("BEESCABR_SKIP_INGEST=1 -- using existing cache (", count_observations(con), " obs)")
+    else bx_note("BEESCABR_SKIP_INGEST=1 -- using existing cache (", count_observations(con), " obs)")
     build_taxonomy_lookup(con)
   }
   main()

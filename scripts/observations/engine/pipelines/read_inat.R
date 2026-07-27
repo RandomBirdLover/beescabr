@@ -22,6 +22,7 @@
 if (!exists("read_observations_raw")) source("scripts/observations/engine/db/observations_store.R")
 if (!exists("flatten_observation"))   source("scripts/observations/engine/api/inat_flatten.R")
 if (!exists("resolve_taxonomy"))       source("scripts/observations/engine/api/inat_cache.R")
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 if (!exists("TAXON_RANK_COLUMNS"))     source("scripts/config.R")
 
 library(dplyr)
@@ -74,19 +75,19 @@ read_observations_export <- function(con, resolve_taxa = TRUE,
   if (cacheable) {
     # 1) in-memory memo (same run, second caller)
     if (identical(.export_cache_env$sig, sig) && !is.null(.export_cache_env$frame)) {
-      if (verbose) message("Export frame: cache hit (in-memory) -- skipping flatten.")
+      if (verbose) bx_cont("export frame: reusing the in-memory copy")
       return(.export_cache_env$frame)
     }
     # 2) on-disk cache (across runs / skip-ingest)
     if (file.exists(cache_path)) {
       cached <- tryCatch(readRDS(cache_path), error = function(e) NULL)
       if (!is.null(cached) && identical(attr(cached, "signature"), sig)) {
-        if (verbose) message(sprintf("Export frame: cache hit (disk, %d rows) -- skipping flatten.", nrow(cached)))
+        if (verbose) bx_kv("Exports", "reusing cache (", format(nrow(cached), big.mark = ","), " rows, no re-flatten)")
         .export_cache_env$sig <- sig; .export_cache_env$frame <- cached
         return(cached)
       }
     }
-    if (verbose) message("Export frame: inputs changed or no cache -- rebuilding...")
+    if (verbose) bx_kv("Exports", "rebuilding (inputs changed)…")
   }
 
   raw <- read_observations_raw(con)
@@ -94,7 +95,7 @@ read_observations_export <- function(con, resolve_taxa = TRUE,
     warning("Observation cache is empty -- run ingest_observations() first.")
     return(tibble())
   }
-  if (verbose) message(sprintf("Flattening %d cached observations...", nrow(raw)))
+  if (verbose) bx_cont("flattening ", format(nrow(raw), big.mark = ","), " observations…")
 
   core <- dplyr::bind_rows(lapply(raw$raw_data, function(j) {
     flatten_observation(jsonlite::fromJSON(j, simplifyVector = FALSE))
@@ -102,7 +103,7 @@ read_observations_export <- function(con, resolve_taxa = TRUE,
 
   if (!resolve_taxa) return(core)
 
-  if (verbose) message("Resolving ranked taxonomy from taxon cache...")
+  if (verbose) bx_cont("resolving taxonomy from the cache…")
   tax_map <- resolve_taxonomy(con, core$taxon_id, request_fn = request_fn, verbose = verbose)
 
   out <- dplyr::left_join(core, tax_map, by = "taxon_id")

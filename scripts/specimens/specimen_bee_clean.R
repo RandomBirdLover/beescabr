@@ -31,6 +31,7 @@
 # Run: source("scripts/specimens/specimen_bee_clean.R"); clean_specimens()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(stringr); library(readr); library(sf); library(readxl) }))
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
@@ -104,7 +105,7 @@ SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_surv
 sbc_transect_spatial <- function(df, transect_path = SBC_TRANSECTS, off_m = SBC_OFF_TRANSECT_M) {
   out <- rep(NA_character_, nrow(df))
   if (!file.exists(transect_path)) {
-    message("  (transect spatial: no shapefile -- plot-less rows left blank)"); return(out)
+    bx_note("(transect spatial: no shapefile -- plot-less rows left blank)"); return(out)
   }
   tl <- suppressWarnings(sf::st_read(transect_path, quiet = TRUE))
   names(tl)[tolower(names(tl)) == "name"] <- "Name"
@@ -140,7 +141,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   dir.create(review_dir, recursive = TRUE, showWarnings = FALSE)
 
   specimens_path <- read_latest(SBC_RECORDS_DIR, SBC_RECORDS_PATTERN)
-  message("Loading specimens: ", basename(specimens_path))
+  bx_kv("Specimens", "reading ", basename(specimens_path))
   raw <- suppressMessages(readxl::read_excel(specimens_path))
   # missing_specimen is OPTIONAL: a record with nothing missing may drop the column entirely.
   # Default it to NA (= none missing) so its absence never hard-stops the clean (line ~204 already
@@ -149,7 +150,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   require_columns(raw, c("date", "latitude", "longitude", "sdnhm_id", "ucsd_id", "collector",
                          "plot", "method_or_plant", "genus", "subgenus", "complex", "species",
                          "subspecies", "sex"), "raw specimens")
-  message("Loaded ", nrow(raw), " specimen rows")
+  bx_cont(nrow(raw), " rows")
 
   df <- raw |> parse_specimen_dates() |> standardize_specimen_names()
 
@@ -161,14 +162,14 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   # ID'd row, so no real bee is lost.
   n_pre_bee <- nrow(df)
   df <- keep_bee_specimens(df)
-  message(sprintf("  bee filter: kept %d bee-family rows, dropped %d non-bee / unidentified",
-                  nrow(df), n_pre_bee - nrow(df)))
+  bx_cont("bee filter: kept ", nrow(df), " bee-family rows, dropped ",
+          n_pre_bee - nrow(df), " non-bee / unidentified")
 
   # NATIVE bees only -- drop the honey bee (Apis mellifera), mirroring the iNat ingest.
   n_pre_apis <- nrow(df)
   df <- drop_non_native_apis(df)
   if (n_pre_apis - nrow(df) > 0)
-    message(sprintf("  honey-bee filter: dropped %d Apis mellifera (non-native) specimen(s)", n_pre_apis - nrow(df)))
+    bx_cont("honey-bee filter: dropped ", n_pre_apis - nrow(df), " Apis mellifera (non-native) specimen(s)")
 
   # --- taxon_id + full taxonomy + spell-check (needs the lookup) ---
   n_taxonomy <- 0L
@@ -187,7 +188,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
     flags <- compute_taxonomy_flags(df, known$genera, known$genus_species)
     write_fresh(flags, flags_out, row.names = FALSE)
     n_taxonomy <- nrow(flags)
-    message(sprintf("  taxonomy spell-check: %d flag(s) -> %s", n_taxonomy, basename(flags_out)))
+    bx_cont("taxonomy spell-check: ", n_taxonomy, " flag(s) -> ", basename(flags_out))
     if (n_taxonomy > 0 && verbose) print(as.data.frame(flags))
   } else {
     message("WARNING: taxonomy lookup not found (", PATHS$taxonomy_lookup,
@@ -202,8 +203,9 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   need_sp <- is.na(by_plot)
   by_spatial <- if (any(need_sp)) sbc_transect_spatial(df) else rep(NA_character_, nrow(df))
   df$transect <- ifelse(is.na(by_plot), by_spatial, by_plot)
-  message(sprintf("  transect: %d from plot, %d from lat/long, %d unresolved",
-                  sum(!is.na(by_plot)), sum(need_sp & !is.na(by_spatial)), sum(is.na(df$transect))))
+  bx_cont("transect: ", sum(!is.na(by_plot)), " from plot, ",
+          sum(need_sp & !is.na(by_spatial)), " from lat/long, ",
+          sum(is.na(df$transect)), " unresolved")
 
   # --- complex match (needs the internal complex map from stage 5) ---
   if (file.exists(PATHS$complex_map)) {
@@ -260,10 +262,11 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   dir.create(dirname(clean_out), recursive = TRUE, showWarnings = FALSE)
   write.csv(clean, clean_out, row.names = FALSE, na = "")
 
-  message(sprintf("specimen_bee_clean: %d specimen rows -> %s", nrow(clean), clean_out))
-  message(sprintf("               %d with taxon_id | %d with flower_visited | %d missing lat/long -> review/%s",
-                  sum(!is.na(clean$taxon_id)), sum(!is.na(clean$flower_visited)),
-                  sum(df$location_needs_fix), basename(locmiss_out)))
+  bx_kv("Specimens", format(nrow(clean), big.mark = ","), " cleaned rows")
+  bx_out(basename(clean_out))
+  bx_cont(sum(!is.na(clean$taxon_id)), " with taxon_id | ",
+          sum(!is.na(clean$flower_visited)), " with flower_visited | ",
+          sum(df$location_needs_fix), " missing lat/long -> review/", basename(locmiss_out))
   invisible(list(clean = clean))
 }
 

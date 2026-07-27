@@ -18,6 +18,7 @@
 
 library(dplyr)
 library(stringr)
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 # ------------------------------------------------------------
 # spatial_split(): return the rows of an sf point layer that fall within a
@@ -27,8 +28,8 @@ library(stringr)
 spatial_split <- function(points_sf, boundary, label = "", verbose = TRUE) {
   inside <- sf::st_within(points_sf, boundary, sparse = FALSE)[, 1]
   result <- points_sf |> filter(inside) |> sf::st_drop_geometry()
-  if (verbose) message(sprintf("%-12s: %d of %d observations inside boundary",
-                               label, nrow(result), nrow(points_sf)))
+  if (verbose) bx_kv(trimws(label), format(nrow(result), big.mark = ","), " of ",
+                     format(nrow(points_sf), big.mark = ","), " observations inside the boundary")
   result
 }
 
@@ -49,8 +50,8 @@ build_checklist <- function(obs_df, label = "", verbose = TRUE) {
     filter(!is.na(genus), genus != "") |>
     arrange(family, genus, species)
 
-  if (verbose) message(sprintf("%-12s: %d unique taxa, %d dropped (no genus), %d remain",
-                               label, nrow(before), nrow(before) - nrow(result), nrow(result)))
+  if (verbose) bx_cont(format(nrow(result), big.mark = ","), " taxa kept · ",
+                       nrow(before) - nrow(result), " dropped (no genus)")
   result
 }
 
@@ -99,13 +100,13 @@ run_qc <- function(checklist, label) {
   distinct_complexes <- checklist |>
     filter(!is.na(complex)) |> distinct(complex, complex_taxon_id)
 
-  message(sprintf("\n--- QC: %s ---", label))
-  message("Families (", nrow(families), "): ", paste(families$family, collapse = ", "))
-  message("Total unique taxa: ", nrow(checklist))
-  message("With subgenus: ", sum(!is.na(checklist$subgenus)),
-          " | with complex: ", sum(!is.na(checklist$complex)),
-          " | distinct complexes: ", nrow(distinct_complexes))
-  message("Genera represented: ", dplyr::n_distinct(checklist$genus))
+  .qc_n <- function(col) if (col %in% names(checklist)) sum(!is.na(checklist[[col]]) & checklist[[col]] != "") else 0L
+  bx_kv(trimws(label), format(nrow(checklist), big.mark = ","), " taxa · ", nrow(families),
+        " families · ", dplyr::n_distinct(checklist$genus), " genera")
+  bx_cont(.qc_n("species"), " species · ", .qc_n("subspecies"), " subspecies · ",
+          sum(!is.na(checklist$subgenus)), " w/ subgenus · ", sum(!is.na(checklist$complex)),
+          " w/ complex (", nrow(distinct_complexes), " distinct)")
+  bx_cont("families: ", paste(families$family, collapse = ", "))
 
   invisible(list(
     n_families = nrow(families),
@@ -249,7 +250,7 @@ lookup_subtree <- function(lookup, present_df, label = "", verbose = TRUE) {
   ord <- order(out$family, out$genus, match(out$taxon_rank, CL_LINEAGE_RANKS),
                out$species, na.last = TRUE, method = "radix")
   out <- out[ord, , drop = FALSE]; rownames(out) <- NULL
-  if (verbose) message(sprintf("%-14s: %d taxa (%d from lookup tree, %d not-in-lookup leaves)",
-                               label, nrow(out), nrow(in_lk), nrow(extra)))
+  if (verbose) bx_kv(trimws(label), format(nrow(out), big.mark = ","), " taxa (",
+                     nrow(in_lk), " from lookup tree, ", nrow(extra), " not-in-lookup leaves)")
   out
 }

@@ -113,6 +113,8 @@
 
 library(sf)
 
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
+
 # ------------------------------------------------------------
 # Config
 # ------------------------------------------------------------
@@ -133,7 +135,7 @@ stopifnot(nrow(cabr_boundary) == 1)
 stopifnot(cabr_boundary$UNIT_CODE[1] == "CABR")
 
 cabr_area_acres <- as.numeric(st_area(cabr_boundary)) * ACRES_PER_SQM
-message(sprintf("cabr_boundary loaded: %.1f acres (NPS-published figure: ~160 acres)", cabr_area_acres))
+bx_kv("Boundaries", sprintf("CABR %.1f ac (NPS ~160)", cabr_area_acres))
 
 # ------------------------------------------------------------
 # CABR survey box: hand-drawn in ArcGIS Pro (2026-06-22), extending
@@ -164,7 +166,7 @@ if (!contains_cabr_in_box) {
   warning("cabr_survey_box does NOT fully contain cabr_boundary -- ",
           "the hand-drawn box may need to be redrawn larger in ArcGIS.")
 } else {
-  message("cabr_survey_box fully contains cabr_boundary.")
+  bx_cont("inside the survey box")
 }
 
 # ------------------------------------------------------------
@@ -223,17 +225,14 @@ stopifnot(nrow(sd_county_boundary) == 1)
 # ------------------------------------------------------------
 check_containment <- function(inner, inner_label, outer, outer_label) {
   result <- st_contains(outer, inner, sparse = FALSE)[1, 1]
-  message(sprintf(
-    "%s completely within %s: %s",
-    inner_label, outer_label, ifelse(result, "PASS", "FAIL (expected -- see Known issue notes)")
-  ))
+  if (result) bx_cont(sprintf("%s inside %s ✓", inner_label, outer_label))
   result
 }
 
-message("\n--- Boundary containment checks ---")
-check_containment(point_loma_boundary, "point_loma_boundary", sd_county_boundary, "sd_county_boundary")
-check_containment(cabr_boundary, "cabr_boundary", point_loma_boundary, "point_loma_boundary")
-check_containment(cabr_boundary, "cabr_boundary", sd_county_boundary, "sd_county_boundary")
+check_containment(point_loma_boundary, "Point Loma", sd_county_boundary, "SD County")
+check_containment(cabr_boundary, "CABR", point_loma_boundary, "Point Loma")
+check_containment(cabr_boundary, "CABR", sd_county_boundary, "SD County")
+bx_note("CABR reaches just past the Point Loma / County lines — expected (known coastal discrepancy), not an error.")
 
 # ------------------------------------------------------------
 # Transect buffers (existing functionality)
@@ -251,4 +250,4 @@ buffer_50m <- st_buffer(transects, dist = buffer_dist_m)
 # buffer_50m is generated in-memory only -- per project convention,
 # do not write this (or any derived buffer) to disk.
 
-message("\nspatial_utils.R: boundaries and buffer_50m ready in environment.")
+bx_cont("boundaries + 50 m buffer ready")

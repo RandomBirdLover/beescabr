@@ -21,6 +21,7 @@
 #      (or) source("scripts/specimens/tidy_raw_specimens.R"); tidy_raw_specimens()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readxl) }))
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
@@ -37,7 +38,7 @@ TRS_WORKLIST_OUT    <- "data/specimens/specimens_clean/review/cabr_specimen_raw_
 # (non-ID'd, missing, duplicate ids), and write the worklist. Returns it invisibly.
 tidy_raw_specimens <- function(write = TRUE) {
   path <- read_latest(TRS_RECORDS_DIR, TRS_RECORDS_PATTERN)
-  message("Reading raw specimens: ", basename(path))
+  bx_kv("Raw specimens", "reading ", basename(path))
   raw <- suppressMessages(readxl::read_excel(path))
 
   id_cols <- intersect(c("ucsd_id", "sdnhm_id", "date", "plot", "collector",
@@ -61,15 +62,14 @@ tidy_raw_specimens <- function(write = TRUE) {
   n_id   <- sum(grepl("needs_id",  worklist$reason))
   n_miss <- sum(grepl("missing",   worklist$reason))
   n_dup  <- sum(grepl("duplicate", worklist$reason))
-  message(sprintf("RAW cleanup worklist: %d row(s) need attention", nrow(worklist)))
-  message(sprintf("  needs_id (no genus): %d | missing_specimen: %d | duplicate id: %d",
-                  n_id, n_miss, n_dup))
-  message("  -> ID them, dedupe them, or delete them in the raw .xlsx (see TODO in this script's header).")
+  bx_cont("RAW cleanup worklist: ", nrow(worklist), " row(s) need attention")
+  bx_cont("needs_id (no genus): ", n_id, " | missing_specimen: ", n_miss, " | duplicate id: ", n_dup)
+  bx_note("ID them, dedupe them, or delete them in the raw .xlsx (see TODO in this script's header).")
 
   if (write) {
     dir.create(dirname(TRS_WORKLIST_OUT), recursive = TRUE, showWarnings = FALSE)
     write_fresh(worklist, TRS_WORKLIST_OUT, row.names = FALSE)
-    message("Wrote worklist -> ", TRS_WORKLIST_OUT)
+    bx_out(basename(TRS_WORKLIST_OUT))
   }
   invisible(worklist)
 }

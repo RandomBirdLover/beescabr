@@ -15,6 +15,7 @@ local({
   need("read_observations_raw", "observations/engine/db/observations_store.R")
 })
 suppressMessages({library(DBI); library(dplyr); library(readr)})
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 build_field_id_map <- function(out = "data/observations/reference/inat_field_id_map.csv", con = NULL) {
   own <- is.null(con)
@@ -67,7 +68,8 @@ build_field_id_map <- function(out = "data/observations/reference/inat_field_id_
   map <- map |> filter(!is.na(field_name), field_name != "") |> arrange(field_name)
   dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
   write.csv(map, out, row.names = FALSE, na = "")
-  message("Wrote ", nrow(map), " field name -> id rows -> ", out)
+  bx_kv("Field map", format(nrow(map), big.mark = ","), " obs-field name→id rows")
+  bx_out(basename(out))
   invisible(map)
 }
 

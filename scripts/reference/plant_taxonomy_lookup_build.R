@@ -31,6 +31,7 @@
 suppressWarnings(suppressMessages({
   library(dplyr); library(readr); library(stringr)
 }))
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 local({
   sdir <- "scripts"
@@ -417,15 +418,17 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
   }
   if (verbose) {
     ng <- sum(tolower(lookup$rank) == "genus", na.rm = TRUE); ns <- sum(tolower(lookup$rank) == "species", na.rm = TRUE)
-    message(sprintf("plant lookup: %d taxa (%d genus, %d species) | in park: %d | on specimens: %d | not in park: %d (genus-absent: %d)",
-                    nrow(lookup), ng, ns, sum(lookup$in_cabr_park_at_all, na.rm = TRUE),
-                    sum(lookup$in_specimens, na.rm = TRUE), nrow(worklist), sum(!worklist$genus_in_park)))
-    message(sprintf("  -> %s", PLT_LOOKUP_OUT)); message(sprintf("  -> %s", PLT_WORKLIST_OUT))
+    bx_kv("Plant lookup", format(nrow(lookup), big.mark = ","), " taxa (", ng, " genus, ", ns, " species)")
+    bx_cont("in park: ", sum(lookup$in_cabr_park_at_all, na.rm = TRUE),
+            " · on specimens: ", sum(lookup$in_specimens, na.rm = TRUE),
+            " · not in park: ", nrow(worklist), " (genus-absent: ", sum(!worklist$genus_in_park), ")")
+    bx_out(basename(PLT_LOOKUP_OUT))
+    bx_out(basename(PLT_WORKLIST_OUT))
     if (!is.null(confirmed_leaves) && nrow(confirmed_leaves))
-      message(sprintf("  confirmed-in-park overrides applied: %d", nrow(confirmed_leaves)))
+      bx_cont("confirmed-in-park overrides applied: ", nrow(confirmed_leaves))
     nf <- sum(lookup$in_bee_forage %in% TRUE)
-    if (nf) message(sprintf("  in-park via bee forage: %d plants (%d added by forage alone)",
-                            nf, if (is.null(forage_leaves)) 0L else nrow(forage_leaves)))
+    if (nf) bx_cont("in-park via bee forage: ", nf, " plants (",
+                    if (is.null(forage_leaves)) 0L else nrow(forage_leaves), " added by forage alone)")
   }
   invisible(list(lookup = lookup, worklist = worklist, cache = cache))
 }

@@ -29,6 +29,7 @@
 if (!exists("store_connect"))              source("scripts/observations/engine/db/store_conn.R")
 if (!exists("ingest_observations"))        source("scripts/observations/engine/pipelines/ingest_inat.R")
 if (!exists("read_observations_export"))   source("scripts/observations/engine/pipelines/read_inat.R")
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 if (!exists("TAXON_TRACHEOPHYTA"))         source("scripts/config.R")
 
 # ------------------------------------------------------------
@@ -59,16 +60,16 @@ ingest_plants <- function(place_id = PLACE_POINT_LOMA,
       verbose          = verbose
     )
   } else if (verbose) {
-    message("Plant ingest: API pull skipped -- rebuilding export from the existing plant cache.")
+    bx_cont("plants: reusing the existing cache (API pull skipped)")
   }
 
   # Build the export the brain reads. Guard the empty-cache case (first run with
   # do_ingest = FALSE, or a pull that returned nothing) so we don't warn noisily.
   if (count_observations(con) > 0) {
     read_observations_export(con, cache_path = EXPORT_FLAT_PLANT_CACHE, verbose = verbose)
-    if (verbose) message("Plant export refreshed -> ", EXPORT_FLAT_PLANT_CACHE)
+    if (verbose) bx_out(basename(EXPORT_FLAT_PLANT_CACHE))
   } else if (verbose) {
-    message("Plant cache is empty -- nothing to export yet (run with do_ingest = TRUE first).")
+    bx_note("plant cache is empty -- nothing to export yet (run with do_ingest = TRUE first).")
   }
   invisible(n_written)
 }

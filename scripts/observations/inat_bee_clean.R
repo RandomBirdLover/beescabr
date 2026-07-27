@@ -45,6 +45,7 @@
 # Run: source("scripts/observations/inat_bee_clean.R"); inat_bee_clean()
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(sf)}))
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 IBC_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"
 IBC_EXPORT         <- "data/observations/cache/export_flat.rds"
@@ -124,7 +125,7 @@ ibc_annotations <- function(ex_full, crosswalk_path) {
   ids <- as.character(ex_full$id)
   out <- tibble(obs_id = ids, flower_visited = NA_character_)
   for (cc in IBC_BOOL_ANNOT) out[[cc]] <- FALSE
-  if (!file.exists(crosswalk_path)) { message("  (annotations: no crosswalk -- skipped)"); return(out) }
+  if (!file.exists(crosswalk_path)) { bx_note("annotations: no crosswalk -- skipped"); return(out) }
   cw <- suppressWarnings(read_csv(crosswalk_path, show_col_types = FALSE))
   splitv <- function(s) { s <- s[!is.na(s)]; if (!length(s)) return(character(0))
                           tolower(trimws(unlist(strsplit(s, "[;,]")))) }
@@ -227,7 +228,7 @@ ibc_spatial_flags <- function(keep_rows, transect_path, road_path,
                               off_m = IBC_OFF_TRANSECT_M, road_m = IBC_ROAD_BUFFER_M) {
   base <- tibble(obs_id = as.character(keep_rows$obs_id), spatial_cat = "on_transect")
   if (!file.exists(transect_path)) {
-    message("  (spatial flags: no transect shapefile -- keep rows left as survey)"); return(base)
+    bx_note("spatial flags: no transect shapefile -- keep rows left as survey"); return(base)
   }
   tl <- suppressWarnings(sf::st_read(transect_path, quiet = TRUE))
   names(tl)[tolower(names(tl)) == "name"] <- "Name"
@@ -249,7 +250,7 @@ ibc_spatial_flags <- function(keep_rows, transect_path, road_path,
     rd <- suppressWarnings(sf::st_read(road_path, quiet = TRUE)) |> sf::st_transform(sf::st_crs(tl))
     d_road <- as.numeric(sf::st_distance(pts, sf::st_union(rd)))
   } else {
-    message("  (spatial flags: no access-road shapefile -- walk-in not identified)")
+    bx_note("spatial flags: no access-road shapefile -- walk-in not identified")
     d_road <- rep(Inf, nrow(pts))
   }
 
@@ -316,11 +317,11 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   if (file.exists(IBC_LOOKUP)) {
     lk <- suppressMessages(read_csv(IBC_LOOKUP, show_col_types = FALSE))
     df <- ibc_fill_taxonomy(df, lk)
-    message(sprintf("  taxonomy: filled %d/%d rows from the lookup",
-                    sum(!is.na(df$scientific_name)), nrow(df)))
+    bx_cont("taxonomy: filled ", format(sum(!is.na(df$scientific_name)), big.mark = ","),
+            "/", format(nrow(df), big.mark = ","), " rows from the lookup")
   } else {
     df <- ibc_fill_taxonomy(df, NULL)
-    message("  taxonomy: lookup not found (", IBC_LOOKUP, ") -- columns left blank")
+    bx_note("taxonomy: lookup not found (", IBC_LOOKUP, ") -- columns left blank")
   }
   df$is_10min    <- NA
   df$is_metadata <- NA
@@ -350,13 +351,13 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   n_fv      <- sum(!is.na(clean$flower_visited))
   n_missing <- sum(fix_behavior$fix_reason == "missing_all_behavior_fields")
   n_badflow <- sum(fix_behavior$fix_reason == "flower_not_a_plant_or_unresolved")
-  message(sprintf("inat_bee_clean: %d CABR bee rows | %d survey / %d not-survey -> %s",
-                  nrow(clean), sum(clean$is_survey), sum(!clean$is_survey), out_clean))
-  message(sprintf("               spatial: %d walk-in re-marked NOT survey | %d location_needs_fix -> %s",
-                  n_walk, n_bad, basename(IBC_LOCATION_REVIEW)))
-  message(sprintf("               annotations: %d obs with flower_visited", n_fv))
-  message(sprintf("               fix_behavior: %d missing all fields + %d non-plant/unresolved flower -> %s",
-                  n_missing, n_badflow, basename(IBC_FIX_BEHAVIOR)))
+  bx_kv("Bees", format(nrow(clean), big.mark = ","), " rows — ",
+        sum(clean$is_survey), " survey / ", sum(!clean$is_survey), " other")
+  bx_out(basename(out_clean))
+  bx_cont("spatial: ", n_walk, " walk-in re-marked NOT survey · ", n_bad, " pins off-transect → review")
+  bx_cont("annotations: ", format(n_fv, big.mark = ","), " obs with flower_visited")
+  bx_cont("fix_behavior: ", n_missing, " missing all fields · ", n_badflow, " non-plant/unresolved flower")
+  bx_out(basename(IBC_FIX_BEHAVIOR))
   invisible(list(clean = clean, fix_behavior = fix_behavior, location_review = location_review))
 }
 
