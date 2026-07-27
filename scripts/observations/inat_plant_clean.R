@@ -295,9 +295,10 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   n_bad  <- sum(as.logical(df$location_needs_fix) %in% TRUE)
   n_flow <- sum(!is.na(clean$flower_flowering))
   bx_kv("Plants", format(nrow(clean), big.mark = ","), " surveyor rows — ",
-        sum(clean$is_survey), " survey / ", sum(!clean$is_survey), " other")
+        format(sum(clean$is_survey), big.mark = ","), " survey / ",
+        format(sum(!clean$is_survey), big.mark = ","), " other")
   bx_out(basename(out_clean))
-  bx_cont("spatial: ", n_walk, " walk-in re-marked NOT survey · ", n_bad,
+  bx_cont("spatial: ", format(n_walk, big.mark = ","), " walk-in re-marked NOT survey · ", format(n_bad, big.mark = ","),
           " pins off-transect → review · annotations: ", format(n_flow, big.mark = ","), " with flower_flowering")
   invisible(list(clean = clean, location_review = location_review))
 }

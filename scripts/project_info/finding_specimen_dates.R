@@ -18,6 +18,7 @@ suppressWarnings(suppressMessages({library(readxl); library(dplyr); library(tibb
 if (!exists("read_latest") && file.exists("scripts/utils/utils.R")) {
   suppressWarnings(suppressMessages(library(stringr))); source("scripts/utils/utils.R")
 }
+if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
 FSD_DIR     <- "data/specimens/records"
 FSD_PATTERN <- "^cabr_bee_specimens_record_V"
@@ -27,13 +28,13 @@ finding_specimen_dates <- function(dir = FSD_DIR, pattern = FSD_PATTERN) {
   empty <- tibble(date = as.Date(character()), n_specimens = integer(), collectors = character())
   path <- tryCatch(read_latest(dir, pattern), error = function(e) NA_character_)
   if (is.na(path) || !file.exists(path)) {
-    message("  (no specimen .xlsx in ", dir, " -- no specimen counts)"); return(empty)
+    bx_note("no specimen .xlsx in ", dir, " -- no specimen counts"); return(empty)
   }
-  message("finding_specimen_dates: reading ", basename(path))
+  bx_kv("Specimens", basename(path))
   raw <- readxl::read_excel(path)
   names(raw) <- tolower(trimws(names(raw)))
   if (!all(c("date", "collector") %in% names(raw))) {
-    message("  (specimen xlsx missing date/collector columns -- skipped)"); return(empty)
+    bx_note("specimen xlsx missing date/collector columns -- skipped"); return(empty)
   }
   cnt <- if ("count" %in% names(raw)) suppressWarnings(as.integer(raw[["count"]])) else rep(1L, nrow(raw))
   df <- tibble(date      = as.Date(raw[["date"]]),
@@ -49,7 +50,7 @@ finding_specimen_dates <- function(dir = FSD_DIR, pattern = FSD_PATTERN) {
                       paste(names(t), collapse = "; ") },
       .groups = "drop") |>
     arrange(date)
-  message(sprintf("  %d specimen dates, %d specimens (missing included)", nrow(agg), sum(agg$n_specimens)))
+  bx_cont(format(nrow(agg), big.mark = ","), " dates · ", format(sum(agg$n_specimens), big.mark = ","), " specimens (missing included)")
   agg
 }
 

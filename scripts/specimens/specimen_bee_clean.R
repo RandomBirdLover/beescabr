@@ -189,7 +189,19 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
     write_fresh(flags, flags_out, row.names = FALSE)
     n_taxonomy <- nrow(flags)
     bx_cont("taxonomy spell-check: ", n_taxonomy, " flag(s) -> ", basename(flags_out))
-    if (n_taxonomy > 0 && verbose) print(as.data.frame(flags))
+    if (n_taxonomy > 0 && verbose) {
+      id_col <- intersect(c("ucsd_id", "sdnhm_id"), names(flags))[1]
+      show_n <- min(nrow(flags), 20L)
+      for (i in seq_len(show_n)) {
+        r     <- flags[i, , drop = FALSE]
+        parts <- c(r$genus, r$species, r$subspecies)
+        binom <- paste(parts[!is.na(parts) & nzchar(parts)], collapse = " ")
+        idtag <- if (!is.na(id_col) && !is.na(r[[id_col]])) paste0("  (", r[[id_col]], ")") else ""
+        bx_cont("· ", binom, " — ", r$flag_reason, idtag)
+      }
+      if (nrow(flags) > show_n)
+        bx_cont("… and ", nrow(flags) - show_n, " more — see ", basename(flags_out))
+    }
   } else {
     message("WARNING: taxonomy lookup not found (", PATHS$taxonomy_lookup,
             ") -- taxon_id + taxonomy left blank. Run the lookup (stage 5) first.")
