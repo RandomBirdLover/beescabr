@@ -22,8 +22,15 @@
 # Ingest runs exactly once here; every stage reads the same freshly-filled cache
 # (no re-fetch).
 #
-# Run:
-#   Rscript scripts/run_pipeline.R      (or Source in RStudio)
+# Run (most common first):
+#   Everyday run, reuse caches (no new obs):
+#     terminal:  BEESCABR_SKIP_INGEST=1 Rscript scripts/run_pipeline.R
+#     RStudio:   Sys.setenv(BEESCABR_SKIP_INGEST = 1)   then Source this file
+#   Full run, pull new observations:
+#     terminal:  Rscript scripts/run_pipeline.R
+#     RStudio:   Source this file (no Sys.setenv needed)
+#   To set any flag below: prefix it in the terminal, or Sys.setenv(FLAG = 1) in
+#   RStudio before Source. Unset with Sys.unsetenv("FLAG").
 #
 # Flags (env vars):
 #   BEESCABR_SKIP_INGEST=1         skip the API pull (bees AND plants), use caches <-- used if you don't want to update old/pull new observations
