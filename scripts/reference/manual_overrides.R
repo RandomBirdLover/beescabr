@@ -138,11 +138,16 @@ apply_manual_overrides <- function(df, overrides = NULL) {
   key  <- paste(tolower(trimws(rank)), .mo_norm(name))
   keep <- !is.na(name) & trimws(name) != "" & !(key %in% answered)   # drop already-answered taxa
   if (!any(keep)) return(empty)
+  # Bind the filtered vectors ONCE up front. Inlining name[keep] a second time inside
+  # tibble() would bind to the freshly-built (already-filtered) `name` column and re-index
+  # it with the full-length `keep`, shifting the URL off its name (and tacking on an NA).
+  rk <- tolower(trimws(rank[keep]))
+  nm <- trimws(name[keep])
   tibble(
-    rank = tolower(trimws(rank[keep])),
-    name = .mo_titlecase1(trimws(name[keep])),           # "holcopasites minima" -> "Holcopasites minima"
+    rank = rk,
+    name = .mo_titlecase1(nm),                           # "holcopasites minima" -> "Holcopasites minima"
     inat_search_url = paste0("https://www.inaturalist.org/taxa/search?q=",
-                             vapply(trimws(name[keep]), function(s) utils::URLencode(s, reserved = TRUE),
+                             vapply(nm, function(s) utils::URLencode(s, reserved = TRUE),
                                     character(1), USE.NAMES = FALSE))
   ) |> distinct(rank, name, .keep_all = TRUE) |> arrange(rank, name)
 }

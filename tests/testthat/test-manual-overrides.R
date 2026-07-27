@@ -81,6 +81,28 @@ test_that("write_review_worklist surfaces the resolver's not_found taxa, droppin
   expect_true(all(is.na(wl$taxon_id)))                    # blank column to fill in
 })
 
+test_that("write_review_worklist keeps each name aligned with its own iNat link (dropped middle row)", {
+  src("reference/manual_overrides.R")
+  # four open not_found taxa; answering a MIDDLE one makes `keep` drop a non-terminal
+  # row -- which is exactly when an index shift between the name and the URL surfaces.
+  cache <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble(
+    key = c("species|alpha ex|100", "species|bravo ex|100",
+            "species|charlie ex|100", "species|delta ex|100"),
+    taxon_id = NA_integer_,
+    status = "not_found_or_ambiguous"), cache)
+  out <- tempfile(fileext = ".csv")
+  ov <- tibble(rank = "species", name = "Bravo ex", taxon_id = 55L,
+               correct_name = NA_character_, note = NA_character_)
+  wl <- write_review_worklist(cache_path = cache, overrides = ov, path = out)
+  expect_equal(nrow(wl), 3L)
+  expect_false(any(grepl("q=NA", wl$inat_search_url)))     # no shifted-off NA link
+  # each row's link must search for THAT row's own name (case-insensitive: name is
+  # title-cased, the URL encodes the raw lowercase name)
+  q <- vapply(sub("^.*q=", "", wl$inat_search_url), utils::URLdecode, character(1), USE.NAMES = FALSE)
+  expect_equal(tolower(q), tolower(trimws(wl$name)))
+})
+
 test_that("prompt_missing_taxon_ids records an entered id (+ name) to the overrides file", {
   src("reference/manual_overrides.R")
   cache <- tempfile(fileext = ".csv")

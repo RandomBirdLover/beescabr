@@ -389,8 +389,43 @@ main <- function() {
   message(sprintf("  ✓ DONE in %s min      cache: %s observations", dt, count_observations(con)))
   message("")
   bx_need_print()
+  bx_analysis_files()
   message("\n  Everything else is written under  data/")
   bx_rule()
+}
+
+# ---- analysis-ready file manifest (printed at the end of every run) -----------
+# The curated set of outputs meant for downstream analysis, grouped by kind.
+# Any that aren't on disk are flagged (not found), so a failed/skipped stage
+# shows up at a glance. Paths are the config.R / stage constants, verbatim.
+bx_analysis_files <- function() {
+  grp  <- function(label) message("    ", label, ":")
+  item <- function(path) message("      · ", path, if (!file.exists(path)) "   (not found)" else "")
+  message("")
+  message("  FILES FOR ANALYSIS")
+  grp("checklists")
+  item("data/checklists/cabr/cabr_official_native_bee_checklist.csv")
+  item("data/checklists/cabr/cabr_raw_inat_native_bee_checklist.csv")
+  item("data/checklists/cabr/cabr_specimen_native_bee_checklist.csv")
+  grp("cleaned observations")
+  item("data/observations/inat_clean/cabr_inat_bee_clean.csv")
+  item("data/observations/inat_clean/cabr_inat_plant_clean.csv")
+  grp("survey record")
+  item("data/project_info/master_per_survey_info.csv")
+  item("data/project_info/surveyor_roster.csv")
+  grp("reference / lookups")
+  item("data/reference/sd_bee_taxonomy_lookup.csv")
+  item("data/reference/cabr_plant_taxonomy_lookup.csv")
+  item("data/reference/holway_sd_bee_reference_table_v3.csv")
+  grp("specimens")
+  item("data/specimens/specimens_clean/cabr_specimen_bee_clean.csv")
+  grp("spatial / boundaries")
+  item("data/spatial/boundaries/cabr/cabr_survey_box.shp")
+  item("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
+  item("data/spatial/boundaries/point_loma/point_loma_boundary.shp")
+  item("data/spatial/boundaries/san_diego_county/sd_county_boundary.shp")
+  item("data/spatial/transects/cabr_bee_transects.shp")
+  item("data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp")
 }
 
 main()
