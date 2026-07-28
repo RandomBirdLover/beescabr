@@ -228,7 +228,10 @@ network_stats <- function(M, label) {
                     NODF = NA_real_, NODF_null_mean = NA_real_, NODF_p = NA_real_,
                     H2prime = NA_real_, H2prime_null_mean = NA_real_, H2prime_p = NA_real_)
   if (HAVE_VEGAN) {
-    on <- try(vegan::oecosimu(Mb, vegan::nestednodf, method = "quasiswap", nsimul = 499),
+    # alternative = "greater": one-sided ("more nested than the null"), matching the
+    # one-sided H2' test below -- both ask "more structured than chance?", same tail.
+    on <- try(vegan::oecosimu(Mb, vegan::nestednodf, method = "quasiswap", nsimul = 499,
+                              alternative = "greater"),
               silent = TRUE)
     if (!inherits(on, "try-error")) {
       i <- which(names(on$statistic$statistic) == "NODF")
@@ -245,6 +248,7 @@ network_stats <- function(M, label) {
   }
   out
 }
+set.seed(1)   # reproducible null-model p-values (NODF quasiswap + H2' r2dtable)
 net_stats <- rbind(network_stats(Mg, "genus"), network_stats(Ms, "species"))
 write.csv(net_stats, file.path(OUT_DIR, "interactions_network_stats.csv"), row.names = FALSE)
 message("\nNetwork-level statistics:")

@@ -65,7 +65,7 @@ message("Top keyable genera: ",
         paste(sprintf("%s(%d)", head(keyable$target, 6), head(keyable$specimen_unresolved, 6)), collapse = "  "))
 
 # ---- 3. figure: top targets by unresolved records, stacked by method ---------
-top <- work %>% slice_max(unresolved_total, n = TOP_N)
+top <- work %>% slice_max(unresolved_total, n = TOP_N, with_ties = FALSE)
 long <- bind_rows(
   data.frame(target = top$target, method = "specimen (keyable)", n = top$specimen_unresolved),
   data.frame(target = top$target, method = "photo",              n = top$photo_unresolved)) %>%

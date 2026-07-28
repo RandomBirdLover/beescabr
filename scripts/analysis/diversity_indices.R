@@ -88,7 +88,7 @@ alpha_indices <- function(M) {
              richness = as.integer(S),
              hill_q1_expShannon = round(exp(H), 1),      # effective # of common species
              invSimpson_q2      = round(vegan::diversity(M, "invsimpson"), 1),
-             pielou_evenness    = round(H / log(S), 3), row.names = NULL)
+             pielou_evenness    = ifelse(S > 1, round(H / log(S), 3), NA_real_), row.names = NULL)
 }
 
 # ---- 2. ALPHA DIVERSITY BY TRANSECT (survey-only, both methods, species+genus) --

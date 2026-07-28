@@ -97,7 +97,7 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     C <- mean(cos(a)); S <- mean(sin(a)); R <- sqrt(C^2 + S^2)
     mu_day <- (atan2(S, C) %% (2 * pi)) / (2 * pi) * 365
     Z <- length(a) * R^2
-    data.frame(n = length(a), mean_day = round(mu_day), peak_month = month.abb[pmax(1, ceiling(mu_day / 30.4))],
+    data.frame(n = length(a), mean_day = round(mu_day), peak_month = month.abb[pmin(12, pmax(1, ceiling(mu_day / 30.4)))],
                resultant_R = round(R, 3), rayleigh_Z = round(Z, 2),
                rayleigh_p = signif(exp(-Z), 3), seasonal = exp(-Z) < 0.05)
   }))

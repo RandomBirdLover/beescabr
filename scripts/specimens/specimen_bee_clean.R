@@ -229,8 +229,13 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   # --- schema columns ---
   df$observer   <- df$collector
   df$observed_on <- df$date_clean
-  df$is_survey  <- TRUE
-  df$survey_note <- NA_character_
+  # Off-transect collections (no resolvable transect -- e.g. S O'Dell's targeted
+  # off-transect netting) count toward the park total but are NOT survey events,
+  # so a specimen with no transect is marked is_survey = FALSE.
+  has_transect   <- !is.na(df$transect) & nzchar(trimws(as.character(df$transect)))
+  df$is_survey   <- has_transect
+  df$survey_note <- ifelse(has_transect, NA_character_,
+                           "off-transect collection (counts to park total, not a survey)")
   df$surveyor_type <- "intern"     # surveyor category (interns collect the specimens)
   df$survey_method <- "lethal"   # specimens are the LETHAL survey
   df$survey_year <- df$year

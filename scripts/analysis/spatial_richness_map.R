@@ -13,11 +13,13 @@
 #                            surface is not just a map of where people looked)
 #
 # SCOPE (deliberately different from the rest of diversity_indices.R):
-#   This map uses ALL RECORDS, not survey-only. A coverage map answers "where in
-#   the park have bees been found / looked for", which is a whole-park question,
-#   so restricting to standardized survey effort would throw away exactly the
-#   off-transect coverage the map is meant to show. Both methods are pooled.
-#   Every figure carries a red caption stating this.
+#   ALL RECORDS, not survey-only -- a coverage map answers "where in the park
+#   have bees been found", a whole-park question. BUT the fine lat/long grid is
+#   built from iNaturalist ONLY: specimen coordinates are transect centroids
+#   (~980 specimens on ~18 points), so gridding them would invent false hotspots.
+#   iNat has real GPS, so it drives the grid; specimens are summarised BY TRANSECT
+#   (their reliable spatial unit) in a companion table + bar chart. Every figure
+#   carries a red caption stating its scope.
 #
 #   Raw richness per cell rises with how much a cell was sampled -- so the effort
 #   map is rendered alongside, and a rarefied-richness map (effort-controlled) is
@@ -45,6 +47,7 @@ CRS_UTM       <- 32611          # UTM zone 11N -- CABR / San Diego, metres
 CELL_M        <- 75             # grid cell size (metres); accuracy median ~4 m
 MAX_ACCURACY  <- 250            # drop iNat points looser than this (metres); NA kept
 RAREFY_N      <- 20             # rarefy cells with >= this many records to this count
+TRANSECTS     <- c("BST", "UPMON", "TP", "OT")   # for the per-transect richness summary
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
@@ -70,11 +73,14 @@ prep <- function(df, method) {
                              !is.na(species) & species != "", paste(genus, word(species, -1)), NA),
       genus_key   = ifelse(taxon_rank %in% GENUS_RANKS & !is.na(genus) & genus != "", genus, NA))
 }
-rec <- bind_rows(prep(spec, "lethal"), prep(inat, "nonlethal")) %>%
+# iNaturalist only drives the fine grid -- it has real GPS. Specimens are
+# transect centroids (see the per-transect summary below), so gridding them
+# would fabricate hotspots.
+rec <- prep(inat, "nonlethal") %>%
   filter(!is.na(latitude), !is.na(longitude))
 n_all <- nrow(rec)
 rec <- rec %>% filter(is.na(accuracy) | accuracy <= MAX_ACCURACY)
-message(sprintf("Georeferenced bee records: %d kept of %d (dropped %d looser than %dm)",
+message(sprintf("Georeferenced iNaturalist records: %d kept of %d (dropped %d looser than %dm)",
                 nrow(rec), n_all, n_all - nrow(rec), MAX_ACCURACY))
 
 # ---- 2. project + build the grid --------------------------------------------
@@ -132,8 +138,8 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
   dat <- cells[!is.na(cells[[fill_col]]), ]
   rank_lab <- if (grepl("genus", fill_col)) "genus" else
               if (fill_col == "n_records") "n/a (record count)" else "species"
-  cap <- str_wrap(scope_cap(sprintf("ALL records (not survey-only), %dm grid", CELL_M),
-                            "lethal + non-lethal pooled", rank_lab), width = 62)
+  cap <- str_wrap(scope_cap(sprintf("iNaturalist only (real GPS), %dm grid", CELL_M),
+                            "non-lethal; specimens summarised by transect", rank_lab), width = 62)
   g <- ggplot(dat) +
     geom_sf(aes(fill = .data[[fill_col]]), color = "white", linewidth = 0.15) +
     scale_fill_viridis_c(option = palette, name = legend_lab, trans = trans) +
@@ -156,4 +162,39 @@ if (any(!is.na(cells$rarefied_richness)))
            sprintf("species / %d recs", RAREFY_N),
            file.path(OUT_DIR, "map_rarefied_richness.png"), palette = "viridis")
 
-message("Spatial richness maps written to ", OUT_DIR)
+# ---- 5. per-transect richness (BOTH methods) -- specimens' reliable unit ------
+# Specimen coordinates are transect centroids, so specimens are summarised BY
+# TRANSECT here rather than gridded above. Both methods pooled, all-records; the
+# four transects only (off-transect records carry no transect and are excluded).
+tr_key <- function(df, method) df %>% transmute(
+  method = method, transect = toupper(str_squish(transect)),
+  species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
+                         !is.na(species) & species != "", paste(genus, word(species, -1)), NA),
+  genus_key   = ifelse(taxon_rank %in% GENUS_RANKS & !is.na(genus) & genus != "", genus, NA))
+tr_tbl <- bind_rows(tr_key(spec, "lethal"), tr_key(inat, "nonlethal")) %>%
+  filter(transect %in% TRANSECTS) %>%
+  group_by(transect) %>%
+  summarise(n_records         = n(),
+            genus_richness    = n_distinct(genus_key[!is.na(genus_key)]),
+            species_richness  = n_distinct(species_key[!is.na(species_key)]),
+            records_lethal    = sum(method == "lethal"),
+            records_nonlethal = sum(method == "nonlethal"),
+            .groups = "drop") %>%
+  arrange(desc(species_richness))
+write.csv(tr_tbl, file.path(OUT_DIR, "transect_richness.csv"), row.names = FALSE)
+message("Per-transect richness (both methods): ",
+        paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
+tr_long <- bind_rows(
+  data.frame(transect = tr_tbl$transect, rank = "species", richness = tr_tbl$species_richness),
+  data.frame(transect = tr_tbl$transect, rank = "genus",   richness = tr_tbl$genus_richness))
+gtr <- ggplot(tr_long, aes(x = reorder(transect, -richness), y = richness, fill = rank)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = c(species = "#2166ac", genus = "#1a9850"), name = NULL) +
+  labs(title = "CABR bee richness by transect (both methods, all records)",
+       subtitle = str_wrap(scope_cap("all records, per transect (specimens' reliable unit)",
+                                     "lethal + non-lethal pooled", "genus + species"), 62),
+       x = "transect", y = "distinct taxa") +
+  base_theme
+ggsave(file.path(OUT_DIR, "transect_richness.png"), gtr, width = 6.5, height = 5, dpi = 200, bg = "white")
+
+message("Spatial richness maps + per-transect richness written to ", OUT_DIR)

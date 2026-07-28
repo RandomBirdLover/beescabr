@@ -54,10 +54,10 @@ by_month <- p %>% group_by(month) %>%
   summarise(trips           = n(),
             observations    = sum(n_obs, na.rm = TRUE),
             obs_per_trip     = round(mean(n_obs, na.rm = TRUE), 1),
-            intern_trips     = sum(role == "intern"),
-            beeple_trips     = sum(role == "beeple"),
-            lethal_trips     = sum(method == "lethal"),
-            nonlethal_trips  = sum(method == "non-lethal"),
+            intern_trips     = sum(role == "intern", na.rm = TRUE),
+            beeple_trips     = sum(role == "beeple", na.rm = TRUE),
+            lethal_trips     = sum(method == "lethal", na.rm = TRUE),
+            nonlethal_trips  = sum(method == "non-lethal", na.rm = TRUE),
             .groups = "drop") %>%
   right_join(data.frame(month = 1:12), by = "month") %>%
   mutate(across(-month, ~ ifelse(is.na(.), 0, .)),
@@ -82,7 +82,7 @@ gA <- ggplot(long, aes(x = month_lab, y = value, fill = in_window)) +
   scale_fill_manual(values = c("TRUE" = "#1a9850", "FALSE" = "#cccccc"),
                     labels = c("TRUE" = "Mar-Sep window", "FALSE" = "outside window"), name = NULL) +
   labs(title = "Q13 - Survey effort calendar (CABR bees)",
-       subtitle = str_wrap(scope_cap("per-survey log, all trips 2021-2026",
+       subtitle = str_wrap(scope_cap(paste0("per-survey log, all trips ", min(p$year, na.rm = TRUE), "-", max(p$year, na.rm = TRUE)),
                             "lethal + non-lethal trips pooled", "n/a (effort)"), 80),
        x = NULL, y = NULL) +
   theme_minimal(base_size = 11) +
