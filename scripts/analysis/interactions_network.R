@@ -297,8 +297,8 @@ web_plot(Ms, file.path(OUT_DIR, "interactions_web_species.png"), "species", 30, 
 # ---- 5b. OPTIONAL bipartite::plotweb figures (only if the package is present) --
 if (HAVE_BIPARTITE) {
   message("bipartite present -- writing plotweb figures.")
-  WEB_TOP_PLANTS <- 15    # trim to the most-visited plant genera + most-connected
-  WEB_TOP_BEES   <- 18    # bees so the two-row web stays legible (full data in the CSVs)
+  WEB_TOP_PLANTS <- 12    # fewer taxa -> more room between labels (full data in the CSVs)
+  WEB_TOP_BEES   <- 12    # bipartite::plotweb packs labels at bar centres, so keep it lean
   # bipartite >= 2.2x rewrote plotweb with NEW arg names (sorting / higher_color /
   # lower_color / link_color / text_size / srt); the classic ones (method / col.high /
   # col.low / text.rot / labsize) were removed. Use the new API, fall back to the
@@ -309,19 +309,19 @@ if (HAVE_BIPARTITE) {
     Mt <- M[sort(pr), sort(bc), drop = FALSE]
     Mt <- Mt[rowSums(Mt) > 0, colSums(Mt) > 0, drop = FALSE]
     ttl <- sprintf("Top plant genera (bottom) x bee %s (top) -- visitation web", rank_label)
-    png(file, width = 2000, height = 1250, res = 170)
+    png(file, width = 2600, height = 1600, res = 150)   # wide + tall so vertical labels don't collide
     on.exit(dev.off())
     tryCatch({                                            # new bipartite API (>= 2.2x)
       bipartite::plotweb(Mt, sorting = "normal",
                          higher_color = "#4575b4", lower_color = "#1a9850",
                          link_color = adjustcolor("#d8b365", 0.7),
-                         text_size = 0.8, srt = 90,
+                         text_size = 0.7, srt = 90,
                          higher_italic = TRUE, lower_italic = TRUE, main = ttl)
     }, error = function(e) tryCatch({                     # legacy bipartite API
       message("  new-API plotweb failed (", conditionMessage(e), ") -- legacy args.")
       bipartite::plotweb(Mt, method = "normal", text.rot = 90,
                          col.high = "#4575b4", col.low = "#1a9850",
-                         col.interaction = adjustcolor("#d8b365", 0.7), labsize = 0.8)
+                         col.interaction = adjustcolor("#d8b365", 0.7), labsize = 0.7)
       title(main = ttl)
     }, error = function(e2) tryCatch({                    # bare call -- proven to run
       message("  styled plotweb failed -- bare call.")

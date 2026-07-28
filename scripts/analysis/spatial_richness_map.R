@@ -115,7 +115,7 @@ if (nrow(sp_long) > 0) {
 cells <- grid %>%
   inner_join(cell_tbl, by = "cell_id") %>%
   left_join(rare_tbl, by = "cell_id")
-cent <- st_transform(st_centroid(cells), CRS_LATLON) %>% st_coordinates()
+cent <- st_transform(st_centroid(st_geometry(cells)), CRS_LATLON) %>% st_coordinates()
 cells$centroid_lon <- round(cent[, 1], 6)
 cells$centroid_lat <- round(cent[, 2], 6)
 
