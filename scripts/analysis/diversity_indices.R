@@ -195,7 +195,7 @@ if (!is.null(mds)) {
     scale_color_manual(values = c(BST = "#1b7837", UPMON = "#762a83", TP = "#2166ac", OT = "#d95f02")) +
     labs(title = "Bee community composition by transect (NMDS, Bray-Curtis)",
          subtitle = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
-                           "\nsites = transect x year; ", ptr,
+                           sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
                            sprintf("  (stress %.2f)", mds$stress)),
          x = "NMDS1", y = "NMDS2") +
     theme_minimal(base_size = 11) +
