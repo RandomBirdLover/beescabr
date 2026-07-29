@@ -81,12 +81,14 @@ source("scripts/observations/qc/inat_misid_qc.R")         # defines inat_misid_q
 source("scripts/reference/manual_overrides.R")        # apply_manual_overrides / write_review_worklist (name-change fixes)
 source("scripts/reference/holway_reference_build.R")  # defines build_holway_reference() -- stage 4 (interactive)
 source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
+source("scripts/reference/verify_prompt.R")           # defines prompt_verify_taxa() -- pass-2 verification
 source("scripts/reference/plant_lookup_join.R")           # attach_flower_ids() -- flower taxon_id + in_park
 source("scripts/reference/plant_taxonomy_lookup_build.R") # defines build_plant_taxonomy_lookup() -- stage 5c
 source("scripts/project_info/collect_plant_names.R")      # defines review_plant_names() -- stage 7b
 source("scripts/specimens/specimen_clean_helpers.R")          # pure specimen-cleaning helpers
 source("scripts/specimens/specimen_bee_clean.R")      # defines clean_specimens() -- stage 6b
 source("scripts/specimens/specimen_raw_worklist.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
+source("scripts/reference/specimen_id_prompt.R")      # defines resolve_specimen_taxa() -- stage 6c interactive taxon-id resolve
 # CHECKLISTS (stage 9): normalized-tree builder + the 3 per-scope orchestrators. Sourced here so
 # the whole pipeline runs end-to-end with NO manual steps (cabr_inat / cabr_specimen / cabr_official /
 # pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat -- parent taxa as their own rows).
@@ -250,6 +252,14 @@ main <- function() {
   if (file.exists(PATHS$holway_reference)) {
     tryCatch(build_taxonomy_lookup(con),
              error = function(e) bx_note("taxonomy lookup failed: ", conditionMessage(e)))
+    # PASS 2 -- VERIFY new-to-Holway taxa: prompt to confirm each is a real ID (not a misID) and
+    # record it in verified_taxa.csv so it stops being flagged. Interactive only; never kills the run.
+    tryCatch({
+      if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1" && file.exists(PATHS$taxonomy_lookup)) {
+        .lkv <- suppressMessages(utils::read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE, check.names = FALSE))
+        prompt_verify_taxa(.lkv, interactive_ok = TRUE)
+      }
+    }, error = function(e) bx_note("verification prompt failed: ", conditionMessage(e)))
   } else {
     bx_kv("Bee lookup", "skipped — no Holway reference table")
   }
@@ -275,6 +285,17 @@ main <- function() {
            error = function(e) bx_note("raw specimen worklist failed: ", conditionMessage(e)))
   tryCatch(clean_specimens(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
            error = function(e) bx_note("specimen clean failed: ", conditionMessage(e)))
+
+  # 6c. RESOLVE unknown specimen taxa -- for each bee flagged as "not in the taxonomy lookup",
+  #     prompt for its iNaturalist id (with a suggested match) and fold it into specimen_additions.csv
+  #     WITH full parent lineage, so it enters the lookup on the NEXT build and stops re-flagging.
+  #     Interactive only; wrapped so it never kills the run.
+  tryCatch({
+    if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1") {
+      .sprec <- suppressMessages(readxl::read_excel(read_latest(SBC_RECORDS_DIR, SBC_RECORDS_PATTERN)))
+      resolve_specimen_taxa(.sprec, interactive_ok = TRUE)
+    }
+  }, error = function(e) bx_note("specimen taxon-id resolve failed: ", conditionMessage(e)))
 
   # ---- 7. CLEAN: labeled iNat BEE table (taxonomy filled from the lookup) ----
   # Reads the brain's cabr_inat_raw.csv, joins coords + taxon_id, fills taxonomy from the

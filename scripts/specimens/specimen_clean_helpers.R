@@ -163,17 +163,14 @@ compute_taxonomy_flags <- function(df, known_genera, known_genus_species) {
 }
 
 # ------------------------------------------------------------------------------
-# STANDARD review-gate input. ONE vocabulary for every STOP / CONTINUE decision in
-# the pipeline, so a reviewer never has to guess whether Enter means "stop" or "go".
-# Type a word (case-insensitive; a few synonyms accepted). A bare Enter or ANY
-# unrecognized input RE-ASKS instead of guessing -- so a stray keystroke can neither
-# skip a real problem nor halt the run by accident.
-#   continue:  skip | s | continue | c | go | ok | y | yes
-#   stop:      stop | x | halt | fix | n | no
-# Heads-up prompts that have NO stop/continue decision just say "Press Enter to
-# continue" (Enter always means continue there -- there's nothing to decide).
+# STANDARD review-gate input. ONE convention for every STOP / CONTINUE decision in
+# the pipeline: y = pause & fix now; Enter (the default) or n = continue. A few
+# synonyms are accepted; only genuine garbage RE-ASKS -- a bare Enter continues, so
+# a stray keystroke can't silently halt the run.
+#   stop (pause & fix):  y | yes | stop | fix | halt | x
+#   continue (default):  <Enter> | n | no | skip | continue | c | go | ok
+# Heads-up prompts that have NO decision just say "[Enter] to continue".
 # ------------------------------------------------------------------------------
-# STANDARD gate answer -> y = pause & fix now;  Enter or n = continue  (Enter is the default).
 REVIEW_STOP_WORDS     <- c("y", "yes", "stop", "fix", "halt", "x")               # pause & fix
 REVIEW_CONTINUE_WORDS <- c("", "n", "no", "skip", "continue", "c", "go", "ok")   # keep going ("" = Enter default)
 .review_ask <- function(prompt_fn, lead) {
