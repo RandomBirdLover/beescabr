@@ -90,3 +90,27 @@ test_that("seed_additions_from_flags skips taxa already in additions, and blank 
   existing <- data.frame(scientific_name = "Colletes phaceliae", stringsAsFactors = FALSE)
   expect_equal(nrow(seed_additions_from_flags(flags, record, existing)), 0L)
 })
+
+test_that("resolve_specimen_taxa (driver) seeds a flag + fills ids with NO type clash", {
+  .impl()
+  addf <- tempfile(fileext = ".csv")
+  writeLines(c(
+    "rank,scientific_name,taxon_id,in_holway,in_inat,in_cabr_specimens,verified,kingdom,phylum,class,order,superfamily,family,subfamily,tribe,subtribe,genus,subgenus,complex,species,subspecies,common_name",
+    "species,Colletes phaceliae,,FALSE,FALSE,TRUE,FALSE,Animalia,Arthropoda,Insecta,Hymenoptera,Apoidea,Colletidae,Colletinae,Colletini,,Colletes,,,phaceliae,,"), addf)
+  flgf <- tempfile(fileext = ".csv")
+  writeLines(c('"ucsd_id","genus","species","subspecies","flag_reason"',
+               '1388,"Melissodes","microstictus",NA,"x"'), flgf)
+  record <- data.frame(order = "Hymenoptera", family = "Apidae", subfamily = "Apinae", tribe = "Eucerini",
+                       genus = "Melissodes", subgenus = "Eumelissodes", complex = "", species = "microstictus",
+                       stringsAsFactors = FALSE)
+  fetch <- function(term)
+    if (term == "Melissodes microstictus") list(list(id = 747170, name = "Melissodes microstictus", rank = "species"))
+    else if (term == "Colletes phaceliae") list(list(id = 179703, name = "Colletes phaceliae", rank = "species"))
+    else list()
+  suppressMessages(resolve_specimen_taxa(record, additions_path = addf, flags_path = flgf,
+    fetch_fn = fetch, prompt_fn = function(...) "", interactive_ok = TRUE, write = TRUE, verbose = FALSE))
+  out <- read.csv(addf, stringsAsFactors = FALSE, check.names = FALSE)
+  expect_equal(nrow(out), 2L)                     # existing Colletes + seeded microstictus (no bind_rows clash)
+  expect_true(all(!is.na(out$taxon_id)))          # both ids filled
+  expect_equal(out$tribe[out$scientific_name == "Melissodes microstictus"], "Eucerini")
+})

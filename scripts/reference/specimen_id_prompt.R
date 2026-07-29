@@ -162,6 +162,10 @@ resolve_specimen_taxa <- function(record_df,
     tryCatch(suppressWarnings(utils::read.csv(p, stringsAsFactors = FALSE, check.names = FALSE)), error = function(e) NULL) else NULL
   additions <- rd(additions_path); if (is.null(additions)) additions <- .sa_empty()
   new_rows  <- seed_additions_from_flags(rd(flags_path), record_df, additions)
+  # read.csv infers the TRUE/FALSE columns as <logical> while the seeded rows are <character>;
+  # coerce both sides to character so bind_rows never hits a type clash.
+  .chr <- function(d) { if (ncol(d)) d[] <- lapply(d, as.character); d }
+  additions <- .chr(additions); new_rows <- .chr(new_rows)
   combined  <- if (nrow(new_rows)) dplyr::bind_rows(additions, new_rows) else additions
   if (!"taxon_id" %in% names(combined)) combined$taxon_id <- NA_integer_
   if (!sum(is.na(suppressWarnings(as.integer(combined$taxon_id))))) {
