@@ -2,7 +2,7 @@ library(testthat)
 library(dplyr)
 
 test_that("standardize_specimen_names fixes casing", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = c("ANDRENA", "melissodes"),
                        species = c("Robustior", "SUBTILIOR"),
                        subspecies = c(NA, "FOO"))
@@ -13,7 +13,7 @@ test_that("standardize_specimen_names fixes casing", {
 })
 
 test_that(".parse_specimen_date_vec converts Excel serials and parses normal dates", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   out <- .parse_specimen_date_vec(c("2021-04-24", "44310", "", NA_character_))
   expect_equal(out[1], as.Date("2021-04-24"))
   expect_equal(out[2], as.Date("2021-04-24"))   # 44310 = Excel serial -> 2021-04-24
@@ -22,20 +22,20 @@ test_that(".parse_specimen_date_vec converts Excel serials and parses normal dat
 })
 
 test_that("parse_specimen_dates fills date/year from an Excel-serial date cell", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   out <- parse_specimen_dates(tibble::tibble(date = c("2021-04-24", "44310")))
   expect_equal(out$date_clean, as.Date(c("2021-04-24", "2021-04-24")))
   expect_equal(out$year, c(2021, 2021))
 })
 
 test_that(".parse_specimen_date_vec ignores numbers outside the Excel-serial window", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   # 100 is not a plausible collection-date serial -> NOT converted via Excel origin
   expect_true(is.na(suppressWarnings(.parse_specimen_date_vec("100"))))
 })
 
 test_that("sbc_bee_situation maps flower_visited / ground / aerial like the iNat side", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(
     flower_visited  = c("Encelia californica", NA_character_, NA_character_, NA_character_),
     method_or_plant = c("ex. Encelia californica", "Ground Grab", "Aerial Net", ""))
@@ -43,14 +43,14 @@ test_that("sbc_bee_situation maps flower_visited / ground / aerial like the iNat
 })
 
 test_that("sbc_bee_situation: 'On ground' -> on_ground, 'In air' -> aerial, blank method -> NA", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(flower_visited = NA_character_,
                        method_or_plant = c("On ground", "In air", NA_character_))
   expect_equal(sbc_bee_situation(df), c("on_ground", "aerial", NA))
 })
 
 test_that("fill_specimen_taxonomy coalesces blanks from the lookup only", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = "Colletes", species = "hyalinus", subspecies = NA_character_,
                        family = "", subfamily = NA_character_, tribe = "KeepMe")
   lk <- tibble::tibble(genus = "Colletes", species = "hyalinus", subspecies = NA_character_,
@@ -62,7 +62,7 @@ test_that("fill_specimen_taxonomy coalesces blanks from the lookup only", {
 })
 
 test_that("compute_taxonomy_flags flags unknown genus and unknown genus+species", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(
     ucsd_id = 1:3, sdnhm_id = 0,
     genus = c("Andrena", "Augochorella", "Andrena"),   # Augochorella = typo
@@ -79,7 +79,7 @@ test_that("compute_taxonomy_flags flags unknown genus and unknown genus+species"
 })
 
 test_that("add_qc_flags marks missing fields", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(latitude = c(1, NA), longitude = c(1, 2), date = c(Sys.Date(), NA),
                        sdnhm_id = c("A", ""), ucsd_id = c("U", "V"), genus = c("Andrena", ""))
   out <- add_qc_flags(df)
@@ -90,7 +90,7 @@ test_that("add_qc_flags marks missing fields", {
 })
 
 test_that("detect_duplicate_ids catches dup ucsd and sdnhm (ignoring 0/NA)", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(
     ucsd_id  = c(1, 1, 2, 3),
     sdnhm_id = c(10, 20, 0, 0))
@@ -100,7 +100,7 @@ test_that("detect_duplicate_ids catches dup ucsd and sdnhm (ignoring 0/NA)", {
 })
 
 test_that("match_specimen_complex prefixes and gates on species", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = c("Diadasia", "Diadasia"), species = c("australis", NA),
                        complex = NA_character_, complex_taxon_id = NA)
   lk <- tibble::tibble(genus = "diadasia", species = "australis",
@@ -112,7 +112,7 @@ test_that("match_specimen_complex prefixes and gates on species", {
 })
 
 test_that("build_old_scientific_name handles the three blank cases", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(old_genus_name = c(NA, "Andrena", "Andrena"),
                        old_species_name = c(NA, NA, "prunorum"))
   out <- build_old_scientific_name(df)
@@ -127,17 +127,18 @@ test_that("build_old_scientific_name handles the three blank cases", {
 .fake_answers <- function(xs) { i <- 0L; function(...) { i <<- i + 1L; xs[[min(i, length(xs))]] } }
 
 test_that("resolve_flag_gate: clean / continue / stop (standard vocab)", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   expect_equal(resolve_flag_gate(0, interactive_ok = TRUE), "clean")
   expect_equal(resolve_flag_gate(3, interactive_ok = FALSE), "continue")   # non-interactive skips
   expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "skip"), "continue")
   expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "stop"), "stop")
-  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "y"), "continue")  # synonym
-  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "n"), "stop")       # synonym
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "y"), "stop")       # y = stop & fix
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) "n"), "continue")   # n = continue
+  expect_equal(resolve_flag_gate(3, interactive_ok = TRUE, prompt_fn = function(...) ""),  "continue")   # Enter = default continue
 })
 
 test_that("resolve_review_gate: clean / batch-continue / standard skip vs stop", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   none <- data.frame(label = "x", count = 0L, file = "f.csv", stringsAsFactors = FALSE)
   some <- data.frame(label = c("taxonomy", "dupes"), count = c(2L, 1L),
                      file = c("a.csv", "b.csv"), stringsAsFactors = FALSE)
@@ -145,16 +146,17 @@ test_that("resolve_review_gate: clean / batch-continue / standard skip vs stop",
   expect_equal(resolve_review_gate(some, "review", interactive_ok = FALSE), "continue")  # batch: log + go
   expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "skip"), "continue")
   expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "stop"), "stop")
-  # a bare Enter / garbage RE-ASKS rather than guessing; here: "" then "junk" then "stop"
+  # Enter is the default -> continue; only genuine garbage RE-ASKS until valid
+  expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) ""), "continue")
   suppressMessages(
     expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE,
-                                     prompt_fn = .fake_answers(c("", "junk", "stop"))), "stop"))
+                                     prompt_fn = .fake_answers(c("junk", "y"))), "stop"))
   # non-blocking (iNat): a heads-up only -- always continues, whatever is typed
   expect_equal(resolve_review_gate(some, "review", interactive_ok = TRUE, prompt_fn = function(...) "", blocking = FALSE), "continue")
 })
 
 test_that("drop_non_native_apis removes honey bees (Apis), keeps natives + NA genus", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df  <- tibble(genus = c("Apis", "apis", "Bombus", NA, "Andrena"),
                 species = c("mellifera", "mellifera", "x", "y", "z"))
   out <- drop_non_native_apis(df)
@@ -164,7 +166,7 @@ test_that("drop_non_native_apis removes honey bees (Apis), keeps natives + NA ge
 })
 
 test_that("flag_raw_clutter tags non-ID'd and missing rows", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(ucsd_id = 1:4,
                        genus = c("Andrena", "", "Bombus", NA_character_),
                        missing_specimen = c("N", "N", "Y", "Y"))
@@ -176,7 +178,7 @@ test_that("flag_raw_clutter tags non-ID'd and missing rows", {
 })
 
 test_that("transect_variant_map + match_plot_transect map plot text to TP/UPMON/BST", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   cw <- tibble::tibble(
     name     = c("tp", "upmon", "bst", "ot", "feeding"),
     what_for = c("transect", "transect", "transect", "transect", "behavior"),
@@ -193,7 +195,7 @@ test_that("transect_variant_map + match_plot_transect map plot text to TP/UPMON/
 })
 
 test_that("attach_lookup_taxonomy fills taxon_id + higher ranks, keeps specimen names", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   # row1: genus+species ID; row2: family-ONLY ID (blank genus); row3: truly blank
   df <- tibble::tibble(
     genus      = c("Andrena", NA_character_, NA_character_),
@@ -236,7 +238,7 @@ test_that("attach_lookup_taxonomy fills taxon_id + higher ranks, keeps specimen 
 # (Anthophila). Bee-ness is a FAMILY test -- apoid wasps share superfamily Apoidea.
 
 test_that("keep_bee_specimens keeps bee families, drops wasps/flies/unidentified", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(
     ucsd_id = 1:6,
     genus   = c("Lasioglossum", "Apis", "Tiphia", NA, NA, "Andrena"),
@@ -249,7 +251,7 @@ test_that("keep_bee_specimens keeps bee families, drops wasps/flies/unidentified
 })
 
 test_that("keep_bee_specimens covers all seven Anthophila families, superfamily-blind", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(family = c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
                                   "Megachilidae", "Melittidae", "Stenotritidae", "Crabronidae"))
   out <- keep_bee_specimens(df)
@@ -258,7 +260,7 @@ test_that("keep_bee_specimens covers all seven Anthophila families, superfamily-
 })
 
 test_that("keep_bee_specimens fails open when there is no family column", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = c("Apis", "Tiphia"))
   expect_warning(out <- keep_bee_specimens(df))
   expect_equal(nrow(out), 2)                            # unchanged, not silently emptied
@@ -268,7 +270,7 @@ test_that("keep_bee_specimens fails open when there is no family column", {
 # blank genus) gets its id/rank/scientific_name from the lookup's row at that rank.
 
 test_that("fill_above_genus_ids resolves a tribe-only specimen (finest rank wins)", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(
     genus = c(NA_character_, "Andrena"),
     family = c("Halictidae", "Andrenidae"),
@@ -296,7 +298,7 @@ test_that("fill_above_genus_ids resolves a tribe-only specimen (finest rank wins
 })
 
 test_that("fill_above_genus_ids leaves an ambiguous rank+name (>1 id) blank", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = NA_character_, family = "Halictidae", tribe = "Halictini",
                        taxon_id = NA_integer_, taxon_rank = NA_character_,
                        scientific_name = NA_character_, common_name = NA_character_)
@@ -309,7 +311,7 @@ test_that("fill_above_genus_ids leaves an ambiguous rank+name (>1 id) blank", {
 })
 
 test_that("fill_above_genus_ids does NOT coarsen a genus-or-finer specimen", {
-  src("specimens/specimen_clean.R")
+  src("specimens/specimen_clean_helpers.R")
   # genus present but its species absent from the lookup -> taxon_id must STAY NA,
   # NOT fall back to the family id.
   df <- tibble::tibble(genus = "Andrena", species = "notinlookup", family = "Andrenidae",

@@ -87,4 +87,4 @@ flowchart TD
   nearest on-iNat parent's `taxon_id` + ancestry (same-named complex → subgenus → genus; the complex is
   prompted). Config paths corrected to the reorganized `data/reference/` layout.
 - **Tests** (`tests/testthat/`) source modules through the `src()` helper. One loose end:
-  `test-specimen.R` targets the removed `specimen_clean.R` — flag for cleanup.
+  `test-specimen.R` targets `specimen_clean_helpers.R` (the pure specimen helpers).

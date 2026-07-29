@@ -254,7 +254,7 @@ build_location_review_maps <- function(write = TRUE) {
       message(sprintf("       %-10s @%-15s %3d pin%s  ->  by_surveyors/cabr_pins_to_fix_%s.html",
                       s$fn, s$u, s$n, if (s$n != 1) "s" else " ", s$u))
     if (interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1")
-      invisible(readline("  Email each surveyor their map when you can. Press Enter to continue: "))
+      invisible(readline("  Email each surveyor their map when you can.  [Enter] to continue: "))
   }
   invisible(vapply(made, function(s) s$u, character(1)))
 }

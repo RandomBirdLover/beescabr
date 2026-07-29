@@ -1,7 +1,8 @@
 # =============================================================
-# specimens/specimen_clean.R
+# specimens/specimen_clean_helpers.R
 # beescabr pipeline -- CABR bee specimen cleaning (pure helpers)
-# Restored 2026-07-20 from _to_delete/specimen_clean.R.bak (was clean/specimen_clean.R).
+# (formerly specimen_clean.R; renamed for clarity -- these are the pure transforms,
+#  NOT the runnable stage. The orchestrator specimen_bee_clean.R calls them.)
 #
 # The testable, side-effect-free transforms behind specimen cleaning. The
 # orchestrator (specimen_bee_clean.R) does the I/O (read the .xlsx, read the
@@ -172,15 +173,15 @@ compute_taxonomy_flags <- function(df, known_genera, known_genus_species) {
 # Heads-up prompts that have NO stop/continue decision just say "Press Enter to
 # continue" (Enter always means continue there -- there's nothing to decide).
 # ------------------------------------------------------------------------------
-REVIEW_CONTINUE_WORDS <- c("skip", "s", "continue", "c", "go", "ok", "y", "yes")
-REVIEW_STOP_WORDS     <- c("stop", "x", "halt", "fix", "n", "no")
+# STANDARD gate answer -> y = pause & fix now;  Enter or n = continue  (Enter is the default).
+REVIEW_STOP_WORDS     <- c("y", "yes", "stop", "fix", "halt", "x")               # pause & fix
+REVIEW_CONTINUE_WORDS <- c("", "n", "no", "skip", "continue", "c", "go", "ok")   # keep going ("" = Enter default)
 .review_ask <- function(prompt_fn, lead) {
   repeat {
-    ans <- tolower(trimws(prompt_fn(paste0(
-      lead, "  Type  skip  to continue, or  stop  to halt and fix now  [skip / stop]: "))))
-    if (ans %in% REVIEW_CONTINUE_WORDS) return("continue")
-    if (ans %in% REVIEW_STOP_WORDS)     return("stop")
-    message("     (please type  skip  or  stop)")
+    ans <- tolower(trimws(prompt_fn(paste0(lead, "  Stop to fix first?  [y/N]: "))))
+    if (ans %in% REVIEW_STOP_WORDS)     return("stop")       # check stop first
+    if (ans %in% REVIEW_CONTINUE_WORDS) return("continue")   # "" (Enter) lands here -> default continue
+    message("     (y = stop & fix · Enter = continue)")
   }
 }
 
@@ -191,7 +192,7 @@ REVIEW_STOP_WORDS     <- c("stop", "x", "halt", "fix", "n", "no")
 resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
   if (n_flags == 0) return("clean")
   if (!interactive_ok) return("continue")
-  .review_ask(prompt_fn, "  Reviewed the flags above and fixed the source .xlsx?")
+  .review_ask(prompt_fn, "  Spell-check flags above may need fixing in the raw .xlsx.")
 }
 
 # ONE consolidated review checkpoint so nothing in the review folder gets silently
@@ -209,7 +210,7 @@ resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = r
     message(sprintf("     %-24s %4d  -> %s", items$label[i], items$count[i], items$file[i]))
   if (!interactive_ok) { message("     (batch mode: logged above, continuing)"); return("continue") }
   if (!blocking) {   # heads-up only -- the run never stops here; the fix happens elsewhere, later
-    prompt_fn(sprintf("  Fix these on %s when you can (each row has its url). Press Enter to continue: ", fix_hint))
+    prompt_fn(sprintf("  Fix these in %s when you can (each row has its url).  [Enter] to continue: ", fix_hint))
     return("continue")
   }
   .review_ask(prompt_fn, sprintf("  These need fixing in %s.", fix_hint))

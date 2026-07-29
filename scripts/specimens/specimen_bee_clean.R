@@ -39,8 +39,8 @@ local({
   need("read_latest",               "utils/utils.R")
   need("require_columns",           "utils/utils.R")
   need("write_fresh",               "utils/utils.R")
-  need("standardize_specimen_names","specimens/specimen_clean.R")
-  need("keep_bee_specimens",        "specimens/specimen_clean.R")
+  need("standardize_specimen_names","specimens/specimen_clean_helpers.R")
+  need("keep_bee_specimens",        "specimens/specimen_clean_helpers.R")
 })
 
 SBC_RECORDS_DIR     <- "data/specimens/records"

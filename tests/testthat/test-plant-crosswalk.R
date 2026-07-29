@@ -6,7 +6,7 @@ library(dplyr)
 # map so flower_visited is uniform with the plant obs + plant lookup. The brain
 # must NOT treat a plant name as a survey tag.
 
-src("specimens/specimen_clean.R")
+src("specimens/specimen_clean_helpers.R")
 
 .cw <- function() tibble(
   name = c("tp", "Isocoma menziesii", "Leptosyne maritima", "Madia"),

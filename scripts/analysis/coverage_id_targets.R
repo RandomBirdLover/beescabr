@@ -41,11 +41,20 @@ prep <- function(df, method) data.frame(
   genus = str_squish(df$genus), stringsAsFactors = FALSE)
 rec <- bind_rows(prep(spec, "specimen"), prep(inat, "photo")) %>%
   mutate(resolved = taxon_rank %in% SPECIES_RANKS,
+         # how far each record got: species / genus-only / coarser-than-genus
+         level = ifelse(resolved, "species",
+                 ifelse(!is.na(genus) & genus != "", "genus", "coarser")),
          # finest label we can name the unresolved cluster by: genus if known, else the rank
          target = ifelse(!is.na(genus) & genus != "", genus, paste0("(", taxon_rank, ")")))
 unresolved <- rec %>% filter(!resolved)
 message(sprintf("Unresolved records (coarser than species): %d of %d (%.1f%%)",
                 nrow(unresolved), nrow(rec), 100 * nrow(unresolved) / nrow(rec)))
+
+# resolved (identified to species) -- the "work already done" side
+resolved_by_genus <- rec %>% filter(resolved, !is.na(genus), genus != "") %>%
+  count(genus, name = "resolved_species")
+n_total <- nrow(rec); n_resolved <- sum(rec$resolved); pct_resolved <- 100 * n_resolved / n_total
+message(sprintf("Resolved to species: %d of %d records (%.1f%%)", n_resolved, n_total, pct_resolved))
 
 # ---- 2. worklist: unresolved records per target, split by method -------------
 work <- unresolved %>%
@@ -55,6 +64,8 @@ work <- unresolved %>%
             photo_unresolved    = sum(method == "photo"),
             ranks = paste(sort(unique(taxon_rank)), collapse = ", "),
             .groups = "drop") %>%
+  left_join(resolved_by_genus, by = c("target" = "genus")) %>%
+  mutate(resolved_species = coalesce(resolved_species, 0L)) %>%
   arrange(desc(specimen_unresolved), desc(unresolved_total))
 write.csv(work, file.path(OUT_DIR, "coverage_id_targets.csv"), row.names = FALSE)
 
@@ -64,23 +75,111 @@ message(sprintf("Targets with specimen-backed (keyable) records: %d genera, %d s
 message("Top keyable genera: ",
         paste(sprintf("%s(%d)", head(keyable$target, 6), head(keyable$specimen_unresolved, 6)), collapse = "  "))
 
-# ---- 3. figure: top targets by unresolved records, stacked by method ---------
-top <- work %>% slice_max(unresolved_total, n = TOP_N, with_ties = FALSE)
+# ---- 3. figure: every remaining target -- work already done (resolved) + what remains ----
+# No top-N cap: show EVERY target that still has unresolved records. A fully-resolved
+# genus isn't a "remaining" task, so its absence here just means its ID work is done.
+top <- work %>% arrange(desc(unresolved_total))
 long <- bind_rows(
-  data.frame(target = top$target, method = "specimen (keyable)", n = top$specimen_unresolved),
-  data.frame(target = top$target, method = "photo",              n = top$photo_unresolved)) %>%
+  data.frame(target = top$target, cat = "resolved (to species)", n = top$resolved_species),
+  data.frame(target = top$target, cat = "specimen (keyable)",    n = top$specimen_unresolved),
+  data.frame(target = top$target, cat = "photo (needs ID)",      n = top$photo_unresolved)) %>%
   filter(n > 0)
-long$target <- factor(long$target, levels = rev(top$target))
-g <- ggplot(long, aes(x = n, y = target, fill = method)) +
+long$cat    <- factor(long$cat, levels = c("resolved (to species)", "specimen (keyable)", "photo (needs ID)"))
+# genera A->Z at the top; the parenthesised coarse-rank buckets ((tribe),
+# (subfamily), (epifamily)) sink to the bottom so they don't split the A-Z genus list.
+tg <- unique(as.character(long$target))
+long$target <- factor(long$target,
+  levels = rev(c(sort(tg[!grepl("^\\(", tg)]), sort(tg[grepl("^\\(", tg)]))))
+# per-target % identified to species, labelled at the end of each bar
+lab <- top %>% transmute(target, total = resolved_species + unresolved_total,
+                         pct_id = ifelse(total > 0, 100 * resolved_species / total, 0)) %>% filter(total > 0)
+lab$target <- factor(lab$target, levels = levels(long$target))
+g <- ggplot(long, aes(x = n, y = target, fill = cat)) +
   geom_col(width = 0.72) +
-  scale_fill_manual(values = c("specimen (keyable)" = "#1a9850", "photo" = "#b8b8b8"), name = NULL) +
-  labs(title = sprintf("Q7 - Target-ID list: top %d bee taxa needing species-level ID", TOP_N),
-       subtitle = str_wrap(scope_cap("all records not resolved to species",
-                            "specimen (keyable) vs photo", "genus / coarse rank"), 78),
-       x = "unresolved records", y = NULL) +
+  geom_text(data = lab, aes(x = total, y = target, label = sprintf("%.0f%% ID'd", pct_id)),
+            hjust = -0.12, size = 2.8, color = "grey25", inherit.aes = FALSE) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.13))) +
+  scale_fill_manual(values = c("resolved (to species)" = "#2166ac",
+                               "specimen (keyable)" = "#1a9850", "photo (needs ID)" = "#b8b8b8"), name = NULL) +
+  labs(title = sprintf("Q7 - Species-level ID: work done vs all %d remaining targets", nrow(top)),
+       subtitle = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
+                            format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
+                            scope_cap("all records", "resolved vs specimen-keyable vs photo", "genus / coarse rank")), 82),
+       x = "records", y = NULL) +
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(color = "#b2182b", size = 9),
         legend.position = "top", panel.grid.major.y = element_blank())
-ggsave(file.path(OUT_DIR, "coverage_id_targets.png"), g, width = 9, height = 6.2, dpi = 200, bg = "white")
-message("Wrote coverage_id_targets.{csv,png} to ", OUT_DIR)
+ggsave(file.path(OUT_DIR, "coverage_id_targets.png"), g,
+       width = 9.5, height = max(7, 0.30 * nrow(top) + 2), dpi = 200, bg = "white")  # taller for all targets
+
+# ---- 4. per-method species-ID progress: to species vs genus-only --------------
+# Shared genus set: EVERY named genus (no top-N cap), ALPHABETICAL -- so the specimen
+# and photo panels line up genus-for-genus and nothing is hidden by an arbitrary cutoff.
+# Genera with 0 records for a method still hold their row (see drop = FALSE below).
+method_genera <- rec %>% filter(!is.na(genus), genus != "") %>%
+  distinct(genus) %>% pull(genus) %>% sort()
+method_genus_fig <- function(m, file, method_label) {
+  d <- rec %>% filter(method == m, genus %in% method_genera) %>%
+    group_by(genus) %>%
+    summarise(species = sum(resolved), genus_only = sum(!resolved), total = n(), .groups = "drop")
+  d <- data.frame(genus = method_genera, stringsAsFactors = FALSE) %>%
+    left_join(d, by = "genus") %>%
+    mutate(species = coalesce(species, 0L), genus_only = coalesce(genus_only, 0L), total = coalesce(total, 0L))
+  long <- bind_rows(
+    data.frame(genus = d$genus, cat = "identified to species",   n = d$species),
+    data.frame(genus = d$genus, cat = "genus-only (unresolved)", n = d$genus_only)) %>% filter(n > 0)
+  long$cat   <- factor(long$cat, levels = c("identified to species", "genus-only (unresolved)"))
+  long$genus <- factor(long$genus, levels = rev(method_genera))   # alphabetical (A at top)
+  pct <- 100 * sum(d$species) / sum(d$total)
+  # per-genus % identified to species, labelled at the end of each bar (0-record genera get no label)
+  lab2 <- d %>% filter(total > 0) %>% transmute(genus, total, pct_id = 100 * species / total)
+  lab2$genus <- factor(lab2$genus, levels = rev(method_genera))
+  g2 <- ggplot(long, aes(x = n, y = genus, fill = cat)) +
+    geom_col(width = 0.72) +
+    geom_text(data = lab2, aes(x = total, y = genus, label = sprintf("%.0f%%", pct_id)),
+              hjust = -0.15, size = 2.7, color = "grey25", inherit.aes = FALSE) +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
+    scale_y_discrete(drop = FALSE) +   # keep EVERY shared genus, even 0-record ones (e.g. photo-only Xenoglossa has 0 specimens) so specimen & photo align row-for-row
+    scale_fill_manual(values = c("identified to species" = "#2166ac",
+                                 "genus-only (unresolved)" = "#b8b8b8"), name = NULL) +
+    labs(title = sprintf("Q7 - %s: species-level ID progress (all %d genera)", method_label, length(method_genera)),
+         subtitle = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
+                              method_label, format(sum(d$species), big.mark = ","),
+                              format(sum(d$total), big.mark = ","), pct,
+                              scope_cap("records with a genus", method_label, "genus")), 82),
+         x = "records", y = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(color = "#b2182b", size = 9),
+          legend.position = "top", panel.grid.major.y = element_blank())
+  ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), dpi = 200, bg = "white")  # taller for all genera
+}
+method_genus_fig("specimen", file.path(OUT_DIR, "coverage_id_targets_specimen.png"), "Specimen (net)")
+method_genus_fig("photo",    file.path(OUT_DIR, "coverage_id_targets_photo.png"),    "Photo (iNaturalist)")
+
+# ---- 5. ID-completeness funnel: how far each record got, by method ------------
+grid   <- expand.grid(method = c("specimen", "photo"),
+                      level  = c("species", "genus", "coarser"), stringsAsFactors = FALSE)
+funnel <- merge(grid, dplyr::count(rec, method, level, name = "n"), all.x = TRUE)
+funnel$n[is.na(funnel$n)] <- 0L
+funnel$level  <- factor(funnel$level,  levels = c("species", "genus", "coarser"))
+funnel$method <- factor(funnel$method, levels = c("specimen", "photo"))
+gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
+  geom_col(position = position_dodge(0.72), width = 0.68) +
+  geom_text(aes(label = format(n, big.mark = ",")), position = position_dodge(0.72), vjust = -0.3, size = 3) +
+  scale_fill_manual(values = c(specimen = "#1a9850", photo = "#b8b8b8"), name = NULL,
+                    labels = c(specimen = "specimen (net)", photo = "photo (iNat)")) +
+  scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +
+  labs(title = "Q7 - Bee ID completeness: how far each record got, by method",
+       subtitle = str_wrap(sprintf("%s of %s records (%.0f%%) identified to species.  %s",
+                            format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
+                            scope_cap("all records", "specimen (net) vs photo (iNat)", "resolution level")), 82),
+       x = NULL, y = "records") +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(color = "#b2182b", size = 9),
+        legend.position = "top", panel.grid.major.x = element_blank())
+ggsave(file.path(OUT_DIR, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, dpi = 200, bg = "white")
+
+message("Wrote coverage_id_targets.{csv,png}, _specimen.png, _photo.png, and coverage_id_completeness.png to ", OUT_DIR)

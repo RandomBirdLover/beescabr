@@ -34,7 +34,6 @@ if (!exists("PATHS")) source("scripts/config.R")
 OUT_DIR       <- "data/analysis/bee_bounties"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-TOP_N         <- 20
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 scope_cap <- function(src) sprintf("Scope: ALL records  |  context from %s  |  ranks: species + genus", src)
 
@@ -112,25 +111,27 @@ message(sprintf("iNAT BOUNTY (get a photo): %d species + %d genera in specimens 
                 sum(inat_bounty$rank == "species"), sum(inat_bounty$rank == "genus")))
 
 # ---- 4. figures: top species targets, most 'findable' first ------------------
+# EVERY gap species (no cap) -- a bounty must be the complete list of taxa missing from the other method.
 bar <- function(df, ncol_records, title, sub, fill, file) {
-  d <- df %>% filter(rank == "species") %>% slice_max(.data[[ncol_records]], n = TOP_N, with_ties = FALSE)
+  d <- df %>% filter(rank == "species") %>% arrange(desc(.data[[ncol_records]]))
   d$taxon <- factor(d$taxon, levels = rev(d$taxon))
   g <- ggplot(d, aes(x = .data[[ncol_records]], y = taxon)) +
     geom_col(fill = fill, width = 0.72) +
     geom_text(aes(label = .data[[ncol_records]]), hjust = -0.25, size = 3) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-    labs(title = title, subtitle = str_wrap(sub, 95), x = "records in the source method (more = easier to target)", y = NULL) +
+    labs(title = sprintf("%s (all %d species)", title, nrow(d)), subtitle = str_wrap(sub, 95),
+         x = "records in the source method (more = easier to target)", y = NULL) +
     theme_minimal(base_size = 11) +
     theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"),
           axis.text.y = element_text(face = "italic"), panel.grid.major.y = element_blank())
-  ggsave(file, g, width = 9, height = 6.4, dpi = 200, bg = "white")
+  ggsave(file, g, width = 9, height = max(6.4, 0.30 * nrow(d) + 1.8), dpi = 200, bg = "white")
 }
 bar(specimen_bounty, "n_photo_records",
-    sprintf("Specimen Bee Bounty - top %d species to COLLECT", TOP_N),
+    "Specimen Bee Bounty - species to COLLECT",
     paste0("In iNaturalist photos but no specimen - net a voucher.  ", scope_cap("iNaturalist")),
     "#1a9850", file.path(OUT_DIR, "specimen_bee_bounty.png"))
 bar(inat_bounty, "n_specimen_records",
-    sprintf("iNaturalist Bee Bounty - top %d species to PHOTOGRAPH", TOP_N),
+    "iNaturalist Bee Bounty - species to PHOTOGRAPH",
     paste0("In specimens but not on iNaturalist - get a community photo.  ", scope_cap("specimens")),
     "#4575b4", file.path(OUT_DIR, "inaturalist_bee_bounty.png"))
 

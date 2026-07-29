@@ -1,5 +1,5 @@
 # =============================================================
-# specimens/tidy_raw_specimens.R
+# specimens/specimen_raw_worklist.R   (formerly tidy_raw_specimens.R)
 # beescabr -- RAW specimen record hygiene worklist (run BY HAND).
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
@@ -17,8 +17,8 @@
 # the raw sheet and either ID, dedupe, or delete them. Re-run it any time to see
 # what's left.
 #
-# Run: Rscript scripts/specimens/tidy_raw_specimens.R
-#      (or) source("scripts/specimens/tidy_raw_specimens.R"); tidy_raw_specimens()
+# Run: Rscript scripts/specimens/specimen_raw_worklist.R
+#      (or) source("scripts/specimens/specimen_raw_worklist.R"); tidy_raw_specimens()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readxl) }))
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
@@ -27,7 +27,7 @@ local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
   need("read_latest",         "utils/utils.R")
   need("write_fresh",         "utils/utils.R")
-  need("flag_raw_clutter",    "specimens/specimen_clean.R")
+  need("flag_raw_clutter",    "specimens/specimen_clean_helpers.R")
 })
 
 TRS_RECORDS_DIR     <- "data/specimens/records"

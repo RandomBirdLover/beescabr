@@ -176,6 +176,100 @@ plot_accumulation <- function(key_col, rank_label, file) {
 plot_accumulation("species_key", "species", file.path(OUT_DIR, "accumulation_species_by_transect.png"))
 plot_accumulation("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_by_transect.png"))
 
+# ---- 4b. accumulation by METHOD (lethal net vs non-lethal photo) --------------
+# Same curves, grouped by method instead of transect (pooled across transects):
+# "as we run more NET surveys vs more PHOTO surveys, how fast do bee taxa pile up?"
+plot_by_method <- function(key_col, rank_label, file) {
+  mg   <- list("lethal (net)"       = expanded[expanded$method == "lethal",    ],
+               "non-lethal (photo)" = expanded[expanded$method == "nonlethal", ])
+  mg   <- mg[vapply(mg, nrow, 0L) > 0]
+  cols <- c("lethal (net)" = "#1b7837", "non-lethal (photo)" = "#762a83")
+  sacs <- lapply(mg, accumulate, key_col = key_col)
+  sacs <- sacs[!vapply(sacs, is.null, logical(1))]
+  if (!length(sacs)) { message("No ", rank_label, " by method to plot."); return(invisible()) }
+  xmax <- max(vapply(sacs, function(s) max(s$sites), numeric(1)))
+  ymax <- max(vapply(sacs, function(s) max(s$richness + s$sd), numeric(1)))
+  png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
+  first <- TRUE
+  for (nm in names(sacs)) {
+    plot(sacs[[nm]], add = !first, ci.type = "poly", col = cols[nm], lwd = 2.5,
+         ci.lty = 0, ci.col = adjustcolor(cols[nm], 0.15), xlim = c(0, xmax), ylim = c(0, ymax),
+         xlab = "Number of surveys", ylab = paste("Number of", rank_label),
+         main = paste0("CABR native bees -- ", rank_label, " accumulation by method"))
+    first <- FALSE
+  }
+  legend("bottomright", legend = sprintf("%s (%d surveys)", names(sacs),
+         vapply(mg[names(sacs)], nrow, integer(1))), col = cols[names(sacs)], lwd = 2.5, bty = "n")
+}
+plot_by_method("species_key", "species", file.path(OUT_DIR, "accumulation_species_by_method.png"))
+plot_by_method("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_by_method.png"))
+
+# ---- 4c. accumulation by TRANSECT x METHOD (2x2 facet, one panel per transect)-
+# For each transect, lethal (net) vs non-lethal (photo) curves side by side.
+plot_transect_x_method <- function(key_col, rank_label, file) {
+  cols <- c(nonlethal = "#762a83", lethal = "#1b7837")
+  sacs <- list()
+  for (tr in TRANSECTS) for (m in c("nonlethal", "lethal")) {
+    rows <- expanded[expanded$transect == tr & expanded$method == m, ]
+    if (nrow(rows)) sacs[[paste(tr, m)]] <- accumulate(rows, key_col)
+  }
+  sacs <- sacs[!vapply(sacs, is.null, logical(1))]
+  if (!length(sacs)) { message("No ", rank_label, " by transect x method to plot."); return(invisible()) }
+  xmax <- max(vapply(sacs, function(s) max(s$sites), numeric(1)))
+  ymax <- max(vapply(sacs, function(s) max(s$richness + s$sd), numeric(1)))
+  png(file, width = 1800, height = 1500, res = 200); on.exit(dev.off())
+  op <- par(mfrow = c(2, 2), mar = c(4, 4, 3, 1), oma = c(0, 0, 2.2, 0)); on.exit(par(op), add = TRUE)
+  for (tr in TRANSECTS) {
+    first <- TRUE
+    for (m in c("nonlethal", "lethal")) {
+      s <- sacs[[paste(tr, m)]]; if (is.null(s)) next
+      plot(s, add = !first, ci.type = "poly", col = cols[m], lwd = 2.2,
+           ci.lty = 0, ci.col = adjustcolor(cols[m], 0.15), xlim = c(0, xmax), ylim = c(0, ymax),
+           xlab = "Number of surveys", ylab = paste("Number of", rank_label), main = tr)
+      first <- FALSE
+    }
+    if (first) { plot.new(); title(main = tr) }   # keep the grid aligned if a transect has no data
+    if (tr == TRANSECTS[1])
+      legend("bottomright", legend = c("non-lethal (photo)", "lethal (net)"),
+             col = cols[c("nonlethal", "lethal")], lwd = 2.2, bty = "n", cex = 0.9)
+  }
+  mtext(sprintf("CABR native bees -- %s accumulation by method, per transect", rank_label),
+        outer = TRUE, font = 2, cex = 1.05)
+}
+plot_transect_x_method("species_key", "species", file.path(OUT_DIR, "accumulation_species_by_transect_method.png"))
+plot_transect_x_method("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_by_transect_method.png"))
+
+# ---- 4d. all transects on ONE plot, but ONE method per figure -----------------
+# Like the per-transect figure, but restricted to a single method. Four figures:
+# {species, genera} x {lethal net, non-lethal photo}, each with all four transects.
+plot_transects_one_method <- function(key_col, rank_label, method, method_label, file) {
+  grps <- list()
+  for (tr in TRANSECTS) {
+    rows <- expanded[expanded$transect == tr & expanded$method == method, ]
+    if (nrow(rows)) grps[[tr]] <- rows
+  }
+  sacs <- lapply(grps, accumulate, key_col = key_col)
+  sacs <- sacs[!vapply(sacs, is.null, logical(1))]
+  if (!length(sacs)) { message("No ", rank_label, " (", method_label, ") to plot."); return(invisible()) }
+  xmax <- max(vapply(sacs, function(s) max(s$sites), numeric(1)))
+  ymax <- max(vapply(sacs, function(s) max(s$richness + s$sd), numeric(1)))
+  png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
+  first <- TRUE
+  for (nm in names(sacs)) {
+    plot(sacs[[nm]], add = !first, ci.type = "poly", col = COLS[nm], lwd = 2.5,
+         ci.lty = 0, ci.col = adjustcolor(COLS[nm], 0.15), xlim = c(0, xmax), ylim = c(0, ymax),
+         xlab = "Number of surveys", ylab = paste("Number of", rank_label),
+         main = sprintf("CABR native bees -- %s accumulation (%s), per transect", rank_label, method_label))
+    first <- FALSE
+  }
+  legend("bottomright", legend = sprintf("%s (%d surveys)", names(sacs),
+         vapply(grps[names(sacs)], nrow, integer(1))), col = COLS[names(sacs)], lwd = 2.5, bty = "n")
+}
+plot_transects_one_method("species_key", "species", "lethal",    "lethal net",       file.path(OUT_DIR, "accumulation_species_by_transect_lethal.png"))
+plot_transects_one_method("species_key", "species", "nonlethal", "non-lethal photo", file.path(OUT_DIR, "accumulation_species_by_transect_nonlethal.png"))
+plot_transects_one_method("genus_key",   "genera",  "lethal",    "lethal net",       file.path(OUT_DIR, "accumulation_genera_by_transect_lethal.png"))
+plot_transects_one_method("genus_key",   "genera",  "nonlethal", "non-lethal photo", file.path(OUT_DIR, "accumulation_genera_by_transect_nonlethal.png"))
+
 # ---- 5. summary table + incidence-based richness estimates -------------------
 # richness_est(): observed richness plus the Chao2 incidence estimate of TRUE
 # richness for a survey x taxa matrix, via vegan::specpool(). Chao2 (incidence,
@@ -212,4 +306,7 @@ write.csv(summary_tbl, file.path(OUT_DIR, "transect_accumulation_summary.csv"), 
 
 message("Per-transect survey effort + observed / Chao2-estimated richness:")
 print(summary_tbl, row.names = FALSE)
+message("Chao2 estimates TRUE richness; the +/- SE (standard error) is how uncertain that\n",
+        "estimate is -- true richness is ~95% likely within +/-2 SE. A large SE (e.g. OT)\n",
+        "means the estimate is rough ('sample more here'), not a precise target.")
 message("\nDone. Figures + table in: ", normalizePath(OUT_DIR))

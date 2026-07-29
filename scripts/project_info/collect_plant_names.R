@@ -36,7 +36,7 @@ local({
     if (dir.exists(cand)) { sdir <- cand; break }
   need <- function(sym, file) if (!exists(sym)) source(file.path(sdir, file))
   need("PATHS",             "config.R")
-  need("plant_variant_map", "specimens/specimen_clean.R")
+  need("plant_variant_map", "specimens/specimen_clean_helpers.R")
   need("cw_append",         "project_info/review_crosswalk.R")
 })
 

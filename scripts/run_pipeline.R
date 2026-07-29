@@ -84,9 +84,9 @@ source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_l
 source("scripts/reference/plant_lookup_join.R")           # attach_flower_ids() -- flower taxon_id + in_park
 source("scripts/reference/plant_taxonomy_lookup_build.R") # defines build_plant_taxonomy_lookup() -- stage 5c
 source("scripts/project_info/collect_plant_names.R")      # defines review_plant_names() -- stage 7b
-source("scripts/specimens/specimen_clean.R")          # pure specimen-cleaning helpers
+source("scripts/specimens/specimen_clean_helpers.R")          # pure specimen-cleaning helpers
 source("scripts/specimens/specimen_bee_clean.R")      # defines clean_specimens() -- stage 6b
-source("scripts/specimens/tidy_raw_specimens.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
+source("scripts/specimens/specimen_raw_worklist.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
 # CHECKLISTS (stage 9): normalized-tree builder + the 3 per-scope orchestrators. Sourced here so
 # the whole pipeline runs end-to-end with NO manual steps (cabr_inat / cabr_specimen / cabr_official /
 # pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat -- parent taxa as their own rows).
@@ -189,7 +189,7 @@ main <- function() {
     n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
     if (n_notes > 0) {
       ans <- tolower(trimws(readline(sprintf(
-        "\n[3b-notes] %d free-text note(s) flagged. Review the observation notes now, or proceed without them? (y = review / N = skip): ",
+        "\n[3b-notes] %d free-text note(s) flagged.  Review them now?  [y/N]: ",
         n_notes))))
       if (ans %in% c("y", "yes")) {
         source("scripts/project_info/review_notes.R")
