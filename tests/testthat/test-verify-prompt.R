@@ -57,6 +57,25 @@ test_that("resolver: verify / reject / skip captured; prev-rejected still proces
   expect_equal(r2$verified_ids, 309284L)
 })
 
+test_that("prompt_verify_taxa saves when verified_taxa.csv is HEADER-ONLY (post-reset)", {
+  .impl()
+  # This is the exact bug that silently lost a whole pass-2 session: a reset leaves the
+  # file as a bare header, read.csv gives logical(0) columns, and bind_rows(<logical>,
+  # <character>) threw -- swallowed by run_pipeline's tryCatch.
+  lk <- data.frame(taxon_id = c(747170, 1266534),
+                   scientific_name = c("Melissodes microstictus", ""),
+                   rank = c("species", "complex"), genus = c("Melissodes", ""),
+                   complex = c("", "(Complex) Bombus fervidus"),
+                   verified = c("FALSE", "FALSE"), stringsAsFactors = FALSE)
+  vf <- tempfile(fileext = ".csv"); writeLines('"taxon_id","scientific_name","verified"', vf)  # header only
+  rf <- tempfile(fileext = ".csv")
+  prompt_verify_taxa(lk, verified_path = vf, rejected_path = rf, prompt_fn = queue_prompt(c("y", "y")),
+                     interactive_ok = TRUE, write = TRUE, verbose = FALSE)
+  got <- read.csv(vf)
+  expect_equal(nrow(got), 2)                    # both saved despite the header-only start
+  expect_true(all(c(747170, 1266534) %in% got$taxon_id))
+})
+
 test_that("prompt_verify_taxa: reject is remembered + re-asked; verifying un-rejects", {
   .impl()
   lk <- data.frame(taxon_id = c(747170, 309284),

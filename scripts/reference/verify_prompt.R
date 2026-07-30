@@ -78,6 +78,12 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
   unique(suppressWarnings(as.integer(v$taxon_id)))
 }
 
+# Coerce every column to character before bind_rows. read.csv of a HEADER-ONLY file
+# (e.g. right after a reset) infers all columns as logical(0), and
+# bind_rows(<logical>, <character>) THROWS -- which silently lost a whole pass-2
+# session (the run_pipeline tryCatch swallowed the error). Coercing sidesteps it.
+.pv_chr <- function(d) { if (ncol(d)) d[] <- lapply(d, as.character); d }
+
 # append (taxon_id, scientific_name, <col>=yes) rows to a decision file, keeping existing.
 .pv_write <- function(path, ids, needs, statuscol) {
   if (!length(ids)) return(invisible())
@@ -86,8 +92,9 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
                     stringsAsFactors = FALSE)
   add[[statuscol]] <- "yes"
   existing <- if (file.exists(path)) tryCatch(utils::read.csv(path, stringsAsFactors = FALSE), error = function(e) NULL) else NULL
-  merged <- if (!is.null(existing) && "taxon_id" %in% names(existing))
-    dplyr::bind_rows(existing, add[!(add$taxon_id %in% suppressWarnings(as.integer(existing$taxon_id))), , drop = FALSE])
+  keep_add <- add[!(add$taxon_id %in% suppressWarnings(as.integer(existing$taxon_id))), , drop = FALSE]
+  merged <- if (!is.null(existing) && "taxon_id" %in% names(existing) && nrow(existing))
+    dplyr::bind_rows(.pv_chr(existing), .pv_chr(keep_add))   # coerce: an empty/header-only file has logical cols
   else add
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   utils::write.csv(merged, path, row.names = FALSE, na = "")
@@ -104,7 +111,7 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
     addrows <- data.frame(taxon_id = to_add,
                           scientific_name = as.character(needs$scientific_name)[match(to_add, suppressWarnings(as.integer(needs$taxon_id)))],
                           rejected = "yes", stringsAsFactors = FALSE)
-    existing <- dplyr::bind_rows(existing, addrows)
+    existing <- dplyr::bind_rows(.pv_chr(existing), .pv_chr(addrows))   # coerce: header-only file has logical cols
   }
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   utils::write.csv(existing, path, row.names = FALSE, na = "")
@@ -147,10 +154,19 @@ prompt_verify_taxa <- function(lookup_df,
   prev_rejected <- .pv_read_ids(rejected_path)
   res <- resolve_verification_interactive(needs, prev_rejected, prompt_fn, interactive_ok, verbose)
   if (write) {
-    .pv_write(verified_path, res$verified_ids, needs, "verified")
-    if (length(res$verified_ids) || length(res$rejected_ids))
-      .pv_update_rejected(rejected_path, add_ids = res$rejected_ids, remove_ids = res$verified_ids, needs = needs)
-    if (verbose) message(sprintf("  [verify] %d verified, %d reject-for-now. Rejected taxa are re-shown next run (memory) -- delete a row from %s to forget it.",
+    saved <- tryCatch({
+      .pv_write(verified_path, res$verified_ids, needs, "verified")
+      if (length(res$verified_ids) || length(res$rejected_ids))
+        .pv_update_rejected(rejected_path, add_ids = res$rejected_ids, remove_ids = res$verified_ids, needs = needs)
+      TRUE
+    }, error = function(e) {   # never let a save failure be silent again
+      message("\n  !!! [verify] COULD NOT SAVE -- ", conditionMessage(e))
+      message("  !!! Your ", length(res$verified_ids), " verify + ", length(res$rejected_ids),
+              " reject answers were NOT written to ", basename(verified_path),
+              ". Re-run and report this message.\n")
+      FALSE
+    })
+    if (saved && verbose) message(sprintf("  [verify] %d verified, %d reject-for-now. Rejected taxa are re-shown next run (memory) -- delete a row from %s to forget it.",
                                  length(res$verified_ids), length(res$rejected_ids), basename(rejected_path)))
   }
   invisible(res)
