@@ -289,7 +289,7 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30) {
                 rank_label, np, nb), side = 3, line = 6.5, font = 2, cex = 1.05)
   par(op); dev.off()
 }
-web_plot(Mg, file.path(OUT_DIR, "interactions_web_genus.png"),   "genus",   30, 28)
+web_plot(Mg, file.path(OUT_DIR, "interactions_web_genus.png"),   "genus",   30, Inf)  # ALL bee genera, no cap (project convention: always show every genus); figure auto-widens. Genera with zero visitation records can't be drawn on a web -- surfaced by the record-confidence note instead.
 web_plot(Ms, file.path(OUT_DIR, "interactions_web_species.png"), "species", 30, 30)
 
 # (bipartite::plotweb figures were removed -- the dependency-free web_plot figures

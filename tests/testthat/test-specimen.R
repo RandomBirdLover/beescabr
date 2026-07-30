@@ -99,6 +99,17 @@ test_that("detect_duplicate_ids catches dup ucsd and sdnhm (ignoring 0/NA)", {
   expect_false(any(dups$sdnhm_id == 0))     # zeros never flagged
 })
 
+test_that("detect_duplicate_ids ignores blank/NA ucsd_id but still reports sdnhm dups on those rows", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(
+    ucsd_id  = c(NA, NA, "", ""),           # all un-assigned -> must NOT be flagged as ucsd dups
+    sdnhm_id = c(50, 50, 0, 99))            # 50,50 is a genuine sdnhm duplicate
+  dups <- detect_duplicate_ids(df)
+  expect_false(any(dups$duplicate_reason == "duplicate ucsd_id"))     # blanks not false-flagged
+  expect_equal(sum(dups$duplicate_reason == "duplicate sdnhm_id"), 2) # both sdnhm=50 rows kept
+  expect_true(all(dups$sdnhm_id == 50))
+})
+
 test_that("match_specimen_complex prefixes and gates on species", {
   src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = c("Diadasia", "Diadasia"), species = c("australis", NA),
@@ -259,11 +270,18 @@ test_that("keep_bee_specimens covers all seven Anthophila families, superfamily-
   expect_false("Crabronidae" %in% out$family)          # apoid WASP (shares Apoidea) dropped
 })
 
-test_that("keep_bee_specimens fails open when there is no family column", {
+test_that("keep_bee_specimens fails CLOSED (stops) when there is no family column", {
   src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(genus = c("Apis", "Tiphia"))
-  expect_warning(out <- keep_bee_specimens(df))
-  expect_equal(nrow(out), 2)                            # unchanged, not silently emptied
+  expect_error(keep_bee_specimens(df), "no `family` column")   # halt, never pass non-bees through
+})
+
+test_that("keep_bee_specimens matches the family column name case-insensitively", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(Family = c("Halictidae", "Tiphiidae"), genus = c("Lasioglossum", "Tiphia"))
+  out <- keep_bee_specimens(df)
+  expect_equal(nrow(out), 1)                            # bee kept via capitalized `Family` column
+  expect_equal(out$genus, "Lasioglossum")
 })
 
 # fill_above_genus_ids(): a specimen ID'd only above genus (e.g. tribe Halictini,

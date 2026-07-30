@@ -28,7 +28,6 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 if (!exists("PATHS")) source("scripts/config.R")
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
-TOP_N         <- 15
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
                                                    scope, method, rank)

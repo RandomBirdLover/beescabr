@@ -157,8 +157,8 @@ main <- function() {
             ") — kept the existing beeple_calendar_windows.csv."))
 
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
-  # finding_project_info() decides survey membership from crosswalk_master, writes
-  # per_observation_raw_info.csv, the THREE unknown reports (review them by
+  # finding_project_info() decides survey membership from master_crosswalk.csv, writes
+  # cabr_inat_raw.csv, the THREE unknown reports (review them by
   # hand in order -> update crosswalk_master -> re-run), and builds master_per_survey_info.csv
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
   bx_phase(2, "SURVEY BRAIN — who surveyed, when, which transect")

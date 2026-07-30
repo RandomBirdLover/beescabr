@@ -370,7 +370,7 @@ finding_project_info <- function(write = TRUE) {
     bx_kv("Review queue", nrow(unknown_tags), " unknown tags · ", nrow(unknown_fields), " fields · ", nrow(unknown_notes), " notes · ", nrow(review_windows), " windows")
     if (!is.null(mistags)) bx_cont(nrow(mistags), " stray transect tags to fix")
     if (!is.null(ties) && nrow(ties)) bx_cont(nrow(ties), " tie day(s) to rule")
-    bx_out("master_per_survey_info.csv, per_observation_raw_info.csv (+ review files)")
+    bx_out("master_per_survey_info.csv, cabr_inat_raw.csv (+ review files)")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  mistags = mistags, ties = ties, unknown_tags = unknown_tags, unknown_fields = unknown_fields,

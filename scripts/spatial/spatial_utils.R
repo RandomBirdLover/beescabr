@@ -123,6 +123,17 @@ boundary_dir <- "data/spatial/boundaries"
 ACRES_PER_SQM <- 1 / 4046.8564224
 
 # ------------------------------------------------------------
+# All boundary + transect loading below is wrapped so a MISSING or renamed shapefile
+# (or a failed sanity check) surfaces as a CLEAR message and lets the run continue --
+# instead of throwing at source() time and killing the whole pipeline before main()
+# even starts (every other heavy stage is tryCatch-wrapped for the same reason). The
+# assignments inside still land in the global env (verified), so on the happy path
+# nothing changes; only a genuine load failure is now non-fatal. Downstream spatial
+# stages that need these layers fail on their own; the non-spatial stages still run.
+# ------------------------------------------------------------
+tryCatch({
+
+# ------------------------------------------------------------
 # Load + reproject: CABR boundary (NPS, authoritative)
 # ------------------------------------------------------------
 cabr_boundary <- st_read(
@@ -251,3 +262,10 @@ buffer_50m <- st_buffer(transects, dist = buffer_dist_m)
 # do not write this (or any derived buffer) to disk.
 
 bx_cont("boundaries + 50 m buffer ready")
+
+}, error = function(e) {
+  message("  [spatial] WARNING: could not load boundary/transect layers -- ", conditionMessage(e))
+  message("  [spatial] The spatial stages (CABR membership, SD-County clip, transect flags) need the ",
+          "shapefiles under ", boundary_dir, "/ and data/spatial/transects/. Fix those and re-run; ",
+          "the rest of the pipeline continues for now instead of dying at startup.")
+})

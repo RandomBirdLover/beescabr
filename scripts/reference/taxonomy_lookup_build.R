@@ -22,25 +22,24 @@
 # Modules wired here:
 #   config.R, pipelines/read_inat.R, reference/holway.R,
 #   checklists/checklist_build.R, reference/taxonomy_reference.R,
-#   (no specimen join -- this lookup is Holway + iNat only, by design)
+#   reference/specimen_id_prompt.R (the specimen-addition merge is WIRED IN -- see below)
 #
-# TODO (deferred -- GATED on the raw-specimen cleanup): fold specimen-only species in so
-# the lookup becomes  Holway + iNat + specimen additions.
+# SPECIMEN ADDITIONS (WIRED IN): the lookup is Holway + iNat + curated specimen-only
+# species -- NOT Holway + iNat only. STEP 5 below merges them every build.
 #   * WHY  : specimen_bee_clean.R nets real bees the Holway checklist AND the iNat SD obs
 #            both miss (species no one photographed). They surface in
 #            data/specimens/specimens_clean/review/cabr_specimen_bee_taxonomy_flags.csv as
-#            "genus+species combo not in taxonomy lookup" -- those flags are the candidates.
-#   * WHERE: a curated specimen_additions.csv, MERGED here at build time. Do NOT hand-edit
-#            sd_bee_taxonomy_lookup.csv -- stage 5 rewrites it every run and would wipe
-#            manual rows (same reason the Holway reference table can't hold them either).
-#   * GATE : only AFTER the tidy_raw_specimens worklist is worked (add IDs, dedupe, drop
-#            missing). Raw is still dirty, so some flagged names may be misspellings
-#            (e.g. Lasioglossum 'daggetti' vs 'daggettii') -- verify each before adding.
-#   * IDS  : each addition needs an iNat taxon_id resolved, or kept id-less like the Holway
-#            "no iNat id yet" cases. Holway's reference table stays a pure copy of the checklist.
-#   * MERGE: specimen_additions_to_lookup() (reference/taxonomy_reference.R) already does the merge
-#            (tested): it appends leaf taxa and LINKS parents that exist but NEVER fabricates a
-#            missing parent -- it returns those in $missing_parents to resolve. NOT wired in yet.
+#            "genus+species combo not in taxonomy lookup".
+#   * WHERE: a curated specimen_additions.csv, MERGED here at build time (STEP 5 via
+#            load_specimen_additions + specimen_additions_to_lookup). Do NOT hand-edit
+#            sd_bee_taxonomy_lookup.csv -- it is rewritten every run and any manual row is
+#            wiped; edit specimen_additions.csv instead.
+#   * IDS  : the interactive pass-1 prompt (specimen_id_prompt.R, run_pipeline stage 6c)
+#            resolves each addition's iNat taxon_id with full parent lineage and writes it to
+#            specimen_additions.csv, which folds in on the NEXT build.
+#   * MERGE: specimen_additions_to_lookup() (reference/taxonomy_reference.R) appends leaf taxa
+#            and LINKS parents that exist but NEVER fabricates a missing parent -- it returns
+#            those in $missing_parents (a missing GENUS is warned at build time).
 #
 # Run standalone: Rscript scripts/reference/taxonomy_lookup_build.R
 #   BEESCABR_SKIP_INGEST=1 reuses the cache without hitting the API.
@@ -135,9 +134,9 @@ build_taxonomy_lookup <- function(con) {
   bx_cont(nrow(complex_map), " complex species")
   bx_out(basename(PATHS$complex_map))
 
-  # NOTE: this lookup is intentionally HOLWAY + iNAT ONLY -- no specimen join. CABR
-  # specimen evidence lives downstream in the checklists (built from a CLEANED
-  # specimen record), never in this reference table.
+  # NOTE: the lookup base is Holway + iNat; curated SPECIMEN-ONLY species are then merged
+  # in at STEP 5 below (specimen_additions_to_lookup). Broader CABR specimen evidence still
+  # lives downstream in the checklists (built from the cleaned specimen record), not here.
 
   # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
   # The enriched Holway reference table (holway_sd_bee_reference_table.csv, built

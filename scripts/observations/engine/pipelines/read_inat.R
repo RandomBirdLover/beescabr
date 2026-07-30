@@ -115,6 +115,14 @@ read_observations_export <- function(con, resolve_taxa = TRUE,
   }
 
   if (cacheable) {
+    # Re-sign AFTER resolve_taxonomy: it prefetches newly-seen taxa into the taxon
+    # cache, and that cache is PART of the signature. Signing before (the `sig`
+    # computed up top) would tag this frame with a fingerprint that no longer matches
+    # once those taxa are stored -- so the next run (and the second caller this run,
+    # after clear_export_cache) would miss and re-flatten all ~77k obs. Signing here,
+    # with the taxon cache now stable, makes the cache actually hit. The top `sig` is
+    # still the correct fingerprint for THIS call's reuse check above.
+    sig <- .export_signature(con)
     attr(out, "signature") <- sig
     .export_cache_env$sig <- sig; .export_cache_env$frame <- out
     dir.create(dirname(cache_path), recursive = TRUE, showWarnings = FALSE)

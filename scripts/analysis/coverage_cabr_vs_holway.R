@@ -1,9 +1,9 @@
 # =============================================================
 # analysis/coverage_cabr_vs_holway.R
-# beescabr pipeline -- CABR bees NOT on the Holway SD-county checklist (Q10)
+# beescabr pipeline -- CABR bees NOT on the Holway SD-county checklist (Q9)
 # Created: 2026-07-21
 #
-# Q10: "Which taxa on the CABR official checklist are absent from Holway's San
+# Q9: "Which taxa on the CABR official checklist are absent from Holway's San
 # Diego County checklist?" -- i.e. bees recorded at Cabrillo that Holway's
 # county reference does not list. These are the interesting ones: genuine
 # county/park additions, OR iNaturalist misidentifications that slipped onto the
@@ -37,8 +37,9 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("holway_name_set")) source("scripts/analysis/not_on_holway.R")
 CHECKLIST_CABR <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
-OUT_DIR        <- "data/analysis/coverage"
+OUT_DIR        <- "data/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 norm <- function(x) str_squish(as.character(x))            # trim/collapse whitespace
@@ -47,8 +48,17 @@ is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
 # ---- 1. the CABR taxa Holway doesn't list -----------------------------------
 chk  <- read.csv(CHECKLIST_CABR, stringsAsFactors = FALSE, check.names = FALSE)
-noth <- chk %>% filter(!is_true(holway))                   # holway flag == FALSE
-message(sprintf("CABR checklist taxa NOT on Holway: %d", nrow(noth)))
+noth <- chk %>% filter(!is_true(holway))                   # holway flag == FALSE (rank-sensitive)
+message(sprintf("CABR checklist taxa NOT on Holway (by flag): %d", nrow(noth)))
+# name-based correction: the holway flag is rank-sensitive, so iNat 'complex' nodes of names Holway
+# lists as species (or as complexes whose members it lists) are false positives -- drop them.
+.hset <- holway_name_set(PATHS$holway_reference)
+if (length(.hset) && nrow(noth)) {
+  .keep <- !(.noh_binom(noth$scientific_name) %in% .hset)
+  message(sprintf("  %d are actually on Holway by name (rank/complex mismatch) -> %d genuinely absent",
+                  sum(!.keep), sum(.keep)))
+  noth <- noth[.keep, , drop = FALSE]
+}
 
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
@@ -170,5 +180,12 @@ print(summary_tbl[, c("scientific_name", "taxon_rank", "n_specimen_records",
 message("\nWrote: coverage_cabr_not_on_holway.csv (summary), ",
         "coverage_cabr_not_on_holway_inat_records.csv (URLs to verify), ",
         "coverage_cabr_not_on_holway.png")
+
+# ---- 7. park-facing "new bees not in Holway" summary (shared formatter) ------
+# Same taxa as the pipeline's stage-11 review prompt, but framed as our confirmed
+# finds for the park. iNat-evidenced only; grouped iNat-only vs also-collected.
+.newbees <- format_new_bees(summary_tbl, mode = "report")
+if (length(.newbees)) { message(""); writeLines(.newbees) }
+
 message("Done. Outputs in: ", normalizePath(OUT_DIR))
 

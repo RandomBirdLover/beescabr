@@ -71,14 +71,18 @@ BEE_FAMILIES <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
 # unidentified rows (blank family) -- specimen_bee_clean is bees only (per Brandi:
 # "only include bees, not wasps or dipterans, or anything not bee"). The specimen
 # record carries `family` on every ID'd row, so this is lossless for real bees.
-# No `family` column -> can't tell, so return df unchanged with a warning (fail
-# open; never silently empty the record).
+# No `family` column -> we CANNOT guarantee a bees-only table, so STOP loudly rather
+# than fail open: silently letting wasps/flies through is worse than halting, and a
+# missing/renamed family column is a schema error the caller should fix. The COLUMN
+# name is also matched case-insensitively so a `Family` rename is handled, not fatal.
 keep_bee_specimens <- function(df) {
-  if (!"family" %in% names(df)) {
-    warning("keep_bee_specimens: no `family` column -- cannot filter to bees; returning df unchanged")
-    return(df)
+  fam_col <- names(df)[tolower(names(df)) == "family"][1]
+  if (is.na(fam_col)) {
+    stop("keep_bee_specimens: no `family` column -- cannot guarantee a bees-only table. ",
+         "The specimen record carries family on every ID'd row; a missing or renamed column ",
+         "is a schema error -- fix the input rather than let non-bees through.")
   }
-  fam <- tolower(trimws(as.character(df$family)))
+  fam <- tolower(trimws(as.character(df[[fam_col]])))
   df[fam %in% tolower(BEE_FAMILIES), , drop = FALSE]
 }
 
@@ -229,16 +233,26 @@ add_qc_flags <- function(df) {
 # Duplicate ID detection: any repeated ucsd_id (should be unique), or repeated
 # sdnhm_id excluding 0/NA (0 is the intentional "needs new tag" sentinel).
 detect_duplicate_ids <- function(df) {
+  # A blank / NA / 0 id means "not assigned yet", not a duplicate. The sdnhm_id branch
+  # already excluded those, but the ucsd_id branch did not -- so multiple un-tagged rows
+  # were all false-flagged as "duplicate ucsd_id". Exclude blanks on BOTH sides.
+  nz <- function(x) { x <- as.character(x); !is.na(x) & trimws(x) != "" & trimws(x) != "0" }
+  df$.row <- seq_len(nrow(df))
   dup_ucsd <- df |>
+    filter(nz(ucsd_id)) |>
     filter(duplicated(ucsd_id) | duplicated(ucsd_id, fromLast = TRUE)) |>
     mutate(duplicate_reason = "duplicate ucsd_id")
   dup_sdnhm <- df |>
-    filter(!is.na(sdnhm_id), sdnhm_id != 0, sdnhm_id != "") |>
+    filter(nz(sdnhm_id)) |>
     filter(duplicated(sdnhm_id) | duplicated(sdnhm_id, fromLast = TRUE)) |>
     mutate(duplicate_reason = "duplicate sdnhm_id")
+  # Dedupe on ROW identity, not ucsd_id: a row can be flagged for both reasons, and
+  # keying on ucsd_id would collapse different blank-ucsd_id rows -- dropping a genuine
+  # sdnhm_id duplicate from the report.
   bind_rows(dup_ucsd, dup_sdnhm) |>
-    distinct(ucsd_id, .keep_all = TRUE) |>
-    arrange(sdnhm_id, ucsd_id)
+    distinct(.row, .keep_all = TRUE) |>
+    arrange(sdnhm_id, ucsd_id) |>
+    select(-.row)
 }
 
 # Build the species-level complex match lookup from the SD County iNat checklist

@@ -56,6 +56,16 @@ ingest_observations <- function(con,
                     place_id, taxon_id, without_taxon_id,
                     if (incremental) "incremental" else "full", id_above, per_page, commit_every))
 
+  # FULL rebuild only (BEESCABR_FULL_INGEST=1 -> incremental=FALSE): empty the cache
+  # first so the fresh download can't leave stale rows behind. An obs re-IDed OUT of
+  # the bee filter is never re-returned by the API, so a plain upsert re-walk can't
+  # delete it -- only starting from empty can. Normal incremental runs never clear.
+  # If a full rebuild is interrupted the cache is left partial; just run it again.
+  if (!incremental) {
+    removed <- clear_observations(con)
+    if (verbose) message(sprintf("Full rebuild: cleared %d cached observations; re-downloading everything.", removed))
+  }
+
   n_written <- 0L; in_txn <- FALSE
   begin_txn  <- function() if (!in_txn) { DBI::dbBegin(con);  in_txn <<- TRUE }
   commit_txn <- function() if (in_txn)  { DBI::dbCommit(con); in_txn <<- FALSE }

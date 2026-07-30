@@ -125,10 +125,29 @@ count_observations <- function(con) {
   DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM inat_observations")$n[1]
 }
 
+# ------------------------------------------------------------
+# clear_observations(): empty the cache so a FULL re-download rebuilds it from
+# scratch. This is the ONLY way to drop a row whose iNat re-ID moved it out of
+# the bee filter -- a plain upsert re-walk never re-returns that obs, so it can
+# never be deleted otherwise. Called ONLY on a full ingest; incremental runs
+# never clear. Returns the number of rows removed (for logging).
+# ------------------------------------------------------------
+clear_observations <- function(con) {
+  n <- count_observations(con)
+  DBI::dbExecute(con, "DELETE FROM inat_observations")
+  invisible(n)
+}
+
 # Highest stored observation id -- the incremental fetch cursor. 0 when empty.
+# NB: returns NUMERIC (double), never as.integer(). iNat observation ids already
+# run into the hundreds of millions and will cross the 32-bit integer ceiling
+# (~2.1 billion), where as.integer() silently yields NA -> id_above = NA -> the
+# incremental cursor breaks and ingest stops. Doubles hold whole numbers exactly
+# to 2^53, and the ingest consumer formats this with sprintf("%.0f", ...), so
+# there is no precision or scientific-notation loss.
 max_observation_id <- function(con) {
   v <- DBI::dbGetQuery(con, "SELECT MAX(id) AS m FROM inat_observations")$m[1]
-  if (is.na(v)) 0L else as.integer(v)
+  if (is.na(v)) 0 else as.numeric(v)
 }
 
 # Return raw observation JSON strings (id + raw_data) for the flatten layer.
