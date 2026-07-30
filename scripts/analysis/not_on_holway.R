@@ -8,11 +8,11 @@
 #   * pipeline stage 11 (mode = "review")  -> "double-check these in review"
 #   * coverage_cabr_vs_holway.R (mode = "report") -> park-facing "our new finds"
 #
-# A taxon is "not on Holway" when the CABR official checklist's holway flag is
-# FALSE *and* Holway's reference table doesn't list the binomial at any rank. The
-# flag alone is rank-sensitive, so iNat 'complex' nodes of a name Holway carries as
-# a 'species' (or as a complex whose members it lists) would otherwise show as false
-# new records; the name-based recheck drops those. Only iNat-evidenced taxa are
+# A taxon is "not on Holway" when the CABR official checklist's holway flag is FALSE
+# *and* Holway's reference table lists neither its taxon_id nor its binomial at any rank.
+# The flag alone is rank-sensitive, so iNat 'complex' nodes of a name/taxon Holway carries
+# (e.g. the blank-named Bombus fervidus / Colletes americanus complexes) would otherwise show
+# as false new records; the taxon_id + binomial recheck drops those. Only iNat-evidenced taxa are
 # listed in the prompt -- those are the ones
 # a reviewer can open on iNaturalist to confirm a trusted scientist made the ID.
 # Two groups, each numbered:
@@ -49,6 +49,29 @@ holway_name_set <- function(holway_path) {
   setdiff(unique(.noh_binom(vals)), "")
 }
 
+# holway_id_set(): taxon_ids present in Holway's reference (as character). A CABR checklist taxon whose
+# id is here IS on Holway (the reference carries listed taxa + their ancestry), regardless of a stale
+# checklist flag or a blank name. id match is unambiguous -- no name-collision risk. character(0) if missing.
+holway_id_set <- function(holway_path) {
+  if (is.null(holway_path) || !nzchar(holway_path) || !file.exists(holway_path)) return(character(0))
+  h <- utils::read.csv(holway_path, stringsAsFactors = FALSE, check.names = FALSE)
+  if (!"taxon_id" %in% names(h)) return(character(0))
+  setdiff(unique(as.character(h$taxon_id)), c("", NA, "NA"))
+}
+
+# .noh_row_binom(): best lower-case binomial for a checklist/reference ROW -- prefer scientific_name,
+# else the `complex` column (minus its "(Complex) " tag -- where a blank-named complex keeps its name),
+# else genus+species, else genus. Mirrors holway_name_set() reading BOTH columns, so an iNat 'complex'
+# node whose scientific_name is blank still matches the name Holway lists.
+.noh_row_binom <- function(df) {
+  colc <- function(n) .noh_norm(if (n %in% names(df)) df[[n]] else rep("", nrow(df)))
+  sn <- colc("scientific_name")
+  cx <- sub("^\\s*\\([^)]*\\)\\s*", "", colc("complex"))
+  g  <- colc("genus"); sp <- colc("species")
+  raw <- ifelse(nzchar(sn), sn, ifelse(nzchar(cx), cx, ifelse(nzchar(g) & nzchar(sp), paste(g, sp), g)))
+  .noh_binom(raw)
+}
+
 .noh_empty <- function() data.frame(
   scientific_name = character(), taxon_rank = character(), genus = character(),
   taxon_id = character(), n_specimen_records = integer(), n_inat_records = integer(),
@@ -67,6 +90,17 @@ not_on_holway_bees <- function(checklist_path, spec, inat, holway_path = NULL) {
   if (!"holway" %in% names(chk) || !nrow(chk)) return(.noh_empty())
   noth <- chk[!.noh_is_true(chk$holway), , drop = FALSE]
   if (!nrow(noth)) return(.noh_empty())
+
+  # CORRECTION (up front): the holway flag is rank-sensitive, so an iNat 'complex' node of a name/taxon
+  # Holway carries lands here as a FALSE positive. Drop anything Holway actually has -- by taxon_id
+  # (unambiguous, no name-collision risk) OR by binomial resolved from scientific_name/complex/genus.
+  # Blank-named complexes (Bombus fervidus, Colletes americanus) are caught here, where the old
+  # scientific_name-only recheck missed them.
+  .hset <- holway_name_set(holway_path); .hids <- holway_id_set(holway_path)
+  if (nrow(noth) && (length(.hset) || length(.hids))) {
+    noth <- noth[!((.noh_row_binom(noth) %in% .hset) | (as.character(noth$taxon_id) %in% .hids)), , drop = FALSE]
+    if (!nrow(noth)) return(.noh_empty())
+  }
 
   match_n <- function(df, tid, sci) {                     # rows of df matching this taxon
     sci <- .noh_norm(sci)
@@ -90,14 +124,7 @@ not_on_holway_bees <- function(checklist_path, spec, inat, holway_path = NULL) {
       n_inat_research_grade = n_res, group = grp, stringsAsFactors = FALSE)
   }))
   res <- if (is.null(res)) .noh_empty() else res
-
-  # NAME-BASED CORRECTION: the checklist holway flag is rank-sensitive, so iNat's 'complex' node of a
-  # name Holway carries as a 'species' (or as a complex whose members Holway lists) lands here as a
-  # FALSE positive. Re-check by binomial and drop anything Holway actually has -- only names Holway
-  # never lists at all survive as genuinely new.
-  hset <- holway_name_set(holway_path)
-  if (length(hset) && nrow(res)) res <- res[!(.noh_binom(res$scientific_name) %in% hset), , drop = FALSE]
-  res
+  res   # correction already applied up front (by taxon_id + resolved binomial), before record matching
 }
 
 # format_new_bees(): the grouped, numbered "N new bees not in Holway's Checklist" text block.

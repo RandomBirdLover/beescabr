@@ -26,10 +26,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR   <- "data/analysis/interactions"
 TOP_N     <- 10          # top plants for the headline table/figure
 TOP_MONTH <- 12          # plants shown in the month heatmap
-COL_LETHAL <- "#1b7837"; COL_NONLETHAL <- "#762a83"
+COL_LETHAL <- unname(BEE_METHOD_COL["lethal"]); COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # purple net / vermillion photo
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
@@ -64,16 +65,19 @@ print(top[, c("plant_genus", "whole_park", "survey_only", "lethal", "nonlethal")
 # ---- 3. figure A: top-N plants, method-split bars ---------------------------
 png(file.path(OUT_DIR, "interactions_top_plants.png"),
     width = 1700, height = 1150, res = 200)
-op <- par(mar = c(4.5, 9, 3.5, 1))
+bee_base_par()                                    # house-style fonts + muted axis colours
+op <- par(mar = c(5.5, 9, 3.5, 1))
 M <- rbind(nonlethal = top$nonlethal, lethal = top$lethal)   # stacked
-colnames(M) <- top$plant_genus
+colnames(M) <- paste0(top$plant_genus, bee_low_n_mark(top$whole_park))   # #12: '*' on thinly-sampled plants
 M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
 barplot(M, horiz = TRUE, las = 1, border = NA,
         col = c(nonlethal = COL_NONLETHAL, lethal = COL_LETHAL),
         xlab = "Bee-visit records (whole park)",
         main = sprintf("Top %d plant genera visited by bees at CABR\n(bar split by survey method)", TOP_N))
-legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL),
+legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col = BEE_INK$primary,
        legend = c("non-lethal (photo/iNat)", "lethal (net/specimen)"))
+if (any(bee_low_n(top$whole_park)))
+  mtext(BEE_LOW_N_NOTE, side = 1, line = 4.2, cex = 0.7, adj = 0, col = BEE_INK$secondary)
 par(op); dev.off()
 
 # ---- 4. per-month breakdown of the top plants -------------------------------
@@ -89,15 +93,16 @@ write.csv(data.frame(plant_genus = rownames(Mmon), Mmon, check.names = FALSE),
 
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
     width = 1700, height = 1050, res = 200)
+bee_base_par()
 op <- par(mar = c(4, 10, 3.5, 1))
 Mplot <- Mmon[nrow(Mmon):1, , drop = FALSE]
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
-      col = hcl.colors(24, "YlOrRd", rev = TRUE), axes = FALSE, xlab = "", ylab = "",
+      col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # magnitude = house blue ramp
       main = sprintf("When are the top %d plants visited? (log records/month)", TOP_MONTH))
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), rownames(Mplot), las = 1, cex.axis = 0.75)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
-      side = 1, line = 2.6, cex = 0.75)
+      side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
 par(op); dev.off()
 
 message("\nWrote interactions_top_plants.csv (+_by_month.csv) and two figures to ",

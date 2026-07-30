@@ -43,6 +43,7 @@ HAVE_VEGAN     <- requireNamespace("vegan",     quietly = TRUE)
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/interactions"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -90,19 +91,18 @@ heatmap_gg <- function(M, file, rank_label) {
   df$bee         <- factor(df$bee,         levels = names(sort(colSums(M), decreasing = TRUE)))
   g <- ggplot2::ggplot(df, ggplot2::aes(bee, plant_genus, fill = n)) +
     ggplot2::geom_tile(color = "grey90", linewidth = 0.1) +
-    ggplot2::scale_fill_viridis_c(option = "D", trans = "log", na.value = "white",
-                                  name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +
+    ggplot2::scale_fill_gradientn(colours = BEE_SEQ, trans = "log", na.value = "white",
+                                  name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +   # magnitude = house blue ramp
     ggplot2::labs(
       title = sprintf("Plant genus × bee %s — visitation network (all taxa)", rank_label),
       subtitle = sprintf("%d plant genera × %d bee %s pooled across both methods",
                          nrow(M), ncol(M), rank_label),
       x = paste("bee", rank_label), y = "plant genus") +
-    ggplot2::theme_minimal(base_size = 8) +
+    theme_beescabr(8) +
     ggplot2::theme(
       axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6),
       axis.text.y = ggplot2::element_text(size = 6),
-      panel.grid  = ggplot2::element_blank(),
-      plot.title  = ggplot2::element_text(face = "bold"))
+      panel.grid  = ggplot2::element_blank())
   ggplot2::ggsave(file, g, dpi = 200, limitsize = FALSE,
                   width  = max(6, 0.17 * ncol(M) + 3),
                   height = max(6, 0.13 * nrow(M) + 2))
@@ -113,7 +113,7 @@ heatmap_base <- function(M, file, rank_label, top_plants = 30) {   # fallback if
   png(file, width = max(1400, 60 * ncol(M2) + 500), height = max(1100, 34 * nrow(M2) + 350), res = 200)
   op <- par(mar = c(10, 9, 3, 1))
   image(seq_len(ncol(M2)), seq_len(nrow(M2)), t(log1p(M2)),
-        col = hcl.colors(24, "YlGnBu", rev = TRUE), axes = FALSE, xlab = "", ylab = "",
+        col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # house blue ramp
         main = sprintf("Plant genus x bee %s (top %d plants)", rank_label, top_plants))
   axis(1, seq_len(ncol(M2)), colnames(M2), las = 2, cex.axis = 0.7)
   axis(2, seq_len(nrow(M2)), rownames(M2), las = 1, cex.axis = 0.7); par(op); dev.off()
@@ -274,6 +274,7 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30) {
   bx <- if (nb > 1) seq(0.03, 0.97, length.out = nb) else 0.5
   yP <- 0.04; yB <- 0.96; wmax <- max(M)
   png(file, width = max(1700, 58 * max(np, nb)), height = 1700, res = 200)
+  bee_base_par()                                    # house-style sans font
   op <- par(mar = c(9, 1, 9, 1), xpd = NA)
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
   for (i in seq_len(np)) for (j in seq_len(nb)) if (M[i, j] > 0)
@@ -281,12 +282,12 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30) {
              col = adjustcolor("#c9a227", 0.35))
   pw <- 0.008 + 0.02 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.008 + 0.02 * sqrt(colSums(M) / max(colSums(M)))
-  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = "#1a9850", border = "white")
-  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = "#4575b4", border = "white")
-  text(px, yP - 0.02, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#1a6b39")
-  text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = "#2c5aa0", font = 3)
+  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = "#b8860b", border = "white")   # plants = goldenrod (forage side)
+  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = "#2166ac", border = "white")   # bees = house focal blue
+  text(px, yP - 0.02, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#8c6d1f")
+  text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = "#184f95", font = 3)
   mtext(sprintf("Plant genus (bottom) - bee %s (top): visitation web  [top %d x %d]",
-                rank_label, np, nb), side = 3, line = 6.5, font = 2, cex = 1.05)
+                rank_label, np, nb), side = 3, line = 6.5, font = 2, cex = 1.05, col = BEE_INK$primary)
   par(op); dev.off()
 }
 web_plot(Mg, file.path(OUT_DIR, "interactions_web_genus.png"),   "genus",   30, Inf)  # ALL bee genera, no cap (project convention: always show every genus); figure auto-widens. Genera with zero visitation records can't be drawn on a web -- surfaced by the record-confidence note instead.

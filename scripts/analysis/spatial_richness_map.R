@@ -39,6 +39,7 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/diversity"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -128,11 +129,8 @@ message(sprintf("Occupied cells: %d (cell size %dm). Rarefied to %d: %d cells.",
                 nrow(cells), CELL_M, RAREFY_N, sum(!is.na(cells$rarefied_richness))))
 
 # ---- 4. maps -----------------------------------------------------------------
-base_theme <- theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b", size = 9),
-        axis.text = element_text(size = 7),
-        panel.grid = element_line(color = "grey92"))
+base_theme <- theme_beescabr(11) +
+  theme(axis.text = element_text(size = 7, colour = BEE_INK$muted))
 
 draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", trans = "identity") {
   dat <- cells[!is.na(cells[[fill_col]]), ]
@@ -142,7 +140,7 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
                             "non-lethal; specimens summarised by transect", rank_lab), width = 62)
   g <- ggplot(dat) +
     geom_sf(aes(fill = .data[[fill_col]]), color = "white", linewidth = 0.15) +
-    scale_fill_viridis_c(option = palette, name = legend_lab, trans = trans) +
+    scale_fill_gradientn(colours = BEE_SEQ, name = legend_lab, trans = trans) +   # magnitude = house blue ramp (palette arg now unused)
     labs(title = title, subtitle = cap, x = NULL, y = NULL) +
     coord_sf(datum = CRS_UTM) +
     base_theme
@@ -189,7 +187,7 @@ tr_long <- bind_rows(
   data.frame(transect = tr_tbl$transect, rank = "genus",   richness = tr_tbl$genus_richness))
 gtr <- ggplot(tr_long, aes(x = reorder(transect, -richness), y = richness, fill = rank)) +
   geom_col(position = "dodge", width = 0.7) +
-  scale_fill_manual(values = c(species = "#2166ac", genus = "#1a9850"), name = NULL) +
+  scale_fill_manual(values = c(species = "#2166ac", genus = "#b8b8b8"), name = NULL) +   # species = focal blue, genus = grey
   labs(title = "CABR bee richness by transect (both methods, all records)",
        subtitle = str_wrap(scope_cap("all records, per transect (specimens' reliable unit)",
                                      "lethal + non-lethal pooled", "genus + species"), 62),

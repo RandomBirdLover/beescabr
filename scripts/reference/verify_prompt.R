@@ -50,15 +50,28 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
   tid <- suppressWarnings(as.integer(needs$taxon_id))
   prev_rejected <- suppressWarnings(as.integer(prev_rejected))
   keep <- integer(0); rej <- integer(0)
+  # iNat place the whole pipeline is scoped to (San Diego County 25-mi buffer). Resolved from config
+  # at call time so a config change propagates; falls back to the known id when config isn't loaded.
+  sd_place <- if (exists("PLACE_SD_COUNTY_BUFFER")) get("PLACE_SD_COUNTY_BUFFER") else 118491L
   if (verbose) message(sprintf("  [verify] %d bee taxa to review -- y verify / r reject-for-now / Enter skip:",
                                sum(!is.na(tid))))
   for (i in seq_len(nrow(needs))) {
     if (is.na(tid[i])) next                          # no id yet -> pass 1's job
     tag <- if (tid[i] %in% prev_rejected) " -- you REJECTED this before. Verified now?" else "."
+    # clickable link: this taxon's records filtered to San Diego County -> "is it actually found in SD?"
+    sd_url <- sprintf("https://www.inaturalist.org/observations?place_id=%s&taxon_id=%s&verifiable=any", sd_place, tid[i])
+    if (verbose) {
+      message(sprintf("    %s (id %s%s)%s", nm[i], tid[i],
+                      if (nzchar(rk[i])) paste0(", ", rk[i]) else "", tag))
+      message(sprintf("       is it in San Diego? open %s", sd_url))
+    }
     repeat {
-      msg <- sprintf("    %s (id %s%s)%s  [y verify / r reject / Enter skip / x stop]: ",
-                     nm[i], tid[i], if (nzchar(rk[i])) paste0(", ", rk[i]) else "", tag)
-      d <- .verify_parse(prompt_fn(msg))
+      # verbose run shows name + SD link above (via message), so the input line stays short;
+      # non-verbose callers get the full name inline (preserves the original one-line prompt).
+      short <- "       [y verify / r reject / Enter skip / x stop]: "
+      full  <- sprintf("    %s (id %s%s)%s  [y verify / r reject / Enter skip / x stop]: ",
+                       nm[i], tid[i], if (nzchar(rk[i])) paste0(", ", rk[i]) else "", tag)
+      d <- .verify_parse(prompt_fn(if (verbose) short else full))
       if (d == "stop")   { out$verified_ids <- unique(keep); out$rejected_ids <- unique(rej); out$stopped <- TRUE; return(out) }
       if (d == "skip")   break
       if (d == "verify") { keep <- c(keep, tid[i]); break }

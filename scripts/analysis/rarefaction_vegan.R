@@ -32,6 +32,7 @@ for (pkg in c("vegan", "ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/rarefaction"
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
@@ -97,7 +98,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
   tab <- rarefy_table(M); write.csv(tab, file.path(OUT_DIR, paste0(key, "_vegan.csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
   cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
-  cols <- if (is.null(cols)) setNames(scales::hue_pal()(nrow(M)), rownames(M)) else cols
+  cols <- if (is.null(cols)) setNames(grDevices::colorRampPalette(BEE_SEQ)(nrow(M)), rownames(M)) else cols  # ordinal groups (years) -> blue sequential
   g1 <- ggplot(cdf, aes(n, S, color = group)) +
     geom_vline(xintercept = minN, linetype = "dashed", color = "grey50") +
     annotate("text", x = minN, y = 0, label = sprintf(" rarefy to %d", minN),
@@ -106,8 +107,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
     scale_color_manual(values = cols, name = NULL) +
     labs(title = sprintf("%s (%s) - rarefaction curve", title, rank), subtitle = cap,
          x = "records sampled", y = paste0("expected ", unit)) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
+    theme_beescabr(11)
   ggsave(file.path(OUT_DIR, paste0(key, "_vegan_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
               data.frame(group = tab$group, kind = sprintf("rarefied to %d", minN), S = tab$rarefied_richness))
@@ -119,9 +119,8 @@ draw <- function(M, key, title, rank, cols = NULL) {
                                         c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
     labs(title = sprintf("%s (%s) - rarefied richness", title, rank), subtitle = cap,
          x = NULL, y = unit) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"),
-          panel.grid.major.x = element_blank())
+    theme_beescabr(11) +
+    theme(panel.grid.major.x = element_blank())
   ggsave(file.path(OUT_DIR, paste0(key, "_vegan_bars.png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
@@ -131,7 +130,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
 # Every comparison is run twice -- once at genus rank (robust: every ID'd record
 # counts) and once at species rank (finer, but only species-resolved records).
 RANKS <- c(species = "species_key", genus = "genus_key")
-TCOLS <- c(BST = "#1b7837", UPMON = "#762a83", TP = "#2166ac", OT = "#d95f02")
+TCOLS <- BEE_TRANSECT   # house transect palette
 rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
 
 for (rk in names(RANKS)) {
@@ -146,11 +145,11 @@ for (rk in names(RANKS)) {
   # 3. observer: beeple vs intern
   draw(comm(filter(rec, surveyor %in% c("beeple", "intern")), "surveyor", kc),
        paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
-       c(beeple = "#2166ac", intern = "#1a9850"))
+       c(intern = "#2166ac", beeple = "#b8b8b8"))   # intern = focal blue, beeple = grey (no house concept for observer)
   # 4. method: observations (iNaturalist) vs specimens
   draw(comm(rec, "obs_type", kc), paste0("by_method_", rk),
        "Bees: observations vs specimens", rk,
-       c(observation = "#4575b4", specimen = "#d73027"))
+       c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
 }
 
 message("Wrote by_{transect,year,observer,method}_{species,genus}_vegan.{csv,curves.png,bars.png} to ", OUT_DIR)

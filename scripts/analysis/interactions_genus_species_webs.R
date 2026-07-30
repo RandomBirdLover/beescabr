@@ -32,6 +32,7 @@ for (pkg in c("ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR   <- "data/analysis/interactions"
 WEB_DIR   <- file.path(OUT_DIR, "genus_species_webs")
 SPECIES_RANKS <- c("species", "subspecies")
@@ -91,6 +92,7 @@ genus_web <- function(M, file, genus, h2lab) {
   yP <- 0.05; yB <- 0.95; wmax <- max(M)
   epithet <- sub("^\\S+\\s+", "", colnames(M))             # drop the genus, show species epithet
   png(file, width = max(1500, 150 * nb), height = 1700, res = 200)
+  bee_base_par()                                    # house-style sans font
   op <- par(mar = c(9, 1, 8, 1), xpd = NA)
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
   for (i in seq_len(np)) for (j in seq_len(nb)) if (M[i, j] > 0)
@@ -98,13 +100,13 @@ genus_web <- function(M, file, genus, h2lab) {
              col = adjustcolor("#c9a227", 0.45))
   pw <- 0.010 + 0.022 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.012 + 0.030 * sqrt(colSums(M) / max(colSums(M)))
-  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = "#1a9850", border = "white")
-  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = "#4575b4", border = "white")
-  text(px, yP - 0.022, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#1a6b39")
-  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.78, col = "#2c5aa0", font = 3)
-  mtext(sprintf("%s: species (top, blue) x plant genus (bottom, green)  --  %d species, %d plant genera",
-                genus, nb, np), side = 3, line = 5.3, font = 2, cex = 1.0)
-  mtext(h2lab, side = 1, line = 7.2, cex = 0.8, col = "#b2182b")
+  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = "#b8860b", border = "white")   # plants = goldenrod (forage)
+  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = "#2166ac", border = "white")   # bees = house focal blue
+  text(px, yP - 0.022, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#8c6d1f")
+  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.78, col = "#184f95", font = 3)
+  mtext(sprintf("%s: species (top, blue) x plant genus (bottom, gold)  --  %d species, %d plant genera",
+                genus, nb, np), side = 3, line = 5.3, font = 2, cex = 1.0, col = BEE_INK$primary)
+  mtext(h2lab, side = 1, line = 7.2, cex = 0.8, col = BEE_INK$note)
   par(op); dev.off()
 }
 
@@ -166,7 +168,8 @@ ov <- h2_tbl %>% filter(!is.na(H2prime)) %>%
 g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = sig)) +
   geom_col(width = 0.72) +
   geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2) +
-  scale_fill_manual(values = c("p < 0.05" = "#1a9850", "n.s." = "#b8b8b8"), name = NULL) +
+  # significance = focal blue (notable) vs grey (background)
+  scale_fill_manual(values = c("p < 0.05" = "#2166ac", "n.s." = "#b8b8b8"), name = NULL) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Within-genus niche partitioning: do a genus's species split up plant genera?",
        subtitle = str_wrap(paste0(scope_cap("all records, species-resolved",
@@ -174,9 +177,8 @@ g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = sig)) +
                             sprintf("  |  genera with >=%d species & >=%d records (%d shown)",
                                     MIN_SPECIES, MIN_REC, nrow(keep))), 84),
        x = "within-genus H2'  (0 = species overlap on plants, 1 = each on its own)", y = NULL) +
-  theme_minimal(base_size = 11) +
+  theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12),
-        plot.subtitle = element_text(color = "#b2182b", size = 9),
         legend.position = "top", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g, width = 9, height = 5.8, dpi = 200, bg = "white")
 message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")

@@ -37,7 +37,7 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("holway_name_set")) source("scripts/analysis/not_on_holway.R")
+if (!exists("holway_id_set")) source("scripts/analysis/not_on_holway.R")  # check the NEWEST helper, so a stale session reloads the updated file
 if (!exists("BEE_EVIDENCE")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 CHECKLIST_CABR <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
 OUT_DIR        <- "data/analysis"
@@ -46,20 +46,32 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 norm <- function(x) str_squish(as.character(x))            # trim/collapse whitespace
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 `%||%` <- function(a, b) if (is.null(a)) b else a  # null-coalescing (base R lacks it)
+# holway_id_set() + .noh_row_binom() (the taxon_id + resolved-binomial correction helpers) come from
+# not_on_holway.R, sourced above -- the shared home, so the graph and the pipeline stage-11 agree.
 
 # ---- 1. the CABR taxa Holway doesn't list -----------------------------------
 chk  <- read.csv(CHECKLIST_CABR, stringsAsFactors = FALSE, check.names = FALSE)
 noth <- chk %>% filter(!is_true(holway))                   # holway flag == FALSE (rank-sensitive)
 message(sprintf("CABR checklist taxa NOT on Holway (by flag): %d", nrow(noth)))
-# name-based correction: the holway flag is rank-sensitive, so iNat 'complex' nodes of names Holway
-# lists as species (or as complexes whose members it lists) are false positives -- drop them.
+# CORRECTION: the holway flag is rank-sensitive, so an iNat 'complex' node of a name/taxon Holway
+# carries (e.g. the blank-named Bombus fervidus / Colletes americanus complexes) is a false positive.
+# Drop anything Holway actually has -- by taxon_id (unambiguous) OR by binomial resolved from
+# scientific_name/complex/genus (so blank-named complexes match, which the name-only recheck missed).
 .hset <- holway_name_set(PATHS$holway_reference)
-if (length(.hset) && nrow(noth)) {
-  .keep <- !(.noh_binom(noth$scientific_name) %in% .hset)
-  message(sprintf("  %d are actually on Holway by name (rank/complex mismatch) -> %d genuinely absent",
-                  sum(!.keep), sum(.keep)))
-  noth <- noth[.keep, , drop = FALSE]
+.hids <- holway_id_set(PATHS$holway_reference)
+if ((length(.hset) || length(.hids)) && nrow(noth)) {
+  .on_holway <- (.noh_row_binom(noth) %in% .hset) | (as.character(noth$taxon_id) %in% .hids)
+  message(sprintf("  %d are actually on Holway (by name or taxon_id) -> %d genuinely absent",
+                  sum(.on_holway), sum(!.on_holway)))
+  noth <- noth[!.on_holway, , drop = FALSE]
 }
+# readable label for any SURVIVING complex/subgenus row (its name lives in the complex/subgenus column,
+# not scientific_name), so the figure never shows a bare "(unnamed <id>)".
+.cx <- sub("^\\s*\\([^)]*\\)\\s*", "", norm(noth$complex))
+noth$scientific_name <- ifelse(nzchar(norm(noth$scientific_name)), norm(noth$scientific_name),
+                        ifelse(nzchar(.cx), paste0(.cx, " (complex)"),
+                        ifelse(nzchar(norm(noth$subgenus)), paste0(norm(noth$genus), " (", norm(noth$subgenus), ")"),
+                               norm(noth$genus))))
 
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
