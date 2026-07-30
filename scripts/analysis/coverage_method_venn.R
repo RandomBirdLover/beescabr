@@ -35,11 +35,14 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-COL_LETHAL    <- "#1b7837"   # green  = lethal / specimen (net)
-COL_NONLETHAL <- "#762a83"   # purple = non-lethal / iNat (photo)
+# METHOD is the whole subject here, so it owns colour: its own palette (purple net / vermillion photo),
+# kept off the transect hues -- the same two method colours used wherever method is shown by fill.
+COL_LETHAL    <- unname(BEE_METHOD_COL["lethal"])     # purple     = lethal / specimen (net)
+COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # vermillion = non-lethal / iNat (photo)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- 1. taxa sets per method ------------------------------------------------
@@ -88,11 +91,12 @@ draw_circle <- function(x, y, r, col) {
 }
 venn2 <- function(cc, title) {
   plot.new(); plot.window(xlim = c(0, 10), ylim = c(0, 8), asp = 1)
-  draw_circle(4.1, 3.6, 2.6, adjustcolor(COL_LETHAL,    0.30))
-  draw_circle(5.9, 3.6, 2.6, adjustcolor(COL_NONLETHAL, 0.30))
-  text(2.7, 3.6, cc["lethal_only"],    cex = 1.7, font = 2)
-  text(7.3, 3.6, cc["nonlethal_only"], cex = 1.7, font = 2)
-  text(5.0, 3.6, cc["both"],           cex = 1.7, font = 2)
+  draw_circle(4.1, 3.6, 2.6, adjustcolor(COL_LETHAL,    0.35))
+  draw_circle(5.9, 3.6, 2.6, adjustcolor(COL_NONLETHAL, 0.35))
+  # axis-less figure: ink the counts explicitly (bee_base_par's grey fg is tuned for axis plots)
+  text(2.7, 3.6, cc["lethal_only"],    cex = 1.7, font = 2, col = BEE_INK$primary)
+  text(7.3, 3.6, cc["nonlethal_only"], cex = 1.7, font = 2, col = BEE_INK$primary)
+  text(5.0, 3.6, cc["both"],           cex = 1.7, font = 2, col = BEE_INK$secondary)
   text(3.0, 7.2, sprintf("Lethal\n(net) - %d", cc["lethal_only"] + cc["both"]),
        col = COL_LETHAL, font = 2, cex = 0.95)
   text(7.0, 7.2, sprintf("Non-lethal\n(photo) - %d", cc["nonlethal_only"] + cc["both"]),
@@ -102,15 +106,16 @@ venn2 <- function(cc, title) {
 
 png(file.path(OUT_DIR, "coverage_method_venn.png"),
     width = 2000, height = 1050, res = 200)
+bee_base_par()                                    # house-style fonts + muted axis/title colours
 op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 2, 0))
 venn2(cn$species, sprintf("Species (%d total)",
       cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
 venn2(cn$genus, sprintf("Genera (%d total)",
       cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
 mtext("CABR native bees -- lethal vs non-lethal overlap", outer = TRUE,
-      cex = 1.2, font = 2)
+      cex = 1.2, font = 2, col = BEE_INK$primary)
 mtext("centre = shared; left = lethal only; right = non-lethal only",
-      side = 1, outer = TRUE, cex = 0.85)
+      side = 1, outer = TRUE, cex = 0.85, col = BEE_INK$secondary)
 par(op); dev.off()
 
 # ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------

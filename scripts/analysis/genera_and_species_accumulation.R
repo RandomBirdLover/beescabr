@@ -21,7 +21,7 @@
 #
 # THE LINES: 8 per figure -- each of the 4 transects (BST, UPMON, TP, OT) is
 # drawn TWICE, once per method. COLOUR = transect; LINE STYLE = method
-# (solid = non-lethal iNat photo, dashed = lethal specimen net). A `lethal`
+# (solid = lethal specimen net, dashed = non-lethal iNat photo). A `lethal`
 # survey's taxa come from the specimen table (net), a `non-lethal` survey's from
 # iNaturalist (photo). The per-transect lethal/non-lethal split is also in the
 # summary table. Just TWO figures: species (Fig 1) and genera (Fig 2).
@@ -57,10 +57,11 @@ GENUS_RANKS     <- c("species", "subspecies", "subgenus", # ranks that pin a gen
 PERMUTATIONS    <- 200                                    # specaccum random permutations
 set.seed(1)                                               # reproducible permutation curves
 
-# colour-blind-safe, one colour per transect; line style encodes method
-COLS         <- c(BST = "#1b7837", UPMON = "#762a83", TP = "#2166ac", OT = "#d95f02")
-LTY          <- c(nonlethal = 1, lethal = 2)                        # solid = photo, dashed = net
-METHOD_LABEL <- c(nonlethal = "non-lethal (iNat photo)", lethal = "lethal (specimen net)")
+# house style: colours + line-style come from the shared module (theme_beescabr.R)
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
+COLS         <- BEE_TRANSECT      # one colour per transect (calecopal 'superbloom3')
+LTY          <- BEE_METHOD_LTY    # line style = method: solid = net (lethal), dashed = photo (non-lethal)
+METHOD_LABEL <- BEE_METHOD_LABEL
 
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -128,7 +129,7 @@ accumulate <- function(survey_rows, key_col) {
 
 # Two figures only (species, genera). Each draws up to 8 mean curves --
 # 4 transects x 2 methods -- with COLOUR = transect and LINE STYLE = method
-# (solid = non-lethal photo, dashed = lethal net). CI bands are omitted on
+# (solid = lethal net, dashed = non-lethal photo). CI bands are omitted on
 # purpose: 8 overlapping polygons would be unreadable; the Chao2 +/- SE
 # uncertainty lives in the summary table (section 5).
 plot_accumulation <- function(key_col, rank_label, file) {
@@ -145,6 +146,7 @@ plot_accumulation <- function(key_col, rank_label, file) {
   ymax <- max(vapply(sacs, function(s) max(s$richness), numeric(1)))
 
   png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
+  bee_base_par()                     # house-style fonts + muted axis/label/title colours
   first <- TRUE
   for (key in names(sacs)) {
     mt <- meta[[key]]

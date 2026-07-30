@@ -26,6 +26,7 @@ for (pkg in c("ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_IDSTATUS")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -98,17 +99,17 @@ g <- ggplot(long, aes(x = n, y = target, fill = cat)) +
   geom_text(data = lab, aes(x = total, y = target, label = sprintf("%.0f%% ID'd", pct_id)),
             hjust = -0.12, size = 2.8, color = "grey25", inherit.aes = FALSE) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.13))) +
-  scale_fill_manual(values = c("resolved (to species)" = "#2166ac",
-                               "specimen (keyable)" = "#1a9850", "photo (needs ID)" = "#b8b8b8"), name = NULL) +
+  # ID-progress ramp: blue = resolved (done), vermillion = specimen-keyable (ACT here), grey = photo (can't act)
+  scale_fill_manual(values = c("resolved (to species)" = unname(BEE_IDSTATUS["resolved"]),
+                               "specimen (keyable)"    = unname(BEE_IDSTATUS["keyable"]),
+                               "photo (needs ID)"      = unname(BEE_IDSTATUS["stuck"])), name = NULL) +
   labs(title = sprintf("Q7 - Species-level ID: work done vs all %d remaining targets", nrow(top)),
        subtitle = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
                             scope_cap("all records", "resolved vs specimen-keyable vs photo", "genus / coarse rank")), 82),
        x = "records", y = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b", size = 9),
-        legend.position = "top", panel.grid.major.y = element_blank())
+  theme_beescabr(11) +
+  theme(legend.position = "top", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "coverage_id_targets.png"), g,
        width = 9.5, height = max(7, 0.30 * nrow(top) + 2), dpi = 200, bg = "white")  # taller for all targets
 
@@ -140,18 +141,17 @@ method_genus_fig <- function(m, file, method_label) {
               hjust = -0.15, size = 2.7, color = "grey25", inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
     scale_y_discrete(drop = FALSE) +   # keep EVERY shared genus, even 0-record ones (e.g. photo-only Xenoglossa has 0 specimens) so specimen & photo align row-for-row
-    scale_fill_manual(values = c("identified to species" = "#2166ac",
-                                 "genus-only (unresolved)" = "#b8b8b8"), name = NULL) +
+    scale_fill_manual(values = c("identified to species"   = unname(BEE_IDSTATUS["resolved"]),  # blue = done
+                                 "genus-only (unresolved)" = unname(BEE_IDSTATUS["stuck"])),     # grey = not yet
+                      name = NULL) +
     labs(title = sprintf("Q7 - %s: species-level ID progress (all %d genera)", method_label, length(method_genera)),
          subtitle = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
                               method_label, format(sum(d$species), big.mark = ","),
                               format(sum(d$total), big.mark = ","), pct,
                               scope_cap("records with a genus", method_label, "genus")), 82),
          x = "records", y = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"),
-          plot.subtitle = element_text(color = "#b2182b", size = 9),
-          legend.position = "top", panel.grid.major.y = element_blank())
+    theme_beescabr(11) +
+    theme(legend.position = "top", panel.grid.major.y = element_blank())
   ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), dpi = 200, bg = "white")  # taller for all genera
 }
 method_genus_fig("specimen", file.path(OUT_DIR, "coverage_id_targets_specimen.png"), "Specimen (net)")
@@ -167,7 +167,9 @@ funnel$method <- factor(funnel$method, levels = c("specimen", "photo"))
 gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
   geom_col(position = position_dodge(0.72), width = 0.68) +
   geom_text(aes(label = format(n, big.mark = ",")), position = position_dodge(0.72), vjust = -0.3, size = 3) +
-  scale_fill_manual(values = c(specimen = "#1a9850", photo = "#b8b8b8"), name = NULL,
+  # method now has its own colours (purple net / vermillion photo), kept off the transect palette
+  scale_fill_manual(values = c(specimen = unname(BEE_METHOD_COL["lethal"]),
+                               photo    = unname(BEE_METHOD_COL["nonlethal"])), name = NULL,
                     labels = c(specimen = "specimen (net)", photo = "photo (iNat)")) +
   scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +
   labs(title = "Q7 - Bee ID completeness: how far each record got, by method",
@@ -175,10 +177,8 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
                             scope_cap("all records", "specimen (net) vs photo (iNat)", "resolution level")), 82),
        x = NULL, y = "records") +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b", size = 9),
-        legend.position = "top", panel.grid.major.x = element_blank())
+  theme_beescabr(11) +
+  theme(legend.position = "top", panel.grid.major.x = element_blank())
 ggsave(file.path(OUT_DIR, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, dpi = 200, bg = "white")
 
 message("Wrote coverage_id_targets.{csv,png}, _specimen.png, _photo.png, and coverage_id_completeness.png to ", OUT_DIR)

@@ -35,6 +35,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_SCOPE")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -118,16 +119,13 @@ long$group  <- factor(long$group, levels = out$group[out$scope == "all records"]
 g <- ggplot(long, aes(x = group, y = value, fill = scope)) +
   geom_col(position = position_dodge(0.8), width = 0.7) +
   facet_wrap(~ metric, scales = "free_y") +
-  scale_fill_manual(values = c("survey-only" = "#2166ac", "all records" = "#b8b8b8"),
-                    name = "scope") +
+  scale_fill_manual(values = BEE_SCOPE, name = "scope") +   # house scope: survey-only accent vs all-records grey
   labs(title = "Q11 - Yield by surveyor group x method (CABR bees)",
        subtitle = scope_cap("survey-only vs all records (both shown)",
                             "lethal (specimens) + non-lethal (iNaturalist)", "species"),
        x = NULL, y = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b"),
-        axis.text.x = element_text(angle = 25, hjust = 1),
+  theme_beescabr(11) +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1),
         panel.grid.major.x = element_blank())
 ggsave(file.path(OUT_DIR, "coverage_yield_by_group.png"), g, width = 10, height = 6.5, dpi = 200, bg = "white")
 message("Wrote coverage_yield_by_group.{csv,png} + coverage_yield_by_group_exclusive_species.csv to ", OUT_DIR)

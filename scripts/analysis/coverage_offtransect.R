@@ -27,6 +27,7 @@ for (pkg in c("ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_SET")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -86,15 +87,15 @@ plot_df <- summ %>%
 g <- ggplot(plot_df, aes(x = rank, y = n, fill = region)) +
   geom_col(position = position_dodge(0.8), width = 0.7) +
   geom_text(aes(label = n), position = position_dodge(0.8), vjust = -0.3, size = 3.4) +
-  scale_fill_manual(values = c("on-only" = "#2166ac", "both" = "#9ecae1", "off-only" = "#d95f02"),
-                    name = NULL) +
+  # set-overlap concept: on-transect = focal blue, shared = grey (background), off-transect = vermillion (what surveys miss)
+  scale_fill_manual(values = c("on-only" = unname(BEE_SET["a_only"]),
+                               "both"     = unname(BEE_SET["shared"]),
+                               "off-only" = unname(BEE_SET["b_only"])), name = NULL) +
   labs(title = "Q6 - On-transect vs off-transect bee coverage (CABR)",
        subtitle = str_wrap(scope_cap("all records; on = is_survey TRUE, off = casual iNaturalist",
                             "lethal + non-lethal (off-transect non-lethal only)", "species & genus"), 82),
        x = NULL, y = "distinct taxa") +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b", size = 9),
-        panel.grid.major.x = element_blank())
+  theme_beescabr(11) +
+  theme(panel.grid.major.x = element_blank())
 ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, dpi = 200, bg = "white")
 message("Wrote coverage_offtransect.{png,_summary.csv,_taxa.csv} to ", OUT_DIR)

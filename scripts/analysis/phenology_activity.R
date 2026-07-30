@@ -38,11 +38,14 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style (ink tokens + >=10 rule)
 OUT_DIR       <- "data/analysis/phenology"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-MIN_RECORDS   <- 10       # a taxon needs this many records to draw a ridge
+MIN_RECORDS   <- BEE_MIN_RECORDS   # shared >=10-record rule: sparser taxa are excluded (too few to read a season)
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
+# figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
+# reinforced by peak-day ordering. Never a categorical transect, so it stays local, not a house concept.
 SPRING_FALL   <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
 MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -78,7 +81,7 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
           plot.title  = element_text(face = "bold"),
-          plot.caption = element_text(color = "#b2182b", hjust = 0, size = 8, face = "bold"))
+          plot.caption = element_text(color = BEE_INK$note, hjust = 0, size = 8, face = "bold"))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 

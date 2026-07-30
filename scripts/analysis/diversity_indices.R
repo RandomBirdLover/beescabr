@@ -38,6 +38,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/diversity"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -107,12 +108,11 @@ plot_indices <- function(dfin, file, title, cap, group_lab) {
   g <- ggplot(long, aes(x = group, y = value, fill = rank)) +
     geom_col(position = position_dodge(0.8), width = 0.7) +
     facet_wrap(~ metric, scales = "free_y") +
-    scale_fill_manual(values = c(species = "#2166ac", genus = "#8c8c8c"), name = "rank") +
+    # rank = focal species (blue) vs coarser genus (grey background)
+    scale_fill_manual(values = c(species = "#2166ac", genus = "#b8b8b8"), name = "rank") +
     labs(title = title, subtitle = cap, x = group_lab, y = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"),
-          plot.subtitle = element_text(color = "#b2182b"),
-          panel.grid.major.x = element_blank())
+    theme_beescabr(11) +
+    theme(panel.grid.major.x = element_blank())
   ggsave(file, g, width = 9, height = 6.2, dpi = 200, bg = "white")
 }
 # tiny long-pivot helper (avoid tidyr dep)
@@ -141,8 +141,7 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
     labs(title = "Bee diversity by year (CABR)",
          subtitle = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
          x = "year", y = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
+    theme_beescabr(11)
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 }
 
@@ -160,13 +159,14 @@ rad <- rbind(rad_df(as.integer(sp_pool), "both pooled"),
 g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
   geom_line(linewidth = 0.9) + geom_point(size = 1) +
   scale_y_log10() +
-  scale_color_manual(values = c("both pooled" = "black", "lethal (net)" = "#1b7837",
-                                "non-lethal (photo)" = "#762a83")) +
+  # method owns colour: pooled = dark ink, lethal = purple (net), non-lethal = vermillion (photo)
+  scale_color_manual(values = c("both pooled" = BEE_INK$primary,
+                                "lethal (net)" = unname(BEE_METHOD_COL["lethal"]),
+                                "non-lethal (photo)" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
   labs(title = "Rank-abundance (dominance) of CABR bee species",
        subtitle = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
+  theme_beescabr(11)
 ggsave(file.path(OUT_DIR, "diversity_rank_abundance.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 
 # ---- 5. NMDS + PERMANOVA: does composition differ by transect/year? ----------
@@ -192,14 +192,13 @@ if (!is.null(mds)) {
   ptr <- with(perm, sprintf("PERMANOVA transect: R2=%.2f, p=%.3f", R2[1], `Pr(>F)`[1]))
   g <- ggplot(sc, aes(NMDS1, NMDS2, color = transect, label = meta$site)) +
     geom_point(size = 3) + geom_text(vjust = -0.8, size = 2.6, show.legend = FALSE) +
-    scale_color_manual(values = c(BST = "#1b7837", UPMON = "#762a83", TP = "#2166ac", OT = "#d95f02")) +
+    scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
     labs(title = "Bee community composition by transect (NMDS, Bray-Curtis)",
          subtitle = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
                            sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
                            sprintf("  (stress %.2f)", mds$stress)),
          x = "NMDS1", y = "NMDS2") +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
+    theme_beescabr(11)
   ggsave(file.path(OUT_DIR, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
 }
 

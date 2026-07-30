@@ -38,6 +38,7 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("holway_name_set")) source("scripts/analysis/not_on_holway.R")
+if (!exists("BEE_EVIDENCE")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 CHECKLIST_CABR <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
 OUT_DIR        <- "data/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -146,9 +147,10 @@ write.csv(url_rows %||% data.frame(),
           row.names = FALSE)
 
 # ---- 5. figure: the taxa, record counts, coloured by evidence ---------------
-pal <- c("specimen"      = "#1b7837",   # green  = voucher-backed (solid)
-         "inat_research" = "#2166ac",   # blue   = iNat, community-vetted
-         "inat_needsid"  = "#d95f02")   # orange = iNat, unvetted (check first)
+# evidence = the shared teal confidence ramp: voucher (dark) -> research -> needs-ID (light)
+pal <- c(specimen      = unname(BEE_EVIDENCE["specimen"]),   # dark teal  = voucher-backed (solid)
+         inat_research = unname(BEE_EVIDENCE["research"]),   # mid teal   = iNat, community-vetted
+         inat_needsid  = unname(BEE_EVIDENCE["needs_id"]))   # light teal = iNat, unvetted (check first)
 
 pdat <- summary_tbl[nrow(summary_tbl):1, ]   # so highest priority sits at top
 spec_n     <- pdat$n_specimen_records
@@ -160,6 +162,7 @@ colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
 
 png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
     width = 1900, height = 1150, res = 200)
+bee_base_par()                                    # house-style fonts + muted axis/title colours
 op <- par(mar = c(4.5, 12, 3.5, 1))
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA,
               xlab = "Number of CABR records",

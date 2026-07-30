@@ -28,6 +28,7 @@ for (pkg in c("ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/phenology"
 WINDOW_MONTHS <- 3:9
 MONTH_ABB     <- month.abb
@@ -79,16 +80,15 @@ long$metric <- factor(long$metric, levels = c("Survey trips", "Observations"))
 gA <- ggplot(long, aes(x = month_lab, y = value, fill = in_window)) +
   geom_col(width = 0.72) +
   facet_wrap(~ metric, scales = "free_y", ncol = 1) +
-  scale_fill_manual(values = c("TRUE" = "#1a9850", "FALSE" = "#cccccc"),
+  # in-window = focal blue, outside = grey background (scope-style accent vs grey)
+  scale_fill_manual(values = c("TRUE" = unname(BEE_SCOPE["survey-only"]), "FALSE" = unname(BEE_SCOPE["all records"])),
                     labels = c("TRUE" = "Mar-Sep window", "FALSE" = "outside window"), name = NULL) +
   labs(title = "Q13 - Survey effort calendar (CABR bees)",
        subtitle = str_wrap(scope_cap(paste0("per-survey log, all trips ", min(p$year, na.rm = TRUE), "-", max(p$year, na.rm = TRUE)),
                             "lethal + non-lethal trips pooled", "n/a (effort)"), 80),
        x = NULL, y = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b", size = 9),
-        legend.position = "top", panel.grid.major.x = element_blank())
+  theme_beescabr(11) +
+  theme(legend.position = "top", panel.grid.major.x = element_blank())
 ggsave(file.path(OUT_DIR, "effort_by_month.png"), gA, width = 8.5, height = 6.5, dpi = 200, bg = "white")
 
 # ---- 4. figure B: year x month trip-count grid (coverage gaps) ---------------
@@ -96,16 +96,17 @@ grid <- p %>% filter(!is.na(year)) %>% count(year, month, name = "trips") %>%
   right_join(expand.grid(year = sort(unique(p$year[!is.na(p$year)])), month = 1:12),
              by = c("year","month")) %>%
   mutate(trips = ifelse(is.na(trips), 0, trips),
-         month_lab = factor(MONTH_ABB[month], levels = MONTH_ABB))
+         month_lab = factor(MONTH_ABB[month], levels = MONTH_ABB),
+         dark = trips > max(trips, na.rm = TRUE) * 0.5)   # dark cells -> white label for contrast
 gB <- ggplot(grid, aes(x = month_lab, y = factor(year), fill = trips)) +
   geom_tile(color = "white", linewidth = 0.4) +
-  geom_text(aes(label = ifelse(trips > 0, trips, "")), size = 3, color = "grey15") +
-  scale_fill_gradient(low = "#f7fcf5", high = "#1a9850", name = "trips") +
+  geom_text(aes(label = ifelse(trips > 0, trips, ""), colour = dark), size = 3, show.legend = FALSE) +
+  scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
+  scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +   # magnitude = house blue sequential ramp
   labs(title = "Q13 - Survey trips by year x month (coverage gaps)",
        subtitle = scope_cap("per-survey log", "all trips", "n/a (effort)"),
        x = NULL, y = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(color = "#b2182b"), panel.grid = element_blank())
+  theme_beescabr(11) +
+  theme(panel.grid = element_blank())
 ggsave(file.path(OUT_DIR, "effort_year_month_grid.png"), gB, width = 9, height = 4.6, dpi = 200, bg = "white")
 message("Wrote effort_by_month.{csv,png} + effort_year_month_grid.png to ", OUT_DIR)

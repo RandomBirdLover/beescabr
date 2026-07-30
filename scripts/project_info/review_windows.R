@@ -11,7 +11,7 @@
 # Runs LAST in the review chain (after tags + fields), so it sees the fullest
 # picture of membership. For each un-ruled window you say whether the survey
 # actually happened:
-#   y  survey     -- yes, it happened -> the brain promotes it into master_per_survey_info.csv
+#   y  survey     -- yes, it happened (recorded for review ONLY; NOT added to survey_dates -- no tag = not a survey day)
 #   n  no         -- it did not happen -> stays out
 #   u  unsure     -- revisit next run
 #   s  skip       -- leave blank, revisit next run       q  save & quit    ? help
@@ -40,7 +40,7 @@ RW_PATH <- "data/project_info/review/review_beeple_survey_windows.csv"
   bar <- strrep("-", 60)
   cat("\n", bar, "\n", sep = "")
   cat(" Ruling survey windows the brain couldn't auto-confirm:\n\n")
-  cat("   y   survey  -- yes it happened (brain folds it into master_per_survey_info.csv)\n")
+  cat("   y   survey  -- yes it happened (recorded ONLY; NOT added to master_per_survey_info -- no tag = not a survey day)\n")
   cat("   n   no      -- it did not happen\n")
   cat("   u   unsure  -- record as unsure, revisit next run\n")
   cat("   s   skip    -- leave blank, revisit next run\n")
@@ -106,7 +106,7 @@ review_windows <- function(path = RW_PATH, prompt_fn = readline, write = TRUE, m
 
   if (changed && write) {
     write.csv(rv, path, row.names = FALSE, na = "")
-    cat(sprintf("\nSaved rulings -> %s  (re-run the brain to fold 'survey' windows into master_per_survey_info.csv)\n", path))
+    cat(sprintf("\nSaved rulings -> %s  (a review record ONLY -- rulings are NOT added to master_per_survey_info; no tag = not a survey day)\n", path))
   } else cat("\nNo new rulings written.\n")
   invisible(rv)
 }
