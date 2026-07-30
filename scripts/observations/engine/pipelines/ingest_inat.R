@@ -82,6 +82,13 @@ ingest_observations <- function(con,
     written
   }
 
+  # Capture the cutoff BEFORE fetching, not after. An observation edited on iNat
+  # WHILE this run is fetching would otherwise carry updated_at < an end-of-run stamp
+  # yet be missed (its page already passed) -> lost from every future refresh. Stamping
+  # the START time makes the next run's updated_since span this run's whole fetch window
+  # (over-inclusive, but the INSERT-OR-REPLACE upsert makes any re-pull idempotent).
+  run_started <- format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
+
   # Pass 1: brand-new observations (id above the highest we hold).
   n_written <- n_written + run_pass(base_query, id_above, "new")
 
@@ -94,9 +101,10 @@ ingest_observations <- function(con,
     n_written <- n_written + run_pass(c(base_query, list(updated_since = last_ts)), 0L, "updated")
   }
 
-  # Stamp this run's time (UTC) so the next refresh knows the cutoff.
+  # Persist the RUN-START cutoff captured above (before any fetch), so the next
+  # refresh's updated_since re-pulls anything edited during this run too.
   dir.create(dirname(state_path), recursive = TRUE, showWarnings = FALSE)
-  writeLines(format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"), state_path)
+  writeLines(run_started, state_path)
 
   if (verbose)
     message(sprintf("Ingest complete: %d rows written. Cache holds %d observations.",
