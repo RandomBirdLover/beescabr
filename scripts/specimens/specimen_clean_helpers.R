@@ -135,34 +135,63 @@ fill_specimen_taxonomy <- function(df, tax_lookup) {
     select(-ends_with("_lookup"))
 }
 
-# Build the "known names" sets used by the spell-check, from the taxonomy lookup +
-# the SD County iNat checklist (second authority for valid names not yet in
-# Holway). Returns list(genera, genus_species).
+# Build the "known names" sets used by the spell-check + new-taxon detection, from the
+# taxonomy lookup + the SD County iNat checklist (second authority for valid names not
+# yet in Holway). Returns list(genera, genus_species, subgenera, complexes). The coarse
+# sets (subgenera, complexes) let a subgenus/complex-only ID that IS already represented
+# in the lookup avoid being re-flagged as new -- complex names are held WITHOUT the
+# "(Complex) " display tag (bare), the same form a specimen carries.
 build_known_names <- function(tax_check, inat_species) {
   known_genera <- unique(c(tax_check$genus, inat_species$genus))
   known_genus_species <- bind_rows(
     tax_check |> filter(!is.na(species), species != "") |> distinct(genus, species),
     inat_species
   ) |> distinct(genus, species)
-  list(genera = known_genera, genus_species = known_genus_species)
+  .strip_cx <- function(x) trimws(sub("^\\s*\\([^)]*\\)\\s*", "", ifelse(is.na(x), "", as.character(x))))
+  known_subgenera <- if ("subgenus" %in% names(tax_check))
+    tax_check |> filter(!is.na(subgenus), subgenus != "") |> distinct(genus, subgenus)
+  else tibble(genus = character(), subgenus = character())
+  known_complexes <- if ("complex" %in% names(tax_check))
+    tax_check |> mutate(complex = .strip_cx(complex)) |> filter(complex != "") |> distinct(genus, complex)
+  else tibble(genus = character(), complex = character())
+  list(genera = known_genera, genus_species = known_genus_species,
+       subgenera = known_subgenera, complexes = known_complexes)
 }
 
-# Spell-check: flag (1) genus not in the known set, (2) known genus but the
-# genus+species combo isn't known. Returns one row per flagged specimen.
-compute_taxonomy_flags <- function(df, known_genera, known_genus_species) {
-  df |>
-    filter(!is.na(genus), genus != "") |>
-    mutate(
-      flag_unknown_genus   = !(genus %in% known_genera),
-      flag_unknown_species = !flag_unknown_genus & !is.na(species) & species != "" &
-        !paste(genus, species) %in% paste(known_genus_species$genus, known_genus_species$species)
-    ) |>
-    filter(flag_unknown_genus | flag_unknown_species) |>
-    mutate(flag_reason = case_when(
-      flag_unknown_genus   ~ "genus not in taxonomy lookup",
-      flag_unknown_species ~ "genus+species combo not in taxonomy lookup"
-    )) |>
-    select(any_of(c("ucsd_id", "sdnhm_id")), genus, species, subspecies, flag_reason) |>
+# Spell-check + NEW-taxon detection. Flags, per specimen, the FINEST-rank determination
+# that isn't yet in the lookup: (1) unknown genus, (2) known genus but unknown
+# genus+species, (3) a complex-only ID (blank species) whose complex isn't a known
+# complex, (4) a subgenus-only ID (blank species+complex) whose subgenus isn't known.
+# The coarse cases (3,4) feed the specimen-additions loop so a subgenus/complex-only bee
+# gets a taxon_id + a lookup row (was species-only before). Carries subgenus + complex on
+# the output so seeding can build a lookup-shaped row. Coarse flags require a KNOWN genus
+# (an unknown genus is reported as such, not as an unknown subgenus). Returns one row per
+# flagged specimen. known_subgenera / known_complexes default to none (species-only mode).
+compute_taxonomy_flags <- function(df, known_genera, known_genus_species,
+                                   known_subgenera = NULL, known_complexes = NULL) {
+  .strip_cx <- function(x) trimws(sub("^\\s*\\([^)]*\\)\\s*", "", ifelse(is.na(x), "", as.character(x))))
+  ksub <- if (!is.null(known_subgenera) && nrow(known_subgenera))
+    tolower(paste(known_subgenera$genus, known_subgenera$subgenus)) else character(0)
+  kcx  <- if (!is.null(known_complexes)  && nrow(known_complexes))
+    tolower(paste(known_complexes$genus,  known_complexes$complex))  else character(0)
+  d  <- df |> filter(!is.na(genus), genus != "")
+  sg <- if ("subgenus" %in% names(d)) ifelse(is.na(d$subgenus), "", trimws(as.character(d$subgenus))) else rep("", nrow(d))
+  cx <- if ("complex"  %in% names(d)) .strip_cx(d$complex) else rep("", nrow(d))
+  sp <- if ("species"  %in% names(d)) ifelse(is.na(d$species),  "", trimws(as.character(d$species)))  else rep("", nrow(d))
+  unk_g  <- !(d$genus %in% known_genera)
+  unk_sp <- !unk_g & sp != "" & !(paste(d$genus, sp) %in% paste(known_genus_species$genus, known_genus_species$species))
+  unk_cx <- !unk_g & sp == "" & cx != "" & !(tolower(paste(d$genus, cx)) %in% kcx)   # complex-only, complex not known
+  unk_sg <- !unk_g & sp == "" & cx == "" & sg != "" & !(tolower(paste(d$genus, sg)) %in% ksub)  # subgenus-only, subgenus not known
+  keep <- unk_g | unk_sp | unk_cx | unk_sg
+  d <- d[keep, , drop = FALSE]
+  d$flag_reason <- dplyr::case_when(
+    unk_g[keep]  ~ "genus not in taxonomy lookup",
+    unk_sp[keep] ~ "genus+species combo not in taxonomy lookup",
+    unk_cx[keep] ~ "complex not in taxonomy lookup",
+    unk_sg[keep] ~ "subgenus not in taxonomy lookup")
+  d |>
+    select(any_of(c("ucsd_id", "sdnhm_id")), genus, any_of(c("subgenus", "complex")),
+           any_of("species"), any_of("subspecies"), flag_reason) |>
     distinct()
 }
 

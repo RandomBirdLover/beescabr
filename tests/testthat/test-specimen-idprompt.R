@@ -82,13 +82,64 @@ test_that("seed_additions_from_flags builds a full-lineage row for a NEW flagged
   expect_equal(out$kingdom, "Animalia"); expect_equal(out$superfamily, "Apoidea")   # full parents carried
 })
 
-test_that("seed_additions_from_flags skips taxa already in additions, and blank species", {
+test_that("seed_additions_from_flags skips taxa already in additions, and genus-only (no rank below genus)", {
   .impl()
+  # Lasioglossum row has NO subgenus/complex/species -> genus-only -> NOT seeded (unchanged behavior)
   flags <- data.frame(genus = c("Colletes", "Lasioglossum"), species = c("phaceliae", ""),
                       subspecies = "", stringsAsFactors = FALSE)
   record <- data.frame(genus = "Colletes", species = "phaceliae", family = "Colletidae", stringsAsFactors = FALSE)
   existing <- data.frame(scientific_name = "Colletes phaceliae", stringsAsFactors = FALSE)
   expect_equal(nrow(seed_additions_from_flags(flags, record, existing)), 0L)
+})
+
+test_that("seed_additions_from_flags seeds a complex-only and subgenus-only flag at its own rank", {
+  .impl()
+  flags <- data.frame(
+    genus      = c("Colletes",          "Lasioglossum", "Andrena"),
+    subgenus   = c("",                  "Novomelitta",  ""),
+    complex    = c("Colletes simulans", "",             ""),
+    species    = c("",                  "",             "baeriae"),
+    subspecies = "",
+    flag_reason = c("complex not in taxonomy lookup", "subgenus not in taxonomy lookup",
+                    "genus+species combo not in taxonomy lookup"),
+    stringsAsFactors = FALSE)
+  record <- data.frame(
+    genus    = c("Colletes",          "Lasioglossum", "Andrena"),
+    subgenus = c("",                  "Novomelitta",  ""),
+    complex  = c("Colletes simulans", "",             ""),
+    species  = c("",                  "",             "baeriae"),
+    order    = "Hymenoptera",
+    family   = c("Colletidae", "Halictidae", "Andrenidae"),
+    subfamily = "", tribe = "", stringsAsFactors = FALSE)
+  out <- seed_additions_from_flags(flags, record, existing = NULL)
+  cx <- out[out$rank == "complex", ]
+  expect_equal(nrow(cx), 1L)
+  expect_equal(cx$scientific_name, "Colletes simulans")   # bare complex name = the search term
+  expect_equal(cx$complex, "Colletes simulans")
+  expect_equal(cx$genus, "Colletes")
+  expect_true(is.na(cx$taxon_id))                         # blank -> resolver fills (or leaves, if not on iNat)
+  expect_equal(cx$species, "")                            # a complex has no species
+  expect_equal(cx$family, "Colletidae")                   # parent lineage pulled by genus
+  sg <- out[out$rank == "subgenus", ]
+  expect_equal(nrow(sg), 1L)
+  expect_equal(sg$scientific_name, "Novomelitta")
+  expect_equal(sg$subgenus, "Novomelitta")
+  sp <- out[out$rank == "species", ]
+  expect_equal(sp$scientific_name, "Andrena baeriae")     # species path still works
+})
+
+test_that("seed_additions_from_flags strips a '(Complex) ' tag from a flagged complex name", {
+  .impl()
+  flags <- data.frame(genus = "Lasioglossum", subgenus = "Dialictus",
+                      complex = "(Complex) Lasioglossum gemmatum", species = "", subspecies = "",
+                      flag_reason = "complex not in taxonomy lookup", stringsAsFactors = FALSE)
+  record <- data.frame(genus = "Lasioglossum", subgenus = "Dialictus",
+                       complex = "(Complex) Lasioglossum gemmatum", species = "",
+                       family = "Halictidae", stringsAsFactors = FALSE)
+  out <- seed_additions_from_flags(flags, record, existing = NULL)
+  expect_equal(out$rank, "complex")
+  expect_equal(out$scientific_name, "Lasioglossum gemmatum")   # tag stripped -> clean iNat search term
+  expect_equal(out$complex, "Lasioglossum gemmatum")
 })
 
 test_that("resolve_specimen_taxa (driver) seeds a flag + fills ids with NO type clash", {

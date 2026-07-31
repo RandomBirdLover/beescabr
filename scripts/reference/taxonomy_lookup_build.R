@@ -204,7 +204,7 @@ build_taxonomy_lookup <- function(con) {
   # LAST STEP: backfill blank ancestor ranks (specimen-only leaves can arrive missing intermediate
   # ranks their genus/family rows already carry). Adds no taxa; only fills gaps.
   bee_taxonomy_lookup <- backfill_parent_taxonomy(bee_taxonomy_lookup)
-  write_fresh(decorate_complex(bee_taxonomy_lookup), PATHS$taxonomy_lookup, na = "")
+  write_fresh(decorate_complex_name(decorate_complex(bee_taxonomy_lookup)), PATHS$taxonomy_lookup, na = "")
   bx_kv("Bee lookup", format(nrow(bee_taxonomy_lookup), big.mark = ","), " rows (",
         sum(!bee_taxonomy_lookup$verified), " unverified)")
   bx_out(basename(PATHS$taxonomy_lookup))

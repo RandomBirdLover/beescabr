@@ -185,7 +185,8 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
         mutate(genus = str_to_title(genus), species = str_to_lower(species)) |> distinct(genus, species)
     } else tibble(genus = character(), species = character())
     known <- build_known_names(tax_check, inat_species)
-    flags <- compute_taxonomy_flags(df, known$genera, known$genus_species)
+    flags <- compute_taxonomy_flags(df, known$genera, known$genus_species,
+                                    known$subgenera, known$complexes)
     write_fresh(flags, flags_out, row.names = FALSE)
     n_taxonomy <- nrow(flags)
     bx_cont("taxonomy spell-check: ", n_taxonomy, " flag(s) -> ", basename(flags_out))

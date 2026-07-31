@@ -35,3 +35,20 @@ decorate_complex <- function(df) {
   df$complex <- cx
   df
 }
+
+# decorate_complex_name(): mirror the "(Complex) <name>" tag into scientific_name for
+# rank == "complex" ROWS, so a complex reads distinctly and never looks like a duplicate of
+# its member species of the same name (e.g. the Diadasia australis complex vs the species).
+# Keyed on rank == "complex" -- NOT on a populated `complex` column, since species rows also
+# carry a parent complex and must keep their binomial. A blank complex scientific_name is
+# filled from the `complex` column. Idempotent. OUTPUT-time only, like decorate_complex():
+# internal joins/matching still use the bare name, so consumers that PARSE scientific_name
+# into a binomial (not_on_holway, inat_misid_qc) strip this tag first.
+decorate_complex_name <- function(df) {
+  if (!all(c("rank", "complex", "scientific_name") %in% names(df))) return(df)
+  is_cx  <- !is.na(df$rank) & df$rank == "complex"
+  bare   <- sub("^\\s*\\(Complex\\)\\s*", "", ifelse(is.na(df$complex), "", as.character(df$complex)))
+  tagged <- ifelse(bare == "", as.character(df$scientific_name), paste0("(Complex) ", bare))
+  df$scientific_name[is_cx] <- tagged[is_cx]
+  df
+}

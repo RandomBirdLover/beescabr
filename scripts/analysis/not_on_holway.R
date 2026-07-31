@@ -65,7 +65,9 @@ holway_id_set <- function(holway_path) {
 # node whose scientific_name is blank still matches the name Holway lists.
 .noh_row_binom <- function(df) {
   colc <- function(n) .noh_norm(if (n %in% names(df)) df[[n]] else rep("", nrow(df)))
-  sn <- colc("scientific_name")
+  # strip a leading "(Complex) " tag from BOTH name columns: complex rows now carry it on
+  # scientific_name too, and the binomial extraction below needs the bare "Genus species".
+  sn <- sub("^\\s*\\([^)]*\\)\\s*", "", colc("scientific_name"))
   cx <- sub("^\\s*\\([^)]*\\)\\s*", "", colc("complex"))
   g  <- colc("genus"); sp <- colc("species")
   raw <- ifelse(nzchar(sn), sn, ifelse(nzchar(cx), cx, ifelse(nzchar(g) & nzchar(sp), paste(g, sp), g)))

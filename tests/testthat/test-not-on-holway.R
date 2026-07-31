@@ -106,6 +106,22 @@ test_that("not_on_holway_bees drops rank/complex mismatches Holway actually list
   expect_setequal(noh$scientific_name, "Perdita nova")   # only the name Holway never lists survives
 })
 
+test_that("not_on_holway_bees tolerates a '(Complex) ' tag on scientific_name (still matched to Holway)", {
+  # complex rows now carry "(Complex) <name>" in scientific_name; the binomial extraction must
+  # strip that tag so a name Holway actually lists is still dropped (not reported as a new bee).
+  ck <- tempfile(fileext = ".csv")
+  write.csv(data.frame(
+    taxon_id = c(1, 2, 3), taxon_rank = "complex",
+    scientific_name = c("(Complex) Diadasia australis", "(Complex) Nomada vegana", "(Complex) Perdita nova"),
+    genus = c("Diadasia", "Nomada", "Perdita"), holway = FALSE, stringsAsFactors = FALSE), ck, row.names = FALSE)
+  inat <- tibble::tibble(taxon_id = c(1, 2, 3),
+                         scientific_name = c("(Complex) Diadasia australis", "(Complex) Nomada vegana", "(Complex) Perdita nova"),
+                         quality_grade = "needs_id")
+  spec <- tibble::tibble(taxon_id = integer(), scientific_name = character())
+  noh <- not_on_holway_bees(ck, spec, inat, holway_path = make_holway())
+  expect_setequal(noh$scientific_name, "(Complex) Perdita nova")   # only the name Holway never lists survives
+})
+
 test_that("not_on_holway_bees skips the name correction when no Holway path (backward compatible)", {
   ck <- tempfile(fileext = ".csv")
   write.csv(data.frame(taxon_id = 1, taxon_rank = "complex", scientific_name = "Diadasia australis",

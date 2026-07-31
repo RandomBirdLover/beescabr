@@ -108,41 +108,82 @@ resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prom
   names(d) <- .SA_COLS; d$taxon_id <- integer(0); d
 }
 
-# seed_additions_from_flags(): PURE. Turn each NEW flagged specimen taxon (genus+species not
-# already in `existing` additions) into a lookup-shaped additions row -- taxon_id BLANK (the
-# prompt fills it), and EVERY PARENT rank carried across from the raw specimen `record`
-# (order/family/subfamily/tribe/genus/subgenus/complex), with the fixed bee lineage on top
-# (Animalia/Arthropoda/Insecta/Apoidea). Returns the new rows (0-row frame if none).
+# seed_additions_from_flags(): PURE. Turn each NEW flagged specimen taxon into a lookup-
+# shaped additions row -- taxon_id BLANK (the prompt/build fills it) with EVERY PARENT rank
+# carried across from the raw specimen `record` and the fixed bee lineage on top
+# (Animalia/Arthropoda/Insecta/Apoidea). Each addition is seeded AT THE SPECIMEN'S FINEST
+# ID RANK: species/subspecies (a binomial), a complex-only ID (rank "complex", named by its
+# bare binomial), or a subgenus-only ID (rank "subgenus"). A genus-only flag is NOT seeded
+# here -- an unknown genus is a different problem than a new taxon under a known genus.
+# Complex names are stored WITHOUT the "(Complex) " tag so the iNat search term is clean.
+# Dedupes within the batch + against `existing` (rank-aware when the file carries a rank).
+# Returns the new rows (0-row frame if none).
 seed_additions_from_flags <- function(flags, record, existing = NULL) {
   if (is.null(flags) || !nrow(flags)) return(.sa_empty())
   gcol <- function(df, col) if (col %in% names(df)) as.character(df[[col]]) else rep(NA_character_, nrow(df))
-  fl <- data.frame(genus      = trimws(gcol(flags, "genus")),
-                   species    = trimws(gcol(flags, "species")),
-                   subspecies = trimws(gcol(flags, "subspecies")), stringsAsFactors = FALSE)
-  fl <- fl[!is.na(fl$genus) & fl$genus != "" & !is.na(fl$species) & fl$species != "", , drop = FALSE]
+  b2 <- function(x) { x <- trimws(as.character(x)); x[is.na(x)] <- ""; x }
+  strip_cx <- function(x) trimws(sub("^\\s*\\([^)]*\\)\\s*", "", b2(x)))
+  fl <- data.frame(genus      = b2(gcol(flags, "genus")),
+                   subgenus   = b2(gcol(flags, "subgenus")),
+                   complex    = strip_cx(gcol(flags, "complex")),
+                   species    = b2(gcol(flags, "species")),
+                   subspecies = b2(gcol(flags, "subspecies")), stringsAsFactors = FALSE)
+  fl <- fl[fl$genus != "", , drop = FALSE]
   if (!nrow(fl)) return(.sa_empty())
-  fl$sci <- paste(fl$genus, fl$species)
-  fl <- fl[!duplicated(tolower(fl$sci)), , drop = FALSE]
-  have <- if (!is.null(existing) && "scientific_name" %in% names(existing))
-    tolower(trimws(existing$scientific_name)) else character(0)
-  fl <- fl[!(tolower(fl$sci) %in% have), , drop = FALSE]
+  # finest ID rank + the scientific_name AT that rank (genus-only -> NA -> dropped)
+  finest <- function(g, sg, cx, sp, ss) {
+    if (sp != "" && ss != "") return(c(rank = "subspecies", sci = paste(g, sp, ss)))
+    if (sp != "")             return(c(rank = "species",    sci = paste(g, sp)))
+    if (cx != "")             return(c(rank = "complex",    sci = cx))
+    if (sg != "")             return(c(rank = "subgenus",   sci = sg))
+    c(rank = NA_character_, sci = NA_character_)
+  }
+  fin <- t(mapply(finest, fl$genus, fl$subgenus, fl$complex, fl$species, fl$subspecies, USE.NAMES = FALSE))
+  fl$rank <- fin[, "rank"]; fl$sci <- fin[, "sci"]
+  fl <- fl[!is.na(fl$rank), , drop = FALSE]
   if (!nrow(fl)) return(.sa_empty())
-  rec_at <- function(gen, sp, col) {
-    if (is.null(record) || !all(c("genus", "species") %in% names(record)) || !col %in% names(record)) return("")
-    hit <- which(tolower(trimws(record$genus)) == tolower(gen) & tolower(trimws(record$species)) == tolower(sp))
-    if (!length(hit)) return("")
-    v <- as.character(record[[col]][hit[1]]); if (is.na(v)) "" else trimws(v)
+  fl <- fl[!duplicated(tolower(paste(fl$rank, fl$sci))), , drop = FALSE]
+  if (!is.null(existing) && "scientific_name" %in% names(existing)) {
+    if ("rank" %in% names(existing)) {
+      have <- tolower(trimws(paste(existing$rank, existing$scientific_name)))
+      fl   <- fl[!(tolower(paste(fl$rank, fl$sci)) %in% have), , drop = FALSE]
+    } else {
+      have <- tolower(trimws(existing$scientific_name))
+      fl   <- fl[!(tolower(fl$sci) %in% have), , drop = FALSE]
+    }
+  }
+  if (!nrow(fl)) return(.sa_empty())
+  # parent lineage (order/family/subfamily/tribe/subgenus) from the record row that matches
+  # the specimen's finest identity (species, else complex, else subgenus, else genus).
+  rec_row <- function(r) {
+    if (is.null(record) || !"genus" %in% names(record)) return(NA_integer_)
+    hit <- tolower(trimws(record$genus)) == tolower(r$genus)
+    if (r$species != "" && "species" %in% names(record))
+      hit <- hit & tolower(trimws(record$species)) == tolower(r$species)
+    else if (r$complex != "" && "complex" %in% names(record))
+      hit <- hit & tolower(strip_cx(record$complex)) == tolower(r$complex)
+    else if (r$subgenus != "" && "subgenus" %in% names(record))
+      hit <- hit & tolower(trimws(record$subgenus)) == tolower(r$subgenus)
+    w <- which(hit); if (length(w)) w[1] else NA_integer_
+  }
+  rec_at <- function(w, col) {
+    if (is.na(w) || is.null(record) || !col %in% names(record)) return("")
+    v <- as.character(record[[col]][w]); if (is.na(v)) "" else trimws(v)
   }
   rows <- lapply(seq_len(nrow(fl)), function(i) {
-    gen <- fl$genus[i]; sp <- fl$species[i]
-    data.frame(rank = "species", scientific_name = fl$sci[i], taxon_id = NA_integer_,
+    r <- fl[i, ]; w <- rec_row(r)
+    data.frame(rank = r$rank, scientific_name = r$sci, taxon_id = NA_integer_,
                in_holway = "FALSE", in_inat = "FALSE", in_cabr_specimens = "TRUE", verified = "FALSE",
                kingdom = "Animalia", phylum = "Arthropoda", class = "Insecta",
-               order = rec_at(gen, sp, "order"), superfamily = "Apoidea",
-               family = rec_at(gen, sp, "family"), subfamily = rec_at(gen, sp, "subfamily"),
-               tribe = rec_at(gen, sp, "tribe"), subtribe = "",
-               genus = gen, subgenus = rec_at(gen, sp, "subgenus"), complex = rec_at(gen, sp, "complex"),
-               species = sp, subspecies = fl$subspecies[i], common_name = "", stringsAsFactors = FALSE)
+               order = rec_at(w, "order"), superfamily = "Apoidea",
+               family = rec_at(w, "family"), subfamily = rec_at(w, "subfamily"),
+               tribe = rec_at(w, "tribe"), subtribe = "",
+               genus = r$genus,
+               subgenus = if (r$subgenus != "") r$subgenus else rec_at(w, "subgenus"),
+               complex  = if (r$complex  != "") r$complex  else strip_cx(rec_at(w, "complex")),
+               species    = if (r$rank %in% c("species", "subspecies")) r$species    else "",
+               subspecies = if (r$rank == "subspecies")                 r$subspecies else "",
+               common_name = "", stringsAsFactors = FALSE)
   })
   do.call(rbind, rows)[.SA_COLS]
 }

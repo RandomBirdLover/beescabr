@@ -78,6 +78,53 @@ test_that("compute_taxonomy_flags flags unknown genus and unknown genus+species"
   expect_false(any(flags$genus == "Andrena" & flags$species == "baeriae"))
 })
 
+test_that("build_known_names surfaces known subgenera + complexes from the lookup (tag stripped)", {
+  src("specimens/specimen_clean_helpers.R")
+  tax_check <- tibble::tibble(
+    genus    = c("Lasioglossum", "Colletes",  "Melissodes"),
+    species  = c("",             "",          "moorei"),
+    subgenus = c("Dialictus",    "",          "Eumelissodes"),
+    complex  = c("",             "(Complex) Colletes americanus", ""))
+  inat_species <- tibble::tibble(genus = character(), species = character())
+  kn <- build_known_names(tax_check, inat_species)
+  expect_true(any(kn$subgenera$genus == "Lasioglossum" & kn$subgenera$subgenus == "Dialictus"))
+  expect_true(any(kn$complexes$genus == "Colletes" & tolower(kn$complexes$complex) == "colletes americanus"))
+  expect_false(any(grepl("\\(Complex\\)", kn$complexes$complex)))   # tag stripped for matching
+})
+
+test_that("compute_taxonomy_flags flags a subgenus-only and complex-only ID absent from the lookup", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(
+    ucsd_id  = 1:5, sdnhm_id = 0,
+    genus    = c("Colletes",          "Lasioglossum", "Lasioglossum", "Colletes",  "Andrena"),
+    subgenus = c("",                  "Novomelitta",  "Dialictus",    "",          ""),          # Novomelitta absent, Dialictus known
+    complex  = c("Colletes simulans", "",             "",             "",          ""),          # simulans absent
+    species  = c("",                  "",             "",             "",          "baeriae"),   # Andrena baeriae known
+    subspecies = NA_character_)
+  known_genera <- c("Colletes", "Lasioglossum", "Andrena")
+  known_gs     <- tibble::tibble(genus = "Andrena", species = "baeriae")
+  known_subg   <- tibble::tibble(genus = "Lasioglossum", subgenus = "Dialictus")       # Novomelitta NOT here
+  known_cx     <- tibble::tibble(genus = "Colletes", complex = "Colletes americanus")  # simulans NOT here
+  flags <- compute_taxonomy_flags(df, known_genera, known_gs, known_subg, known_cx)
+  expect_true(all(c("subgenus", "complex") %in% names(flags)))                          # coarse cols carried for seeding
+  expect_true(any(flags$complex == "Colletes simulans" & grepl("complex", flags$flag_reason)))
+  expect_true(any(flags$subgenus == "Novomelitta"     & grepl("subgenus", flags$flag_reason)))
+  expect_false(any(flags$subgenus == "Dialictus"))    # known subgenus -> NOT flagged
+  expect_false(any(flags$species == "baeriae"))       # known species  -> NOT flagged
+})
+
+test_that("compute_taxonomy_flags: coarse flags require a KNOWN genus (unknown genus dominates)", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(ucsd_id = 1L, sdnhm_id = 0,
+                       genus = "Notagenus", subgenus = "Whatever", complex = "", species = "",
+                       subspecies = NA_character_)
+  flags <- compute_taxonomy_flags(df, known_genera = character(), known_genus_species = tibble::tibble(genus = character(), species = character()),
+                                  known_subgenera = tibble::tibble(genus = character(), subgenus = character()),
+                                  known_complexes = tibble::tibble(genus = character(), complex = character()))
+  expect_equal(nrow(flags), 1L)
+  expect_true(grepl("genus not in", flags$flag_reason))     # reported as unknown-genus, not unknown-subgenus
+})
+
 test_that("add_qc_flags marks missing fields", {
   src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(latitude = c(1, NA), longitude = c(1, 2), date = c(Sys.Date(), NA),

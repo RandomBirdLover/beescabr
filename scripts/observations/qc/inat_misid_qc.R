@@ -48,7 +48,9 @@ IMQ_OUT_COLS <- c("obs_id", "observed_on", "observer", "scientific_name",
 IMQ_REASON   <- "species-level iNat ID, not research-grade, no specimen voucher + not on Holway -- verify (misID or new record?)"
 
 # ---- pure helpers ----------------------------------------------------------
-imq_norm  <- function(x) tolower(trimws(gsub("\\s+", " ", as.character(x))))
+# strip a leading "(Complex) " tag first: complex-rank specimen rows now carry it on
+# scientific_name, and the ref-set keys on the bare "Genus species" (the iNat side is bare).
+imq_norm  <- function(x) tolower(trimws(gsub("\\s+", " ", sub("^\\s*\\([^)]*\\)\\s*", "", as.character(x)))))
 # first two words (a subspecies "Genus sp ssp" -> "genus sp"); a 1-word name stays.
 imq_binom <- function(x) vapply(strsplit(imq_norm(x), " ", fixed = TRUE),
   function(w) if (length(w) >= 2) paste(w[1], w[2]) else if (length(w)) w[1] else NA_character_, character(1))
