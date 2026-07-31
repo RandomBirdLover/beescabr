@@ -108,8 +108,8 @@ plot_indices <- function(dfin, file, title, cap, group_lab) {
   g <- ggplot(long, aes(x = group, y = value, fill = rank)) +
     geom_col(position = position_dodge(0.8), width = 0.7) +
     facet_wrap(~ metric, scales = "free_y") +
-    # rank = focal species (blue) vs coarser genus (grey background)
-    scale_fill_manual(values = c(species = "#2166ac", genus = "#b8b8b8"), name = "rank") +
+    # rank = focal species (ink) vs coarser genus (stone background)
+    scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
     labs(title = title, subtitle = cap, x = group_lab, y = NULL) +
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank())
@@ -136,7 +136,7 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
             invSimpson_q2 = "Inverse Simpson (q2)", pielou_evenness = "Pielou evenness (J)")
   long$metric <- factor(lvls[long$metric], levels = lvls)
   g <- ggplot(long, aes(x = factor(group), y = value, group = 1)) +
-    geom_line(color = "#2166ac") + geom_point(color = "#2166ac", size = 2) +
+    geom_line(color = "#3C3B36") + geom_point(color = "#3C3B36", size = 2) +
     facet_wrap(~ metric, scales = "free_y") +
     labs(title = "Bee diversity by year (CABR)",
          subtitle = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),

@@ -112,6 +112,12 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
 
 doy_of <- function(x) suppressWarnings(as.integer(format(as.Date(x), "%j")))
 
+## NOTE (#12 -- non-lethal-only is intentional; do NOT add lethal/specimen data here):
+## The plant phenology below is built from iNat SURVEY records only (is_survey == TRUE, non-lethal) --
+## question #12 asks for "plant phenology based on the survey data (nonlethal only)." Excluding
+## specimen/lethal data is deliberate, not a bug. (The BEE phenology in section 2 pools both methods --
+## that is a separate extension, not the #12 deliverable.) The scope differs from #7 (both methods)
+## because each matches its own question. Keep it survey / non-lethal only.
 # ---- 1. FLOWERING-PLANT phenology (per plant genus; survey records = flowering) -
 # A plant is around all year, so "recorded" != "flowering". By survey protocol a
 # plant is only photographed/logged WHEN IT IS FLOWERING, so survey records are the

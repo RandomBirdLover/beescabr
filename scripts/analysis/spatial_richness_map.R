@@ -187,7 +187,7 @@ tr_long <- bind_rows(
   data.frame(transect = tr_tbl$transect, rank = "genus",   richness = tr_tbl$genus_richness))
 gtr <- ggplot(tr_long, aes(x = reorder(transect, -richness), y = richness, fill = rank)) +
   geom_col(position = "dodge", width = 0.7) +
-  scale_fill_manual(values = c(species = "#2166ac", genus = "#b8b8b8"), name = NULL) +   # species = focal blue, genus = grey
+  scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = NULL) +   # species = house ink (focus), genus = stone
   labs(title = "CABR bee richness by transect (both methods, all records)",
        subtitle = str_wrap(scope_cap("all records, per transect (specimens' reliable unit)",
                                      "lethal + non-lethal pooled", "genus + species"), 62),

@@ -112,10 +112,8 @@ venn2(cn$species, sprintf("Species (%d total)",
       cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
 venn2(cn$genus, sprintf("Genera (%d total)",
       cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
-mtext("CABR native bees -- lethal vs non-lethal overlap", outer = TRUE,
+mtext("Native Bees Sampling Method: Lethal vs Non-Lethal Overlap", outer = TRUE,
       cex = 1.2, font = 2, col = BEE_INK$primary)
-mtext("centre = shared; left = lethal only; right = non-lethal only",
-      side = 1, outer = TRUE, cex = 0.85, col = BEE_INK$secondary)
 par(op); dev.off()
 
 # ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------

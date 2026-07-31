@@ -97,14 +97,14 @@ genus_web <- function(M, file, genus, h2lab) {
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
   for (i in seq_len(np)) for (j in seq_len(nb)) if (M[i, j] > 0)
     segments(px[i], yP, bx[j], yB, lwd = 0.5 + 5 * M[i, j] / wmax,
-             col = adjustcolor("#c9a227", 0.45))
+             col = adjustcolor("#a29e94", 0.45))   # links = neutral grey (nodes carry the colour)
   pw <- 0.010 + 0.022 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.012 + 0.030 * sqrt(colSums(M) / max(colSums(M)))
-  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = "#b8860b", border = "white")   # plants = goldenrod (forage)
-  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = "#2166ac", border = "white")   # bees = house focal blue
-  text(px, yP - 0.022, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#8c6d1f")
-  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.78, col = "#184f95", font = 3)
-  mtext(sprintf("%s: species (top, blue) x plant genus (bottom, gold)  --  %d species, %d plant genera",
+  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = "#3E7D43", border = "white")   # plants = superbloom green (forage)
+  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = "#A63D95", border = "white")   # bees = opposite of green (magenta)
+  text(px, yP - 0.022, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#2C5A31")   # plant labels = dark green
+  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.78, col = "#7A2A6D", font = 3)   # bee labels = dark magenta
+  mtext(sprintf("%s: species (top, magenta) x plant genus (bottom, green)  --  %d species, %d plant genera",
                 genus, nb, np), side = 3, line = 5.3, font = 2, cex = 1.0, col = BEE_INK$primary)
   mtext(h2lab, side = 1, line = 7.2, cex = 0.8, col = BEE_INK$note)
   par(op); dev.off()
@@ -168,8 +168,8 @@ ov <- h2_tbl %>% filter(!is.na(H2prime)) %>%
 g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = sig)) +
   geom_col(width = 0.72) +
   geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2) +
-  # significance = focal blue (notable) vs grey (background)
-  scale_fill_manual(values = c("p < 0.05" = "#2166ac", "n.s." = "#b8b8b8"), name = NULL) +
+  # significance = house ink (notable) vs stone (background)
+  scale_fill_manual(values = c("p < 0.05" = "#3C3B36", "n.s." = "#C0BBB0"), name = NULL) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Within-genus niche partitioning: do a genus's species split up plant genera?",
        subtitle = str_wrap(paste0(scope_cap("all records, species-resolved",

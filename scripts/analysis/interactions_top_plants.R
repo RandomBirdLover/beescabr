@@ -81,26 +81,31 @@ if (any(bee_low_n(top$whole_park)))
 par(op); dev.off()
 
 # ---- 4. per-month breakdown of the top plants -------------------------------
-top_m <- head(tbl$plant_genus, TOP_MONTH)
+top_m   <- head(tbl$plant_genus, TOP_MONTH)
+top_tot <- head(tbl$whole_park, TOP_MONTH)                  # total bee-visit records = the "favourite" ranking
 mm <- rec %>% filter(!is.na(month), plant_genus %in% top_m) %>%
   count(plant_genus, month)
 Mmon <- matrix(0L, nrow = length(top_m), ncol = 12,
                dimnames = list(top_m, month.abb))
 for (i in seq_len(nrow(mm)))
   Mmon[mm$plant_genus[i], mm$month[i]] <- mm$n[i]
-write.csv(data.frame(plant_genus = rownames(Mmon), Mmon, check.names = FALSE),
+write.csv(data.frame(favourite_rank = seq_along(top_m), plant_genus = rownames(Mmon),
+                     total_visits = top_tot, Mmon, check.names = FALSE),
           file.path(OUT_DIR, "interactions_top_plants_by_month.csv"), row.names = FALSE)
+
+# y-axis numbered by the bees' FAVOURITE: rank 1 = most total visit records. Labels carry rank + count.
+rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), top_m, format(top_tot, big.mark = ",")), top_m)
 
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
     width = 1700, height = 1050, res = 200)
 bee_base_par()
-op <- par(mar = c(4, 10, 3.5, 1))
+op <- par(mar = c(4, 12.5, 4, 1))
 Mplot <- Mmon[nrow(Mmon):1, , drop = FALSE]
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # magnitude = house blue ramp
-      main = sprintf("When are the top %d plants visited? (log records/month)", TOP_MONTH))
+      main = sprintf("When are the top %d plants visited? (log records/month)\ny-axis ranked by the bees' favourite -- 1 = most visit records", TOP_MONTH))
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
-axis(2, seq_len(nrow(Mplot)), rownames(Mplot), las = 1, cex.axis = 0.75)
+axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.72)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
       side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
 par(op); dev.off()

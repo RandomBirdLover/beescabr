@@ -91,6 +91,13 @@ not_on_holway_bees <- function(checklist_path, spec, inat, holway_path = NULL) {
   noth <- chk[!.noh_is_true(chk$holway), , drop = FALSE]
   if (!nrow(noth)) return(.noh_empty())
 
+  ## NOTE -- the Holway reference is CORRECT as-is; do NOT rebuild it to "fix" this, and do NOT
+  ## fall back to name-only matching. It ALREADY carries the complex taxon_ids (1266534 Bombus
+  ## fervidus, 1438678 Colletes americanus). The false "new bee" hits were never a missing-reference
+  ## problem -- they came from the rank-sensitive `holway` flag plus a BLANK scientific_name on those
+  ## iNat complex nodes, which a name-only check can't catch. The taxon_id (+ resolved-binomial) match
+  ## below IS the fix; keep it. (An earlier "the reference is missing that row" reading turned out to
+  ## be a stale local copy of the reference, not a real bug -- so don't go remaking the reference.)
   # CORRECTION (up front): the holway flag is rank-sensitive, so an iNat 'complex' node of a name/taxon
   # Holway carries lands here as a FALSE positive. Drop anything Holway actually has -- by taxon_id
   # (unambiguous, no name-collision risk) OR by binomial resolved from scientific_name/complex/genus.

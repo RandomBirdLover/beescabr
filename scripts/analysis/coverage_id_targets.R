@@ -33,6 +33,11 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
                                                    scope, method, rank)
 
+## NOTE (#7 -- method scope is intentional; do NOT "fix" it down to one method):
+## This POOLS lethal (specimen) + non-lethal (photo) records on purpose -- question #7 asks what
+## needs ID in "lethal AND non-lethal specimens." That it spans BOTH methods (while #12 plant
+## phenology is non-lethal only) is NOT an inconsistency: each analysis matches its own question's
+## wording. Keep both methods here.
 # ---- 1. pool records, keep only those NOT resolved to species ----------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)

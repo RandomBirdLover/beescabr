@@ -126,7 +126,7 @@ for (rk in names(RANKS)) {
             cols = setNames(grDevices::colorRampPalette(BEE_SEQ)(length(gl_y)), names(gl_y)))   # year -> blue sequential
   run_inext(abun_list(rec, "surveyor", kc, c("beeple", "intern")),
             paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
-            cols = c(intern = "#2166ac", beeple = "#b8b8b8"))   # intern focal blue / beeple grey
+            cols = c(intern = "#3C3B36", beeple = "#C0BBB0"))   # intern = house ink (focus) / beeple = stone (background)
   run_inext(abun_list(rec, "obs_type", kc, c("observation", "specimen")),
             paste0("by_method_", rk), "Bees: observations vs specimens", rk,
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours

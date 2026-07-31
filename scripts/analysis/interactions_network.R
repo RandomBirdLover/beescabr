@@ -142,7 +142,7 @@ png(file.path(OUT_DIR, "interactions_bee_genus_network.png"),
     width = 1500, height = 1450, res = 200)
 set.seed(1)
 plot(beebee_plot,
-     vertex.color = "#2166ac", vertex.frame.color = "white",
+     vertex.color = "#A63D95", vertex.frame.color = "white",
      vertex.label.color = "black", vertex.label.cex = 0.6, vertex.label.dist = 0.5,
      edge.width = pmin(0.25 * E(beebee_plot)$weight, 3),
      edge.color = adjustcolor("grey60", 0.5), layout = layout_with_fr,
@@ -279,13 +279,13 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30) {
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
   for (i in seq_len(np)) for (j in seq_len(nb)) if (M[i, j] > 0)
     segments(px[i], yP, bx[j], yB, lwd = 0.4 + 3.4 * M[i, j] / wmax,
-             col = adjustcolor("#c9a227", 0.35))
+             col = adjustcolor("#a29e94", 0.35))   # links = neutral grey (nodes carry the colour)
   pw <- 0.008 + 0.02 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.008 + 0.02 * sqrt(colSums(M) / max(colSums(M)))
-  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = "#b8860b", border = "white")   # plants = goldenrod (forage side)
-  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = "#2166ac", border = "white")   # bees = house focal blue
-  text(px, yP - 0.02, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#8c6d1f")
-  text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = "#184f95", font = 3)
+  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = "#3E7D43", border = "white")   # plants = superbloom green (forage side)
+  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = "#A63D95", border = "white")   # bees = opposite of green (magenta)
+  text(px, yP - 0.02, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#2C5A31")   # plant labels = dark green
+  text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = "#7A2A6D", font = 3)   # bee labels = dark magenta
   mtext(sprintf("Plant genus (bottom) - bee %s (top): visitation web  [top %d x %d]",
                 rank_label, np, nb), side = 3, line = 6.5, font = 2, cex = 1.05, col = BEE_INK$primary)
   par(op); dev.off()

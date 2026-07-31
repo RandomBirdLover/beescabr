@@ -6,18 +6,17 @@
 # across all figures. Change a value HERE and every figure updates -- a transect is
 # the same colour everywhere, forever.
 #
-# DESIGN (colour-blind validated -- transect palette worst adjacent CVD dE 15.5):
-#   * COLOUR encodes ONE thing: TRANSECT (the primary spatial identity).
-#   * METHOD (lethal net / non-lethal photo) has its OWN identity: line style AND colour.
-#     Lines: lethal = SOLID, non-lethal = DASHED. Fills (venn, ID-completeness): two method
-#     colours (purple = net, vermillion = photo), deliberately OUTSIDE the transect palette
-#     so method never reads as a transect. COLOUR still means TRANSECT in the transect
-#     figures; the method colours appear only where method itself is the subject.
-#   * EVIDENCE / ID-confidence is an ORDINAL ramp (voucher dark -> needs-ID faint), so
-#     "less certain" literally looks fainter.
-#   * SCOPE (survey-only vs all-records) = accent vs grey (grey = background context).
-#   * MAGNITUDE (richness / counts) = one blue sequential ramp.
-#   * TEXT always wears ink tokens, never a series colour.
+# DESIGN (each VARIABLE keeps ONE encoding everywhere -- colour-blind validated):
+#   * TRANSECT -- the 4-colour superbloom palette below. These 4 hues appear ONLY as transects.
+#   * METHOD (lethal net / non-lethal photo) -- its OWN two colours, off the transect palette:
+#     poppy (lethal) / teal (non-lethal), CVD dE 37. Line style is a SECONDARY cue for the one
+#     figure where a transect AND a method share a plot (lethal = SOLID, non-lethal = DASHED).
+#   * EVIDENCE / ID-confidence -- a LAVENDER->plum ordinal ramp (voucher dark -> needs-ID faint), so
+#     "less certain" literally looks fainter. Lavender from superbloom1/2, off every transect hue.
+#   * SCOPE / SET / ID-status -- single-figure accents from one small set: ink = focus/primary,
+#     stone = background/shared, ochre = the third/other category. No hue borrowed from above.
+#   * MAGNITUDE (richness / counts) -- one crimson sequential ramp (pale -> deep wine).
+#   * TEXT always wears ink tokens, never a series colour. Nothing uses purple.
 # Base-R helpers need no packages; the ggplot theme needs ggplot2 (lazy).
 # =============================================================
 
@@ -27,40 +26,40 @@
 # always ship with a legend + labels). Swap to exact cal_palette("superbloom3") hexes if wanted.
 BEE_TRANSECT <- c(BST = "#3E7D43", UPMON = "#CB1F6A", TP = "#3B5EA0", OT = "#E69F00")
 
-# ---- METHOD: its own line style + colour identity (kept OFF the transect palette) ----
-# lethal = SOLID line, non-lethal = DASHED. Method-subject figures (venn, ID-completeness)
-# use the two colours below -- purple (net) / vermillion (photo), CVD dE 96, no transect hue.
+# ---- METHOD: its own two colours (kept OFF the transect palette) -------------
+# poppy (lethal net) / teal (non-lethal photo), CVD dE 37 -- neither is a transect hue.
+# Line style is a SECONDARY cue for the one figure where a transect AND a method share a plot:
+# lethal = SOLID, non-lethal = DASHED (pch: filled circle vs triangle).
 BEE_METHOD_LTY   <- c(lethal = 1, nonlethal = 2)                 # solid = lethal net, dashed = non-lethal photo
 BEE_METHOD_PCH   <- c(lethal = 16, nonlethal = 17)              # filled circle = net, triangle = photo
-BEE_METHOD_COL   <- c(lethal = "#762a83", nonlethal = "#D55E00") # purple = net, vermillion = photo
+BEE_METHOD_COL   <- c(lethal = "#C65A2E", nonlethal = "#0E7C72") # poppy = net (lethal), teal = photo (non-lethal)
 BEE_METHOD_LABEL <- c(lethal = "lethal (specimen net)", nonlethal = "non-lethal (iNat photo)")
 
-# ---- EVIDENCE / ID-confidence: ordinal ramp (strong -> faint) --------------
-BEE_EVIDENCE       <- c(specimen = "#0c5544", research = "#1e8b71", needs_id = "#46b39a")  # vivid teal ordinal ramp (dark voucher -> medium needs-ID), --ordinal validated
+# ---- EVIDENCE / ID-confidence: LAVENDER ordinal ramp (strong -> faint) ------
+# Lavender -> deep plum (superbloom1 #9185AE + superbloom2 #61487E family), off every transect hue.
+BEE_EVIDENCE       <- c(specimen = "#52357E", research = "#9078C0", needs_id = "#D0C6E8")  # deep-plum voucher -> pale-lavender needs-ID, --ordinal validated
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
-# ---- SCOPE: accent vs grey -------------------------------------------------
-BEE_SCOPE <- c(`survey-only` = "#2166ac", `all records` = "#b8b8b8")
+# ---- SCOPE: focus vs background --------------------------------------------
+BEE_SCOPE <- c(`survey-only` = "#3C3B36", `all records` = "#C0BBB0")   # ink = focus, stone = background
 
 # ---- LOCATION / SET OVERLAP: A-only / shared / B-only (on vs off-transect) ----
-# on-transect = focal blue, shared core = grey (background), off-transect = vermillion.
-# (off-transect records are all non-lethal iNat, so vermillion reads consistently with method here.)
-# The method-overlap venn uses BEE_METHOD_COL, NOT this -- method has its own colours now.
-BEE_SET <- c(a_only = "#2166ac", shared = "#b8b8b8", b_only = "#D55E00")
+# ink = focal set (on-transect), stone = shared core (background), ochre = the other set (off-transect).
+# The method-overlap venn uses BEE_METHOD_COL, NOT this -- method has its own colours.
+BEE_SET <- c(a_only = "#3C3B36", shared = "#C0BBB0", b_only = "#B0632B")
 
 # ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# Blue = resolved to species (done), purple = specimen-keyable (ACT here -- and purple is the
-# net/lethal method colour, which is exactly what a keyable specimen IS), grey = photo/genus-only.
-# 2-cat panels reuse resolved(blue) vs stuck(grey).
-BEE_IDSTATUS <- c(resolved = "#2166ac", keyable = "#762a83", stuck = "#b8b8b8")
+# ink = resolved to species (done), ochre = specimen-keyable (ACT here), stone = photo/genus-only (stuck).
+# 2-cat panels reuse resolved(ink) vs stuck(stone).
+BEE_IDSTATUS <- c(resolved = "#3C3B36", keyable = "#B0632B", stuck = "#C0BBB0")
 
 # ---- ink + chrome tokens (text never wears a series colour) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
                 grid = "#e1e0d9", axis = "#c3c2b7", note = "#b2182b")   # note = scope-caption accent
 
-# ---- sequential (magnitude): one blue ramp ---------------------------------
-BEE_SEQ <- c("#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b")
+# ---- sequential (magnitude): one crimson ramp (pale -> deep wine) -----------
+BEE_SEQ <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")
 
 # ---- #12 record-confidence: flag taxa too sparse to claim a preference ------
 BEE_MIN_RECORDS <- 10L    # under this many records -> "too few to claim" (matches phenology >=10)
