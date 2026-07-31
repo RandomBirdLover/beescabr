@@ -68,3 +68,9 @@ rsconnect/
 # large local-only scratch — never commit
 _to_delete/
 _to_delete/
+_v_*
+_fresh_*
+_final_*
+_check_*
+_verify_*
+_scratch*
