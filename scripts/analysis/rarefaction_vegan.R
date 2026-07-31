@@ -105,7 +105,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
              hjust = 0, vjust = 0, size = 3, color = "grey40") +
     geom_line(linewidth = 0.9) +
     scale_color_manual(values = cols, name = NULL) +
-    labs(title = sprintf("%s (%s) - rarefaction curve", title, rank), subtitle = cap,
+    labs(title = sprintf("%s (%s) - rarefaction curve", title, rank), caption = cap,
          x = "records sampled", y = paste0("expected ", unit)) +
     theme_beescabr(11)
   ggsave(file.path(OUT_DIR, paste0(key, "_vegan_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
@@ -117,7 +117,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
     geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3) +
     scale_fill_manual(values = setNames(c("#C0BBB0", "#3C3B36"),   # stone (observed) / ink (rarefied)
                                         c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
-    labs(title = sprintf("%s (%s) - rarefied richness", title, rank), subtitle = cap,
+    labs(title = sprintf("%s (%s) - rarefied richness", title, rank), caption = cap,
          x = NULL, y = unit) +
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank())

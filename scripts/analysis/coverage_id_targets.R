@@ -109,7 +109,7 @@ g <- ggplot(long, aes(x = n, y = target, fill = cat)) +
                                "specimen (keyable)"    = unname(BEE_IDSTATUS["keyable"]),
                                "photo (needs ID)"      = unname(BEE_IDSTATUS["stuck"])), name = NULL) +
   labs(title = sprintf("Q7 - Species-level ID: work done vs all %d remaining targets", nrow(top)),
-       subtitle = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
+       caption = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
                             scope_cap("all records", "resolved vs specimen-keyable vs photo", "genus / coarse rank")), 82),
        x = "records", y = NULL) +
@@ -150,7 +150,7 @@ method_genus_fig <- function(m, file, method_label) {
                                  "genus-only (unresolved)" = unname(BEE_IDSTATUS["stuck"])),     # grey = not yet
                       name = NULL) +
     labs(title = sprintf("Q7 - %s: species-level ID progress (all %d genera)", method_label, length(method_genera)),
-         subtitle = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
+         caption = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
                               method_label, format(sum(d$species), big.mark = ","),
                               format(sum(d$total), big.mark = ","), pct,
                               scope_cap("records with a genus", method_label, "genus")), 82),
@@ -178,7 +178,7 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
                     labels = c(specimen = "specimen (net)", photo = "photo (iNat)")) +
   scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +
   labs(title = "Q7 - Bee ID completeness: how far each record got, by method",
-       subtitle = str_wrap(sprintf("%s of %s records (%.0f%%) identified to species.  %s",
+       caption = str_wrap(sprintf("%s of %s records (%.0f%%) identified to species.  %s",
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
                             scope_cap("all records", "specimen (net) vs photo (iNat)", "resolution level")), 82),
        x = NULL, y = "records") +

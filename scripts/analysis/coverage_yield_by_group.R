@@ -121,7 +121,7 @@ g <- ggplot(long, aes(x = group, y = value, fill = scope)) +
   facet_wrap(~ metric, scales = "free_y") +
   scale_fill_manual(values = BEE_SCOPE, name = "scope") +   # house scope: survey-only accent vs all-records grey
   labs(title = "Q11 - Yield by surveyor group x method (CABR bees)",
-       subtitle = scope_cap("survey-only vs all records (both shown)",
+       caption = scope_cap("survey-only vs all records (both shown)",
                             "lethal (specimens) + non-lethal (iNaturalist)", "species"),
        x = NULL, y = NULL) +
   theme_beescabr(11) +

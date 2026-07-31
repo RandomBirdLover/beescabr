@@ -95,7 +95,7 @@ heatmap_gg <- function(M, file, rank_label) {
                                   name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +   # magnitude = house blue ramp
     ggplot2::labs(
       title = sprintf("Plant genus × bee %s — visitation network (all taxa)", rank_label),
-      subtitle = sprintf("%d plant genera × %d bee %s pooled across both methods",
+      caption = sprintf("%d plant genera × %d bee %s pooled across both methods",
                          nrow(M), ncol(M), rank_label),
       x = paste("bee", rank_label), y = "plant genus") +
     theme_beescabr(8) +

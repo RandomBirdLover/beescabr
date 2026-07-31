@@ -19,13 +19,12 @@
 # recorded no identifiable bee still count as effort (an empty row that flattens
 # the curve) -- that is the honest picture of survey return.
 #
-# THE LAYOUT: a 2x2 small-multiple -- one PANEL per transect (BST, UPMON, TP, OT),
-# its title tinted in the transect colour. Inside each panel the two methods are drawn
-# as curves, COLOUR = method (poppy = lethal net, teal = non-lethal photo) with solid/dashed
-# as a secondary cue -- so lethal/non-lethal read the SAME poppy/teal here as in every other
-# figure. A `lethal` survey's taxa come from the specimen table (net), a `non-lethal` survey's
-# from iNaturalist (photo). The per-transect lethal/non-lethal split is also in the summary
-# table. Just TWO figures: species (Fig 1) and genera (Fig 2).
+# THE LAYOUT: one panel per rank, with all transect x method curves OVERLAID on a single
+# plot -- COLOUR = transect (BST, UPMON, TP, OT) and LINE STYLE = method (solid = lethal net,
+# dashed = non-lethal photo). Two legends carry the two keys (transect colour, method style).
+# A `lethal` survey's taxa come from the specimen table (net), a `non-lethal` survey's from
+# iNaturalist (photo). The per-transect lethal/non-lethal split is also in the summary table.
+# Just TWO figures: species (Fig 1) and genera (Fig 2).
 #
 # RANK RULES: for the SPECIES figure only species-level IDs count (subspecies
 # rolled up). For the GENUS figure any ID that pins a genus counts
@@ -120,7 +119,7 @@ survey_taxa_matrix <- function(survey_rows, key_col) {
   M
 }
 
-# ---- 4. accumulation curves: one PANEL per transect, both methods inside --------
+# ---- 4. accumulation curves: all transects x both methods, ONE panel per rank ---
 # accumulate(): one specaccum per group; NULL if the group never recorded a taxon
 # at this rank (nothing to accumulate).
 accumulate <- function(survey_rows, key_col) {
@@ -129,46 +128,46 @@ accumulate <- function(survey_rows, key_col) {
   specaccum(M, method = "random", permutations = PERMUTATIONS)
 }
 
-# Two figures only (species, genera). Each is a 2x2 small-multiple: one panel per transect
-# (title tinted its transect colour), and inside each panel the two methods as mean curves --
-# COLOUR = method (poppy = lethal net, teal = non-lethal photo), solid/dashed kept as a secondary
-# cue. Panels share x/y limits so heights compare directly. CI bands are omitted on purpose
-# (overlaps unreadable); the Chao2 +/- SE uncertainty lives in the summary table (section 5).
+# Two figures only (species, genera). Each OVERLAYS all transect x method mean curves on
+# ONE panel -- COLOUR = transect, LINE STYLE = method (solid = lethal net, dashed = non-lethal
+# photo). Two legends carry the keys. CI bands are omitted on purpose (up to 8 overlapping
+# polygons are unreadable); the Chao2 +/- SE uncertainty lives in the summary table (section 5).
 plot_accumulation <- function(key_col, rank_label, file) {
-  sacs <- list()
-  for (tr in TRANSECTS) for (m in c("lethal", "nonlethal")) {
+  sacs <- list(); meta <- list()
+  for (tr in TRANSECTS) for (m in c("nonlethal", "lethal")) {
     rows <- expanded[expanded$transect == tr & expanded$method == m, ]
     if (!nrow(rows)) next
     s <- accumulate(rows, key_col); if (is.null(s)) next
-    sacs[[paste(tr, m)]] <- s
+    key <- paste(tr, m); sacs[[key]] <- s; meta[[key]] <- list(tr = tr, m = m)
   }
   if (!length(sacs)) { message("No ", rank_label, " to plot."); return(invisible()) }
   xmax <- max(vapply(sacs, function(s) max(s$sites),    numeric(1)))
   ymax <- max(vapply(sacs, function(s) max(s$richness), numeric(1)))
 
-  png(file, width = 1700, height = 1250, res = 200); on.exit(dev.off())
+  png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
   bee_base_par()                     # house-style fonts + muted axis/label colours
-  op <- par(mfrow = c(2, 2), mar = c(4, 4.2, 2.8, 1), oma = c(3.4, 0, 3, 0))
-  for (tr in TRANSECTS) {
-    plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
-         xlab = "Number of surveys", ylab = paste("Number of", rank_label))
-    title(main = tr, col.main = COLS[tr], font.main = 2)      # transect = the panel, tinted its colour
-    for (m in c("nonlethal", "lethal")) {                     # lethal drawn last -> on top
-      s <- sacs[[paste(tr, m)]]; if (is.null(s)) next
-      lines(s$sites, s$richness, col = METHOD_COL[m], lwd = 2.6, lty = LTY[m])
-    }
+  op <- par(mar = c(4.2, 4.4, 3.4, 1))
+  plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
+       xlab = "Number of surveys", ylab = paste("Number of", rank_label))
+  for (key in names(sacs)) {                                 # all transect x method curves, one panel
+    mt <- meta[[key]]
+    lines(sacs[[key]]$sites, sacs[[key]]$richness, col = COLS[mt$tr], lwd = 2.5, lty = LTY[mt$m])
   }
-  mtext(sprintf("Native Bee %s Accumulation by Survey Effort",
-                paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
-        outer = TRUE, cex = 1.15, font = 2, col = BEE_INK$primary, line = 0.4)
+  title(main = sprintf("Native Bee %s Accumulation by Survey Effort",
+                       paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
+        col.main = BEE_INK$primary, font.main = 2)
+  # both legends grouped in the bottom-right: transect (COLOUR) anchored low, method
+  # (LINE STYLE) stacked just above it (yjust = 0 pins the method box's base above the
+  # transect box; shared right edge keeps them aligned).
+  lg_t <- legend("bottomright", title = "transect", legend = TRANSECTS,
+                 col = COLS[TRANSECTS], lwd = 2.5, lty = 1, bty = "n", cex = 0.9,
+                 text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+  gap <- 0.03 * diff(par("usr")[3:4])
+  legend(x = lg_t$rect$left + lg_t$rect$w, y = lg_t$rect$top + gap, xjust = 1, yjust = 0,
+         title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
+         col = BEE_INK$secondary, lwd = 2.5, lty = LTY[c("lethal", "nonlethal")], bty = "n",
+         cex = 0.9, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
   par(op)
-  # one shared method legend across the bottom (transect identity is already the panel titles)
-  par(fig = c(0, 1, 0, 1), mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0), new = TRUE)
-  plot.new()
-  legend("bottom", horiz = TRUE, bty = "n", cex = 0.95, seg.len = 2.8, inset = c(0, 0.01),
-         legend = c(METHOD_LABEL["lethal"], METHOD_LABEL["nonlethal"]),
-         col = c(METHOD_COL["lethal"], METHOD_COL["nonlethal"]),
-         lty = c(LTY["lethal"], LTY["nonlethal"]), lwd = 2.6, text.col = BEE_INK$secondary)
 }
 plot_accumulation("species_key", "species", file.path(OUT_DIR, "accumulation_species.png"))
 plot_accumulation("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera.png"))

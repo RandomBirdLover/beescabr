@@ -83,8 +83,8 @@ g <- ggplot(long, aes(x = n, y = lab, fill = evidence)) +
             hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
   scale_fill_evidence() +                               # shared teal ordinal ramp
-  labs(title = "Records per bee genus at CABR, by evidence type",
-       subtitle = "ordinal confidence ramp: specimen voucher (dark) -> iNat research -> iNat needs-ID (faint)",
+  labs(title = "Total Records of Bee Genera",
+       #subtitle = "ordinal confidence ramp: specimen voucher (dark) -> iNat research -> iNat needs-ID (faint)",
        x = "Number of records", y = NULL,
        caption = if (anyn) sprintf("* fewer than %d records total -- thin evidence base; read the composition with care", BEE_MIN_RECORDS) else NULL) +
   theme_beescabr(11) +

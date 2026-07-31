@@ -80,22 +80,28 @@ message("Genera:  ",
         paste(sprintf("%s=%d", summ$region[summ$rank=="genus"], summ$n[summ$rank=="genus"]), collapse="  "))
 message("Off-only species (surveys miss these): ", length(offonly_sp))
 
-# ---- 3. figure: on-only / shared / off-only, species + genus -----------------
+# ---- 3. figure: on-only / shared / off-only, species + genus (horizontal grouped) --
+# horizontal so the rank/label sit flush and the off-transect-only bar (what surveys miss) reads clean.
+reg_lab <- c("on-only" = "on-transect only", "both" = "both", "off-only" = "off-transect only")
 plot_df <- summ %>%
-  mutate(region = factor(region, levels = c("on-only", "both", "off-only")),
-         rank = factor(rank, levels = c("species", "genus")))
-g <- ggplot(plot_df, aes(x = rank, y = n, fill = region)) +
-  geom_col(position = position_dodge(0.8), width = 0.7) +
-  geom_text(aes(label = n), position = position_dodge(0.8), vjust = -0.3, size = 3.4) +
-  # set-overlap concept: on-transect = focal blue, shared = grey (background), off-transect = vermillion (what surveys miss)
-  scale_fill_manual(values = c("on-only" = unname(BEE_SET["a_only"]),
-                               "both"     = unname(BEE_SET["shared"]),
-                               "off-only" = unname(BEE_SET["b_only"])), name = NULL) +
-  labs(title = "Q6 - On-transect vs off-transect bee coverage (CABR)",
-       subtitle = str_wrap(scope_cap("all records; on = is_survey TRUE, off = casual iNaturalist",
-                            "lethal + non-lethal (off-transect non-lethal only)", "species & genus"), 82),
-       x = NULL, y = "distinct taxa") +
+  mutate(region = factor(reg_lab[region],
+                         levels = c("on-transect only", "both", "off-transect only")),
+         rank   = factor(rank, levels = c("genus", "species")))   # species on top
+g <- ggplot(plot_df, aes(x = n, y = rank, fill = region)) +
+  geom_col(position = position_dodge(0.72), width = 0.64) +
+  geom_text(aes(label = n), position = position_dodge(0.72),
+            hjust = -0.3, colour = BEE_INK$secondary, size = 3.4) +
+  # set-overlap concept: on-transect = focal ink, shared = stone (background), off-transect = ochre (what surveys miss)
+  scale_fill_manual(values = c("on-transect only" = unname(BEE_SET["a_only"]),
+                               "both"              = unname(BEE_SET["shared"]),
+                               "off-transect only" = unname(BEE_SET["b_only"])), name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.10))) +
+  labs(title = "On-transect vs off-transect bee coverage",
+       #subtitle = str_wrap(scope_cap("all records; on = is_survey TRUE, off = casual iNaturalist",
+       #                     "lethal + non-lethal (off-transect non-lethal only)", "species & genus"), 82),
+       x = "distinct taxa", y = NULL) +
   theme_beescabr(11) +
-  theme(panel.grid.major.x = element_blank())
-ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, dpi = 200, bg = "white")
+  theme(panel.grid.major.y = element_blank(),
+        legend.position = "top", legend.justification = "left")
+ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 4.0, dpi = 200, bg = "white")
 message("Wrote coverage_offtransect.{png,_summary.csv,_taxa.csv} to ", OUT_DIR)

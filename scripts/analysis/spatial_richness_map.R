@@ -141,7 +141,7 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
   g <- ggplot(dat) +
     geom_sf(aes(fill = .data[[fill_col]]), color = "white", linewidth = 0.15) +
     scale_fill_gradientn(colours = BEE_SEQ, name = legend_lab, trans = trans) +   # magnitude = house blue ramp (palette arg now unused)
-    labs(title = title, subtitle = cap, x = NULL, y = NULL) +
+    labs(title = title, caption = cap, x = NULL, y = NULL) +
     coord_sf(datum = CRS_UTM) +
     base_theme
   ggsave(file, g, width = 7.4, height = 8.2, dpi = 200, bg = "white")
@@ -189,7 +189,7 @@ gtr <- ggplot(tr_long, aes(x = reorder(transect, -richness), y = richness, fill 
   geom_col(position = "dodge", width = 0.7) +
   scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = NULL) +   # species = house ink (focus), genus = stone
   labs(title = "CABR bee richness by transect (both methods, all records)",
-       subtitle = str_wrap(scope_cap("all records, per transect (specimens' reliable unit)",
+       caption = str_wrap(scope_cap("all records, per transect (specimens' reliable unit)",
                                      "lethal + non-lethal pooled", "genus + species"), 62),
        x = "transect", y = "distinct taxa") +
   base_theme

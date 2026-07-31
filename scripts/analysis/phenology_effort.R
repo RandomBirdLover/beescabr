@@ -83,8 +83,8 @@ gA <- ggplot(long, aes(x = month_lab, y = value, fill = in_window)) +
   # in-window = focal blue, outside = grey background (scope-style accent vs grey)
   scale_fill_manual(values = c("TRUE" = unname(BEE_SCOPE["survey-only"]), "FALSE" = unname(BEE_SCOPE["all records"])),
                     labels = c("TRUE" = "Mar-Sep window", "FALSE" = "outside window"), name = NULL) +
-  labs(title = "Q13 - Survey effort calendar (CABR bees)",
-       subtitle = str_wrap(scope_cap(paste0("per-survey log, all trips ", min(p$year, na.rm = TRUE), "-", max(p$year, na.rm = TRUE)),
+  labs(title = "Survey Effort Calendar",
+       caption = str_wrap(scope_cap(paste0("per-survey log, all trips ", min(p$year, na.rm = TRUE), "-", max(p$year, na.rm = TRUE)),
                             "lethal + non-lethal trips pooled", "n/a (effort)"), 80),
        x = NULL, y = NULL) +
   theme_beescabr(11) +
@@ -103,8 +103,8 @@ gB <- ggplot(grid, aes(x = month_lab, y = factor(year), fill = trips)) +
   geom_text(aes(label = ifelse(trips > 0, trips, ""), colour = dark), size = 3, show.legend = FALSE) +
   scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
   scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +   # magnitude = house blue sequential ramp
-  labs(title = "Q13 - Survey trips by year x month (coverage gaps)",
-       subtitle = scope_cap("per-survey log", "all trips", "n/a (effort)"),
+  labs(title = "Survey Trips by Year and Month",
+       caption = scope_cap("per-survey log", "all trips", "n/a (effort)"),
        x = NULL, y = NULL) +
   theme_beescabr(11) +
   theme(panel.grid = element_blank())

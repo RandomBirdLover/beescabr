@@ -177,11 +177,11 @@ png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
 bee_base_par()                                    # house-style fonts + muted axis/title colours
 op <- par(mar = c(4.5, 12, 3.5, 1))
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA,
-              xlab = "Number of CABR records",
-              main = "CABR bees not on Holway's SD-county checklist\n(bar = records; colour = evidence type)",
+              xlab = "Number of Records within Cabrillo National Monument",
+              main = "Bee Species New to San Diego County",
               cex.names = 0.8)
-legend("bottomright", bty = "n",
-       fill = pal,
+legend("topright", bty = "n", inset = c(0.03, 0.05),      # up in the open area, clear of the axis line
+       fill = pal, cex = 0.85, text.col = BEE_INK$secondary,
        legend = c("specimen (voucher - solid)",
                   "iNat research-grade (community-vetted)",
                   "iNat needs-ID (verify first)"))

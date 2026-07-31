@@ -120,7 +120,7 @@ bar <- function(df, ncol_records, title, sub, fill, file) {
     geom_col(fill = fill, width = 0.72) +
     geom_text(aes(label = .data[[ncol_records]]), hjust = -0.25, size = 3) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-    labs(title = sprintf("%s (all %d species)", title, nrow(d)), subtitle = str_wrap(sub, 95),
+    labs(title = sprintf("%s (all %d species)", title, nrow(d)), caption = str_wrap(sub, 95),
          x = "records in the source method (more = easier to target)", y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.y = element_text(face = "italic", colour = BEE_INK$muted), panel.grid.major.y = element_blank())
@@ -157,7 +157,7 @@ g1 <- ggplot() + base_pts +
   geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 1.3, alpha = 0.6) +   # net-targets = purple
   coord_quickmap() +
   labs(title = "Specimen Bee Bounty - where to NET a voucher",
-       subtitle = str_wrap(sprintf("iNaturalist sightings of the %d taxa photographed but never collected (grey = all iNat effort)",
+       caption = str_wrap(sprintf("iNaturalist sightings of the %d taxa photographed but never collected (grey = all iNat effort)",
                                     length(sb_sp) + length(sb_gn)), 92),
        x = NULL, y = NULL) + map_theme
 ggsave(file.path(OUT_DIR, "specimen_bee_bounty_map.png"), g1, width = 7.5, height = 8, dpi = 200, bg = "white")
@@ -182,7 +182,7 @@ g2 <- ggplot() + base_pts +
   scale_fill_manual(values = BEE_TRANSECT, name = "transect corridor") +
   coord_sf(expand = TRUE) +
   labs(title = "iNaturalist Bee Bounty - where to PHOTOGRAPH (walk these trails)",
-       subtitle = str_wrap(sprintf("%d taxa held only as specimens; shaded band = that transect's walked trail (specimen coords are transect centroids, red dots)",
+       caption = str_wrap(sprintf("%d taxa held only as specimens; shaded band = that transect's walked trail (specimen coords are transect centroids, red dots)",
                                     length(ib_sp) + length(ib_gn)), 92),
        x = NULL, y = NULL) + map_theme
 ggsave(file.path(OUT_DIR, "inaturalist_bee_bounty_map.png"), g2, width = 7.8, height = 8, dpi = 200, bg = "white")

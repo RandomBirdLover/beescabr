@@ -88,14 +88,14 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
   out <- iNEXT::iNEXT(gl, q = QVALS, datatype = "abundance", nboot = NBOOT)
   sub <- sprintf("Scope: survey records only  |  Method: lethal + non-lethal pooled  |  Rank: %s", rank)
   th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary),  # house ink on ggiNEXT text
-               plot.subtitle = element_text(colour = BEE_INK$note))
+               plot.caption = element_text(colour = BEE_INK$secondary))
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q
   g1 <- add_cols(iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
-    labs(title = sprintf("%s (%s) - iNEXT size-based (q0/q1/q2)", title, rank), subtitle = sub) + th, cols)
+    labs(title = sprintf("%s (%s) - iNEXT size-based (q0/q1/q2)", title, rank), caption = sub) + th, cols)
   ggsave(file.path(OUT_DIR, paste0(key, "_inext_size.png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
   g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
-    labs(title = sprintf("%s (%s) - iNEXT coverage-based (q0/q1/q2)", title, rank), subtitle = sub) + th, cols)
+    labs(title = sprintf("%s (%s) - iNEXT coverage-based (q0/q1/q2)", title, rank), caption = sub) + th, cols)
   ggsave(file.path(OUT_DIR, paste0(key, "_inext_coverage.png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
   write.csv(out$AsyEst, file.path(OUT_DIR, paste0(key, "_inext_asymptotic.csv")), row.names = FALSE)

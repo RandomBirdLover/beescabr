@@ -110,7 +110,7 @@ plot_indices <- function(dfin, file, title, cap, group_lab) {
     facet_wrap(~ metric, scales = "free_y") +
     # rank = focal species (ink) vs coarser genus (stone background)
     scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
-    labs(title = title, subtitle = cap, x = group_lab, y = NULL) +
+    labs(title = title, caption = cap, x = group_lab, y = NULL) +
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank())
   ggsave(file, g, width = 9, height = 6.2, dpi = 200, bg = "white")
@@ -121,7 +121,7 @@ tidyr_pivot <- function(df, cols) {
     data.frame(rank = df$rank, group = df$group, metric = c, value = df[[c]])))
 }
 plot_indices(div_tr, file.path(OUT_DIR, "diversity_by_transect.png"),
-             "Bee diversity by transect (CABR)",
+             "Bee Diversity by Transect",
              scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus"),
              "transect")
 
@@ -139,7 +139,7 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
     geom_line(color = "#3C3B36") + geom_point(color = "#3C3B36", size = 2) +
     facet_wrap(~ metric, scales = "free_y") +
     labs(title = "Bee diversity by year (CABR)",
-         subtitle = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
+         caption = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
          x = "year", y = NULL) +
     theme_beescabr(11)
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
@@ -164,7 +164,7 @@ g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
                                 "lethal (net)" = unname(BEE_METHOD_COL["lethal"]),
                                 "non-lethal (photo)" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
   labs(title = "Rank-abundance (dominance) of CABR bee species",
-       subtitle = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
+       caption = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11)
 ggsave(file.path(OUT_DIR, "diversity_rank_abundance.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
@@ -194,7 +194,7 @@ if (!is.null(mds)) {
     geom_point(size = 3) + geom_text(vjust = -0.8, size = 2.6, show.legend = FALSE) +
     scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
     labs(title = "Bee community composition by transect (NMDS, Bray-Curtis)",
-         subtitle = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
+         caption = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
                            sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
                            sprintf("  (stress %.2f)", mds$stress)),
          x = "NMDS1", y = "NMDS2") +

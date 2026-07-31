@@ -103,7 +103,7 @@ op <- par(mar = c(4, 12.5, 4, 1))
 Mplot <- Mmon[nrow(Mmon):1, , drop = FALSE]
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # magnitude = house blue ramp
-      main = sprintf("When are the top %d plants visited? (log records/month)\ny-axis ranked by the bees' favourite -- 1 = most visit records", TOP_MONTH))
+      main = "When Top 12 Plants are Most Visited")
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.72)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",

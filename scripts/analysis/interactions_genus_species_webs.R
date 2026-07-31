@@ -162,23 +162,22 @@ message("Webs written to ", WEB_DIR, " (", nrow(keep), " genera)")
 print(h2_tbl, row.names = FALSE)
 
 # ---- 3. overview: within-genus H2' across genera -----------------------------
-ov <- h2_tbl %>% filter(!is.na(H2prime)) %>%
-  mutate(bee_genus = factor(bee_genus, levels = rev(bee_genus)),
-         sig = ifelse(!is.na(H2prime_p) & H2prime_p < 0.05, "p < 0.05", "n.s."))
-g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = sig)) +
+ov <- h2_tbl %>% filter(!is.na(H2prime), !is.na(H2prime_p), H2prime_p < 0.05) %>%
+  mutate(bee_genus = factor(bee_genus, levels = rev(bee_genus)))
+g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = H2prime)) +
   geom_col(width = 0.72) +
   geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2) +
-  # significance = house ink (notable) vs stone (background)
-  scale_fill_manual(values = c("p < 0.05" = "#3C3B36", "n.s." = "#C0BBB0"), name = NULL) +
+  # significant genera only (n.s. dropped); fill = H2' on the house crimson magnitude ramp
+  scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Within-genus niche partitioning: do a genus's species split up plant genera?",
-       subtitle = str_wrap(paste0(scope_cap("all records, species-resolved",
+       caption = str_wrap(paste0(scope_cap("all records, species-resolved",
                             "lethal + non-lethal pooled", "bee species x plant genus, per bee genus"),
-                            sprintf("  |  genera with >=%d species & >=%d records (%d shown)",
-                                    MIN_SPECIES, MIN_REC, nrow(keep))), 84),
+                            sprintf("  |  genera with >=%d species & >=%d records, significant only p<0.05 (%d shown)",
+                                    MIN_SPECIES, MIN_REC, nrow(ov))), 84),
        x = "within-genus H2'  (0 = species overlap on plants, 1 = each on its own)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12),
-        legend.position = "top", panel.grid.major.y = element_blank())
+        legend.position = "none", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g, width = 9, height = 5.8, dpi = 200, bg = "white")
 message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")

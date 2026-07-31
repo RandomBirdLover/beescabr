@@ -7,9 +7,9 @@
 # the same colour everywhere, forever.
 #
 # DESIGN (each VARIABLE keeps ONE encoding everywhere -- colour-blind validated):
-#   * TRANSECT -- the 4-colour superbloom palette below. These 4 hues appear ONLY as transects.
+#   * TRANSECT -- the 4-colour Okabe-Ito CVD-safe palette below. These 4 hues appear ONLY as transects.
 #   * METHOD (lethal net / non-lethal photo) -- its OWN two colours, off the transect palette:
-#     poppy (lethal) / teal (non-lethal), CVD dE 37. Line style is a SECONDARY cue for the one
+#     bright red (lethal) / bright royal-blue (non-lethal), CVD dE ~141. Line style is a SECONDARY cue for the one
 #     figure where a transect AND a method share a plot (lethal = SOLID, non-lethal = DASHED).
 #   * EVIDENCE / ID-confidence -- a LAVENDER->plum ordinal ramp (voucher dark -> needs-ID faint), so
 #     "less certain" literally looks fainter. Lavender from superbloom1/2, off every transect hue.
@@ -21,18 +21,22 @@
 # =============================================================
 
 # ---- categorical: TRANSECT is the colour identity -------------------------
-# calecopal 'superbloom3' vibe -- grass / lupine-magenta / sky / poppy. CVD-validated
-# (worst adjacent dE 25.4, all bands pass; orange is sub-3:1 on white so transects
-# always ship with a legend + labels). Swap to exact cal_palette("superbloom3") hexes if wanted.
-BEE_TRANSECT <- c(BST = "#3E7D43", UPMON = "#CB1F6A", TP = "#3B5EA0", OT = "#E69F00")
+# Okabe-Ito colour-blind-safe qualitative set (green / rose / blue / orange) -- keeps each
+# transect's original superbloom identity but CVD-optimised: worst adjacent dE 53.6 normal,
+# 18.1 under deuteranopia (up from 13.2 for the old superbloom hexes). These 4 hues appear
+# ONLY as transects. OT orange is still sub-3:1 on white, so transect figures always ship
+# with a legend + labels.
+BEE_TRANSECT <- c(BST = "#009E73", UPMON = "#CC79A7", TP = "#0072B2", OT = "#E69F00")
 
 # ---- METHOD: its own two colours (kept OFF the transect palette) -------------
-# poppy (lethal net) / teal (non-lethal photo), CVD dE 37 -- neither is a transect hue.
+# bright red (lethal net) / bright royal-blue (non-lethal photo) -- internal CVD dE ~141 (red/blue is
+# the most CVD-robust pair there is). The blue leans indigo to stay clear of transect-TP's teal-ish blue
+# (dE 56 normal / 38 deuteranopia) so the two blues don't read alike across charts.
 # Line style is a SECONDARY cue for the one figure where a transect AND a method share a plot:
 # lethal = SOLID, non-lethal = DASHED (pch: filled circle vs triangle).
 BEE_METHOD_LTY   <- c(lethal = 1, nonlethal = 2)                 # solid = lethal net, dashed = non-lethal photo
 BEE_METHOD_PCH   <- c(lethal = 16, nonlethal = 17)              # filled circle = net, triangle = photo
-BEE_METHOD_COL   <- c(lethal = "#C65A2E", nonlethal = "#0E7C72") # poppy = net (lethal), teal = photo (non-lethal)
+BEE_METHOD_COL   <- c(lethal = "#E8000D", nonlethal = "#2E4FE0") # bright red = net (lethal), bright royal blue = photo (non-lethal)
 BEE_METHOD_LABEL <- c(lethal = "lethal (specimen net)", nonlethal = "non-lethal (iNat photo)")
 
 # ---- EVIDENCE / ID-confidence: LAVENDER ordinal ramp (strong -> faint) ------
@@ -45,14 +49,17 @@ BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research
 BEE_SCOPE <- c(`survey-only` = "#3C3B36", `all records` = "#C0BBB0")   # ink = focus, stone = background
 
 # ---- LOCATION / SET OVERLAP: A-only / shared / B-only (on vs off-transect) ----
-# ink = focal set (on-transect), stone = shared core (background), ochre = the other set (off-transect).
-# The method-overlap venn uses BEE_METHOD_COL, NOT this -- method has its own colours.
-BEE_SET <- c(a_only = "#3C3B36", shared = "#C0BBB0", b_only = "#B0632B")
+# ink = focal set (on-transect), stone = shared core (background), sienna = the other set (off-transect).
+# sienna (was ochre #B0632B) -- a deeper earth kept CVD-clear of every warm series colour
+# (transect-orange, method-red) and clearing 3:1 contrast on white. The old ochre collided badly under
+# CVD (dE 3.1) with the then-poppy method colour, so it was moved off that hue. The method-overlap venn
+# uses BEE_METHOD_COL, NOT this -- method has its own colours.
+BEE_SET <- c(a_only = "#3C3B36", shared = "#C0BBB0", b_only = "#8A5A2B")
 
 # ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# ink = resolved to species (done), ochre = specimen-keyable (ACT here), stone = photo/genus-only (stuck).
-# 2-cat panels reuse resolved(ink) vs stuck(stone).
-BEE_IDSTATUS <- c(resolved = "#3C3B36", keyable = "#B0632B", stuck = "#C0BBB0")
+# ink = resolved to species (done), sienna = specimen-keyable (ACT here), stone = photo/genus-only (stuck).
+# 2-cat panels reuse resolved(ink) vs stuck(stone). sienna shares BEE_SET's accent (same de-conflict).
+BEE_IDSTATUS <- c(resolved = "#3C3B36", keyable = "#8A5A2B", stuck = "#C0BBB0")
 
 # ---- ink + chrome tokens (text never wears a series colour) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
@@ -73,8 +80,8 @@ theme_beescabr <- function(base_size = 12) {
     ggplot2::theme(
       text             = ggplot2::element_text(colour = BEE_INK$primary),
       plot.title       = ggplot2::element_text(face = "bold", size = base_size + 2),
-      plot.subtitle    = ggplot2::element_text(colour = BEE_INK$note, size = base_size - 2),
-      plot.caption     = ggplot2::element_text(colour = BEE_INK$muted, size = base_size - 3, hjust = 0),
+      plot.subtitle    = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2),
+      plot.caption     = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2, hjust = 0, margin = ggplot2::margin(t = 8)),
       axis.title       = ggplot2::element_text(colour = BEE_INK$secondary),
       axis.text        = ggplot2::element_text(colour = BEE_INK$muted),
       panel.grid.major = ggplot2::element_line(colour = BEE_INK$grid, linewidth = 0.3),

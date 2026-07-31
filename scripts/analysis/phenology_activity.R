@@ -51,7 +51,7 @@ MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- ridgeline phenology: one density curve per taxon, peak-ordered ----------
-phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL) {
+phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL, title = NULL) {
   df <- df[!is.na(df$taxon) & df$taxon != "" & !is.na(df$doy), ]
   keep <- names(which(table(df$taxon) >= min_records))
   df <- df[df$taxon %in% keep, ]
@@ -74,14 +74,14 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     scale_fill_gradientn(colors = SPRING_FALL, guide = "none") +
     scale_x_continuous(breaks = MONTH_STARTS, labels = month.abb,
                        limits = c(1, 366), expand = c(0.01, 0)) +
-    labs(title = sprintf("%s phenology - seasonal activity (ridgeline)", label),
-         subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
-                            length(ord), min_records),
+    labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
+         #subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
+                            #length(ord), min_records),
          caption = scope, x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
           plot.title  = element_text(face = "bold"),
-          plot.caption = element_text(color = BEE_INK$note, hjust = 0, size = 8, face = "bold"))
+          plot.caption = element_text(color = BEE_INK$secondary, hjust = 0, size = 8))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 
@@ -136,7 +136,8 @@ message(sprintf("Building phenology ridgelines:\n  Flowering plants: %d of %d re
 phenology_ridge(data.frame(taxon = str_squish(plants$plant_genus), doy = doy_of(plants$observed_on)),
                 file.path(OUT_DIR, "phenology_plant_genus.png"), "Flowering plant genus",
                 scope = paste0("Scope: FLOWERING records only - survey plant records are in-flower by protocol\n",
-                               "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."))
+                               "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."),
+                title = "Seasonal Plant Bloom by Genus")
 
 # ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -148,11 +149,11 @@ bees$doy <- doy_of(bees$observed_on)
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% GENUS_RANKS & !is.na(bees$genus),
                             str_squish(bees$genus), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus")
+  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus", title = "Seasonal Bee Activity by Genus")
 
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% SPECIES_RANKS & !is.na(bees$genus) & bees$species != "",
                             paste(str_squish(bees$genus), word(bees$species, -1)), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species")
+  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species", title = "Seasonal Bee Activity by Species")
 
 message("\nDone. Phenology ridgelines + tables in: ", normalizePath(OUT_DIR))
