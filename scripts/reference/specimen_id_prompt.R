@@ -59,11 +59,12 @@ suggest_taxon <- function(cands, term, want_rank = "species") {
   list(action = "reask", id = NA_integer_)
 }
 
-# flag_specimen_ids(): PURE. Map each flagged taxon (rows of the taxonomy-flags table) to the
-# ucsd_id / sdnhm_id of the specimens carrying it, keyed by the taxon's FINEST-rank name
-# (lowercased) -- the same key the resolver searches each addition under. Lets the prompt show
-# "which specimens is this?" so the reviewer can pull them up in the records to confirm the
-# taxon_id. Blank / 0 ids are dropped. Returns a named character vector (name = taxon key).
+# flag_specimen_ids(): PURE. Map each taxon in a specimen table (the raw specimen RECORD, or the
+# taxonomy-flags table -- any df with genus..subspecies + ucsd_id/sdnhm_id) to the ucsd_id /
+# sdnhm_id of the specimens carrying it, keyed "rank|name" on the FINEST-rank determination
+# (lowercased) -- the same key the resolver searches each addition under. Sourced from the RECORD
+# so the prompt shows "which specimens is this?" every time -- even on a re-run where the taxon is
+# pending in additions but no longer freshly flagged. Blank / 0 ids dropped. Named character vector.
 flag_specimen_ids <- function(flags) {
   empty <- stats::setNames(character(0), character(0))
   if (is.null(flags) || !nrow(flags)) return(empty)
@@ -259,8 +260,10 @@ resolve_specimen_taxa <- function(record_df,
     return(invisible(combined))
   }
   if (is.null(fetch_fn)) fetch_fn <- function(nm) inat_fetch_taxa_by_name(nm)
+  # specimen-id hints come from the RECORD (every specimen), so they show even when a taxon is
+  # pending in additions but no longer freshly flagged (flags empty on a re-run).
   res <- resolve_specimen_additions_interactive(combined, fetch_fn, prompt_fn, interactive_ok = TRUE,
-                                                verbose = verbose, id_map = flag_specimen_ids(.flags))
+                                                verbose = verbose, id_map = flag_specimen_ids(record_df))
   if (write) {
     dir.create(dirname(additions_path), recursive = TRUE, showWarnings = FALSE)
     utils::write.csv(res$additions, additions_path, row.names = FALSE, na = "")

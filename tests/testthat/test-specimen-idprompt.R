@@ -175,6 +175,26 @@ test_that("resolve_specimen_additions_interactive shows only the matching rank's
     "186, 221")
 })
 
+test_that("resolve_specimen_taxa shows specimen ids from the RECORD even when re-flagging is empty", {
+  .impl()
+  # the real re-run case: simulans is PENDING in additions (blank id) but no longer flagged
+  # (it's already in the lookup), so the flags file is empty. The specimen ids must still show,
+  # sourced from the raw record -- not the (empty) flags.
+  addf <- tempfile(fileext = ".csv")
+  writeLines(c(
+    "rank,scientific_name,taxon_id,in_holway,in_inat,in_cabr_specimens,verified,kingdom,phylum,class,order,superfamily,family,subfamily,tribe,subtribe,genus,subgenus,complex,species,subspecies,common_name",
+    "complex,Colletes simulans,,FALSE,FALSE,TRUE,FALSE,Animalia,Arthropoda,Insecta,Hymenoptera,Apoidea,Colletidae,Colletinae,Colletini,,Colletes,,Colletes simulans,,,"), addf)
+  flgf <- tempfile(fileext = ".csv")
+  writeLines('"ucsd_id","sdnhm_id","genus","subgenus","complex","species","subspecies","flag_reason"', flgf)  # EMPTY (header only)
+  record <- data.frame(ucsd_id = c(186, 221), sdnhm_id = 0, genus = "Colletes", subgenus = "",
+                       complex = "Colletes simulans", species = "", subspecies = "", stringsAsFactors = FALSE)
+  fetch <- function(term) if (term == "Colletes simulans") list(list(id = 1438677, name = "Colletes simulans", rank = "complex")) else list()
+  expect_message(
+    resolve_specimen_taxa(record, additions_path = addf, flags_path = flgf,
+                          fetch_fn = fetch, prompt_fn = function(...) "", interactive_ok = TRUE, write = FALSE, verbose = FALSE),
+    "ucsd_id 186, 221")
+})
+
 test_that("resolve_specimen_taxa (driver) seeds a flag + fills ids with NO type clash", {
   .impl()
   addf <- tempfile(fileext = ".csv")
