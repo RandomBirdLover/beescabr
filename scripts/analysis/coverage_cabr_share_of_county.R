@@ -34,8 +34,8 @@ scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  | 
 
 CHECKLIST_CABR   <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
 CHECKLIST_HOLWAY <- "data/checklists/sd_county/sd_holway_native_bee_checklist.csv"
-CABR_ACRES       <- 143.9      # NPS / Wikipedia (58.2 ha)
-SD_COUNTY_SQMI   <- 4526       # San Diego County total area
+CABR_ACRES       <- 160.4      # measured from the NPS official CABR boundary shapefile
+SD_COUNTY_SQMI   <- 4261       # measured from the San Diego County boundary shapefile
 SPECIES_RANKS    <- c("species", "subspecies")
 
 # ---- 1. count distinct species (binomials) + genera on each checklist --------
