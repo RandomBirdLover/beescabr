@@ -115,7 +115,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
   g2 <- ggplot(bd, aes(group, S, fill = kind)) +
     geom_col(position = position_dodge(0.8), width = 0.7) +
     geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3) +
-    scale_fill_manual(values = setNames(c("#C6CCCF", "#343A3F"),   # stone (observed) / ink (rarefied)
+    scale_fill_manual(values = setNames(c(BEE_NEUTRAL[["light"]], BEE_NEUTRAL[["dark"]]),   # stone (observed) / ink (rarefied)
                                         c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
     labs(title = sprintf("%s (%s) - rarefied richness", title, rank), caption = cap,
          x = NULL, y = unit) +
@@ -145,7 +145,7 @@ for (rk in names(RANKS)) {
   # 3. observer: beeple vs intern
   draw(comm(filter(rec, surveyor %in% c("beeple", "intern")), "surveyor", kc),
        paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
-       c(intern = "#343A3F", beeple = "#C6CCCF"))   # intern = house ink (focus), beeple = stone (background)
+       c(intern = BEE_NEUTRAL[["dark"]], beeple = BEE_NEUTRAL[["light"]]))   # intern = house ink (focus), beeple = stone (background)
   # 4. method: observations (iNaturalist) vs specimens
   draw(comm(rec, "obs_type", kc), paste0("by_method_", rk),
        "Bees: observations vs specimens", rk,

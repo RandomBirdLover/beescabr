@@ -44,9 +44,9 @@ SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 MIN_RECORDS   <- BEE_MIN_RECORDS   # shared >=10-record rule: sparser taxa are excluded (too few to read a season)
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
-# figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
-# reinforced by peak-day ordering. Never a categorical transect, so it stays local, not a house concept.
-SPRING_FALL   <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
+# SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient, reinforced by peak-day
+# ordering. Sourced from the theme (BEE_SEASON) so every colour lives in one place -- no raw hex here.
+SPRING_FALL   <- BEE_SEASON
 MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 

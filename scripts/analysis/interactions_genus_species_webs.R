@@ -97,13 +97,13 @@ genus_web <- function(M, file, genus, h2lab) {
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
   for (i in seq_len(np)) for (j in seq_len(nb)) if (M[i, j] > 0)
     segments(px[i], yP, bx[j], yB, lwd = 0.5 + 5 * M[i, j] / wmax,
-             col = adjustcolor("#a29e94", 0.45))   # links = neutral grey (nodes carry the colour)
+             col = adjustcolor(BEE_WEB[["link"]], 0.45))   # links = neutral grey (nodes carry the colour)
   pw <- 0.010 + 0.022 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.012 + 0.030 * sqrt(colSums(M) / max(colSums(M)))
-  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = "#3E7D43", border = "white")   # plants = superbloom green (forage)
-  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = "#A63D95", border = "white")   # bees = opposite of green (magenta)
-  text(px, yP - 0.022, rownames(M), srt = 90, adj = 1, cex = 0.62, col = "#2C5A31")   # plant labels = dark green
-  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.78, col = "#7A2A6D", font = 3)   # bee labels = dark magenta
+  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = BEE_WEB[["plant"]], border = "white")   # plants = superbloom green (forage)
+  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = BEE_WEB[["bee"]], border = "white")   # bees = opposite of green (magenta)
+  text(px, yP - 0.022, rownames(M), srt = 90, adj = 1, cex = 0.62, col = BEE_WEB[["plant_label"]])   # plant labels = dark green
+  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.78, col = BEE_WEB[["bee_label"]], font = 3)   # bee labels = dark magenta
   mtext(sprintf("%s: species (top, magenta) x plant genus (bottom, green)  --  %d species, %d plant genera",
                 genus, nb, np), side = 3, line = 5.3, font = 2, cex = 1.0, col = BEE_INK$primary)
   mtext(h2lab, side = 1, line = 7.2, cex = 0.8, col = BEE_INK$note)

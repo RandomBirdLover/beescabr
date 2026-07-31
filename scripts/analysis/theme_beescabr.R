@@ -45,22 +45,26 @@ BEE_EVIDENCE       <- c(specimen = "#52357E", research = "#9078C0", needs_id = "
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
+# ---- NEUTRALS + ACCENT: ONE definition of the shared cool greys + teal ------
+# Every neutral figure references THESE tokens (never a raw hex), so a tweak here updates the whole
+# portfolio. Cool charcoal/mist replaced the old warm greige #3C3B36/#C0BBB0, which read muddy brown.
+BEE_NEUTRAL <- c(dark = "#343A3F", light = "#C6CCCF")   # focus (charcoal) / background (mist-grey)
+BEE_ACCENT  <- "#0E8F82"                                # clean teal -- the "third / other / actionable" pop
+
 # ---- SCOPE: focus vs background --------------------------------------------
-# cool charcoal + cool mist-grey (de-muddied -- the old warm greige #3C3B36/#C0BBB0 read brown).
-BEE_SCOPE <- c(`survey-only` = "#343A3F", `all records` = "#C6CCCF")   # ink = focus, mist = background
+BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRAL[["light"]])
 
 # ---- LOCATION / SET OVERLAP: A-only / shared / B-only (on vs off-transect) ----
-# ink = focal set (on-transect), mist = shared core (background), teal = the other set (off-transect).
-# teal (was sienna #8A5A2B, before that ochre) -- a clean cool accent that pops against the cool greys
-# without the brown/muddy cast. CVD-clear of every series colour (closest is transect-rose at dE 11.6);
-# transect/method no longer use teal (method is red/blue), so this lane is free. The method-overlap venn
-# uses BEE_METHOD_COL, NOT this -- method has its own colours.
-BEE_SET <- c(a_only = "#343A3F", shared = "#C6CCCF", b_only = "#0E8F82")
+# dark = focal set (on-transect), light = shared core (background), teal = the other set (off-transect).
+# teal (BEE_ACCENT) pops against the cool greys, CVD-clear of every series colour (closest transect-rose
+# dE 11.6); transect/method no longer use teal, so this lane is free. The method-overlap venn uses
+# BEE_METHOD_COL, NOT this -- method has its own colours.
+BEE_SET <- c(a_only = BEE_NEUTRAL[["dark"]], shared = BEE_NEUTRAL[["light"]], b_only = BEE_ACCENT)
 
 # ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# ink = resolved to species (done), teal = specimen-keyable (ACT here), mist = photo/genus-only (stuck).
-# 2-cat panels reuse resolved(ink) vs stuck(mist). teal shares BEE_SET's accent (same cool palette).
-BEE_IDSTATUS <- c(resolved = "#343A3F", keyable = "#0E8F82", stuck = "#C6CCCF")
+# dark = resolved to species (done), teal = specimen-keyable (ACT here), light = photo/genus-only (stuck).
+# 2-cat panels reuse resolved(dark) vs stuck(light). teal shares BEE_SET's accent (same cool palette).
+BEE_IDSTATUS <- c(resolved = BEE_NEUTRAL[["dark"]], keyable = BEE_ACCENT, stuck = BEE_NEUTRAL[["light"]])
 
 # ---- ink + chrome tokens (text never wears a series colour) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
@@ -68,6 +72,16 @@ BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
 
 # ---- sequential (magnitude): one crimson ramp (pale -> deep wine) -----------
 BEE_SEQ <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")
+
+# ---- INTERACTION WEBS: plant vs bee node colours (bipartite visitation figures) --------
+# plants = forage green, bees = magenta (opposite of green -- the two trophic sides). label = the darker
+# shade of each, link = neutral grey (nodes carry the colour). interactions_network.R + *_webs.R.
+BEE_WEB <- c(plant = "#3E7D43", bee = "#A63D95",
+             plant_label = "#2C5A31", bee_label = "#7A2A6D", link = "#a29e94")
+
+# ---- PHENOLOGY SEASON: spring -> fall diverging ramp (green -> yellow -> orange-red) ----
+# RdYlGn-style 6-step for month / day-of-year density in phenology_activity.R.
+BEE_SEASON <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
 
 # ---- #12 record-confidence: flag taxa too sparse to claim a preference ------
 BEE_MIN_RECORDS <- 10L    # under this many records -> "too few to claim" (matches phenology >=10)

@@ -79,9 +79,11 @@ abun_list <- function(df, group_col, key_col, keep = NULL) {
 }
 
 # ---- 2. run iNEXT for one comparison: curves + standardized tables -----------
-# house colours onto a ggiNEXT plot (sets both colour + fill, keyed to the group/assemblage)
+# house colours onto a ggiNEXT plot (sets both colour + fill, keyed to the group/assemblage).
+# ggiNEXT already attaches its own colour+fill scales, so overriding them is intentional -- wrap in
+# suppressMessages() to mute ggplot's expected "Scale for colour/fill is already present" notice.
 add_cols <- function(p, cols) if (is.null(cols)) p else
-  p + ggplot2::scale_colour_manual(values = cols, name = NULL, aesthetics = c("colour", "fill"))
+  suppressMessages(p + ggplot2::scale_colour_manual(values = cols, name = NULL, aesthetics = c("colour", "fill")))
 
 run_inext <- function(gl, key, title, rank, cols = NULL) {
   if (length(gl) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
@@ -126,7 +128,7 @@ for (rk in names(RANKS)) {
             cols = setNames(grDevices::colorRampPalette(BEE_SEQ)(length(gl_y)), names(gl_y)))   # year -> blue sequential
   run_inext(abun_list(rec, "surveyor", kc, c("beeple", "intern")),
             paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
-            cols = c(intern = "#343A3F", beeple = "#C6CCCF"))   # intern = house ink (focus) / beeple = stone (background)
+            cols = c(intern = BEE_NEUTRAL[["dark"]], beeple = BEE_NEUTRAL[["light"]]))   # intern = house ink (focus) / beeple = stone (background)
   run_inext(abun_list(rec, "obs_type", kc, c("observation", "specimen")),
             paste0("by_method_", rk), "Bees: observations vs specimens", rk,
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours

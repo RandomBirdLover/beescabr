@@ -1,0 +1,102 @@
+# =============================================================
+# analysis/coverage_cabr_share_of_county.R
+# beescabr -- how much of San Diego County's native-bee diversity does tiny
+# Cabrillo National Monument carry?  (a "punches above its weight" stat.)
+#
+# THE POINT (for management): CABR is a sliver of the county by area, yet holds a
+# large share of its bee diversity. We compare the CABR OFFICIAL checklist to the
+# Holway San Diego County checklist (the county reference), for both SPECIES and
+# GENERA, and set that against CABR's share of the county's land area.
+#
+# NOTE ON SCOPE: we deliberately do NOT compare to a Point Loma checklist -- the
+# only Point Loma list is iNaturalist-only (no comprehensive specimen survey of the
+# peninsula), so it is not a fair denominator. The county (Holway) is the yardstick.
+#
+# Areas are fixed facts: CABR = 143.9 acres (NPS / Wikipedia); San Diego County =
+# ~4,526 sq mi. Everything else is counted from the checklists. Descriptive; no test.
+#
+# Run from the repo root:  Rscript scripts/analysis/coverage_cabr_share_of_county.R
+# Depends on: dplyr, stringr, ggplot2 (+ config.R).
+# =============================================================
+
+for (pkg in c("ggplot2")) {
+  if (!requireNamespace(pkg, quietly = TRUE))
+    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
+}
+suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
+
+if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+OUT_DIR <- "data/analysis/coverage"
+dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
+
+CHECKLIST_CABR   <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
+CHECKLIST_HOLWAY <- "data/checklists/sd_county/sd_holway_native_bee_checklist.csv"
+CABR_ACRES       <- 143.9      # NPS / Wikipedia (58.2 ha)
+SD_COUNTY_SQMI   <- 4526       # San Diego County total area
+SPECIES_RANKS    <- c("species", "subspecies")
+
+# ---- 1. count distinct species (binomials) + genera on each checklist --------
+binoms <- function(chk) {
+  d  <- chk[tolower(str_squish(chk$taxon_rank)) %in% SPECIES_RANKS, , drop = FALSE]
+  sn <- str_squish(d$scientific_name)
+  b  <- tolower(sub("^(\\S+\\s+\\S+).*$", "\\1", sn))     # first two words = binomial
+  unique(b[grepl("\\s", b)])
+}
+genera_of <- function(chk) {                # any bee genus recorded on the checklist (all ranks)
+  g <- tolower(str_squish(chk$genus)); unique(g[nzchar(g)])
+}
+cabr <- read.csv(CHECKLIST_CABR,   stringsAsFactors = FALSE, check.names = FALSE)
+hol  <- read.csv(CHECKLIST_HOLWAY, stringsAsFactors = FALSE, check.names = FALSE)
+cabr_sp <- binoms(cabr); hol_sp <- binoms(hol)
+cabr_gn <- genera_of(cabr); hol_gn <- genera_of(hol)
+
+n_cabr_sp <- length(cabr_sp); n_hol_sp <- length(hol_sp)
+n_cabr_gn <- length(cabr_gn); n_hol_gn <- length(hol_gn)
+n_shared  <- length(intersect(cabr_sp, hol_sp))          # CABR species also on Holway
+
+# ---- 2. shares (CABR as % of the county) ------------------------------------
+cabr_sqmi <- CABR_ACRES / 640
+area_pct  <- 100 * cabr_sqmi / SD_COUNTY_SQMI
+sp_pct    <- 100 * n_cabr_sp / n_hol_sp
+gen_pct   <- 100 * n_cabr_gn / n_hol_gn
+overrep   <- sp_pct / area_pct
+
+stat_tbl <- data.frame(
+  measure       = c("Land area", "Bee species", "Bee genera"),
+  cabr          = c(round(cabr_sqmi, 3), n_cabr_sp, n_cabr_gn),
+  county        = c(SD_COUNTY_SQMI, n_hol_sp, n_hol_gn),
+  cabr_pct      = round(c(area_pct, sp_pct, gen_pct), c(3, 1, 1)),
+  stringsAsFactors = FALSE)
+write.csv(stat_tbl, file.path(OUT_DIR, "cabr_share_of_county.csv"), row.names = FALSE)
+message(sprintf("CABR share of San Diego County: species %.1f%% (%d/%d), genera %.1f%% (%d/%d), land %.4f%%; ~%.0fx overrepresented",
+                sp_pct, n_cabr_sp, n_hol_sp, gen_pct, n_cabr_gn, n_hol_gn, area_pct, overrep))
+message(sprintf("  %d of %d CABR species (%.0f%%) are on the Holway county list; %d are not (new-to-county)",
+                n_shared, n_cabr_sp, 100 * n_shared / n_cabr_sp, n_cabr_sp - n_shared))
+
+# ---- 3. figure: CABR's share of the county, area vs diversity -----------------
+plot_df <- data.frame(
+  measure = factor(c("Land area", "Bee species", "Bee genera"),
+                   levels = c("Land area", "Bee species", "Bee genera")),   # area bottom -> genera top
+  pct = c(area_pct, sp_pct, gen_pct),
+  lab = c(sprintf("%.3f%%   (%.0f acres of ~%s sq mi)", area_pct, CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ",")),
+          sprintf("%.0f%%   (%d of %d species)", sp_pct, n_cabr_sp, n_hol_sp),
+          sprintf("%.0f%%   (%d of %d genera)", gen_pct, n_cabr_gn, n_hol_gn)))
+g <- ggplot(plot_df, aes(x = pct, y = measure, fill = pct)) +
+  geom_col(width = 0.62) +
+  geom_text(aes(label = lab), hjust = 0, nudge_x = 0.8, size = 3.5, colour = BEE_INK$secondary) +
+  scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
+  scale_x_continuous(limits = c(0, max(gen_pct) * 1.65), expand = expansion(mult = c(0, 0))) +
+  labs(title = sprintf("Cabrillo carries ~%.0f%% of San Diego County's native bees on ~%.3f%% of its land",
+                       sp_pct, area_pct),
+       caption = str_wrap(paste0(scope_cap("CABR official checklist vs Holway San Diego County checklist (v3)",
+                            "specimen + iNaturalist", "distinct species & genera"),
+                            sprintf("  |  CABR = %.0f acres of ~%s sq mi. It holds ~1 in 9 of the county's bee species and %.0f%% of its genera -- roughly %sx its share by area.",
+                                    CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ","), gen_pct, format(round(overrep, -2), big.mark = ","))), 104),
+       x = "CABR's share of San Diego County (%)", y = NULL) +
+  theme_beescabr(12) +
+  theme(legend.position = "none", panel.grid.major.y = element_blank())
+ggsave(file.path(OUT_DIR, "cabr_share_of_county.png"), g, width = 9.5, height = 4.8, dpi = 200, bg = "white")
+message("Wrote cabr_share_of_county.{png,csv} to ", OUT_DIR)
