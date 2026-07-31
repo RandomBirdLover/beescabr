@@ -458,6 +458,8 @@ fill_above_genus_ids <- function(df, lookup) {
   df$taxon_id <- suppressWarnings(as.integer(df$taxon_id))
   if (is.null(lookup) || !nrow(lookup) || !"rank" %in% names(lookup)) return(df)
   norm <- function(x) tolower(trimws(as.character(x)))
+  b2na <- function(x) { x <- as.character(x); ifelse(is.na(x) | trimws(x) == "", NA_character_, x) }
+  fill_cols <- intersect(intersect(names(df), names(lookup)), SPECIMEN_LOOKUP_RANKS)  # ancestor ranks to backfill
   g <- if ("genus" %in% names(df)) as.character(df$genus) else rep(NA_character_, nrow(df))
   has_genus <- !is.na(g) & trimws(g) != ""
   need <- which(is.na(df$taxon_id) & !has_genus)
@@ -480,6 +482,9 @@ fill_above_genus_ids <- function(df, lookup) {
       df$taxon_rank[i]      <- rk
       if ("scientific_name" %in% names(lookup)) df$scientific_name[i] <- as.character(lookup$scientific_name[j1])
       if ("common_name"     %in% names(lookup)) df$common_name[i]     <- as.character(lookup$common_name[j1])
+      # backfill the ancestor lineage (kingdom..the matched rank) from the node -- a tribe/family-only
+      # specimen carries no higher ranks in the raw record, so pull them in (blanks only; own values win).
+      for (fc in fill_cols) if (is.na(b2na(df[[fc]][i]))) df[[fc]][i] <- as.character(lookup[[fc]][j1])
     }
   }
   df

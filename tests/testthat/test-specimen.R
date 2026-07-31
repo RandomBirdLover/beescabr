@@ -535,6 +535,34 @@ test_that("fill_above_genus_ids does NOT coarsen a genus-or-finer specimen", {
   expect_true(is.na(out$taxon_id[1]))                # has_genus -> skipped
 })
 
+test_that("fill_above_genus_ids backfills the full ancestor lineage from the matched node", {
+  src("specimens/specimen_clean_helpers.R")
+  # a tribe-only ID (blank genus): the record carries order/family/subfamily/tribe, but the
+  # higher ancestors (kingdom..superfamily, epifamily) are blank and must be filled from the
+  # lookup's tribe node -- exactly like the genus/subgenus/complex coarse rows already are.
+  df <- tibble::tibble(
+    kingdom = NA_character_, phylum = NA_character_, subphylum = NA_character_, class = NA_character_,
+    subclass = NA_character_, order = "Hymenoptera", suborder = NA_character_, infraorder = NA_character_,
+    superfamily = NA_character_, family = "Halictidae", epifamily = NA_character_, subfamily = "Halictinae",
+    tribe = "Halictini", subtribe = NA_character_, genus = NA_character_,
+    taxon_id = NA_integer_, taxon_rank = NA_character_, scientific_name = NA_character_, common_name = NA_character_)
+  lk <- tibble::tibble(
+    rank = "tribe",
+    kingdom = "Animalia", phylum = "Arthropoda", subphylum = "Hexapoda", class = "Insecta",
+    subclass = "Pterygota", order = "Hymenoptera", suborder = "Apocrita", infraorder = "Aculeata",
+    superfamily = "Apoidea", family = "Halictidae", epifamily = "Anthophila", subfamily = "Halictinae",
+    tribe = "Halictini", subtribe = NA_character_, genus = NA_character_,
+    taxon_id = 335597L, scientific_name = "Halictini", common_name = NA_character_)
+  out <- fill_above_genus_ids(df, lk)
+  expect_equal(out$taxon_id[1], 335597L)
+  expect_equal(out$kingdom[1], "Animalia")       # backfilled
+  expect_equal(out$class[1], "Insecta")          # backfilled
+  expect_equal(out$superfamily[1], "Apoidea")    # backfilled
+  expect_equal(out$epifamily[1], "Anthophila")   # backfilled
+  expect_equal(out$order[1], "Hymenoptera")      # specimen's own value kept
+  expect_true(is.na(out$genus[1]))               # genus stays blank -- it's a tribe-only ID
+})
+
 # mask_out_of_park_flowers(): specimen rows whose flower isn't in the park (flower_in_park == FALSE)
 # get flower_visited -> "flower - angiosperm" with plant identity cleared; raw label preserved.
 test_that("mask_out_of_park_flowers hides not-in-park plants as 'flower - angiosperm'", {
