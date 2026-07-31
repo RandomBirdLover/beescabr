@@ -39,10 +39,10 @@ if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # s
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-# METHOD is the whole subject here, so it owns colour: its own palette (purple net / vermillion photo),
+# METHOD is the whole subject here, so it owns colour: its own palette (red net / blue photo),
 # kept off the transect hues -- the same two method colours used wherever method is shown by fill.
-COL_LETHAL    <- unname(BEE_METHOD_COL["lethal"])     # purple     = lethal / specimen (net)
-COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # vermillion = non-lethal / iNat (photo)
+COL_LETHAL    <- unname(BEE_METHOD_COL["lethal"])     # red  = lethal / specimen (net)
+COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # blue = non-lethal / iNat (photo)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- 1. taxa sets per method ------------------------------------------------

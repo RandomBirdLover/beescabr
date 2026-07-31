@@ -14,7 +14,7 @@
 #   * EVIDENCE / ID-confidence -- a LAVENDER->plum ordinal ramp (voucher dark -> needs-ID faint), so
 #     "less certain" literally looks fainter. Lavender from superbloom1/2, off every transect hue.
 #   * SCOPE / SET / ID-status -- single-figure accents from one small set: ink = focus/primary,
-#     stone = background/shared, ochre = the third/other category. No hue borrowed from above.
+#     mist = background/shared, teal = the third/other category. Cool neutrals (no warm/brown cast).
 #   * MAGNITUDE (richness / counts) -- one crimson sequential ramp (pale -> deep wine).
 #   * TEXT always wears ink tokens, never a series colour. Nothing uses purple.
 # Base-R helpers need no packages; the ggplot theme needs ggplot2 (lazy).
@@ -46,20 +46,21 @@ BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research
                         needs_id = "iNat needs-ID")
 
 # ---- SCOPE: focus vs background --------------------------------------------
-BEE_SCOPE <- c(`survey-only` = "#3C3B36", `all records` = "#C0BBB0")   # ink = focus, stone = background
+# cool charcoal + cool mist-grey (de-muddied -- the old warm greige #3C3B36/#C0BBB0 read brown).
+BEE_SCOPE <- c(`survey-only` = "#343A3F", `all records` = "#C6CCCF")   # ink = focus, mist = background
 
 # ---- LOCATION / SET OVERLAP: A-only / shared / B-only (on vs off-transect) ----
-# ink = focal set (on-transect), stone = shared core (background), sienna = the other set (off-transect).
-# sienna (was ochre #B0632B) -- a deeper earth kept CVD-clear of every warm series colour
-# (transect-orange, method-red) and clearing 3:1 contrast on white. The old ochre collided badly under
-# CVD (dE 3.1) with the then-poppy method colour, so it was moved off that hue. The method-overlap venn
+# ink = focal set (on-transect), mist = shared core (background), teal = the other set (off-transect).
+# teal (was sienna #8A5A2B, before that ochre) -- a clean cool accent that pops against the cool greys
+# without the brown/muddy cast. CVD-clear of every series colour (closest is transect-rose at dE 11.6);
+# transect/method no longer use teal (method is red/blue), so this lane is free. The method-overlap venn
 # uses BEE_METHOD_COL, NOT this -- method has its own colours.
-BEE_SET <- c(a_only = "#3C3B36", shared = "#C0BBB0", b_only = "#8A5A2B")
+BEE_SET <- c(a_only = "#343A3F", shared = "#C6CCCF", b_only = "#0E8F82")
 
 # ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# ink = resolved to species (done), sienna = specimen-keyable (ACT here), stone = photo/genus-only (stuck).
-# 2-cat panels reuse resolved(ink) vs stuck(stone). sienna shares BEE_SET's accent (same de-conflict).
-BEE_IDSTATUS <- c(resolved = "#3C3B36", keyable = "#8A5A2B", stuck = "#C0BBB0")
+# ink = resolved to species (done), teal = specimen-keyable (ACT here), mist = photo/genus-only (stuck).
+# 2-cat panels reuse resolved(ink) vs stuck(mist). teal shares BEE_SET's accent (same cool palette).
+BEE_IDSTATUS <- c(resolved = "#343A3F", keyable = "#0E8F82", stuck = "#C6CCCF")
 
 # ---- ink + chrome tokens (text never wears a series colour) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
