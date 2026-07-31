@@ -122,6 +122,27 @@ test_that("match_specimen_complex prefixes and gates on species", {
   expect_true(is.na(out$complex[2]))        # genus-only -> no complex
 })
 
+test_that("match_specimen_complex preserves a hand-typed complex when there is no species-level map hit", {
+  src("specimens/specimen_clean_helpers.R")
+  # A complex-only ID (blank species) carries the collector's hand-entered complex -- it must
+  # SURVIVE (tagged "(Complex) "), not be wiped to NA. The old else-branch forced NA on every
+  # row without a species+map hit, silently discarding a determination the collector made
+  # (e.g. 'Colletes simulans', a complex not in the lookup).
+  df <- tibble::tibble(
+    genus            = c("Colletes", "Lasioglossum", "Diadasia", "Colletes"),
+    species          = c(NA_character_, NA_character_, "australis", NA_character_),
+    complex          = c("Colletes simulans", "(Complex) Lasioglossum gemmatum", NA_character_, NA_character_),
+    complex_taxon_id = NA)
+  lk <- tibble::tibble(genus = "diadasia", species = "australis",
+                       complex_match = "Diadasia australis", complex_taxon_id_match = 42L)
+  out <- match_specimen_complex(df, lk)
+  expect_equal(out$complex[1], "(Complex) Colletes simulans")      # bare hand-typed -> tagged + kept
+  expect_equal(out$complex[2], "(Complex) Lasioglossum gemmatum")  # already tagged -> unchanged (idempotent)
+  expect_equal(out$complex[3], "(Complex) Diadasia australis")     # species map hit still wins
+  expect_equal(out$complex_taxon_id[3], 42L)
+  expect_true(is.na(out$complex[4]))                               # genus-only, no complex typed -> stays NA
+})
+
 test_that("build_old_scientific_name handles the three blank cases", {
   src("specimens/specimen_clean_helpers.R")
   df <- tibble::tibble(old_genus_name = c(NA, "Andrena", "Andrena"),
@@ -242,6 +263,131 @@ test_that("attach_lookup_taxonomy fills taxon_id + higher ranks, keeps specimen 
   # truly-blank specimen (no genus, no family, nothing) must NOT grab a spurious id
   expect_true(is.na(out$taxon_id[3]))
   expect_true(is.na(out$scientific_name[3]))
+})
+
+# fill_coarse_ids(): a specimen ID'd only to a COARSE below-genus rank (genus,
+# subgenus, or a named species-complex, with a BLANK species) must resolve to the
+# lookup NODE AT THAT RANK -- never collapse onto an arbitrary child complex. This is
+# the coarse-ID fabrication bug: a blank-species ID joined on (genus, species) alone
+# matched every same-genus blank-species lookup row and grabbed the first (a complex).
+
+test_that("fill_coarse_ids resolves genus/subgenus to their own node, not a child complex", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(
+    genus      = c("Colletes", "Lasioglossum", "Andrena"),
+    subgenus   = c(NA_character_, "Dialictus", NA_character_),
+    complex    = NA_character_,
+    species    = NA_character_, subspecies = NA_character_,
+    taxon_id   = NA_integer_, taxon_rank = NA_character_,
+    scientific_name = NA_character_, common_name = NA_character_)
+  # complex/other children listed BEFORE the genus/subgenus node -- the file-order that
+  # made distinct() pick the wrong row.
+  lk <- tibble::tibble(
+    rank     = c("complex", "genus", "complex", "subgenus", "complex", "genus"),
+    genus    = c("Colletes", "Colletes", "Lasioglossum", "Lasioglossum", "Andrena", "Andrena"),
+    subgenus = c(NA_character_, NA_character_, "Dialictus", "Dialictus", "Melandrena", NA_character_),
+    complex  = c("(Complex) Colletes americanus", NA_character_,
+                 "(Complex) Lasioglossum gemmatum", NA_character_,
+                 "(Complex) Andrena osmioides", NA_character_),
+    species = NA_character_, subspecies = NA_character_,
+    taxon_id = c(1438678L, 127741L, 1450287L, 126545L, 1258784L, 57669L),
+    scientific_name = c("Colletes americanus", "Colletes", "Lasioglossum gemmatum",
+                        "Dialictus", "Andrena osmioides", "Andrena"),
+    common_name = NA_character_)
+  out <- fill_coarse_ids(df, lk)
+  expect_equal(out$taxon_id[1], 127741L)   # Colletes genus-only -> genus, NOT americanus complex
+  expect_equal(out$taxon_rank[1], "genus")
+  expect_equal(out$scientific_name[1], "Colletes")
+  expect_equal(out$taxon_id[2], 126545L)   # Dialictus subgenus-only -> subgenus, NOT gemmatum complex
+  expect_equal(out$taxon_rank[2], "subgenus")
+  expect_equal(out$taxon_id[3], 57669L)    # Andrena genus-only -> genus, NOT osmioides complex
+  expect_equal(out$taxon_rank[3], "genus")
+})
+
+test_that("fill_coarse_ids matches a named complex when it IS in the lookup", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(genus = "Lasioglossum", subgenus = "Dialictus",
+                       complex = "Lasioglossum gemmatum", species = NA_character_, subspecies = NA_character_,
+                       taxon_id = NA_integer_, taxon_rank = NA_character_,
+                       scientific_name = NA_character_, common_name = NA_character_)
+  lk <- tibble::tibble(rank = c("complex", "subgenus"),
+                       genus = "Lasioglossum", subgenus = "Dialictus",
+                       complex = c("(Complex) Lasioglossum gemmatum", NA_character_),
+                       species = NA_character_, subspecies = NA_character_,
+                       taxon_id = c(1450287L, 126545L),
+                       scientific_name = c("Lasioglossum gemmatum", "Dialictus"), common_name = NA_character_)
+  out <- fill_coarse_ids(df, lk)
+  expect_equal(out$taxon_id[1], 1450287L)   # exact complex wins over its subgenus parent
+  expect_equal(out$taxon_rank[1], "complex")
+})
+
+test_that("fill_coarse_ids rolls an unrecognised complex back to its parent (never a sibling)", {
+  src("specimens/specimen_clean_helpers.R")
+  # 'Colletes simulans' complex is NOT in the lookup; must roll back to the Colletes
+  # genus node -- NOT be fabricated onto the americanus complex that happens to share genus.
+  df <- tibble::tibble(genus = "Colletes", subgenus = NA_character_,
+                       complex = "Colletes simulans", species = NA_character_, subspecies = NA_character_,
+                       taxon_id = NA_integer_, taxon_rank = NA_character_,
+                       scientific_name = NA_character_, common_name = NA_character_)
+  lk <- tibble::tibble(rank = c("complex", "genus"),
+                       genus = "Colletes", subgenus = NA_character_,
+                       complex = c("(Complex) Colletes americanus", NA_character_),
+                       species = NA_character_, subspecies = NA_character_,
+                       taxon_id = c(1438678L, 127741L),
+                       scientific_name = c("Colletes americanus", "Colletes"), common_name = NA_character_)
+  out <- fill_coarse_ids(df, lk)
+  expect_equal(out$taxon_id[1], 127741L)    # rolled back to genus parent
+  expect_equal(out$taxon_rank[1], "genus")
+})
+
+test_that("fill_coarse_ids leaves species-level and blank-genus rows untouched", {
+  src("specimens/specimen_clean_helpers.R")
+  df <- tibble::tibble(genus = c("Melissodes", NA_character_), subgenus = c("Eumelissodes", NA_character_),
+                       complex = NA_character_, species = c("moorei", NA_character_), subspecies = NA_character_,
+                       taxon_id = NA_integer_, taxon_rank = NA_character_,
+                       scientific_name = NA_character_, common_name = NA_character_)
+  lk <- tibble::tibble(rank = "genus", genus = "Melissodes", subgenus = NA_character_, complex = NA_character_,
+                       species = NA_character_, subspecies = NA_character_, taxon_id = 52781L,
+                       scientific_name = "Melissodes", common_name = NA_character_)
+  out <- fill_coarse_ids(df, lk)
+  expect_true(is.na(out$taxon_id[1]))   # has a species -> NOT coarse; must NOT be demoted to genus
+  expect_true(is.na(out$taxon_id[2]))   # blank genus -> left for fill_above_genus_ids
+})
+
+test_that("attach_lookup_taxonomy does NOT fabricate a complex for a coarse (genus/subgenus-only) ID", {
+  src("specimens/specimen_clean_helpers.R")
+  # end-to-end repro: complex rows precede the genus/subgenus node in the lookup (real file order)
+  df <- tibble::tibble(
+    genus      = c("Colletes", "Lasioglossum", "Melissodes"),
+    subgenus   = c(NA_character_, "Dialictus", "Eumelissodes"),
+    complex    = NA_character_,
+    species    = c(NA_character_, NA_character_, "moorei"),
+    subspecies = NA_character_,
+    family = NA_character_, subfamily = NA_character_, tribe = NA_character_)
+  lk <- tibble::tibble(
+    taxon_id = c(1438678L, 127741L, 1450287L, 126545L, 346685L),
+    rank     = c("complex", "genus", "complex", "subgenus", "species"),
+    scientific_name = c("Colletes americanus", "Colletes", "Lasioglossum gemmatum",
+                        "Dialictus", "Melissodes moorei"),
+    common_name = NA_character_,
+    kingdom = "Animalia", phylum = "Arthropoda", subphylum = "Hexapoda", class = "Insecta",
+    subclass = "Pterygota", order = "Hymenoptera", suborder = "Apocrita", infraorder = "Aculeata",
+    superfamily = "Apoidea",
+    family = c("Colletidae", "Colletidae", "Halictidae", "Halictidae", "Apidae"),
+    epifamily = "Anthophila", subfamily = NA_character_, tribe = NA_character_, subtribe = NA_character_,
+    genus = c("Colletes", "Colletes", "Lasioglossum", "Lasioglossum", "Melissodes"),
+    subgenus = c(NA_character_, NA_character_, "Dialictus", "Dialictus", "Eumelissodes"),
+    complex = c("(Complex) Colletes americanus", NA_character_, "(Complex) Lasioglossum gemmatum",
+                NA_character_, NA_character_),
+    species = c(NA_character_, NA_character_, NA_character_, NA_character_, "moorei"),
+    subspecies = NA_character_)
+  out <- attach_lookup_taxonomy(df, lk)
+  expect_equal(out$taxon_id[1], 127741L)    # Colletes genus-only -> genus, never americanus complex
+  expect_equal(out$taxon_rank[1], "genus")
+  expect_equal(out$taxon_id[2], 126545L)    # Dialictus subgenus-only -> subgenus, never gemmatum complex
+  expect_equal(out$taxon_rank[2], "subgenus")
+  expect_equal(out$taxon_id[3], 346685L)    # species-level moorei still resolves exactly (regression guard)
+  expect_equal(out$taxon_rank[3], "species")
 })
 
 # keep_bee_specimens(): the specimen record carries wasp/fly bycatch and fully-
