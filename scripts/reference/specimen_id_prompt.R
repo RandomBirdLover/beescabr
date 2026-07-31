@@ -59,12 +59,52 @@ suggest_taxon <- function(cands, term, want_rank = "species") {
   list(action = "reask", id = NA_integer_)
 }
 
+# flag_specimen_ids(): PURE. Map each flagged taxon (rows of the taxonomy-flags table) to the
+# ucsd_id / sdnhm_id of the specimens carrying it, keyed by the taxon's FINEST-rank name
+# (lowercased) -- the same key the resolver searches each addition under. Lets the prompt show
+# "which specimens is this?" so the reviewer can pull them up in the records to confirm the
+# taxon_id. Blank / 0 ids are dropped. Returns a named character vector (name = taxon key).
+flag_specimen_ids <- function(flags) {
+  empty <- stats::setNames(character(0), character(0))
+  if (is.null(flags) || !nrow(flags)) return(empty)
+  gcol <- function(col) if (col %in% names(flags)) as.character(flags[[col]]) else rep(NA_character_, nrow(flags))
+  b2 <- function(x) { x <- trimws(as.character(x)); x[is.na(x)] <- ""; x }
+  strip_cx <- function(x) trimws(sub("^\\s*\\([^)]*\\)\\s*", "", b2(x)))
+  g  <- b2(gcol("genus")); sg <- b2(gcol("subgenus")); cx <- strip_cx(gcol("complex"))
+  sp <- b2(gcol("species")); ss <- b2(gcol("subspecies"))
+  ucsd <- b2(gcol("ucsd_id")); sdnhm <- b2(gcol("sdnhm_id"))
+  # finest ID rank + its name -- key on BOTH so a complex and a species of the SAME name
+  # (e.g. the "Colletes simulans" complex vs the species) never share a bucket.
+  rk  <- ifelse(sp != "" & ss != "", "subspecies",
+         ifelse(sp != "",            "species",
+         ifelse(cx != "",            "complex",
+         ifelse(sg != "",            "subgenus", "genus"))))
+  sci <- ifelse(sp != "" & ss != "", paste(g, sp, ss),
+         ifelse(sp != "",            paste(g, sp),
+         ifelse(cx != "",            cx,
+         ifelse(sg != "",            sg, g))))
+  key <- ifelse(trimws(sci) != "", paste(rk, tolower(trimws(sci)), sep = "|"), "")
+  ks  <- unique(key[key != ""])
+  if (!length(ks)) return(empty)
+  vals <- vapply(ks, function(k) {
+    rows   <- which(key == k)
+    keepid <- function(v) { v <- unique(v[rows]); v[v != "" & v != "0"] }
+    u <- keepid(ucsd); s <- keepid(sdnhm)
+    parts <- c(if (length(u)) paste0("ucsd_id ", paste(u, collapse = ", ")),
+               if (length(s)) paste0("sdnhm_id ", paste(s, collapse = ", ")))
+    paste(parts, collapse = " | ")
+  }, character(1))
+  stats::setNames(vals, ks)
+}
+
 # resolve_specimen_additions_interactive(): fill blank taxon_ids in the additions
 # data.frame by asking the user one taxon at a time, each with an iNat suggestion.
 # Returns list(additions = <updated df>, stopped = <TRUE if user chose stop>).
-# Non-interactive (batch) -> unchanged, never blocks automation.
+# Non-interactive (batch) -> unchanged, never blocks automation. id_map (from
+# flag_specimen_ids) is optional: when present, each prompt also shows the specimen
+# ucsd_id/sdnhm_id behind that taxon so the reviewer can look them up in the records.
 resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prompt_fn = readline,
-                                                   interactive_ok = TRUE, verbose = TRUE) {
+                                                   interactive_ok = TRUE, verbose = TRUE, id_map = NULL) {
   if (!interactive_ok || is.null(add_df) || !nrow(add_df) || !"taxon_id" %in% names(add_df))
     return(list(additions = add_df, stopped = FALSE))
   if (is.null(fetch_fn)) fetch_fn <- function(nm) inat_fetch_taxa_by_name(nm)
@@ -81,6 +121,10 @@ resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prom
     cands <- tryCatch(fetch_fn(term), error = function(e) list())
     sug   <- suggest_taxon(cands, term, rank)
     sug_id <- if (is.null(sug)) NA_integer_ else sug$id
+    .k <- paste(tolower(trimws(rank)), tolower(trimws(term)), sep = "|")   # rank+name: keep complex vs species apart
+    ids_hint <- if (!is.null(id_map) && .k %in% names(id_map)) id_map[[.k]] else NULL
+    if (!is.null(ids_hint) && nzchar(ids_hint))
+      message(sprintf("      specimens: %s  (look these up in your records)", ids_hint))
     repeat {
       msg <- if (is.null(sug))
         sprintf("    %s -- no iNat match. Paste a taxon_id, or  s  skip /  x  stop: ", term)
@@ -202,7 +246,8 @@ resolve_specimen_taxa <- function(record_df,
   rd <- function(p) if (!is.null(p) && file.exists(p))
     tryCatch(suppressWarnings(utils::read.csv(p, stringsAsFactors = FALSE, check.names = FALSE)), error = function(e) NULL) else NULL
   additions <- rd(additions_path); if (is.null(additions)) additions <- .sa_empty()
-  new_rows  <- seed_additions_from_flags(rd(flags_path), record_df, additions)
+  .flags    <- rd(flags_path)
+  new_rows  <- seed_additions_from_flags(.flags, record_df, additions)
   # read.csv infers the TRUE/FALSE columns as <logical> while the seeded rows are <character>;
   # coerce both sides to character so bind_rows never hits a type clash.
   .chr <- function(d) { if (ncol(d)) d[] <- lapply(d, as.character); d }
@@ -214,7 +259,8 @@ resolve_specimen_taxa <- function(record_df,
     return(invisible(combined))
   }
   if (is.null(fetch_fn)) fetch_fn <- function(nm) inat_fetch_taxa_by_name(nm)
-  res <- resolve_specimen_additions_interactive(combined, fetch_fn, prompt_fn, interactive_ok = TRUE, verbose = verbose)
+  res <- resolve_specimen_additions_interactive(combined, fetch_fn, prompt_fn, interactive_ok = TRUE,
+                                                verbose = verbose, id_map = flag_specimen_ids(.flags))
   if (write) {
     dir.create(dirname(additions_path), recursive = TRUE, showWarnings = FALSE)
     utils::write.csv(res$additions, additions_path, row.names = FALSE, na = "")

@@ -268,13 +268,13 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
 
   # --- ONE review checkpoint: surface every review-folder issue so none is silently missed ---
   review_items <- data.frame(
-    label = c("taxonomy name flags", "duplicate IDs", "missing lat/long", "missing specimens"),
+    label = c("unknown names (typo or new taxon)", "duplicate IDs", "missing lat/long", "missing specimens"),
     count = c(n_taxonomy, nrow(dupe_rows), nrow(loc_missing), nrow(miss_rows)),
     file  = basename(c(flags_out, dupes_out, locmiss_out, missing_out)),
     stringsAsFactors = FALSE)
   if (resolve_review_gate(review_items, review_dir, interactive_ok, prompt_fn,
                           fix_hint = "the raw .xlsx (find each row by ucsd_id / sdnhm_id)") == "stop")
-    stop("Stopping so you can fix the flagged rows in the raw .xlsx, then re-run. Review files: ", review_dir)
+    stop("Stopping so you can review/fix the flagged rows in the raw .xlsx, then re-run. Review files: ", review_dir)
 
   clean <- df |> strip_control_chars() |> select(any_of(SBC_COLUMN_ORDER))
   dir.create(dirname(clean_out), recursive = TRUE, showWarnings = FALSE)

@@ -142,6 +142,39 @@ test_that("seed_additions_from_flags strips a '(Complex) ' tag from a flagged co
   expect_equal(out$complex, "Lasioglossum gemmatum")
 })
 
+test_that("flag_specimen_ids keys by RANK+name so a complex and species of the same name never clump", {
+  .impl()
+  flags <- data.frame(
+    ucsd_id  = c("186",               "221",               "500",      "673"),
+    sdnhm_id = c("0",                 "45",                "0",        "0"),
+    genus    = c("Colletes",          "Colletes",          "Colletes", "Melissodes"),
+    subgenus = "",
+    complex  = c("Colletes simulans", "Colletes simulans", "",         ""),          # rows 1-2: COMPLEX simulans
+    species  = c("",                  "",                  "simulans", "moorei"),     # row 3: SPECIES simulans (same name!)
+    subspecies = "", stringsAsFactors = FALSE)
+  m <- flag_specimen_ids(flags)
+  expect_true("complex|colletes simulans" %in% names(m))       # complex and species get DIFFERENT keys
+  expect_true("species|colletes simulans" %in% names(m))
+  expect_match(m[["complex|colletes simulans"]], "ucsd_id 186, 221")   # only the two complex specimens
+  expect_false(grepl("500", m[["complex|colletes simulans"]]))         # the species specimen is NOT clumped in
+  expect_match(m[["complex|colletes simulans"]], "sdnhm_id 45")        # 0/blank sdnhm dropped
+  expect_match(m[["species|colletes simulans"]], "ucsd_id 500")        # species specimen stands alone
+  expect_false(grepl("186|221", m[["species|colletes simulans"]]))     # complex specimens NOT clumped in
+  expect_match(m[["species|melissodes moorei"]], "ucsd_id 673")
+})
+
+test_that("resolve_specimen_additions_interactive shows only the matching rank's specimen ids", {
+  .impl()
+  add <- data.frame(rank = "complex", scientific_name = "Colletes simulans",
+                    taxon_id = NA_integer_, genus = "Colletes", species = "", stringsAsFactors = FALSE)
+  fetch <- fake_fetch(list(list(id = 1438677, name = "Colletes simulans", rank = "complex")))
+  idmap <- stats::setNames(c("ucsd_id 186, 221", "ucsd_id 500"),
+                           c("complex|colletes simulans", "species|colletes simulans"))
+  expect_message(   # the complex prompt shows the complex specimens (186, 221), not the species one (500)
+    resolve_specimen_additions_interactive(add, fetch, queue_prompt(c("")), interactive_ok = TRUE, id_map = idmap),
+    "186, 221")
+})
+
 test_that("resolve_specimen_taxa (driver) seeds a flag + fills ids with NO type clash", {
   .impl()
   addf <- tempfile(fileext = ".csv")

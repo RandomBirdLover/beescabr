@@ -197,10 +197,10 @@ compute_taxonomy_flags <- function(df, known_genera, known_genus_species,
 
 # ------------------------------------------------------------------------------
 # STANDARD review-gate input. ONE convention for every STOP / CONTINUE decision in
-# the pipeline: y = pause & fix now; Enter (the default) or n = continue. A few
+# the pipeline: y = pause & review now; Enter (the default) or n = continue. A few
 # synonyms are accepted; only genuine garbage RE-ASKS -- a bare Enter continues, so
 # a stray keystroke can't silently halt the run.
-#   stop (pause & fix):  y | yes | stop | fix | halt | x
+#   stop (pause & review):  y | yes | stop | fix | halt | x
 #   continue (default):  <Enter> | n | no | skip | continue | c | go | ok
 # Heads-up prompts that have NO decision just say "[Enter] to continue".
 # ------------------------------------------------------------------------------
@@ -208,10 +208,10 @@ REVIEW_STOP_WORDS     <- c("y", "yes", "stop", "fix", "halt", "x")              
 REVIEW_CONTINUE_WORDS <- c("", "n", "no", "skip", "continue", "c", "go", "ok")   # keep going ("" = Enter default)
 .review_ask <- function(prompt_fn, lead) {
   repeat {
-    ans <- tolower(trimws(prompt_fn(paste0(lead, "  Stop to fix first?  [y/N]: "))))
+    ans <- tolower(trimws(prompt_fn(paste0(lead, "  Pause to review now?  [y/N]: "))))
     if (ans %in% REVIEW_STOP_WORDS)     return("stop")       # check stop first
     if (ans %in% REVIEW_CONTINUE_WORDS) return("continue")   # "" (Enter) lands here -> default continue
-    message("     (y = stop & fix · Enter = continue)")
+    message("     (y = pause & review · Enter = continue)")
   }
 }
 
@@ -222,7 +222,7 @@ REVIEW_CONTINUE_WORDS <- c("", "n", "no", "skip", "continue", "c", "go", "ok")  
 resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
   if (n_flags == 0) return("clean")
   if (!interactive_ok) return("continue")
-  .review_ask(prompt_fn, "  Spell-check flags above may need fixing in the raw .xlsx.")
+  .review_ask(prompt_fn, "  Names above aren't in your taxonomy list yet (a typo to fix, or a new taxon to add).")
 }
 
 # ONE consolidated review checkpoint so nothing in the review folder gets silently
@@ -237,13 +237,15 @@ resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = r
   if (!nrow(items)) return("clean")
   message("\n  ⚠ REVIEW NEEDED -- ", review_dir)
   for (i in seq_len(nrow(items)))
-    message(sprintf("     %-24s %4d  -> %s", items$label[i], items$count[i], items$file[i]))
+    message(sprintf("     %-34s %4d  -> %s", items$label[i], items$count[i], items$file[i]))
   if (!interactive_ok) { message("     (batch mode: logged above, continuing)"); return("continue") }
   if (!blocking) {   # heads-up only -- the run never stops here; the fix happens elsewhere, later
-    prompt_fn(sprintf("  Fix these in %s when you can (each row has its url).  [Enter] to continue: ", fix_hint))
+    prompt_fn(sprintf("  Review these in %s when you can (each row has its url).  [Enter] to continue: ", fix_hint))
     return("continue")
   }
-  .review_ask(prompt_fn, sprintf("  These need fixing in %s.", fix_hint))
+  # "Review", not "fix": some flags are genuine mistakes to correct, others are just new taxa
+  # (a real name not in the lookup yet) that need no raw-data change -- they get added on rebuild.
+  .review_ask(prompt_fn, sprintf("  Review these in %s.", fix_hint))
 }
 
 # QC flags: which required-data fields are missing. genus is the one rank expected
