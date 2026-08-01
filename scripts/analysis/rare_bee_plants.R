@@ -32,8 +32,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR <- "data/analysis/conservation"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 RARE_CUT      <- 15                              # a bee is "rare" if we have < this many records
 SPECIES_RANKS <- c("species", "subspecies")

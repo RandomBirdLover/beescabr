@@ -49,8 +49,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
 # consistent scope caption stamped on every figure
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 # ---- 1. SURVEY-ONLY bee records (both methods), with keys + grouping ----------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)

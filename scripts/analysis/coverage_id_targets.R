@@ -30,8 +30,7 @@ if (!exists("BEE_IDSTATUS")) source("scripts/analysis/theme_beescabr.R")   # sha
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 ## NOTE (#7 -- method scope is intentional; do NOT "fix" it down to one method):
 ## This POOLS lethal (specimen) + non-lethal (photo) records on purpose -- question #7 asks what

@@ -33,8 +33,7 @@ OUT_DIR       <- "data/analysis/phenology"
 WINDOW_MONTHS <- 3:9
 MONTH_ABB     <- month.abb
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 # ---- 1. read the per-survey log ---------------------------------------------
 psf_path <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else

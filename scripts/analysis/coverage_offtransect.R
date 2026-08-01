@@ -33,8 +33,7 @@ SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 # ---- 1. pool records, flag on/off-transect + taxonomy keys ------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -97,8 +96,9 @@ g <- ggplot(plot_df, aes(x = n, y = rank, fill = region)) +
                                "off-transect only" = unname(BEE_SET["b_only"])), name = NULL) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.10))) +
   labs(title = "On-transect vs off-transect bee coverage",
-       #subtitle = str_wrap(scope_cap("all records; on = is_survey TRUE, off = casual iNaturalist",
-       #                     "lethal + non-lethal (off-transect non-lethal only)", "species & genus"), 82),
+       caption = scope_cap(scope = "all records (on = is_survey TRUE; off = casual iNaturalist)",
+                           method = "lethal + non-lethal (off-transect is non-lethal only)",
+                           rank = "species & genus", n = nrow(rec)),  # descriptive -- no test, so no p-value
        x = "distinct taxa", y = NULL) +
   theme_beescabr(11) +
   theme(panel.grid.major.y = element_blank(),
