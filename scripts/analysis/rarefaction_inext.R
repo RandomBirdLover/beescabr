@@ -44,7 +44,7 @@ NBOOT         <- 50             # bootstrap reps for CIs (raise to 100+ for fina
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-scope_cap <- function() "Scope: survey records only  |  Method: lethal + non-lethal pooled  |  Rank: species"
+# scope_cap() now provided by theme_beescabr.R (this local def was unused and shadowed the shared one)
 
 # ---- 1. survey-only bee records (same prep as the vegan script) --------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)

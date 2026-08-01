@@ -36,7 +36,7 @@ OUT_DIR       <- "data/analysis/bee_bounties"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(src) sprintf("Scope: ALL records  |  context from %s  |  ranks: species + genus", src)
+# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 # ---- 1. read + key both sources ---------------------------------------------
 read_prep <- function(f) {
@@ -128,11 +128,13 @@ bar <- function(df, ncol_records, title, sub, fill, file) {
 }
 bar(specimen_bounty, "n_photo_records",
     "Specimen Bee Bounty - species to COLLECT",
-    paste0("In iNaturalist photos but no specimen - net a voucher.  ", scope_cap("iNaturalist")),
+    paste0("In iNaturalist photos but no specimen - net a voucher.  ",
+           scope_cap(scope = "all records", method = "context: iNaturalist observations", rank = "species + genus")),
     unname(BEE_METHOD_COL["lethal"]), file.path(OUT_DIR, "specimen_bee_bounty.png"))   # collect = net = purple
 bar(inat_bounty, "n_specimen_records",
     "iNaturalist Bee Bounty - species to PHOTOGRAPH",
-    paste0("In specimens but not on iNaturalist - get a community photo.  ", scope_cap("specimens")),
+    paste0("In specimens but not on iNaturalist - get a community photo.  ",
+           scope_cap(scope = "all records", method = "context: specimen vouchers", rank = "species + genus")),
     unname(BEE_METHOD_COL["nonlethal"]), file.path(OUT_DIR, "inaturalist_bee_bounty.png"))   # photograph = vermillion
 
 message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} to ", OUT_DIR)

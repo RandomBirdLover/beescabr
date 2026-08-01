@@ -69,6 +69,12 @@ sp <- bind_rows(grab(spec), grab(inat)) %>%
   distinct() %>% arrange(scientific_name)
 message(sprintf("Querying IUCN Red List (v4, via rredlist) for %d bee species...", nrow(sp)))
 
+# A few species IUCN assesses under a different ACCEPTED name (synonyms). A literal
+# name-for-name query returns NE for these, so query the accepted name instead. IUCN's
+# pensylvanicus assessment explicitly covers B. sonorus, and fervidus covers B. californicus.
+IUCN_SYNONYM <- c("Bombus sonorus"      = "Bombus pensylvanicus",
+                  "Bombus californicus" = "Bombus fervidus")
+
 # ---- latest global category for one species (NE if not assessed / not found) --
 get_code <- function(g, e) {
   res <- tryCatch(rredlist::rl_species_latest(genus = g, species = e, key = KEY, parse = TRUE),
@@ -80,13 +86,16 @@ get_code <- function(g, e) {
 }
 
 rows <- lapply(seq_len(nrow(sp)), function(i) {
-  cat <- tryCatch(get_code(sp$genus[i], sp$epithet[i]),
-                  error = function(e) { message("  ! ", sp$scientific_name[i], ": ", conditionMessage(e)); NULL })
+  nm  <- sp$scientific_name[i]
+  qnm <- if (nm %in% names(IUCN_SYNONYM)) unname(IUCN_SYNONYM[nm]) else nm   # query accepted name
+  cat <- tryCatch(get_code(word(qnm, 1), word(qnm, 2)),
+                  error = function(e) { message("  ! ", nm, ": ", conditionMessage(e)); NULL })
   if (is.null(cat)) cat <- list(code = "NE", year = NA)
   if (i %% 10 == 0) message(sprintf("  ...%d/%d", i, nrow(sp)))
   Sys.sleep(0.34)                                             # ~3 req/sec, courteous to the API
-  data.frame(scientific_name = sp$scientific_name[i],
-             iucn_code = cat$code, iucn_category = name_of(cat$code),
+  note <- if (qnm != nm && cat$code != "NE") sprintf(" (as %s)", qnm) else ""
+  data.frame(scientific_name = nm,
+             iucn_code = cat$code, iucn_category = paste0(name_of(cat$code), note),
              assessment_year = as.character(cat$year %||% ""), stringsAsFactors = FALSE)
 })
 out <- do.call(rbind, rows)
@@ -98,4 +107,12 @@ thr <- out$scientific_name[out$iucn_code %in% c("CR", "EN", "VU", "NT")]
 message(sprintf("Wrote %s  (%d species; %d threatened/near-threatened)",
                 file.path(OUT_DIR, "iucn_status.csv"), nrow(out), length(thr)))
 if (length(thr)) message("  Flagged: ", paste(thr, collapse = ", "))
-message("Now re-run the field guide (or run_all_analysis.R) and it will show the IUCN column.")
+
+# rebuild the species field guide right away so the refreshed IUCN column shows up
+FIELD_GUIDE <- "scripts/analysis/bee_field_guide.R"
+if (file.exists(FIELD_GUIDE)) {
+  message("Rebuilding the field guide with the refreshed IUCN column...")
+  source(FIELD_GUIDE)
+} else {
+  message("Done. Run scripts/analysis/bee_field_guide.R to show the IUCN column.")
+}
