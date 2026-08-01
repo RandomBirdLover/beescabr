@@ -75,6 +75,11 @@ breadth_call <- function(n_gen, n_vis) {   # how many plant genera the genus is 
   sprintf("%s (%d)", tier, n_gen)
 }
 status_call <- function(n) if (n < RARE_CUT) "rare" else if (n < UNCOMMON_CUT) "uncommon" else "common"
+# genera that include an at-risk species (IUCN Red List); spelled out in the legend below the table
+CONSERV_SPP    <- c("Bombus crotchii" = "Endangered", "Bombus sonorus" = "Vulnerable",
+                    "Bombus californicus" = "Vulnerable")
+CONSERV_GENERA <- unique(word(names(CONSERV_SPP), 1))
+CONSERV_LEGEND <- "* genus includes an at-risk species (IUCN Red List) -- Bombus crotchii: Endangered (also a California Endangered Species Act candidate); Bombus sonorus and Bombus californicus: Vulnerable."
 where_call <- function(d) {
   tr <- d$transect[d$transect %in% TRANSECTS]
   if (length(tr) >= 0.5 * nrow(d) && length(tr) > 0) {           # transect genus
@@ -102,6 +107,7 @@ rows <- lapply(gen_keys, function(k) {
     n_records      = nrow(d),
     n_species      = length(unique(na.omit(d$species))),
     status         = status_call(nrow(d)),
+    conservation   = if (k %in% CONSERV_GENERA) paste(names(CONSERV_SPP)[word(names(CONSERV_SPP), 1) == k], collapse = "; ") else "",
     peak_day       = md_of(peak),
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(head(names(fl), 5), collapse = ", ") else "- (no flower records)",
@@ -122,10 +128,11 @@ esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$status == "rare"
   tag <- if (r$n_species == 0) '<span class="cn">not yet ID&#39;d to species</span>' else ""
-  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s</td><td class="num">%d</td><td class="num">%d</td>',
+  cs  <- if (r$conservation != "") sprintf('<sup class="cs" title="includes at-risk: %s">*</sup>', esc(r$conservation)) else ""
+  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td><td class="num">%d</td><td class="num">%d</td>',
                  '<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td>',
                  '<td class="loc">%s</td><td><span class="pill st-%s">%s</span></td></tr>'),
-          if (low) "low" else "", esc(r$genus), tag, r$n_records, r$n_species,
+          if (low) "low" else "", esc(r$genus), cs, tag, r$n_records, r$n_species,
           esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
           esc(r$flower_breadth), esc(r$top_plant), esc(r$where_to_find), r$status, r$status)
 }, character(1))
@@ -134,6 +141,8 @@ html <- paste0(
 '<style>',
 'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb}',
 'h1{font-size:20px;margin:0 0 2px}p.sub{color:#6b6a66;margin:0 0 16px;font-size:13px;max-width:1100px}',
+'p.note{color:#6b6a66;margin:12px 0 0;font-size:12px;max-width:1100px}',
+'sup.cs{color:#8a1c1c;font-weight:700;margin-left:1px}',
 'table{border-collapse:collapse;width:100%;font-size:13px}',
 'th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}',
 'th{position:sticky;top:0;background:#f3f1ec;cursor:pointer;font-weight:600;white-space:nowrap;border-bottom:2px solid #ddd}',
@@ -152,6 +161,7 @@ html <- paste0(
 '<table id="t"><thead><tr>',
 '<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Peak day</th><th>Active months</th><th>Top flowers</th><th>Flower breadth</th><th>Top plant</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
+'<p class="note">', esc(CONSERV_LEGEND), '</p>',
 '<script>',
 'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
 'var t=h.closest("table"),b=t.tBodies[0],rows=[].slice.call(b.rows);',
@@ -165,7 +175,8 @@ writeLines(html, file.path(OUT_DIR, "bee_field_guide_genus.html"))
 
 # ---- 4. PNG table image (gridExtra) -----------------------------------------
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
-  disp <- tbl %>% transmute(Genus = genus, N = n_records, `Species ID'd` = n_species,
+  disp <- tbl %>% transmute(Genus = ifelse(conservation != "", paste0(genus, " *"), genus),
+                            N = n_records, `Species ID'd` = n_species,
                             `Peak day` = peak_day, `Active months` = active_months,
                             `Top flowers` = top_flowers, `Flower breadth` = flower_breadth,
                             `Top plant` = top_plant,
@@ -174,9 +185,14 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
     base_size = 7,
     core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
-  g <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
+  g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
+  cap <- grid::textGrob(paste(strwrap(CONSERV_LEGEND, width = 170), collapse = "\n"),
+                        x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
+                        gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
+  g   <- gridExtra::arrangeGrob(g, cap, ncol = 1,
+                                heights = grid::unit.c(grid::unit(1, "null"), grid::unit(2.2, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "bee_field_guide_genus.png"), g,
-                  width = 17, height = 0.26 * nrow(disp) + 1, dpi = 200, limitsize = FALSE, bg = "white")
+                  width = 17, height = 0.26 * nrow(disp) + 1.4, dpi = 200, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote bee_field_guide_genus.{csv,html,png} to ", OUT_DIR)

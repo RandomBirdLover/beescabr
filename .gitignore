@@ -74,3 +74,6 @@ _final_*
 _check_*
 _verify_*
 _scratch*
+
+# API tokens / secrets (never commit)
+data/secrets/
