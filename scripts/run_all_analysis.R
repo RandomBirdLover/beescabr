@@ -18,8 +18,21 @@ source("scripts/config.R")
 source("scripts/analysis/theme_beescabr.R")
 source("scripts/analysis/utils_analysis.R")
 source("scripts/analysis/not_on_holway.R")
+source("scripts/analysis/conservation_status.R")   # shared IUCN / conservation lookups (one source)
 
-.modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R")
+# Refresh IUCN Red List statuses FIRST, so the field guide and the rare-species figure
+# use current listings and any newly threatened species is caught. Best-effort: it needs
+# internet + an API token; if it can't reach IUCN (offline, no token, API down) it keeps
+# the last cached data/checklists/iucn/iucn_status.csv and the rest of the run proceeds.
+# (refresh_iucn_status.R lives in scripts/, not scripts/analysis/, so it is NOT in the
+# auto-discovered loop below -- sourcing it here is the single place it runs.)
+RUNNING_ALL <- TRUE
+message("\n===== refresh_iucn_status.R (IUCN Red List) =====")
+tryCatch(source("scripts/refresh_iucn_status.R"),
+         error = function(e) message("  !! IUCN refresh skipped: ", conditionMessage(e),
+                                     "\n     (using the last cached iucn_status.csv; run stays offline-safe)"))
+
+.modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R", "conservation_status.R")
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
 
 # source each in the global env; a formal-arg closure keeps `nm` safe even if a

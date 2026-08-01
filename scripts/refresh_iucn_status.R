@@ -101,18 +101,26 @@ rows <- lapply(seq_len(nrow(sp)), function(i) {
 out <- do.call(rbind, rows)
 out$source       <- "IUCN Red List API v4 (rredlist)"
 out$retrieved_on <- as.character(Sys.Date())
-write.csv(out, file.path(OUT_DIR, "iucn_status.csv"), row.names = FALSE)
 
-thr <- out$scientific_name[out$iucn_code %in% c("CR", "EN", "VU", "NT")]
-message(sprintf("Wrote %s  (%d species; %d threatened/near-threatened)",
-                file.path(OUT_DIR, "iucn_status.csv"), nrow(out), length(thr)))
-if (length(thr)) message("  Flagged: ", paste(thr, collapse = ", "))
+# Don't clobber a good cache with a failed pull: if EVERY species came back NE but the
+# existing cache held real assessments, IUCN was almost certainly unreachable -- keep it.
+CACHE_FILE   <- file.path(OUT_DIR, "iucn_status.csv")
+new_assessed <- sum(out$iucn_code != "NE")
+old_assessed <- if (file.exists(CACHE_FILE))
+  sum(toupper(read.csv(CACHE_FILE, stringsAsFactors = FALSE)$iucn_code) != "NE") else 0
+if (new_assessed == 0 && old_assessed > 0) {
+  message("IUCN refresh returned no assessments (offline or API issue?) -- keeping the existing cache.")
+} else {
+  write.csv(out, CACHE_FILE, row.names = FALSE)
+  thr <- out$scientific_name[out$iucn_code %in% c("CR", "EN", "VU", "NT")]
+  message(sprintf("Wrote %s  (%d species; %d threatened/near-threatened)", CACHE_FILE, nrow(out), length(thr)))
+  if (length(thr)) message("  Flagged: ", paste(thr, collapse = ", "))
+}
 
-# rebuild the species field guide right away so the refreshed IUCN column shows up
+# When run on its own, rebuild the species field guide so the refreshed IUCN column shows
+# up immediately. Under run_all_analysis.R (RUNNING_ALL is set) the loop rebuilds it, so skip.
 FIELD_GUIDE <- "scripts/analysis/bee_field_guide.R"
-if (file.exists(FIELD_GUIDE)) {
+if (!exists("RUNNING_ALL") && file.exists(FIELD_GUIDE)) {
   message("Rebuilding the field guide with the refreshed IUCN column...")
   source(FIELD_GUIDE)
-} else {
-  message("Done. Run scripts/analysis/bee_field_guide.R to show the IUCN column.")
 }

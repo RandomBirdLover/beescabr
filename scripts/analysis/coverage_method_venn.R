@@ -104,22 +104,7 @@ venn2 <- function(cc, title) {
   title(main = title, line = 0.2)
 }
 
-png(file.path(OUT_DIR, "coverage_method_venn.png"),
-    width = 2000, height = 1050, res = 200)
-bee_base_par()                                    # house-style fonts + muted axis/title colours
-op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 2, 0))
-venn2(cn$species, sprintf("Species (%d total)",
-      cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
-venn2(cn$genus, sprintf("Genera (%d total)",
-      cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
-mtext("Native Bees Sampling Method: Lethal vs Non-Lethal Overlap", outer = TRUE,
-      cex = 1.2, font = 2, col = BEE_INK$primary)
-par(op); dev.off()
-
-# ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------
-# Chi-square on a 2x2 contingency (method x resolution), where resolution =
-# "species-level" (species/subspecies) vs "coarser". Tests the Q2 hypothesis that
-# nets reach species more often than photos. Uses every bee record with a genus.
+# ---- chi-square (method x ID resolution): computed HERE so the venn caption can cite it -------
 res_cat <- function(df, method) {
   df <- df[!is.na(df$genus) & df$genus != "", ]
   data.frame(method = method,
@@ -129,6 +114,31 @@ rc   <- rbind(res_cat(spec, "lethal"), res_cat(inat, "nonlethal"))
 ctab <- table(method = rc$method, resolution = rc$resolution)
 chi  <- suppressWarnings(chisq.test(ctab))
 pct_species <- prop.table(ctab, 1)[, "species-level"] * 100
+
+png(file.path(OUT_DIR, "coverage_method_venn.png"),
+    width = 2000, height = 1050, res = 200)
+bee_base_par()                                    # house-style fonts + muted axis/title colours
+op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(5, 0, 2, 0))   # oma bottom for the caption
+venn2(cn$species, sprintf("Species (%d total)",
+      cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
+venn2(cn$genus, sprintf("Genera (%d total)",
+      cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
+mtext("Native Bees Sampling Method: Lethal vs Non-Lethal Overlap", outer = TRUE,
+      cex = 1.2, font = 2, col = BEE_INK$primary)
+bee_caption_base(scope = "all records (survey filter off)",
+                 method = "lethal (net) vs non-lethal (photo)", rank = "species & genus",
+                 n = nrow(spec) + nrow(inat),
+                 sig = bee_test("Pearson chi-square (method x ID resolution)",
+                                sprintf("X2=%.0f, df=%d, p<%s; species-level net %.0f%% vs photo %.0f%%",
+                                        chi$statistic, chi$parameter,
+                                        format.pval(chi$p.value, digits = 2, eps = 1e-16),
+                                        pct_species["lethal"], pct_species["nonlethal"])),
+                 cex = 0.5)
+par(op); dev.off()
+
+# ---- 3b. STATISTICAL TEST output (chi-square computed above, before the figure) --------------
+# Chi-square: taxonomic resolution (species-level vs coarser) x method -- tests whether nets reach
+# species more often than photos. The stats/CSV/txt below are written from the objects computed above.
 write.csv(data.frame(method = rownames(ctab), n_records = as.integer(rowSums(ctab)),
                      n_species_level = as.integer(ctab[, "species-level"]),
                      pct_species_level = round(pct_species, 1), row.names = NULL),

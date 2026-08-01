@@ -20,6 +20,7 @@
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 OUT_DIR       <- "data/analysis/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
@@ -70,13 +71,6 @@ diet_call <- function(n_gen, n_vis) {
   else                 sprintf("Moderate (%s)", pl)
 }
 status_call <- function(n) if (n < RARE_CUT) "rare" else if (n < UNCOMMON_CUT) "uncommon" else "common"
-# conservation concern (IUCN Red List) -- a few bumble bees; spelled out in the legend below the table
-CONSERV        <- c("Bombus crotchii" = "Endangered", "Bombus sonorus" = "Vulnerable",
-                    "Bombus californicus" = "Vulnerable")
-CESA_CANDIDATE <- c("Bombus crotchii")            # also a California Endangered Species Act candidate
-CONSERV_LEGEND <- "* IUCN Red List species of concern -- Bombus crotchii: Endangered (also a California Endangered Species Act candidate); Bombus sonorus and Bombus californicus: Vulnerable."
-conserv_of <- function(sp) { if (!sp %in% names(CONSERV)) return("")
-  s <- paste0("IUCN ", CONSERV[[sp]]); if (sp %in% CESA_CANDIDATE) s <- paste0(s, "; CA ESA candidate"); s }
 where_call <- function(d) {
   tr <- d$transect[d$transect %in% TRANSECTS]
   if (length(tr) >= 0.5 * nrow(d) && length(tr) > 0) {           # transect bee
@@ -105,7 +99,6 @@ rows <- lapply(sp_keys, function(k) {
     n_records      = nrow(d),
     confidence     = if (nrow(d) < MIN_CONF) "low (n<10)" else "ok",
     status         = status_call(nrow(d)),
-    conservation   = conserv_of(k),
     peak_day       = md_of(peak),
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(head(names(fl), 5), collapse = ", ") else "- (no flower records)",
@@ -116,22 +109,13 @@ rows <- lapply(sp_keys, function(k) {
 })
 tbl <- do.call(rbind, rows) %>% arrange(genus, bee)
 
-# ---- optional: real IUCN Red List column from the cached API pull -------------
-# populated by scripts/refresh_iucn_status.R; if absent, fall back to the hand flags above
-IUCN_CACHE <- "data/checklists/iucn/iucn_status.csv"
-HAVE_IUCN  <- file.exists(IUCN_CACHE)
-if (HAVE_IUCN) {
-  ic  <- read.csv(IUCN_CACHE, stringsAsFactors = FALSE, check.names = FALSE)
-  cc  <- setNames(toupper(str_squish(ic$iucn_code)), str_squish(ic$scientific_name))
-  cn  <- setNames(str_squish(ic$iucn_category),      str_squish(ic$scientific_name))
-  tbl$iucn      <- ifelse(tbl$bee %in% names(cc), unname(cc[tbl$bee]), "NE")
-  tbl$iucn_name <- ifelse(tbl$bee %in% names(cn), unname(cn[tbl$bee]), "Not Evaluated")
-  thr <- tbl$iucn %in% c("CR", "EN", "VU", "NT")            # threatened + near-threatened -> flagged
-  tbl$conservation <- ifelse(thr, paste0("IUCN ", tbl$iucn_name), "")
-  ces <- tbl$bee %in% CESA_CANDIDATE
-  tbl$conservation[ces] <- ifelse(nzchar(tbl$conservation[ces]),
-                                  paste0(tbl$conservation[ces], "; CA ESA candidate"), "CA ESA candidate")
-}
+# ---- IUCN Red List status from the shared conservation module (one source) ----
+# conservation_status.R reads data/checklists/iucn/iucn_status.csv (written by
+# refresh_iucn_status.R); the IUCN column shows when that cache exists.
+HAVE_IUCN        <- iucn_cache_exists()
+tbl$iucn         <- iucn_code_of(tbl$bee)
+tbl$iucn_name    <- iucn_name_of(tbl$bee)
+tbl$conservation <- conservation_label(tbl$bee)
 write.csv(tbl, file.path(OUT_DIR, "bee_field_guide.csv"), row.names = FALSE)
 message(sprintf("Field guide: %d species (%d with >= %d records)",
                 nrow(tbl), sum(tbl$confidence == "ok"), MIN_CONF))
@@ -155,8 +139,8 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 note_txt <- if (HAVE_IUCN) {
-  "IUCN = current IUCN Red List category: CR/EN/VU = threatened, NT = near threatened, LC = least concern, DD = data deficient, NE = not evaluated (most solitary bees). * marks threatened/near-threatened species; Bombus crotchii is also a California Endangered Species Act candidate. Source: IUCN Red List API v4."
-} else CONSERV_LEGEND
+  "IUCN = current IUCN Red List category: CR/EN/VU = threatened, NT = near threatened, LC = least concern, DD = data deficient, NE = not evaluated (most solitary bees). * marks threatened/near-threatened species. Source: IUCN Red List API v4."
+} else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>CABR Native Bee Field Guide</title>',
 '<style>',

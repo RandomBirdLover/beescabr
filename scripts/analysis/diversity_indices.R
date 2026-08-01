@@ -188,14 +188,14 @@ mds <- tryCatch(vegan::metaMDS(Msite, distance = "bray", autotransform = FALSE, 
                 error = function(e) NULL)
 if (!is.null(mds)) {
   sc <- as.data.frame(vegan::scores(mds, display = "sites")); sc$transect <- meta$transect
-  ptr <- with(perm, sprintf("PERMANOVA transect: R2=%.2f, p=%.3f", R2[1], `Pr(>F)`[1]))
+  ptr <- with(perm, bee_test("PERMANOVA (Bray-Curtis, transect)", sprintf("R2=%.2f, p=%.3f", R2[1], `Pr(>F)`[1])))
   g <- ggplot(sc, aes(NMDS1, NMDS2, color = transect, label = meta$site)) +
     geom_point(size = 3) + geom_text(vjust = -0.8, size = 2.6, show.legend = FALSE) +
     scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
     labs(title = "Bee community composition by transect (NMDS, Bray-Curtis)",
-         caption = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
-                           sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
-                           sprintf("  (stress %.2f)", mds$stress)),
+         caption = scope_cap(scope = sprintf("survey records only; sites = transect x year (>=%d records)", MIN_SITE_REC),
+                             method = "lethal + non-lethal pooled", rank = "species-level",
+                             n = sum(Msite), sig = paste0(ptr, sprintf(" (NMDS stress %.2f)", mds$stress))),
          x = "NMDS1", y = "NMDS2") +
     theme_beescabr(11)
   ggsave(file.path(OUT_DIR, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, dpi = 200, bg = "white")

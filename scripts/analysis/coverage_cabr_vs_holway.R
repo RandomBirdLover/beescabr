@@ -175,7 +175,7 @@ colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
 png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
     width = 1900, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colours
-op <- par(mar = c(4.5, 12, 3.5, 1))
+op <- par(mar = c(4.5, 12, 3.5, 1), oma = c(3.6, 0, 0, 0))   # oma bottom for the caption
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA,
               xlab = "Number of Records within Cabrillo National Monument",
               main = "Bee Species New to San Diego County",
@@ -185,6 +185,9 @@ legend("topright", bty = "n", inset = c(0.03, 0.05),      # up in the open area,
        legend = c("specimen (voucher - solid)",
                   "iNat research-grade (community-vetted)",
                   "iNat needs-ID (verify first)"))
+bee_caption_base(scope = "CABR checklist taxa absent from Holway's San Diego County list",
+                 method = "specimen + iNaturalist evidence", rank = "any rank (species/complex/genus)",
+                 n = nrow(summary_tbl), cex = 0.58)   # descriptive -- checklist arithmetic, no test
 par(op); dev.off()
 
 # ---- 6. console summary -----------------------------------------------------

@@ -66,7 +66,7 @@ print(top[, c("plant_genus", "whole_park", "survey_only", "lethal", "nonlethal")
 png(file.path(OUT_DIR, "interactions_top_plants.png"),
     width = 1700, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis colours
-op <- par(mar = c(5.5, 9, 3.5, 1))
+op <- par(mar = c(5.5, 9, 3.5, 1), oma = c(3.2, 0, 0, 0))   # oma bottom for the caption
 M <- rbind(nonlethal = top$nonlethal, lethal = top$lethal)   # stacked
 colnames(M) <- paste0(top$plant_genus, bee_low_n_mark(top$whole_park))   # #12: '*' on thinly-sampled plants
 M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
@@ -78,6 +78,8 @@ legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col =
        legend = c("non-lethal (photo/iNat)", "lethal (net/specimen)"))
 if (any(bee_low_n(top$whole_park)))
   mtext(BEE_LOW_N_NOTE, side = 1, line = 4.2, cex = 0.7, adj = 0, col = BEE_INK$secondary)
+bee_caption_base(scope = "all records that name a plant genus", method = "lethal (net) + non-lethal (photo)",
+                 rank = "bee-visit records per plant genus", n = nrow(rec), cex = 0.55)
 par(op); dev.off()
 
 # ---- 4. per-month breakdown of the top plants -------------------------------
@@ -99,7 +101,7 @@ rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), top_m, format(top_
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
     width = 1700, height = 1050, res = 200)
 bee_base_par()
-op <- par(mar = c(4, 12.5, 4, 1))
+op <- par(mar = c(4, 12.5, 4, 1), oma = c(3.2, 0, 0, 0))   # oma bottom for the caption
 Mplot <- Mmon[nrow(Mmon):1, , drop = FALSE]
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # magnitude = house blue ramp
@@ -108,6 +110,8 @@ axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.72)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
       side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
+bee_caption_base(scope = "all records that name a plant genus, by month", method = "lethal + non-lethal pooled",
+                 rank = "plant genus x month", n = sum(Mmon), cex = 0.55)
 par(op); dev.off()
 
 message("\nWrote interactions_top_plants.csv (+_by_month.csv) and two figures to ",

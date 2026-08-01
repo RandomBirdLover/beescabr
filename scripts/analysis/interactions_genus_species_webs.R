@@ -170,10 +170,10 @@ g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = H2prime)) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Within-genus niche partitioning: do a genus's species split up plant genera?",
-       caption = str_wrap(paste0(scope_cap("all records, species-resolved",
-                            "lethal + non-lethal pooled", "bee species x plant genus, per bee genus"),
-                            sprintf("  |  genera with >=%d species & >=%d records, significant only p<0.05 (%d shown)",
-                                    MIN_SPECIES, MIN_REC, nrow(ov))), 84),
+       caption = scope_cap(scope = sprintf("all records, species-resolved; genera >=%d species & >=%d records", MIN_SPECIES, MIN_REC),
+                           method = "lethal + non-lethal pooled", rank = "bee species x plant genus, per bee genus",
+                           n = sum(ov$n_records),
+                           sig = bee_test("H2' vs Patefield null model", sprintf("significant genera only, p<0.05 (%d of %d shown)", nrow(ov), nrow(h2_tbl)))),
        x = "within-genus H2'  (0 = species overlap on plants, 1 = each on its own)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12),

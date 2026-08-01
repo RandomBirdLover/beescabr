@@ -4,9 +4,9 @@
 #
 # THE QUESTION: which plants do the park's rare bees rely on, so management knows
 # what to protect and plant? "Rare" here is two things:
-#   (a) NAMED conservation-priority bumble bees -- Crotch's (Bombus crotchii, a
-#       California Endangered Species Act candidate) and Sonoran (Bombus sonorus,
-#       the at-risk American-bumble-bee lineage); and
+#   (a) THREATENED bees on the IUCN Red List (categories CR/EN/VU), read live from the
+#       IUCN cache (data/checklists/iucn/iucn_status.csv, written by refresh_iucn_status.R)
+#       so a newly listed species is picked up automatically; and
 #   (b) every bee species we have FEWER THAN `RARE_CUT` records of (rarely seen here).
 #
 # A "plant visit" = a bee record (specimen net OR iNaturalist photo) that carries a
@@ -16,7 +16,7 @@
 # TWO figures:
 #   A. HUBS  -- plant genera ranked by HOW MANY different rare (< RARE_CUT record) bee
 #      species use them. A plant feeding many rare bees is a conservation hub.
-#   B. NAMED -- the two flagship bees' own plant lists (per species).
+#   B. THREATENED -- each IUCN-threatened bee's own plant list (per species).
 #
 # Run from the repo root:  Rscript scripts/analysis/rare_bee_plants.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
@@ -30,17 +30,14 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 OUT_DIR <- "data/analysis/conservation"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
 
 RARE_CUT      <- 15                              # a bee is "rare" if we have < this many records
 SPECIES_RANKS <- c("species", "subspecies")
-NAMED <- data.frame(
-  species_key = c("Bombus crotchii", "Bombus sonorus"),
-  label = c("Crotch's bumble bee  (Bombus crotchii)",
-            "Sonoran bumble bee  (Bombus sonorus)"),
-  stringsAsFactors = FALSE)
 has <- function(x) !is.na(x) & x != ""
 
 # ---- 1. all bee records: species key + the plant they were on ----------------
@@ -49,6 +46,7 @@ grab <- function(df, method) data.frame(
   taxon_rank    = tolower(str_squish(df$taxon_rank)),
   genus         = str_squish(df$genus),
   epithet       = tolower(word(str_squish(df$species), -1)),
+  common_name   = str_squish(df$common_name),
   plant_genus   = str_squish(df$plant_genus),
   plant_species = str_squish(df$plant_species),
   stringsAsFactors = FALSE)
@@ -89,7 +87,25 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_genus, fill = rare_bee
   theme(legend.position = "none", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "rare_bee_plant_hubs.png"), gA, width = 9, height = 5.8, dpi = 200, bg = "white")
 
-# ---- 4. FIGURE B: the two NAMED flagship bees' plants ------------------------
+# ---- 4. FIGURE B: each IUCN-threatened bee's plants -------------------------
+# threatened set comes from the shared module (IUCN CR/EN/VU, live from the cache)
+.thr          <- flagged_species(IUCN_THREAT_CODES)
+threat_status <- setNames(.thr$iucn_category, .thr$scientific_name)
+threat_keys   <- intersect(.thr$scientific_name, unique(rec$species_key))   # only ones we recorded
+cn_of  <- rec %>% filter(species_key %in% threat_keys, has(common_name)) %>%
+  count(species_key, common_name) %>% group_by(species_key) %>%
+  slice_max(n, n = 1, with_ties = FALSE) %>% ungroup()
+cn_map <- setNames(cn_of$common_name, cn_of$species_key)
+NAMED <- data.frame(
+  species_key = threat_keys,
+  label = vapply(threat_keys, function(k) {
+    base <- if (!is.na(cn_map[k]) && nzchar(cn_map[k])) sprintf("%s  (%s)", cn_map[k], k) else k
+    sprintf("%s  --  IUCN %s", base, unname(threat_status[k]))
+  }, character(1)),
+  stringsAsFactors = FALSE)
+message(sprintf("IUCN-threatened bees with records: %d (%s)", nrow(NAMED),
+                if (nrow(NAMED)) paste(threat_keys, collapse = ", ") else "none"))
+
 named    <- rec %>% inner_join(NAMED, by = "species_key")
 tot      <- named %>% group_by(label) %>%
   summarise(n_records = n(), n_visits = sum(has(plant_genus)), .groups = "drop")
@@ -113,14 +129,15 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   scale_y_discrete(labels = function(x) sub("^.*@@", "", x)) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
-  labs(title = "Named priority bees: the plants they use",
-       caption = str_wrap(paste0(scope_cap("Bombus crotchii & B. sonorus, records with a plant recorded",
+  labs(title = "Plants used by the park's IUCN-threatened bees",
+       caption = str_wrap(paste0(scope_cap("IUCN-threatened bees (CR/EN/VU), records with a plant recorded",
                             "specimen net + iNat photo pooled", "plant genus"),
-                            "  |  Crotch's = CA Endangered Species Act candidate; Sonoran = at-risk American bumble bee. Low n: where the few sightings concentrate"), 92),
+                            "  |  Threatened set read live from the IUCN Red List cache. Low n: where the few sightings concentrate"), 92),
        x = "plant visits (records with this plant recorded)", y = NULL) +
   theme_beescabr(11) +
   theme(legend.position = "none", panel.grid.major.y = element_blank(),
         strip.text = element_text(face = "bold", hjust = 0, size = 10, lineheight = 1.05))
-ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB, width = 8.5, height = 7.5, dpi = 200, bg = "white")
+ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,
+       width = 8.5, height = 2.0 + 3.1 * length(unique(plot_df$panel)), dpi = 200, bg = "white")
 
 message("Wrote rare_bee_plant_hubs.{png,csv} + rare_named_bee_plants.{png,csv} to ", OUT_DIR)

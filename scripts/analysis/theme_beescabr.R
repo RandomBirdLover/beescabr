@@ -146,3 +146,13 @@ scale_fill_evidence   <- function(...) ggplot2::scale_fill_manual(values = BEE_E
 # ---- base-R helper: consistent par + fonts for the non-ggplot figures ------
 bee_base_par <- function(...) graphics::par(family = "sans", col.axis = BEE_INK$muted,
   col.lab = BEE_INK$secondary, col.main = BEE_INK$primary, fg = BEE_INK$axis, ...)
+
+# base-R figures draw the caption in the BOTTOM OUTER margin (ggplot uses labs(caption=)).
+# Give the device enough bottom oma first (e.g. par(oma = c(4, 0, 2, 0))). Takes the same args as
+# scope_cap(); splits its wrapped text into stacked mtext lines so long captions don't clip.
+bee_caption_base <- function(..., cex = 0.6, line0 = 0.3) {
+  lines <- strsplit(scope_cap(...), "\n", fixed = TRUE)[[1]]
+  for (i in seq_along(lines))
+    graphics::mtext(lines[i], side = 1, outer = TRUE, adj = 0,
+                    line = line0 + (i - 1) * 0.85, cex = cex, col = BEE_INK$secondary)
+}

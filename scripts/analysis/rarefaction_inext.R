@@ -88,7 +88,7 @@ add_cols <- function(p, cols) if (is.null(cols)) p else
 run_inext <- function(gl, key, title, rank, cols = NULL) {
   if (length(gl) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
   out <- iNEXT::iNEXT(gl, q = QVALS, datatype = "abundance", nboot = NBOOT)
-  sub <- sprintf("Scope: survey records only  |  Method: lethal + non-lethal pooled  |  Rank: %s", rank)
+  sub <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
   th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary),  # house ink on ggiNEXT text
                plot.caption = element_text(colour = BEE_INK$secondary))
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q

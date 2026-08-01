@@ -28,6 +28,7 @@
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 OUT_DIR       <- "data/analysis/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
@@ -75,11 +76,10 @@ breadth_call <- function(n_gen, n_vis) {   # how many plant genera the genus is 
   sprintf("%s (%d)", tier, n_gen)
 }
 status_call <- function(n) if (n < RARE_CUT) "rare" else if (n < UNCOMMON_CUT) "uncommon" else "common"
-# genera that include an at-risk species (IUCN Red List); spelled out in the legend below the table
-CONSERV_SPP    <- c("Bombus crotchii" = "Endangered", "Bombus sonorus" = "Vulnerable",
-                    "Bombus californicus" = "Vulnerable")
-CONSERV_GENERA <- unique(word(names(CONSERV_SPP), 1))
-CONSERV_LEGEND <- "* genus includes an at-risk species (IUCN Red List) -- Bombus crotchii: Endangered (also a California Endangered Species Act candidate); Bombus sonorus and Bombus californicus: Vulnerable."
+# genera that include an IUCN at-risk species come straight from the shared module (the cache)
+CONSERV_FLAGGED <- flagged_species()                                  # CR/EN/VU/NT, live from the cache
+CONSERV_GENERA  <- unique(word(CONSERV_FLAGGED$scientific_name, 1))
+CONSERV_LEGEND  <- "* genus includes an IUCN at-risk species (CR/EN/VU/NT), from the current IUCN Red List pull."
 where_call <- function(d) {
   tr <- d$transect[d$transect %in% TRANSECTS]
   if (length(tr) >= 0.5 * nrow(d) && length(tr) > 0) {           # transect genus
@@ -107,7 +107,7 @@ rows <- lapply(gen_keys, function(k) {
     n_records      = nrow(d),
     n_species      = length(unique(na.omit(d$species))),
     status         = status_call(nrow(d)),
-    conservation   = if (k %in% CONSERV_GENERA) paste(names(CONSERV_SPP)[word(names(CONSERV_SPP), 1) == k], collapse = "; ") else "",
+    conservation   = if (k %in% CONSERV_GENERA) paste(CONSERV_FLAGGED$scientific_name[word(CONSERV_FLAGGED$scientific_name, 1) == k], collapse = "; ") else "",
     peak_day       = md_of(peak),
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(head(names(fl), 5), collapse = ", ") else "- (no flower records)",
