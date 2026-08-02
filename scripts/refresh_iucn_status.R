@@ -9,7 +9,7 @@
 # so it needs internet AND a free token:
 #   1. Request a token (free) at  https://api.iucnredlist.org  -- approval can take a
 #      day or two. You agree to the Red List Terms of Use.
-#   2. Paste the token into  data/secrets/iucn_redlist.env  (on the IUCN_REDLIST_KEY= line).
+#   2. Paste the token into  data/secrets/iucn_api.env  (on the IUCN_REDLIST_KEY= line).
 #      That file is gitignored, so the token is never committed. (You can instead set the
 #      IUCN_REDLIST_KEY environment variable, or run rredlist::rl_use_iucn("your-token").)
 #   3. From the repo root:  Rscript scripts/refresh_iucn_status.R
@@ -29,7 +29,7 @@ suppressPackageStartupMessages({ library(rredlist); library(dplyr); library(stri
 if (!exists("PATHS")) source("scripts/config.R")
 
 OUT_DIR     <- "data/checklists/iucn"; dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-SECRET_FILE <- "data/secrets/iucn_redlist.env"    # gitignored -- paste your token in here
+SECRET_FILE <- "data/secrets/iucn_api.env"    # gitignored -- paste your token in here
 
 # token: environment variable first, then the gitignored secrets file
 read_secret_key <- function(path) {

@@ -96,7 +96,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
   unit <- UNIT(rank)
   tab <- rarefy_table(M); write.csv(tab, file.path(OUT_DIR, paste0(key, "_vegan.csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
-  cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
+  cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank, n = sum(M))
   cols <- if (is.null(cols)) setNames(grDevices::colorRampPalette(BEE_SEQ)(nrow(M)), rownames(M)) else cols  # ordinal groups (years) -> blue sequential
   g1 <- ggplot(cdf, aes(n, S, color = group)) +
     geom_vline(xintercept = minN, linetype = "dashed", color = "grey50") +

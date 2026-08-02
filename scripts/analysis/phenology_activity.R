@@ -39,14 +39,15 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style (ink tokens + >=10 rule)
+if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
 OUT_DIR       <- "data/analysis/phenology"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 MIN_RECORDS   <- BEE_MIN_RECORDS   # shared >=10-record rule: sparser taxa are excluded (too few to read a season)
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
-# SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient, reinforced by peak-day
-# ordering. Sourced from the theme (BEE_SEASON) so every colour lives in one place -- no raw hex here.
-SPRING_FALL   <- BEE_SEASON
+# figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
+# reinforced by peak-day ordering. Never a categorical transect, so it stays local, not a house concept.
+SPRING_FALL   <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
 MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -75,13 +76,13 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     scale_x_continuous(breaks = MONTH_STARTS, labels = month.abb,
                        limits = c(1, 366), expand = c(0.01, 0)) +
     labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
-         #subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
-                            #length(ord), min_records),
+         subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
+                            length(ord), min_records),
          caption = scope, x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
           plot.title  = element_text(face = "bold"),
-          plot.caption = element_text(color = BEE_INK$secondary, hjust = 0, size = 8))
+          plot.caption = element_text(color = BEE_INK$note, hjust = 0, size = 8, face = "bold"))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 
@@ -133,7 +134,7 @@ message(sprintf("Building phenology ridgelines:\n  Flowering plants: %d of %d re
                 nrow(plants), nrow(plants_all),
                 sum(!is_true(plants_all$is_survey)),
                 sum(is_true(plants_all$is_survey) & tolower(str_squish(plants_all$flower_flowering)) == "no")))
-phenology_ridge(data.frame(taxon = str_squish(plants$plant_genus), doy = doy_of(plants$observed_on)),
+phenology_ridge(data.frame(taxon = plant_label(str_squish(plants$plant_genus)), doy = doy_of(plants$observed_on)),
                 file.path(OUT_DIR, "phenology_plant_genus.png"), "Flowering plant genus",
                 scope = paste0("Scope: FLOWERING records only - survey plant records are in-flower by protocol\n",
                                "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."),

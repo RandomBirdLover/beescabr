@@ -31,6 +31,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
+if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 OUT_DIR <- "data/analysis/conservation"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
@@ -71,8 +72,9 @@ message(sprintf("  plant genera used by rare bees: %d (top: %s)",
                 nrow(hub), paste(sprintf("%s[%dspp]", head(hub$plant_genus, 4), head(hub$rare_bee_species, 4)), collapse = " ")))
 
 hub_fig <- hub %>% filter(rare_bee_species >= 2)               # the multi-rare-bee hubs
-hub_fig$plant_genus <- factor(hub_fig$plant_genus, levels = rev(hub_fig$plant_genus))
-gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_genus, fill = rare_bee_species)) +
+hub_fig$plant_lab <- plant_label(hub_fig$plant_genus)          # "Common Name (Genus)" for the reader
+hub_fig$plant_lab <- factor(hub_fig$plant_lab, levels = rev(hub_fig$plant_lab))
+gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_species)) +
   geom_col(width = 0.72) +
   geom_text(aes(label = sprintf("%d spp  -  %d visits", rare_bee_species, visits)),
             hjust = -0.08, size = 3.0, colour = BEE_INK$secondary) +
@@ -126,7 +128,7 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   geom_col(width = 0.72) +
   geom_text(aes(label = visits), hjust = -0.5, size = 3.1, colour = BEE_INK$secondary) +
   facet_wrap(~ panel, ncol = 1, scales = "free") +
-  scale_y_discrete(labels = function(x) sub("^.*@@", "", x)) +
+  scale_y_discrete(labels = function(x) plant_label(sub("^.*@@", "", x))) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
   labs(title = "Plants used by the park's IUCN-threatened bees",

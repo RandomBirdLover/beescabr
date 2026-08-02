@@ -11,10 +11,10 @@
 #   * METHOD (lethal net / non-lethal photo) -- its OWN two colours, off the transect palette:
 #     rose-red (lethal) / periwinkle (non-lethal), softer jewel tones. Line style is a SECONDARY cue for the
 #     one figure where a transect AND a method share a plot (lethal = SOLID, non-lethal = DASHED).
-#   * EVIDENCE / ID-confidence -- a LAVENDER->plum ordinal ramp (voucher dark -> needs-ID faint), so
-#     "less certain" literally looks fainter. Off every transect hue.
+#   * EVIDENCE / ID-confidence -- a TEAL ordinal ramp (voucher dark -> needs-ID faint), so "less certain"
+#     literally looks fainter. Teal keeps it distinct from the purple neutrals + off every transect hue.
 #   * SCOPE / SET / ID-status -- single-figure accents from one small set: dark = focus/primary,
-#     light = background/shared, orchid = the third/other category. Plum-tinted jewel neutrals.
+#     light = background/shared, orchid = the third/other category. Indigo-violet neutrals.
 #   * MAGNITUDE (richness / counts) -- one crimson sequential ramp (pale -> deep wine).
 #   * TEXT always wears ink tokens, never a series colour.
 # Base-R helpers need no packages; the ggplot theme needs ggplot2 (lazy).
@@ -39,17 +39,18 @@ BEE_METHOD_COL   <- c(lethal = "#D8455F", nonlethal = "#6B6FCE") # rose-red = ne
 BEE_METHOD_LABEL <- c(lethal = "lethal (specimen net)", nonlethal = "non-lethal (iNat photo)")
 
 # ---- EVIDENCE / ID-confidence: LAVENDER ordinal ramp (strong -> faint) ------
-# Lavender -> deep plum (superbloom1 #9185AE + superbloom2 #61487E family), off every transect hue.
-BEE_EVIDENCE       <- c(specimen = "#52357E", research = "#9078C0", needs_id = "#D0C6E8")  # deep-plum voucher -> pale-lavender needs-ID, --ordinal validated
+# TEAL ordinal ramp (deep teal voucher -> pale teal needs-ID). Moved OFF purple so evidence no longer
+# reads like the purple neutrals; CVD-safe and kept clear of transect green/blue (they never co-occur).
+BEE_EVIDENCE       <- c(specimen = "#08544B", research = "#4C9E90", needs_id = "#C3E3DC")  # deep-teal voucher -> pale-teal needs-ID, ordinal
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
 # ---- NEUTRALS + ACCENT: ONE definition of the shared jewel greys + orchid ------
 # Every neutral figure references THESE tokens (never a raw hex), so a tweak here updates the whole
-# portfolio. Plum-tinted aubergine/lavender neutrals + an orchid accent -- warm jewel tones that sit
-# with the purple (evidence) and crimson (magnitude) ramps.
-BEE_NEUTRAL <- c(dark = "#3D3646", light = "#D1CBD8")   # focus (aubergine) / background (lavender-grey)
-BEE_ACCENT  <- "#A857A0"                                # orchid -- the "third / other / actionable" pop (jewel family)
+# portfolio. Cool indigo-violet neutrals + an orchid accent -- kept clear of the teal evidence ramp and
+# the crimson magnitude ramp (dE 43+ from both), so the three read as distinct families.
+BEE_NEUTRAL <- c(dark = "#473C8C", light = "#C8C4EE")   # focus (indigo-violet) / background (cool lavender)
+BEE_ACCENT  <- "#A857A0"                                # orchid -- the "third / other / actionable" pop
 
 # ---- SCOPE: focus vs background --------------------------------------------
 BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRAL[["light"]])
@@ -61,10 +62,9 @@ BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRA
 # BEE_METHOD_COL, NOT this -- method has its own colours.
 BEE_SET <- c(a_only = BEE_NEUTRAL[["dark"]], shared = BEE_NEUTRAL[["light"]], b_only = BEE_ACCENT)
 
-# ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# dark = resolved to species (done), orchid = specimen-keyable (ACT here), light = photo/genus-only (stuck).
-# 2-cat panels reuse resolved(dark) vs stuck(light). orchid shares BEE_SET's accent (same jewel palette).
-BEE_IDSTATUS <- c(resolved = BEE_NEUTRAL[["dark"]], keyable = BEE_ACCENT, stuck = BEE_NEUTRAL[["light"]])
+# ---- ID PROGRESS (Q7): removed -- coverage_id_targets.R now colours by METHOD (red = specimen,
+# blue = photo, purple = the red/blue blend for "resolved", i.e. a mix of both methods), derived
+# straight from BEE_METHOD_COL. No separate ID-status palette needed.
 
 # ---- ink + chrome tokens (text never wears a series colour) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
@@ -74,10 +74,20 @@ BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
 BEE_SEQ <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")
 
 # ---- INTERACTION WEBS: plant vs bee node colours (bipartite visitation figures) --------
-# plants = forage green, bees = magenta (opposite of green -- the two trophic sides). label = the darker
-# shade of each, link = neutral grey (nodes carry the colour). interactions_network.R + *_webs.R.
-BEE_WEB <- c(plant = "#3E7D43", bee = "#A63D95",
-             plant_label = "#2C5A31", bee_label = "#7A2A6D", link = "#a29e94")
+# plants = forage green, bees = goldenrod (warm vs the cool green -- the two trophic sides). node fills
+# carry the colour; labels are BLACK (ink) for legibility. link = neutral grey. interactions_network.R + *_webs.R.
+BEE_WEB <- c(plant = "#3E7D43", bee = "#C8952A",
+             plant_label = BEE_INK$primary, bee_label = BEE_INK$primary, link = "#a29e94")
+
+# ---- BEE-GENUS categorical palette: colours the overview webs' SELECTIVE genera ----
+# A bee genus earns a colour only if it has enough records AND forages selectively (chi-square of its
+# plant distribution vs plant availability, p<0.05) -- i.e. it concentrates its visits beyond what mere
+# availability/phenology would give. Non-selective or sparse genera stay grey. ~15 genera clear the bar,
+# so this is a large qualitative set (as tell-apart as 15+ hues allow); the coloured top-node bars double
+# as the legend, and species inherit their genus's colour. Assigned to genera in descending-record order.
+BEE_GENUS_GREY <- "#B7B4AC"   # non-selective / too-few-records: nodes + links go neutral grey
+BEE_GENUS <- c("#E69F00", "#0072B2", "#009E73", "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
+               "#882255", "#44AA99", "#999933", "#AA4499", "#D55E00", "#661100", "#DC267F", "#785EF0")
 
 # ---- PHENOLOGY SEASON: spring -> fall diverging ramp (green -> yellow -> orange-red) ----
 # RdYlGn-style 6-step for month / day-of-year density in phenology_activity.R.

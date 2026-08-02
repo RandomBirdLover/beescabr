@@ -482,6 +482,46 @@ Both failures occur because `cabr_boundary` (NPS source) extends slightly into t
 
 ---
 
+## Forage selectivity — "likes it" vs. "just gets it"
+
+Raw visit counts (the field guides' *Top flowers* / *Top plant*, and any "most-visited" ranking) blend three things: how much a plant was blooming, how heavily it was sampled, and whether the bee actually prefers it. To separate genuine preference from mere availability, `scripts/analysis/forage_selectivity.R` (a shared, single-source module) runs — per bee genus — a **matched** Monte-Carlo chi-square goodness-of-fit test. Rather than compare a genus's visits to the whole-season plant marginal, it compares them to what the **rest of the community recorded in the same (month, year, survey-method) cells the genus appears in** (leave-one-out so an abundant genus can't define its own baseline; weighted by the genus's own distribution across those cells). So the availability baseline is corrected for three confounders at once: **phenology** (a plant blooming when the bee wasn't out can't count against it), **year** (a one-good-year bloom under drought/rain can't masquerade as preference), and **method** (net specimens sample different plants than iNat photos). Thin cells fall back method-preserving: `(year,month,method) → (month,method) → (month) → overall`. A genus is **selective** if it deviates (p < 0.05) and has ≥ 20 plant-visit records; otherwise it's a **generalist** or has **too few records**. Each selective genus's **preferred plant** is the one most over-used relative to that matched availability (highest observed/expected). The plain overall-abundance p-value is kept alongside (`chi_p_abundance`) for comparison. **Observer identity is deliberately not controlled** — it's spread across 10–48 observers per genus (top observer ≤ 33%), so it averages out rather than needing a matching axis or a mixed model.
+
+That one module drives **both** downstream products, so they can never disagree:
+
+- the **interaction-web colours** (`interactions_network.R`, `interactions_web_genus.png` / `_species.png`) — selective genera get a distinct colour, generalists / too-sparse genera stay neutral grey; and
+- the by-genus field guide's **Forage preference** column (`bee_field_guide_genus.R`).
+
+A per-genus summary — the statistics (both p-values) plus the finding — is written to `data/analysis/interactions/forage_selectivity_summary.csv` (same `*_summary.csv` convention as the other analyses). Line thickness in the two overview webs encodes each bee's *preference share*; the per-genus focused webs use raw counts. Plant labels are common names (see `plant_names.R`).
+
+**Findings (data as of 2026-08-02): 17 of 31 bee genera are selective, and the set is stable** across every level of control — plain abundance → +month → +year → +method all return essentially the same selective genera. That stability *is* the result: these preferences are robust, not artefacts of when, what year, or how the bees were sampled. What the year control *did* change is some of the **favourites** (the plant a genus most over-uses), because a "favourite" measured against a whole-season average can be a good-year bloom rather than a true preference:
+
+- *Bombus* — recorded most on wild buckwheat (*Eriogonum*); its favourite was milkvetch under month-only control, but against **same-year-and-month** availability it shifts to **deervetch** (*Acmispon*, ~46×). Milkvetch was partly a good-year artefact.
+- *Diadasia* — **prickly pear** (*Opuntia*, ~108×), *stronger* under year control; a textbook cactus specialist.
+- *Andrena* — **goldfields** (*Lasthenia*, ~23×); *Habropoda* — **sages** (*Salvia*, ~34×); *Anthophora* — **stinkweed** (*Cleomella*, ~17×); *Hylaeus* — **baccharis** (~19×); *Lasioglossum* — **spurges** (*Euphorbia*, ~7×).
+- *Halictus* is weakly-but-significantly selective (*Deinandra*, ~2.7×) once flight timing is accounted for — it is *not* the clean generalist the plain abundance test suggested. Clear generalists (visit ≈ in proportion to availability): *Megachile*, *Nomada*.
+
+One honest limit on the *favourite*: the selective *set* is rock-solid, but the single named favourite can wobble for a bee with several strong preferences (Bombus likes both deervetch and milkvetch) — argmax just names the top one. The `forage_selectivity_summary.csv` carries `years_spanned` and `top_year_pct` per genus so a reader can weigh how many years back each finding (e.g. *Diadasia* 99 records / 9 years / 30% max = bulletproof; *Hylaeus* 29 records / 5 years / 59% in one year = real but thinner).
+
+**Residual caveats (stated in the guide and figures too):** "availability" is the community's realized plant *use* per cell (a strong proxy, not an independent bloom census); verdicts near p = 0.05 (e.g. *Dianthidium*) are borderline; and **plant detectability is not controlled** (see the confounder audit and limitations below).
+
+---
+
+## What each analysis controls for (confounders)
+
+The park's sampling is uneven — heavily weighted to one or two survey years (2024 dominates), seasonally skewed (interns survey ~Mar–Sep, "beeple" year-round), ~92% iNaturalist photos vs. ~8% net specimens, and spread across dozens of observers. Those are all confounders. Whether an analysis *needs* to control for them depends on whether it makes an **inferential claim** (something beyond "here is what we recorded") or is **descriptive**. We deliberately do **not** control for confounders in the descriptive analyses — only in the inferential one(s).
+
+**Descriptive analyses** — report what was observed, inherit the sampling biases *by design*, and should be read as "what we saw," not "what is true": the field guides' *Most-recorded flowers* / *Most-used plant*, `interactions_top_plants.R`, the raw-count interaction heatmaps and webs, `bee_bounties.R`, `rare_bee_plants.R`, `records_per_genus_by_evidence.R`, and the coverage maps. These are honest as long as they're labelled descriptively (which is why "Top flowers" became "Most-recorded flowers"). No confounder control is applied or needed.
+
+**Inferential analyses** — make a claim beyond description, so confounders matter:
+
+1. **Forage selectivity** (`forage_selectivity.R` → web colours + *Forage preference* column). Controls for overall abundance, **month, year, and survey method** (the matched-cell chi-square described above). Not controlled: **observer** (spread over many observers → averages out) and **plant detectability** (see below — uncontrollable here). This is the most fully-controlled analysis in the pipeline.
+
+2. **Within-genus niche partitioning — H2′** (`interactions_genus_species_webs.R`). Tests whether a genus's *species* divide up plant genera more than chance. It **no longer uses the plain `r2dtable` null** (which only fixes marginals). Instead it uses a **confounder-aware null: it permutes bee-species labels within (month × method) strata**, so it only calls partitioning "real" if a genus's species split plants *more than their differing flight seasons and sampling methods already explain*. Stratifying by month × method (not also year) is deliberate — a genus's own species overlap in years, so year is a weak within-genus confound and finer strata would leave nothing to permute (power collapses); `n_permutable` is reported per genus so low-power cases are visible. Effect of the control: under the stricter null, **Melissodes and Habropoda drop to non-significant** — their apparent partitioning was largely seasonal — while genuine specialists (Perdita, Diadasia, Anthophora, …) stay significant.
+
+**Sampling-based estimators** — not "preference" tests, but they assume roughly even effort: Chao2 richness (`genera_and_species_accumulation.R`, coverage completeness), rarefaction (`rarefaction_*.R`), diversity indices (`diversity_indices.R`), and the phenology Rayleigh tests. They're standard and defensible, but with effort this uneven (2024-heavy, seasonal) their confidence intervals understate true uncertainty — treat point estimates as approximate.
+
+---
+
 ## Known limitations
 
 Like any research pipeline, this one makes trade-offs and carries assumptions that are worth stating explicitly.
@@ -497,6 +537,8 @@ Like any research pipeline, this one makes trade-offs and carries assumptions th
 **Spatial tiers depend on iNat place boundaries, which are user-contributed.** The CABR, Point Loma, and SD County tiers are defined by iNat's place geometries, not by authoritative NPS or government shapefiles (except where `spatial_utils.R` applies the NPS CABR boundary for fine-grained spatial clipping). Minor boundary inconsistencies between iNat places and official shapefiles can cause observations to appear in one tier but not another unexpectedly.
 
 **Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run skips the write and leaves stale data in place. Delete `data/outputs/` contents before each run until this is resolved. (See also: TODO below.)
+
+**Forage "preference" is matched on month/year/method, but two confounders remain.** The selectivity test (`forage_selectivity.R`, driving the *Forage preference* column and the web colours) matches availability to each genus's own month, year and method cells (see "Forage selectivity" and the confounder audit above). What it still can't fix: (1) **plant detectability** — a bee on a big showy flower is far more likely to be photographed than the same bee on a tiny inconspicuous one, and since our availability proxy is itself photo-derived, that bias sits on both sides of the comparison. The clean fix would be an *independent* bloom census (plant-survey phenology), but that prepared plant data does not exist / is not available, so detectability is an acknowledged, uncorrectable limitation here. (2) "Availability" is the community's realized plant *use* per cell, not a true bloom measurement; and verdicts near p = 0.05 (e.g. *Dianthidium*) are borderline. **Observer identity is not controlled but does not need to be** — it's spread across 10–48 observers per genus, so it averages out. See the confounder audit for the one test that still needs work (H2′).
 
 ---
 
@@ -541,6 +583,7 @@ Like any research pipeline, this one makes trade-offs and carries assumptions th
 ### Analysis
 
 - [ ] **Reconstruction of bee identifications:** specimens help identify non-IDed iNat obs; iNat helps direct future collecting efforts.
+- [ ] **Independent bloom phenology for the availability baseline (refinement).** The selectivity test uses the community's realized plant *use* per cell as the availability proxy. A stronger version would build availability from the survey plant-bloom data (`phenology_activity.R`'s flowering records) so it's an independent bloom census rather than use-derived — this would also be the only real handle on the plant-detectability confound. (Note: as of 2026-08 no prepared plant-bloom dataset is available.)
 - [ ] Bee phenology vs. plant phenology
 - [ ] iNat vs. specimen / lethal vs. non-lethal comparison — do we find more bees with iNat or specimens?
 - [ ] Camera quality comparison (camera vs. phone)
@@ -572,6 +615,8 @@ Like any research pipeline, this one makes trade-offs and carries assumptions th
 - [x] TIER 2 merged checklists in Holway format (implemented 2026-06-24)
 - [x] Subgenus rank correctly populated for taxa identified directly to subgenus level (fixed 2026-06-25)
 - [x] iNat observation-field discovery via API integrated into `inat_bee_clean.R` (2026-07-06)
+- [x] **Matched forage-selectivity test (month + year + method)** — `forage_selectivity.R` matches each genus's expected plant use to what the community recorded in the same (month, year, survey-method) cells (leave-one-out, method-preserving fallback); controls phenology, climate-year, and net-vs-photo method. The selective set is stable across all control levels; drives the field-guide *Forage preference* column and web colours; keeps the overall-abundance p for comparison. Confounder audit for the whole pipeline written into the README (2026-08-02)
+- [x] **Confounder-aware H2′ null** — `interactions_genus_species_webs.R` replaced the fixed-marginal `r2dtable` null with a permutation of species labels *within month × method strata*, so within-genus niche-partitioning is only called real beyond what flight-season/method differences explain. Under it, Melissodes and Habropoda drop to non-significant; power (`n_permutable`) reported per genus (2026-08-02)
 
 ---
 

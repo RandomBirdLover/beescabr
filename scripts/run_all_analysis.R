@@ -19,6 +19,8 @@ source("scripts/analysis/theme_beescabr.R")
 source("scripts/analysis/utils_analysis.R")
 source("scripts/analysis/not_on_holway.R")
 source("scripts/analysis/conservation_status.R")   # shared IUCN / conservation lookups (one source)
+source("scripts/analysis/plant_names.R")           # shared plant-genus common-name labels (one source)
+source("scripts/analysis/forage_selectivity.R")    # shared bee-genus forage selectivity (one source)
 
 # Refresh IUCN Red List statuses FIRST, so the field guide and the rare-species figure
 # use current listings and any newly threatened species is caught. Best-effort: it needs
@@ -32,7 +34,18 @@ tryCatch(source("scripts/refresh_iucn_status.R"),
          error = function(e) message("  !! IUCN refresh skipped: ", conditionMessage(e),
                                      "\n     (using the last cached iucn_status.csv; run stays offline-safe)"))
 
-.modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R", "conservation_status.R")
+# Refresh PLANT-GENUS COMMON NAMES next, same best-effort contract: it fills genera the
+# local plant-taxonomy files don't name by asking the public iNaturalist taxa API (no
+# token needed). Offline/blocked -> it keeps the local-seed + previously fetched cache,
+# and figures fall back to the Latin genus for anything still unnamed. Lives in scripts/
+# (not scripts/analysis/), so it is NOT in the auto-discovered loop below.
+message("\n===== refresh_plant_common_names.R (plant genus common names) =====")
+tryCatch(source("scripts/refresh_plant_common_names.R"),
+         error = function(e) message("  !! plant common-name refresh skipped: ", conditionMessage(e),
+                                     "\n     (using the last cached plant_genus_common.csv; run stays offline-safe)"))
+
+.modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",
+              "conservation_status.R", "plant_names.R", "forage_selectivity.R")
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
 
 # source each in the global env; a formal-arg closure keeps `nm` safe even if a

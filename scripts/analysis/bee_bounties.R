@@ -156,11 +156,12 @@ sb_sp <- specimen_bounty$taxon[specimen_bounty$rank == "species"]
 sb_gn <- specimen_bounty$taxon[specimen_bounty$rank == "genus"]
 sb_tgt <- inat_geo %>% filter(species_key %in% sb_sp | genus_key %in% sb_gn)
 g1 <- ggplot() + base_pts +
-  geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 1.3, alpha = 0.6) +   # net-targets = purple
+  geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 1.3, alpha = 0.6) +   # net-targets = rose-red (lethal)
   coord_quickmap() +
   labs(title = "Specimen Bee Bounty - where to NET a voucher",
-       caption = str_wrap(sprintf("iNaturalist sightings of the %d taxa photographed but never collected (grey = all iNat effort)",
-                                    length(sb_sp) + length(sb_gn)), 92),
+       caption = scope_cap(scope = sprintf("iNaturalist sightings of %d collect-target taxa (photographed, never collected); grey = all iNat effort",
+                                           length(sb_sp) + length(sb_gn)),
+                          method = "non-lethal (iNat GPS points)", rank = "species + genus", n = nrow(sb_tgt)),
        x = NULL, y = NULL) + map_theme
 ggsave(file.path(OUT_DIR, "specimen_bee_bounty_map.png"), g1, width = 7.5, height = 8, dpi = 200, bg = "white")
 
@@ -184,8 +185,9 @@ g2 <- ggplot() + base_pts +
   scale_fill_manual(values = BEE_TRANSECT, name = "transect corridor") +
   coord_sf(expand = TRUE) +
   labs(title = "iNaturalist Bee Bounty - where to PHOTOGRAPH (walk these trails)",
-       caption = str_wrap(sprintf("%d taxa held only as specimens; shaded band = that transect's walked trail (specimen coords are transect centroids, red dots)",
-                                    length(ib_sp) + length(ib_gn)), 92),
+       caption = scope_cap(scope = sprintf("%d taxa held only as specimens; shaded band = transect trail (specimen coords are centroids, red dots)",
+                                           length(ib_sp) + length(ib_gn)),
+                          method = "lethal (specimen) targets on transect corridors", rank = "species + genus", n = nrow(ib_spec)),
        x = NULL, y = NULL) + map_theme
 ggsave(file.path(OUT_DIR, "inaturalist_bee_bounty_map.png"), g2, width = 7.8, height = 8, dpi = 200, bg = "white")
 message("Wrote specimen_bee_bounty_map.png + inaturalist_bee_bounty_map.png to ", OUT_DIR)

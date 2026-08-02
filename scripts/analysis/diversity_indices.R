@@ -121,7 +121,7 @@ tidyr_pivot <- function(df, cols) {
 }
 plot_indices(div_tr, file.path(OUT_DIR, "diversity_by_transect.png"),
              "Bee Diversity by Transect",
-             scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus"),
+             scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus", n = nrow(rec)),
              "transect")
 
 # ---- 3. ALPHA DIVERSITY BY YEAR (survey-only, both methods, Mar-Sep, species) --
@@ -138,7 +138,7 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
     geom_line(color = BEE_NEUTRAL[["dark"]]) + geom_point(color = BEE_NEUTRAL[["dark"]], size = 2) +
     facet_wrap(~ metric, scales = "free_y") +
     labs(title = "Bee diversity by year (CABR)",
-         caption = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
+         caption = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level", n = nrow(rec)),
          x = "year", y = NULL) +
     theme_beescabr(11)
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
@@ -163,7 +163,7 @@ g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
                                 "lethal (net)" = unname(BEE_METHOD_COL["lethal"]),
                                 "non-lethal (photo)" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
   labs(title = "Rank-abundance (dominance) of CABR bee species",
-       caption = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
+       caption = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level", n = nrow(rec)),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11)
 ggsave(file.path(OUT_DIR, "diversity_rank_abundance.png"), g, width = 9, height = 6, dpi = 200, bg = "white")

@@ -53,8 +53,8 @@ write_observations <- function(con, results) {
         CAST(j->>'$.id' AS BIGINT)                            AS id,
         TRY_CAST(j->>'$.taxon.id' AS BIGINT)                 AS taxon_id,
         TRY_CAST(j->>'$.observed_on' AS DATE)                AS observed_on,
-        TRY_CAST(j->>'$.geojson.coordinates[1]' AS DOUBLE)   AS lat,
-        TRY_CAST(j->>'$.geojson.coordinates[0]' AS DOUBLE)   AS lon
+        COALESCE(TRY_CAST(j->>'$.private_geojson.coordinates[1]' AS DOUBLE), TRY_CAST(j->>'$.geojson.coordinates[1]' AS DOUBLE)) AS lat,
+        COALESCE(TRY_CAST(j->>'$.private_geojson.coordinates[0]' AS DOUBLE), TRY_CAST(j->>'$.geojson.coordinates[0]' AS DOUBLE)) AS lon
       FROM e
     )
     SELECT
@@ -97,8 +97,8 @@ write_observations_page <- function(con, raw_text) {
         CAST(j->>'$.id' AS BIGINT)                            AS id,
         TRY_CAST(j->>'$.taxon.id' AS BIGINT)                 AS taxon_id,
         TRY_CAST(j->>'$.observed_on' AS DATE)                AS observed_on,
-        TRY_CAST(j->>'$.geojson.coordinates[1]' AS DOUBLE)   AS lat,
-        TRY_CAST(j->>'$.geojson.coordinates[0]' AS DOUBLE)   AS lon
+        COALESCE(TRY_CAST(j->>'$.private_geojson.coordinates[1]' AS DOUBLE), TRY_CAST(j->>'$.geojson.coordinates[1]' AS DOUBLE)) AS lat,
+        COALESCE(TRY_CAST(j->>'$.private_geojson.coordinates[0]' AS DOUBLE), TRY_CAST(j->>'$.geojson.coordinates[0]' AS DOUBLE)) AS lon
       FROM _page
     )
     SELECT id, taxon_id, observed_on, lat, lon,

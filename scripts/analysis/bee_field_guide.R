@@ -21,6 +21,7 @@
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
+if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 OUT_DIR       <- "data/analysis/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
@@ -101,7 +102,7 @@ rows <- lapply(sp_keys, function(k) {
     status         = status_call(nrow(d)),
     peak_day       = md_of(peak),
     active_months  = active_months(d$doy),
-    top_flowers    = if (length(fl)) paste(head(names(fl), 5), collapse = ", ") else "- (no flower records)",
+    top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
     n_plant_genera = length(fl),
     diet           = diet_call(length(fl), nrow(pv)),
     where_to_find  = where_call(d),
@@ -167,8 +168,9 @@ html <- paste0(
 '</style></head><body>',
 '<h1>CABR native bee field guide</h1>',
 '<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used; where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare/uncommon/common). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
+'<p class="sub"><b>Most-recorded flowers = the plants this species was seen on most often</b>, which reflects how much each plant was blooming and sampled as much as any true preference &mdash; read it as &quot;where it was seen,&quot; not proof of what it likes best. (Whether a bee <i>favours</i> a plant beyond its availability is tested at the genus level in the companion by-genus guide&#39;s &quot;Forage preference&quot; column.)</p>',
 '<table id="t"><thead><tr>',
-'<th>Bee</th><th class="num">Records</th>', iucn_th, '<th>Peak day</th><th>Active months</th><th>Top flowers</th><th>Diet</th><th>Where to find</th><th>Status</th>',
+'<th>Bee</th><th class="num">Records</th>', iucn_th, '<th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<p class="note">', esc(note_txt), '</p>',
 '<script>',
@@ -186,7 +188,7 @@ writeLines(html, file.path(OUT_DIR, "bee_field_guide.html"))
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
   disp <- tbl %>% transmute(Bee = ifelse(conservation != "", paste0(bee, " *"), bee),
                             N = n_records, `Peak day` = peak_day,
-                            `Active months` = active_months, `Top flowers` = top_flowers,
+                            `Active months` = active_months, `Most-recorded flowers` = top_flowers,
                             Diet = diet, `Where to find` = where_to_find, Status = status)
   if (HAVE_IUCN) disp <- dplyr::relocate(dplyr::mutate(disp, IUCN = tbl$iucn), IUCN, .after = N)
   th <- gridExtra::ttheme_minimal(

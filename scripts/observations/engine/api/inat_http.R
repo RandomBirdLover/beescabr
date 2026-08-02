@@ -21,6 +21,8 @@
 library(httr2)
 
 if (!exists("INAT_BASE_URL")) source("scripts/config.R")
+# optional OAuth sign-in (adds true coords for records you're trusted with); no-op if unconfigured
+if (!exists("inat_auth_enabled")) source("scripts/observations/engine/api/inat_auth.R")
 
 # Build a configured request (UA + timeout + retry) for a path/query.
 .inat_build_request <- function(path, query = list(),
@@ -38,6 +40,10 @@ if (!exists("INAT_BASE_URL")) source("scripts/config.R")
     )
   query <- query[!vapply(query, function(v) is.null(v) || length(v) == 0, logical(1))]
   if (length(query) > 0) req <- req_url_query(req, !!!query)
+  # authenticate when configured, so trusted/own records return true coordinates
+  tok <- tryCatch(if (exists("inat_auth_enabled") && inat_auth_enabled()) inat_auth_token() else NULL,
+                  error = function(e) NULL)
+  if (!is.null(tok) && nzchar(tok)) req <- req_headers(req, Authorization = paste("Bearer", tok))
   req
 }
 

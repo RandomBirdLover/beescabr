@@ -103,7 +103,7 @@ gB <- ggplot(grid, aes(x = month_lab, y = factor(year), fill = trips)) +
   scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
   scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +   # magnitude = house blue sequential ramp
   labs(title = "Survey Trips by Year and Month",
-       caption = scope_cap("per-survey log", "all trips", "n/a (effort)"),
+       caption = scope_cap("per-survey log", "all trips", "n/a (effort)", n = nrow(p)),
        x = NULL, y = NULL) +
   theme_beescabr(11) +
   theme(panel.grid = element_blank())

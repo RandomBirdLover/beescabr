@@ -101,6 +101,17 @@ flatten_observation <- function(o) {
   coord <- .get(o, "geojson", "coordinates")
   lon <- if (is.null(coord) || length(coord) < 2) NA_real_ else as.numeric(coord[[1]])
   lat <- if (is.null(coord) || length(coord) < 2) NA_real_ else as.numeric(coord[[2]])
+  # TRUE coordinates when we're trusted (own record / individual trust / trusted project):
+  # authenticated pulls add private_geojson + private_location for those; absent otherwise.
+  coords_trusted <- FALSE
+  pcoord <- .get(o, "private_geojson", "coordinates")
+  ploc   <- .scalar(o$private_location, NA_character_)
+  if (!is.null(pcoord) && length(pcoord) >= 2) {
+    lon <- as.numeric(pcoord[[1]]); lat <- as.numeric(pcoord[[2]]); coords_trusted <- TRUE
+  } else if (!is.na(ploc) && grepl(",", ploc)) {
+    ll <- suppressWarnings(as.numeric(strsplit(ploc, ",")[[1]]))          # private_location is "lat,lng"
+    if (length(ll) == 2 && !anyNA(ll)) { lat <- ll[1]; lon <- ll[2]; coords_trusted <- TRUE }
+  }
 
   tags <- o$tags %||% list()
   tag_list <- if (length(tags) == 0) NA_character_ else paste(
@@ -126,7 +137,8 @@ flatten_observation <- function(o) {
     latitude             = lat,
     longitude            = lon,
     positional_accuracy  = as.numeric(.scalar(o$positional_accuracy, NA_real_)),
-    coordinates_obscured = isTRUE(o$obscured),
+    coordinates_obscured = isTRUE(o$obscured) && !coords_trusted,   # FALSE once we hold the real spot
+    coords_trusted       = coords_trusted,
     geoprivacy           = .scalar(o$geoprivacy, NA_character_),
     taxon_geoprivacy     = .scalar(o$taxon_geoprivacy, NA_character_),
     scientific_name      = .scalar(.get(o, "taxon", "name"), NA_character_),

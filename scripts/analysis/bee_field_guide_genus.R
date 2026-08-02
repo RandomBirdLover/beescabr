@@ -29,6 +29,8 @@
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
+if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
+if (!exists("forage_preference_label")) source("scripts/analysis/forage_selectivity.R")  # shared selectivity (likes vs available)
 OUT_DIR       <- "data/analysis/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
@@ -101,7 +103,7 @@ rows <- lapply(gen_keys, function(k) {
   fl <- sort(table(pv$plant_genus), decreasing = TRUE)
   peak <- circ_mean_doy(d$doy)
   top_plant <- if (length(fl) && nrow(pv) >= 5)
-    sprintf("%s (%d%%)", names(fl)[1], round(100 * as.integer(fl[1]) / nrow(pv))) else "-"
+    sprintf("%s, %d%%", plant_label(names(fl)[1]), round(100 * as.integer(fl[1]) / nrow(pv))) else "-"
   data.frame(
     genus          = k,
     n_records      = nrow(d),
@@ -110,7 +112,7 @@ rows <- lapply(gen_keys, function(k) {
     conservation   = if (k %in% CONSERV_GENERA) paste(CONSERV_FLAGGED$scientific_name[word(CONSERV_FLAGGED$scientific_name, 1) == k], collapse = "; ") else "",
     peak_day       = md_of(peak),
     active_months  = active_months(d$doy),
-    top_flowers    = if (length(fl)) paste(head(names(fl), 5), collapse = ", ") else "- (no flower records)",
+    top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
     n_plant_genera = length(fl),
     flower_breadth = breadth_call(length(fl), nrow(pv)),
     top_plant      = top_plant,
@@ -118,6 +120,11 @@ rows <- lapply(gen_keys, function(k) {
     stringsAsFactors = FALSE)
 })
 tbl <- do.call(rbind, rows) %>% arrange(desc(n_records))
+# Forage preference: does the genus FAVOUR certain plants beyond what's available, or just
+# visit whatever's blooming? From the shared selectivity module (same test as the web colours).
+# The preferred plant reads as a common name (fall back to the Latin genus if none known).
+.pref_fmt <- function(g) { cn <- plant_common_name(g); ifelse(is.na(cn), g, cn) }
+tbl$forage_pref <- forage_preference_label(tbl$genus, plant_fmt = .pref_fmt)
 write.csv(tbl, file.path(OUT_DIR, "bee_field_guide_genus.csv"), row.names = FALSE)
 message(sprintf("Genus field guide: %d genera (%d never yet ID'd to species; %d rare, %d uncommon, %d common)",
                 nrow(tbl), sum(tbl$n_species == 0),
@@ -129,12 +136,14 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$status == "rare"
   tag <- if (r$n_species == 0) '<span class="cn">not yet ID&#39;d to species</span>' else ""
   cs  <- if (r$conservation != "") sprintf('<sup class="cs" title="includes at-risk: %s">*</sup>', esc(r$conservation)) else ""
+  pref_cls <- if (grepl("^Selective", r$forage_pref)) "pref-sel" else if (grepl("^Generalist", r$forage_pref)) "pref-gen" else "pref-na"
   sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td><td class="num">%d</td><td class="num">%d</td>',
-                 '<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td>',
-                 '<td class="loc">%s</td><td><span class="pill st-%s">%s</span></td></tr>'),
+                 '<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="%s">%s</td><td class="loc">%s</td>',
+                 '<td><span class="pill st-%s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$genus), cs, tag, r$n_records, r$n_species,
           esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
-          esc(r$flower_breadth), esc(r$top_plant), esc(r$where_to_find), r$status, r$status)
+          esc(r$flower_breadth), esc(r$top_plant), pref_cls, esc(r$forage_pref),
+          esc(r$where_to_find), r$status, r$status)
 }, character(1))
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>CABR Native Bee Field Guide - by genus</title>',
@@ -150,6 +159,7 @@ html <- paste0(
 'td.bee i{color:#111}td .cn{display:block;color:#8a8880;font-size:11px}',
 'td.num{text-align:right;font-variant-numeric:tabular-nums}td.loc{color:#52514e;font-size:12px}',
 'tr.low{color:#a09e98}tr.low td.bee i{color:#a09e98}',
+'td.pref-sel{color:#0e5a52;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',
 '.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
 '.pill.sp{background:#f0dcc8;color:#7a4a1e}.pill.ge{background:#cfe6e2;color:#0e5a52}',
 '.pill.mo{background:#e9e7e0;color:#5a5850}.pill.na{background:#f1f1f1;color:#999}',
@@ -157,9 +167,10 @@ html <- paste0(
 '.pill.st-common{background:#dcebe0;color:#2f6b46}',
 '</style></head><body>',
 '<h1>CABR native bee field guide - by genus</h1>',
-'<p class="sub">Companion to the species guide: one row per GENUS, pooling every record of that genus (specimen net + iNaturalist, all ID ranks) so the hard-to-ID diverse genera keep their flower associations for planting. &quot;Species ID&#39;d&quot; = distinct species we have pinned in the genus (0 = none yet). Peak day = circular mean of record dates; active months = 5th-95th percentile; flower breadth = how many plant genera the genus uses (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+); top plant = its single most-used plant and that plant&#39;s share of the genus&#39;s flower visits; where = favoured transect(s) or an off-transect centre + buffer; status = how often the genus is recorded here. Rows in grey are rarely recorded (peak/season are rough). Click a column header to sort.</p>',
+'<p class="sub">Companion to the species guide: one row per GENUS, pooling every record of that genus (specimen net + iNaturalist, all ID ranks) so the hard-to-ID diverse genera keep their flower associations for planting. &quot;Species ID&#39;d&quot; = distinct species we have pinned in the genus (0 = none yet). Peak day = circular mean of record dates; active months = 5th-95th percentile; flower breadth = how many plant genera the genus uses (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+); most-used plant = its single most-recorded plant and that plant&#39;s share of the genus&#39;s flower visits (a raw count, not a preference &mdash; see Forage preference); where = favoured transect(s) or an off-transect centre + buffer; status = how often the genus is recorded here. Rows in grey are rarely recorded (peak/season are rough). Click a column header to sort.</p>',
+'<p class="sub"><b>Most-recorded flowers and Most-used plant are exactly that &mdash; the plants seen most often</b>, which blends how much the plant was blooming and sampled with genuine preference, so neither is proof the genus &quot;likes&quot; it best. <b>Forage preference</b> corrects for that, matching on bloom timing, year AND survey method: a matched Monte-Carlo chi-square compares the genus&#39;s visits to what the rest of the community recorded <i>in the same month, year and method (net vs photo)</i> &mdash; so a one-good-year bloom (drought/rain) or a photo-vs-net sampling quirk can&#39;t masquerade as a preference. &quot;Selective &rarr; plant (N&times; vs available)&quot; = visits that plant N times more than its same-year-month availability would predict; &quot;Generalist&quot; = visits roughly in proportion to what&#39;s around then (no real preference); &quot;too few records&quot; = not enough data to judge. Caveat: &quot;availability&quot; is the community&#39;s realized plant use per year-month (a strong proxy, not an independent bloom census), and genera whose p sits near 0.05 are borderline.</p>',
 '<table id="t"><thead><tr>',
-'<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Peak day</th><th>Active months</th><th>Top flowers</th><th>Flower breadth</th><th>Top plant</th><th>Where to find</th><th>Status</th>',
+'<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Flower breadth</th><th>Most-used plant</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<p class="note">', esc(CONSERV_LEGEND), '</p>',
 '<script>',
@@ -175,11 +186,12 @@ writeLines(html, file.path(OUT_DIR, "bee_field_guide_genus.html"))
 
 # ---- 4. PNG table image (gridExtra) -----------------------------------------
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
+  pref_short <- sub(" \\(.*$", "", tbl$forage_pref)              # drop the "(N x vs available)" tail for the compact image
   disp <- tbl %>% transmute(Genus = ifelse(conservation != "", paste0(genus, " *"), genus),
                             N = n_records, `Species ID'd` = n_species,
                             `Peak day` = peak_day, `Active months` = active_months,
-                            `Top flowers` = top_flowers, `Flower breadth` = flower_breadth,
-                            `Top plant` = top_plant,
+                            `Most-recorded flowers` = top_flowers, `Flower breadth` = flower_breadth,
+                            `Most-used plant` = top_plant, `Forage preference` = pref_short,
                             `Where to find` = where_to_find, Status = status)
   th <- gridExtra::ttheme_minimal(
     base_size = 7,

@@ -27,6 +27,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 OUT_DIR   <- "data/analysis/interactions"
 TOP_N     <- 10          # top plants for the headline table/figure
 TOP_MONTH <- 12          # plants shown in the month heatmap
@@ -64,13 +65,13 @@ print(top[, c("plant_genus", "whole_park", "survey_only", "lethal", "nonlethal")
 
 # ---- 3. figure A: top-N plants, method-split bars ---------------------------
 png(file.path(OUT_DIR, "interactions_top_plants.png"),
-    width = 1700, height = 1150, res = 200)
+    width = 2050, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis colours
-op <- par(mar = c(5.5, 9, 3.5, 1), oma = c(3.2, 0, 0, 0))   # oma bottom for the caption
+op <- par(mar = c(5.5, 16, 3.5, 1))               # wide left margin for "Common Name (Genus)" labels
 M <- rbind(nonlethal = top$nonlethal, lethal = top$lethal)   # stacked
-colnames(M) <- paste0(top$plant_genus, bee_low_n_mark(top$whole_park))   # #12: '*' on thinly-sampled plants
+colnames(M) <- paste0(plant_label(top$plant_genus), bee_low_n_mark(top$whole_park))   # common name (Latin); '*' on thinly-sampled plants
 M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
-barplot(M, horiz = TRUE, las = 1, border = NA,
+barplot(M, horiz = TRUE, las = 1, border = NA, cex.names = 0.82,
         col = c(nonlethal = COL_NONLETHAL, lethal = COL_LETHAL),
         xlab = "Bee-visit records (whole park)",
         main = sprintf("Top %d plant genera visited by bees at CABR\n(bar split by survey method)", TOP_N))
@@ -78,8 +79,6 @@ legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col =
        legend = c("non-lethal (photo/iNat)", "lethal (net/specimen)"))
 if (any(bee_low_n(top$whole_park)))
   mtext(BEE_LOW_N_NOTE, side = 1, line = 4.2, cex = 0.7, adj = 0, col = BEE_INK$secondary)
-bee_caption_base(scope = "all records that name a plant genus", method = "lethal (net) + non-lethal (photo)",
-                 rank = "bee-visit records per plant genus", n = nrow(rec), cex = 0.55)
 par(op); dev.off()
 
 # ---- 4. per-month breakdown of the top plants -------------------------------
@@ -96,22 +95,23 @@ write.csv(data.frame(favourite_rank = seq_along(top_m), plant_genus = rownames(M
           file.path(OUT_DIR, "interactions_top_plants_by_month.csv"), row.names = FALSE)
 
 # y-axis numbered by the bees' FAVOURITE: rank 1 = most total visit records. Labels carry rank + count.
-rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), top_m, format(top_tot, big.mark = ",")), top_m)
+# plant genus shown as its common name (Latin) via the shared label helper; names() stay the raw
+# genus so the matrix-rowname indexing below still lines up.
+rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), plant_label(top_m),
+                             format(top_tot, big.mark = ",")), top_m)
 
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
-    width = 1700, height = 1050, res = 200)
+    width = 2150, height = 1050, res = 200)
 bee_base_par()
-op <- par(mar = c(4, 12.5, 4, 1), oma = c(3.2, 0, 0, 0))   # oma bottom for the caption
+op <- par(mar = c(4, 19, 4, 1))                   # wide left margin for "rank. Common Name (Genus) (n)" labels
 Mplot <- Mmon[nrow(Mmon):1, , drop = FALSE]
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # magnitude = house blue ramp
-      main = "When Top 12 Plants are Most Visited")
+      main = sprintf("When are the top %d plants visited? (log records/month)\ny-axis ranked by the bees' favourite -- 1 = most visit records", TOP_MONTH))
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
-axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.72)
+axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.66)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
       side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
-bee_caption_base(scope = "all records that name a plant genus, by month", method = "lethal + non-lethal pooled",
-                 rank = "plant genus x month", n = sum(Mmon), cex = 0.55)
 par(op); dev.off()
 
 message("\nWrote interactions_top_plants.csv (+_by_month.csv) and two figures to ",
