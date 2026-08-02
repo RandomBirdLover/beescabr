@@ -45,7 +45,8 @@ tryCatch(source("scripts/refresh_plant_common_names.R"),
                                      "\n     (using the last cached plant_genus_common.csv; run stays offline-safe)"))
 
 .modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",
-              "conservation_status.R", "plant_names.R", "forage_selectivity.R")
+              "conservation_status.R", "plant_names.R", "forage_selectivity.R",
+              "findings_summaries.R")   # runs LAST (after every analysis) -- excluded from the auto-loop
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
 
 # source each in the global env; a formal-arg closure keeps `nm` safe even if a
@@ -56,6 +57,13 @@ tryCatch(source("scripts/refresh_plant_common_names.R"),
            error = function(e) { message("  !! FAILED: ", conditionMessage(e)); FALSE })
 })
 .failed <- .scripts[!unlist(.ok)]
+
+# LAST: roll up every analysis into plain-language <name>_findings.csv tables +
+# a master findings_index.csv (data/analysis/findings/). Runs after the loop so it
+# can read the fresh per-analysis outputs it summarises. Best-effort like the rest.
+message("\n===== findings_summaries.R (plain-language finding rollups) =====")
+tryCatch(source("scripts/analysis/findings_summaries.R"),
+         error = function(e) message("  !! findings rollup skipped: ", conditionMessage(e)))
 
 message("\n---------------------------------------------")
 message(sprintf("Ran %d analysis scripts; %d failed.", length(.scripts), length(.failed)))

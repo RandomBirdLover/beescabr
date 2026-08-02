@@ -173,7 +173,10 @@ message(sprintf("Bee genera with >=%d species & >=%d records: %d (drawing webs).
                 if (nrow(dropped)) paste(sprintf("%s(%d)", dropped$bee_genus, dropped$n_records), collapse=", ") else "none"))
 
 # ---- 2. per-genus: web + H2' + per-species breadth ---------------------------
-h2_rows <- list(); sp_rows <- list()
+# Clear stale webs first so only the CURRENTLY-significant genera remain (the significant set is
+# data-driven and can change as records accrue).
+invisible(file.remove(list.files(WEB_DIR, pattern = "\\.png$", full.names = TRUE)))
+h2_rows <- list(); sp_rows <- list(); ns_dropped <- character(0)
 for (g in keep$bee_genus) {
   d <- rec %>% filter(bee_genus == g)
   M <- as.matrix(table(d$plant_genus, d$bee_species))            # plant genus x bee species
@@ -183,7 +186,11 @@ for (g in keep$bee_genus) {
                         ht$H2prime, ht$null_mean, signif(ht$p, 2),
                         ifelse(!is.na(ht$p) && ht$p < 0.05, "species partition plants more than expected from timing/method alone",
                                "no more than timing/method already explains"))
-  genus_web(M, file.path(WEB_DIR, paste0(g, ".png")), g, h2lab)
+  if (!is.na(ht$p) && ht$p < 0.05) {
+    genus_web(M, file.path(WEB_DIR, paste0(g, ".png")), g, h2lab)   # draw only genera that significantly partition
+  } else if (!is.na(ht$H2prime)) {
+    ns_dropped <- c(ns_dropped, g)                                 # tested, but timing/method already explains it
+  }
 
   h2_rows[[g]] <- data.frame(bee_genus = g, n_species = ncol(M), n_plant_genera = nrow(M),
                              n_records = sum(M), H2prime = round(ht$H2prime, 3),
@@ -201,24 +208,26 @@ write.csv(sp_tbl, file.path(OUT_DIR, "interactions_genus_species_specialization.
 message("Webs written to ", WEB_DIR, " (", nrow(keep), " genera)")
 print(h2_tbl, row.names = FALSE)
 
-# ---- 3. overview: within-genus H2' across genera -----------------------------
-ov <- h2_tbl %>% filter(!is.na(H2prime)) %>%
-  mutate(bee_genus = factor(bee_genus, levels = rev(bee_genus)),
-         sig = ifelse(!is.na(H2prime_p) & H2prime_p < 0.05, "p < 0.05", "n.s."))
-g <- ggplot(ov, aes(x = H2prime, y = bee_genus, fill = sig)) +
-  geom_col(width = 0.72) +
-  geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2) +
-  # significance = house ink (notable) vs stone (background)
-  scale_fill_manual(values = c("p < 0.05" = "#3C3B36", "n.s." = "#C0BBB0"), name = NULL) +
+# ---- 3. overview: within-genus H2' -- SIGNIFICANT genera only -----------------
+n_tested <- sum(!is.na(h2_tbl$H2prime))
+ov <- h2_tbl %>% filter(!is.na(H2prime), !is.na(H2prime_p), H2prime_p < 0.05) %>%
+  mutate(bee_genus = factor(bee_genus, levels = rev(bee_genus)))
+drop_note <- if (length(ns_dropped)) {
+    sprintf("  Dropped as NOT significant once flight-season & method are controlled (their apparent partitioning was a timing/method artefact): %s.",
+            paste(sort(ns_dropped), collapse = ", "))
+  } else ""
+g <- ggplot(ov, aes(x = H2prime, y = bee_genus)) +
+  geom_col(width = 0.72, fill = "#3C3B36") +
+  geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-  labs(title = "Within-genus niche partitioning: do a genus's species split up plant genera?",
-       subtitle = str_wrap(paste0(scope_cap("all records, species-resolved",
-                            "lethal + non-lethal pooled", "bee species x plant genus, per bee genus"),
-                            sprintf("  |  genera with >=%d species & >=%d records (%d shown)",
-                                    MIN_SPECIES, MIN_REC, nrow(keep))), 84),
+  labs(title = "Within-genus niche partitioning: significant genera only",
+       subtitle = str_wrap(paste0(
+         sprintf("Do a genus's species split up plant genera more than their differing flight seasons & survey methods already explain? Showing the %d of %d tested genera that are significant (season+method-controlled permutation null, p<0.05).",
+                 nrow(ov), n_tested), drop_note), 96),
        x = "within-genus H2'  (0 = species overlap on plants, 1 = each on its own)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12),
-        legend.position = "top", panel.grid.major.y = element_blank())
-ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g, width = 9, height = 5.8, dpi = 200, bg = "white")
+        legend.position = "none", panel.grid.major.y = element_blank())
+ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
+       width = 9, height = max(3.2, 0.5 * nrow(ov) + 1.8), dpi = 200, bg = "white")
 message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")
