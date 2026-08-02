@@ -22,22 +22,49 @@
 # Ingest runs exactly once here; every stage reads the same freshly-filled cache
 # (no re-fetch).
 #
-# Run (most common first):
-#   Everyday run, reuse caches (no new obs):
-#     terminal:  BEESCABR_SKIP_INGEST=1 Rscript scripts/run_pipeline.R
-#     RStudio:   Sys.setenv(BEESCABR_SKIP_INGEST = 1)   then Source this file
-#   Full run, pull new observations:
-#     terminal:  Rscript scripts/run_pipeline.R
-#     RStudio:   Source this file (no Sys.setenv needed)
-#   To set any flag below: prefix it in the terminal, or Sys.setenv(FLAG = 1) in
-#   RStudio before Source. Unset with Sys.unsetenv("FLAG").
+# ------------------------------------------------------------------------------
+# HOW TO RUN (RStudio, most common first)
+# ------------------------------------------------------------------------------
+#   Normal run -- pull only NEW/edited observations since last time (fast, seconds):
+#     source("scripts/run_pipeline.R")            # no flags needed; this is the default
 #
-# Flags (env vars):
-#   BEESCABR_SKIP_INGEST=1         skip the API pull (bees AND plants), use caches <-- used if you don't want to update old/pull new observations
-#   BEESCABR_SKIP_PLANTS=1         skip the plant step entirely (bees only)
-#   BEESCABR_FULL_INGEST=1         re-walk the whole place (not incremental)
-#   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table
-#   BEESCABR_NONINTERACTIVE=1      auto-skip ambiguous Holway names (no prompts)
+#   Everyday run -- reuse the caches, don't touch iNat at all:
+#     Sys.setenv(BEESCABR_SKIP_INGEST = "1")
+#     source("scripts/run_pipeline.R")
+#
+# ------------------------------------------------------------------------------
+# FLAGS = on/off switches. How they work (READ THIS -- it bit us once):
+# ------------------------------------------------------------------------------
+#   * A flag is just an env var stored in your R SESSION's memory.
+#   * Turn a flag ON :  Sys.setenv(FLAG_NAME = "1")
+#   * Turn a flag OFF:  Sys.unsetenv("FLAG_NAME")
+#   * Check a flag   :  Sys.getenv("FLAG_NAME")   # ""  = off,  "1" = on
+#   * A flag you set STAYS ON for the whole R session (every source() re-uses it)
+#     until you Sys.unsetenv() it or restart RStudio. That is how a leftover
+#     BEESCABR_FULL_INGEST=1 can silently make every run do a slow full rebuild.
+#   * Terminal equivalent: prefix it, e.g.  BEESCABR_SKIP_INGEST=1 Rscript scripts/run_pipeline.R
+#
+# ------------------------------------------------------------------------------
+# THE FLAGS
+# ------------------------------------------------------------------------------
+#   BEESCABR_SKIP_INGEST=1  -> don't call iNat at all; use whatever is already cached.
+#                              Use when you just want to re-clean/re-export existing data.
+#
+#   BEESCABR_SKIP_PLANTS=1  -> pull bees only, skip the (slower) plant pull.
+#
+#   BEESCABR_FULL_INGEST=1  -> !! SLOW, RARELY NEEDED !! Wipe the ENTIRE cache and
+#                              re-download every observation from scratch (~40+ min for
+#                              bees + plants). You'll see "Full rebuild: cleared N cached
+#                              observations; re-downloading everything." in the console --
+#                              if you see that and didn't mean it, this flag is stuck ON:
+#                              stop, run Sys.unsetenv("BEESCABR_FULL_INGEST"), re-run.
+#                              Default (flag OFF) is INCREMENTAL: keeps the cache and only
+#                              fetches records newer than the newest one you already have.
+#                              Only turn ON if the cache looks wrong/corrupt or the iNat
+#                              query params (place/taxon filters) changed.
+#
+#   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table (see NOTE below).
+#   BEESCABR_NONINTERACTIVE=1      auto-skip ambiguous Holway names (no prompts).
 #
 # NOTE: step 1b builds the Holway reference table ONCE (resolving 700+ names to
 # iNat taxa is slow + interactive). The result is saved to a versioned file and
