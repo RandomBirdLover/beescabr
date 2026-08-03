@@ -145,10 +145,11 @@ fw("interactions_top_plants",
 
 fw("bee_field_guide",
    "Bee field guide -- by species",
-   "descriptive",
-   "Per-species reference: peak day, active months, most-recorded flowers, diet breadth, status, IUCN.",
-   c(note = "'Most-recorded flowers' = where it was seen most, NOT proven preference"),
-   "bee_field_guide.html; bee_field_guide.csv; bee_field_guide.png")
+   "descriptive (+ inferential Forage-preference column)",
+   "Per-species reference: peak day, active months, most-recorded flowers, diet breadth, status, IUCN, and an availability-corrected Forage-preference column (species-level, same matched month/year/method test as the genus guide; ~19 species selective, shown only where a species has >=20 plant-visit records, so it fills in as sampling grows).",
+   c(note = "'Most-recorded flowers' = where it was seen most; 'Forage preference' is the matched-test result (Selective -> plant / Generalist / too few records)",
+     threshold = "forage preference gated at >=20 plant-visit records -- most species read 'too few records to judge' today"),
+   "bee_field_guide_species.html; bee_field_guide_species.csv; bee_field_guide_species.png")
 
 fw("bee_field_guide_genus",
    "Bee field guide -- by genus",

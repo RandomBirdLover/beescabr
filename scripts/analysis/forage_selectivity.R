@@ -196,3 +196,83 @@ forage_preference_label <- function(genus, plant_fmt = function(x) x, min_rec = 
       "too few records to judge"
   }, character(1))
 }
+
+# =============================================================
+# SPECIES-level forage preference -- the SAME matched test, but the focal taxon is a SPECIES
+# (Genus epithet) and the community is every other record (leave-one-out). Populated only for
+# species with >= SELECT_MIN_REC plant-visit records (a handful today, more as sampling grows);
+# "too few records to judge" below that. Used by the SPECIES field guide. The genus path above is
+# left untouched (it drives the web colours); .forage_core mirrors selectivity_table()'s maths on
+# a generic `taxon` column -- keep the two in sync if the test ever changes.
+# =============================================================
+.selectivity_records_species <- function() {
+  cols <- c("genus", "species", "taxon_rank", "plant_genus", "observed_on", "survey_method")
+  grab <- function(p) { d <- read.csv(p, stringsAsFactors = FALSE, check.names = FALSE)
+                        if (!"survey_method" %in% names(d)) d$survey_method <- NA_character_; d[cols] }
+  inter <- bind_rows(grab(PATHS$specimen_clean), grab(PATHS$inat_clean))
+  inter$genus       <- str_squish(inter$genus)
+  inter$plant_genus <- str_squish(inter$plant_genus)
+  inter$taxon_rank  <- tolower(str_squish(inter$taxon_rank))
+  epi <- tolower(word(str_squish(inter$species), -1))
+  inter$taxon <- ifelse(inter$taxon_rank %in% c("species", "subspecies") & inter$genus != "" &
+                          !is.na(epi) & epi != "", paste(inter$genus, epi), NA_character_)
+  inter$month  <- suppressWarnings(as.integer(substr(inter$observed_on, 6, 7)))
+  inter$year   <- suppressWarnings(as.integer(substr(inter$observed_on, 1, 4)))
+  inter$method <- tolower(str_squish(inter$survey_method))
+  inter$method[is.na(inter$method) | inter$method == ""] <- "unknown"
+  inter[!is.na(inter$taxon) & !is.na(inter$plant_genus) & inter$plant_genus != "" &
+        !is.na(inter$month) & !is.na(inter$year), c("taxon", "plant_genus", "month", "year", "method")]
+}
+
+# generic matched-availability test on a `taxon` column (mirror of selectivity_table's core).
+# Skips the Monte-Carlo for sub-threshold taxa (they can't be judged anyway) to stay fast.
+.forage_core <- function(rec, min_rec) {
+  plants <- sort(unique(rec$plant_genus)); P <- length(plants); taxa <- sort(unique(rec$taxon))
+  gmarg <- as.numeric(table(factor(rec$plant_genus, plants))); gmarg <- gmarg / sum(gmarg)
+  MIN_CELL <- 10; REG <- 0.05; rec$ym <- rec$year * 100L + rec$month
+  share_of <- function(pg) { t <- as.numeric(table(factor(pg, plants))); if (sum(t) == 0) NULL else t / sum(t) }
+  rows <- lapply(taxa, function(b) {
+    isb <- rec$taxon == b; rb <- rec[isb, , drop = FALSE]
+    x <- as.numeric(table(factor(rb$plant_genus, plants))); names(x) <- plants; n <- sum(x)
+    rc <- rec[!isb, , drop = FALSE]
+    cw <- table(paste(rb$ym, rb$method, sep = "|")) / n; Epref <- numeric(P)
+    for (k in names(cw)) {
+      parts <- strsplit(k, "\\|")[[1]]; ymk <- as.integer(parts[1]); mth <- parts[2]; mm <- ymk %% 100L
+      m1 <- rc$ym == ymk & rc$method == mth; sh <- if (sum(m1) >= MIN_CELL) share_of(rc$plant_genus[m1]) else NULL
+      if (is.null(sh)) { m2 <- rc$month == mm & rc$method == mth; sh <- if (sum(m2) >= MIN_CELL) share_of(rc$plant_genus[m2]) else NULL }
+      if (is.null(sh)) { m3 <- rc$month == mm; sh <- if (sum(m3) >= MIN_CELL) share_of(rc$plant_genus[m3]) else gmarg }
+      if (is.null(sh)) sh <- gmarg
+      Epref <- Epref + as.numeric(cw[k]) * sh
+    }
+    if (sum(Epref) <= 0) Epref <- gmarg
+    Epref <- Epref / sum(Epref); Epref <- (1 - REG) * Epref + REG / P; names(Epref) <- plants
+    p_ym  <- if (n < min_rec) NA_real_ else tryCatch(
+      suppressWarnings(chisq.test(x, p = Epref, simulate.p.value = TRUE, B = SELECT_B)$p.value), error = function(e) NA_real_)
+    ratio <- ifelse(Epref > 0, (x / n) / Epref, NA_real_); names(ratio) <- plants
+    elig  <- x >= pmax(3, 0.05 * n); pref <- if (any(elig)) names(which.max(ifelse(elig, ratio, -Inf))) else NA_character_
+    data.frame(taxon = b, n_records = n, n_plants = sum(x > 0), chi_p = p_ym,
+               selective = !is.na(p_ym) & p_ym < 0.05 & n >= min_rec,
+               top_plant = names(sort(x, decreasing = TRUE))[1], preferred_plant = pref,
+               preferred_ratio = if (is.na(pref)) NA_real_ else round(unname(ratio[pref]), 1), stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, rows); out[order(-out$n_records), ]
+}
+
+selectivity_table_species <- function(min_rec = SELECT_MIN_REC) {
+  key <- paste0("sp:", min_rec); if (!is.null(.sel_env[[key]])) return(.sel_env[[key]])
+  out <- .forage_core(.selectivity_records_species(), min_rec); .sel_env[[key]] <- out; out
+}
+
+# One-line forage-preference verdict for a SPECIES (Genus epithet), for the species field guide.
+forage_preference_label_species <- function(species, plant_fmt = function(x) x, min_rec = SELECT_MIN_REC) {
+  t <- selectivity_table_species(min_rec); idx <- match(species, t$taxon)
+  vapply(seq_along(species), function(i) {
+    j <- idx[i]; if (is.na(j)) return("-"); r <- t[j, ]
+    if (isTRUE(r$selective) && !is.na(r$preferred_plant))
+      sprintf("Selective -> %s (%.1fx vs available)", plant_fmt(r$preferred_plant), r$preferred_ratio)
+    else if (!is.na(r$n_records) && r$n_records >= min_rec)
+      "Generalist (visits ~ availability)"
+    else
+      "too few records to judge"
+  }, character(1))
+}
