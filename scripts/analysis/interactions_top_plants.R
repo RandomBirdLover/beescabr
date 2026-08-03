@@ -129,31 +129,24 @@ peak <- max.col(Mc, ties.method = "first")               # each plant's peak (bu
 ramp <- grDevices::colorRampPalette(BEE_SEQ)(32); mx <- log1p(max(Mc))
 cidx <- function(v) pmax(1, pmin(32, ceiling(31 * log1p(v) / mx) + 1))
 
-# ONE merged graph: each plant is a row carrying BOTH its total-visits bar (left)
-# and its 12 monthly cells (right), split by a divider -- magnitude + timing in a single chart.
-BARW <- 4.0; GAP <- 1.9; x0 <- BARW + GAP; maxc <- max(topc$whole_park)   # bar region 0..BARW, months start at x0
-png(file.path(OUT_DIR, "interactions_top_plants_timing.png"), width = 2450, height = 1180, res = 200)
+# ONE merged graph: a single ranked month heatmap. The ranking (top -> bottom = most ->
+# least visited) and the total count in each row label carry the "top 10" magnitude; the
+# monthly cells + peak diamond carry the "when". No separate records bar -- it's one chart.
+lab2 <- sprintf("%d. %s  (n = %s)", seq_len(n), plant_label(topc$plant_genus), format(topc$whole_park, big.mark = ","))
+png(file.path(OUT_DIR, "interactions_top_plants_timing.png"), width = 2200, height = 1150, res = 200)
 bee_base_par()
-par(mar = c(5, 15.5, 4, 1))
-plot.new(); plot.window(xlim = c(0, x0 + 12), ylim = c(0.5, n + 0.5), yaxs = "i")
+par(mar = c(5, 20, 4, 1.5))
+plot.new(); plot.window(xlim = c(0.5, 12.5), ylim = c(0.5, n + 0.5), yaxs = "i", xaxs = "i")
 for (k in seq_len(n)) { p <- ord[k]
-  # -- magnitude: method-split total-visits bar, scaled to the bar region
-  xn <- topc$nonlethal[p] / maxc * BARW; xl <- topc$lethal[p] / maxc * BARW
-  rect(0, k - 0.34, xn, k + 0.34, col = COL_NONLETHAL, border = NA)
-  rect(xn, k - 0.34, xn + xl, k + 0.34, col = COL_LETHAL, border = NA)
-  text(xn + xl, k, format(topc$whole_park[p], big.mark = ","), pos = 4, offset = 0.2, cex = 0.66, col = BEE_INK$secondary, xpd = NA)
-  # -- timing: 12 monthly cells + a diamond on the peak month
-  for (mo in 1:12) { v <- Mc[p, mo]; xl2 <- x0 + (mo - 1)
-    rect(xl2, k - 0.42, xl2 + 1, k + 0.42, col = if (v == 0) "#f4f2ee" else ramp[cidx(v)], border = "white", lwd = 0.6) }
-  points(x0 + peak[p] - 0.5, k, pch = 18, cex = 0.8, col = BEE_INK$primary) }
-abline(v = x0 - GAP / 2, col = "#d8d3ca", lwd = 1)                        # divider between the two halves
-axis(2, at = seq_len(n), labels = rev(lab), las = 1, cex.axis = 0.72, tick = FALSE)
-axis(1, at = x0 + (1:12) - 0.5, labels = month.abb, las = 2, cex.axis = 0.72, tick = FALSE)
-mtext("total visits", side = 1, at = BARW / 2, line = 2.6, cex = 0.68, col = BEE_INK$secondary)
-mtext("when visited  (shade = log records/month · diamond = peak)", side = 1, at = x0 + 6, line = 3.0, cex = 0.68, col = BEE_INK$secondary)
+  for (mo in 1:12) { v <- Mc[p, mo]
+    rect(mo - 0.5, k - 0.42, mo + 0.5, k + 0.42, col = if (v == 0) "#efece7" else ramp[cidx(v)], border = "white", lwd = 0.7) } }
+axis(2, at = seq_len(n), labels = rev(lab2), las = 1, cex.axis = 0.74, tick = FALSE)
+axis(1, at = 1:12, labels = month.abb, las = 2, cex.axis = 0.78, tick = FALSE)
 title(main = sprintf("Top %d plants bees visit -- and when", TOP_N), cex.main = 1.1)
-legend("bottomleft", inset = c(0, -0.16), horiz = TRUE, bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL),
-       text.col = BEE_INK$primary, cex = 0.72, legend = c("non-lethal (photo)", "lethal (net)"), xpd = NA)
+mtext("n = total visit records · cell shade = log records that month · pale = no records that month",
+      side = 1, line = 3.0, cex = 0.72, col = BEE_INK$secondary)
+mtext("interns survey ~Mar-Oct; beeple year-round -- month coverage is uneven",
+      side = 1, line = 3.9, cex = 0.68, col = BEE_INK$secondary)
 dev.off()
 
 message("\nWrote interactions_top_plants.csv (+_by_month.csv) and three figures to ",
