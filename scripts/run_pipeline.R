@@ -348,10 +348,11 @@ main <- function() {
   tryCatch({
     obs_rev   <- "data/observations/review"
     obs_items <- data.frame(
-      label = c("bee flower fields to fix", "stray transect tags"),
-      count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior.csv")),
+      label = c("bee behavior to fix (survey)", "bee flowers to add (non-survey)", "stray transect tags"),
+      count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior_survey.csv")),
+                .n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior_nonsurvey.csv")),
                 .n_rows(file.path(obs_rev, "review_mistagged_transects.csv"))),
-      file  = c("cabr_inat_bee_fix_behavior.csv", "review_mistagged_transects.csv"),
+      file  = c("cabr_inat_bee_fix_behavior_survey.csv", "cabr_inat_bee_fix_behavior_nonsurvey.csv", "review_mistagged_transects.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",

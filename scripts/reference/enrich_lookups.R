@@ -56,7 +56,9 @@ IUCN_SYNONYM    <- c("Bombus sonorus"      = "Bombus pensylvanicus",
     return(data.frame(scientific_name = character(0), iucn_code = character(0),
                       iucn_category = character(0), assessment_year = character(0),
                       source = character(0), retrieved_on = character(0), stringsAsFactors = FALSE))
-  d <- read.csv(IUCN_CACHE_FILE, stringsAsFactors = FALSE, check.names = FALSE)
+  # colClasses="character" so a numeric-looking assessment_year isn't read back as <integer>
+  # (that mismatched the fetched rows' type and broke bind_rows during an incremental refresh)
+  d <- read.csv(IUCN_CACHE_FILE, stringsAsFactors = FALSE, check.names = FALSE, colClasses = "character")
   for (c in c("scientific_name","iucn_code","iucn_category","assessment_year","source","retrieved_on"))
     if (!c %in% names(d)) d[[c]] <- NA_character_
   d
@@ -98,7 +100,7 @@ resolve_iucn <- function(species, force = FALSE, verbose = TRUE) {
       Sys.sleep(0.34)                                                # ~3 req/s, courteous
       data.frame(scientific_name = need[i], iucn_code = r$code,
                  iucn_category = paste0(.iucn_name_of(r$code), r$note),
-                 assessment_year = r$year, source = "IUCN Red List API v4 (rredlist)",
+                 assessment_year = as.character(r$year), source = "IUCN Red List API v4 (rredlist)",
                  retrieved_on = as.character(Sys.Date()), stringsAsFactors = FALSE)
     })
     new <- do.call(rbind, fetched)
