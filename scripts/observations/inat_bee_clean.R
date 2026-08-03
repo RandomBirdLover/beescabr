@@ -54,6 +54,7 @@ IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: 
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
 IBC_FIX_BEHAVIOR   <- "data/observations/review/cabr_inat_bee_fix_behavior.csv"  # hand-back worklist: fields to fix (missing OR wrong)
+IBC_CASUAL_ADD     <- "data/observations/review/cabr_inat_bee_casual_add_flower.csv"  # casual (non-survey) obs with no behavior -> check photo, add a flower
 IBC_LOCATION_REVIEW <- "data/observations/review/review_location/cabr_inat_bee_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
 IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
@@ -182,26 +183,62 @@ ibc_bee_situation <- function(df) {
 #     flower_taxon_id, i.e. it isn't a plant in the lookup. The plant lookup ingests
 #     every real bee-forage plant, so a missing id means the tag is wrong (e.g. a
 #     butterfly mis-entered in the flower field) or the name is a typo.
+#   * on_flower_but_no_plant -- the bee_on_flower flag is ticked (a foraging
+#     interaction IS recorded) but no plant was entered in flower_visited. The floral
+#     visit is confirmed; only the plant identity is missing -> open the photo and add
+#     the plant. A bee recorded on the ground or at a nest is NOT on a flower, so those
+#     are excluded (they carry no flower to record).
 #   * missing_all_behavior_fields -- a SURVEY obs that recorded no behavior at all
 #     (bee_situation == "missing").
-# NA-safe; a bad flower takes priority over "missing" (a bad flower can't be missing).
+# NA-safe; priority: a bad flower first (it has a value), then on-flower-no-plant
+# (flag set, value blank), then "missing" (no flags at all).
 ibc_fix_behavior <- function(clean) {
   n   <- nrow(clean)
   col <- function(c) if (c %in% names(clean)) clean[[c]] else rep(NA, n)
+  tf  <- function(c) as.logical(col(c)) %in% TRUE
   fv   <- col("flower_visited"); ftid <- col("flower_taxon_id")
   has_flower <- !is.na(fv) & trimws(as.character(fv)) != ""
   bad_flower <- has_flower & (is.na(ftid) | trimws(as.character(ftid)) == "")
   is_surv <- as.logical(col("is_survey")) %in% TRUE
   sit     <- as.character(col("bee_situation"))
+  ground_nest <- tf("bee_on_ground") | tf("bee_nest") | tf("bee_in_nest")  # NOT on a flower -> exclude
+  on_flower_no_plant <- tf("bee_on_flower") & !has_flower & !ground_nest    # flower confirmed, plant blank
   reason  <- dplyr::case_when(
     bad_flower                 ~ "flower_not_a_plant_or_unresolved",
+    on_flower_no_plant         ~ "on_flower_but_no_plant",
     is_surv & sit == "missing" ~ "missing_all_behavior_fields",
     TRUE                       ~ NA_character_)
+  # plain-language "do this" prompt so the worklist tells the reviewer what to fix, not just why
+  action <- dplyr::case_when(
+    reason == "flower_not_a_plant_or_unresolved" ~ "Open on iNaturalist: the flower entry is not a known plant (typo or wrong taxon) -- correct the plant name or clear it.",
+    reason == "on_flower_but_no_plant"           ~ "Open on iNaturalist: the bee is marked on a flower but the plant is blank -- add the plant it is visiting.",
+    reason == "missing_all_behavior_fields"      ~ "Open on iNaturalist: survey obs with no behavior recorded -- add the plant it is on (or mark on-ground / at-nest).",
+    TRUE                                          ~ NA_character_)
   clean |>
-    mutate(fix_reason = reason) |>
+    mutate(fix_reason = reason, action = action) |>
     filter(!is.na(fix_reason)) |>
     select(any_of(c("obs_id", "observer", "observed_on", "transect", "taxon_id",
-                    "scientific_name", "flower_visited", "fix_reason", "url")))
+                    "scientific_name", "flower_visited", "fix_reason", "action", "url")))
+}
+
+# ---- casual-obs add-a-flower worklist --------------------------------------
+# ibc_casual_add_flower(): PURE. CASUAL (non-survey) obs that recorded NO behavior at all
+# (bee_situation == "missing": no plant, no on-flower flag, not on-ground, not at a nest).
+# Many are photos of a bee sitting on a flower nobody logged -> a light community-science
+# task: open the photo and, IF the bee is on a flower, add the plant. Kept SEPARATE from the
+# survey hand-back worklist -- these are public records, lower priority and far more numerous.
+# On-ground / nest obs never reach here ("missing" already excludes them), so we never ask a
+# reviewer to add a flower to a bee that isn't on one.
+ibc_casual_add_flower <- function(clean) {
+  n   <- nrow(clean)
+  col <- function(c) if (c %in% names(clean)) clean[[c]] else rep(NA, n)
+  is_surv <- as.logical(col("is_survey")) %in% TRUE
+  sit     <- as.character(col("bee_situation"))
+  clean |>
+    mutate(action = "Open on iNaturalist: no behavior recorded -- if the bee is on a flower, add the plant it is visiting (and tick bee-on-flower).") |>
+    filter(!is_surv, sit == "missing") |>
+    select(any_of(c("obs_id", "observer", "observed_on", "taxon_id",
+                    "scientific_name", "action", "url")))
 }
 
 # ---- location-fix worklist ------------------------------------------------
@@ -333,22 +370,19 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
 
-  # bake the current IUCN Red List status onto each species (fetched once, cache-backed,
-  # offline-safe) so the analysis layer reads a column instead of hitting the network.
-  if (!exists("enrich_iucn_columns")) source("scripts/reference/enrich_lookups.R")
-  clean <- tryCatch(enrich_iucn_columns(clean),
-                    error = function(e) { message("  !! IUCN enrichment skipped: ", conditionMessage(e)); clean })
-
   # hand-back worklists (review artifacts, kept OUT of the clean table):
-  #   * fix_behavior    -- behavioral fields to fix (see ibc_fix_behavior)
+  #   * fix_behavior    -- SURVEY behavioral fields to fix (see ibc_fix_behavior)
+  #   * casual_add      -- CASUAL obs with no behavior -> check the photo, add a flower (ibc_casual_add_flower)
   #   * location_review -- survey pins to re-check (location_needs_fix, see ibc_location_review)
   fix_behavior    <- ibc_fix_behavior(clean)
+  casual_add      <- ibc_casual_add_flower(clean)
   location_review <- ibc_location_review(df)
   if (write) {
     dir.create(dirname(out_clean), recursive = TRUE, showWarnings = FALSE)
     write.csv(clean, out_clean, row.names = FALSE, na = "")
     dir.create(dirname(IBC_FIX_BEHAVIOR), recursive = TRUE, showWarnings = FALSE)
     write.csv(fix_behavior, IBC_FIX_BEHAVIOR, row.names = FALSE, na = "")
+    write.csv(casual_add, IBC_CASUAL_ADD, row.names = FALSE, na = "")
     dir.create(dirname(IBC_LOCATION_REVIEW), recursive = TRUE, showWarnings = FALSE)
     write.csv(location_review, IBC_LOCATION_REVIEW, row.names = FALSE, na = "")
   }
@@ -357,15 +391,18 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   n_fv      <- sum(!is.na(clean$flower_visited))
   n_missing <- sum(fix_behavior$fix_reason == "missing_all_behavior_fields")
   n_badflow <- sum(fix_behavior$fix_reason == "flower_not_a_plant_or_unresolved")
+  n_noplant <- sum(fix_behavior$fix_reason == "on_flower_but_no_plant")
   bx_kv("Bees", format(nrow(clean), big.mark = ","), " rows — ",
         format(sum(clean$is_survey), big.mark = ","), " survey / ",
         format(sum(!clean$is_survey), big.mark = ","), " other")
   bx_out(basename(out_clean))
   bx_cont("spatial: ", format(n_walk, big.mark = ","), " walk-in re-marked NOT survey · ", format(n_bad, big.mark = ","), " pins off-transect → review")
   bx_cont("annotations: ", format(n_fv, big.mark = ","), " obs with flower_visited")
-  bx_cont("fix_behavior: ", format(n_missing, big.mark = ","), " missing all fields · ", format(n_badflow, big.mark = ","), " non-plant/unresolved flower")
+  bx_cont("fix_behavior: ", format(n_noplant, big.mark = ","), " on-flower but no plant · ", format(n_missing, big.mark = ","), " missing all fields · ", format(n_badflow, big.mark = ","), " non-plant/unresolved flower")
   bx_out(basename(IBC_FIX_BEHAVIOR))
-  invisible(list(clean = clean, fix_behavior = fix_behavior, location_review = location_review))
+  bx_cont("casual add-flower: ", format(nrow(casual_add), big.mark = ","), " casual obs with no behavior → check photo, add a flower")
+  bx_out(basename(IBC_CASUAL_ADD))
+  invisible(list(clean = clean, fix_behavior = fix_behavior, casual_add = casual_add, location_review = location_review))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0)
