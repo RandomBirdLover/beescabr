@@ -238,6 +238,15 @@ fw("coverage_cabr_share_of_county",
    character(0),
    "cabr_share_of_county.csv; cabr_share_of_county.png; cabr_county_map.png")
 
+fw("coverage_cabr_county_map",
+   "CABR county locator map -- speck of area, big share of bees",
+   "descriptive",
+   "A locator map placing tiny Cabrillo National Monument on the San Diego County map: CABR is a fraction of a percent of the county by AREA yet carries a disproportionately large share of its native-bee species and genera -- the visual companion to the share-of-county figures.",
+   c(measures    = "area % straight from the NPS official CABR polygon vs the San Diego County polygon (same CRS); species/genus shares from the CABR official checklist vs the Holway county checklist",
+     the_numbers = "the actual area % and diversity shares are computed and tabulated by coverage_cabr_share_of_county (cabr_share_of_county.csv); this script is the map that dramatizes them",
+     scope       = "checklist-level (all records feeding each checklist), not survey-only"),
+   "cabr_county_map.png")
+
 fw("records_per_genus_by_evidence",
    "Evidence backing each genus",
    "descriptive",
