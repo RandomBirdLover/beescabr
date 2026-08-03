@@ -101,53 +101,28 @@ rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), plant_label(top_m)
                              format(top_tot, big.mark = ",")), top_m)
 
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
-    width = 2150, height = 1050, res = 200)
+    width = 2300, height = 1050, res = 200)
 bee_base_par()
-op <- par(mar = c(4, 19, 4, 1))                   # wide left margin for "rank. Common Name (Genus) (n)" labels
-Mplot <- Mmon[nrow(Mmon):1, , drop = FALSE]
+op <- par(mar = c(4, 19, 4, 7))                   # wide left margin for labels; right margin for the colour legend
+Mplot  <- Mmon[nrow(Mmon):1, , drop = FALSE]
+ramp_m <- grDevices::colorRampPalette(BEE_SEQ)(24)   # house red ramp (magnitude)
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
-      col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # magnitude = house blue ramp
+      col = ramp_m, axes = FALSE, xlab = "", ylab = "",
       main = sprintf("When are the top %d plants visited? (log records/month)\ny-axis ranked by the bees' favourite -- 1 = most visit records", TOP_MONTH))
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.66)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
       side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
+# colour-scale legend (right margin): pale = few / no records, dark = many that month
+lx0 <- grconvertX(0.905, "ndc", "user"); lx1 <- grconvertX(0.925, "ndc", "user")
+ly0 <- grconvertY(0.34, "ndc", "user");  ly1 <- grconvertY(0.66, "ndc", "user")
+nb  <- length(ramp_m); ys <- seq(ly0, ly1, length.out = nb + 1)
+rect(lx0, ys[-(nb + 1)], lx1, ys[-1], col = ramp_m, border = NA, xpd = NA)
+rect(lx0, ly0, lx1, ly1, border = BEE_INK$secondary, lwd = 0.8, xpd = NA)
+text(lx1, ly1, sprintf(" %s", format(max(Mmon), big.mark = ",")), pos = 4, offset = 0.15, xpd = NA, cex = 0.64, col = BEE_INK$secondary)
+text(lx1, ly0, " 0",                                              pos = 4, offset = 0.15, xpd = NA, cex = 0.64, col = BEE_INK$secondary)
+text((lx0 + lx1) / 2, ly1, "records/month", pos = 3, offset = 0.5, xpd = NA, cex = 0.64, col = BEE_INK$secondary)
 par(op); dev.off()
 
-# ---- 5. COMBINED figure: top-N ranking + WHEN they're visited, shared rows ---
-# One figure, two aligned panels sharing the same plant rows (rank 1 at top):
-#   LEFT  = total bee-visit records (method-split bar)  -> magnitude / the ranking
-#   RIGHT = month heatmap (log records/month) + a diamond on each plant's peak month -> timing
-topc <- head(tbl, TOP_N)
-Mc <- matrix(0L, nrow = nrow(topc), ncol = 12, dimnames = list(topc$plant_genus, month.abb))
-mmc <- rec %>% filter(!is.na(month), plant_genus %in% topc$plant_genus) %>% count(plant_genus, month)
-for (r in seq_len(nrow(mmc))) Mc[mmc$plant_genus[r], mmc$month[r]] <- mmc$n[r]
-n    <- nrow(topc)
-ord  <- rev(seq_len(n))                                   # plot rank 1 at the TOP (highest y)
-lab  <- sprintf("%d. %s", seq_len(n), plant_label(topc$plant_genus))
-peak <- max.col(Mc, ties.method = "first")               # each plant's peak (busiest) month
-ramp <- grDevices::colorRampPalette(BEE_SEQ)(32); mx <- log1p(max(Mc))
-cidx <- function(v) pmax(1, pmin(32, ceiling(31 * log1p(v) / mx) + 1))
-
-# ONE merged graph: a single ranked month heatmap. The ranking (top -> bottom = most ->
-# least visited) and the total count in each row label carry the "top 10" magnitude; the
-# monthly cells + peak diamond carry the "when". No separate records bar -- it's one chart.
-lab2 <- sprintf("%d. %s  (n = %s)", seq_len(n), plant_label(topc$plant_genus), format(topc$whole_park, big.mark = ","))
-png(file.path(OUT_DIR, "interactions_top_plants_timing.png"), width = 2200, height = 1150, res = 200)
-bee_base_par()
-par(mar = c(5, 20, 4, 1.5))
-plot.new(); plot.window(xlim = c(0.5, 12.5), ylim = c(0.5, n + 0.5), yaxs = "i", xaxs = "i")
-for (k in seq_len(n)) { p <- ord[k]
-  for (mo in 1:12) { v <- Mc[p, mo]
-    rect(mo - 0.5, k - 0.42, mo + 0.5, k + 0.42, col = if (v == 0) "#efece7" else ramp[cidx(v)], border = "white", lwd = 0.7) } }
-axis(2, at = seq_len(n), labels = rev(lab2), las = 1, cex.axis = 0.74, tick = FALSE)
-axis(1, at = 1:12, labels = month.abb, las = 2, cex.axis = 0.78, tick = FALSE)
-title(main = sprintf("Top %d plants bees visit -- and when", TOP_N), cex.main = 1.1)
-mtext("n = total visit records · cell shade = log records that month · pale = no records that month",
-      side = 1, line = 3.0, cex = 0.72, col = BEE_INK$secondary)
-mtext("interns survey ~Mar-Oct; beeple year-round -- month coverage is uneven",
-      side = 1, line = 3.9, cex = 0.68, col = BEE_INK$secondary)
-dev.off()
-
-message("\nWrote interactions_top_plants.csv (+_by_month.csv) and three figures to ",
+message("\nWrote interactions_top_plants.csv (+_by_month.csv) and two figures to ",
         normalizePath(OUT_DIR))
