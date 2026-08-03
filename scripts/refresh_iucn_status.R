@@ -1,124 +1,44 @@
 # =============================================================
 # scripts/refresh_iucn_status.R
-# beescabr -- pull the current IUCN Red List category for every bee species in the
-# park and cache it, so the field guide can show a real "IUCN" column that stays up
-# to date instead of a hand-maintained list.
+# beescabr -- STANDALONE "force a full IUCN refresh" tool.
 #
-# This is a DATA-REFRESH step, NOT part of run_all_analysis.R (which stays offline).
-# It uses the ropensci `rredlist` package against the official IUCN Red List API v4,
-# so it needs internet AND a free token:
-#   1. Request a token (free) at  https://api.iucnredlist.org  -- approval can take a
-#      day or two. You agree to the Red List Terms of Use.
-#   2. Paste the token into  data/secrets/iucn_api.env  (on the IUCN_REDLIST_KEY= line).
-#      That file is gitignored, so the token is never committed. (You can instead set the
-#      IUCN_REDLIST_KEY environment variable, or run rredlist::rl_use_iucn("your-token").)
-#   3. From the repo root:  Rscript scripts/refresh_iucn_status.R
+# The IUCN Red List category for every bee species is now baked into the cleaned bee tables
+# AT DATA-CLEANING TIME (specimen_bee_clean.R + inat_bee_clean.R call enrich_iucn_columns()
+# from scripts/reference/enrich_lookups.R, which fetches once, caches, and is offline-safe).
+# So you normally do NOT need to run this -- a normal pipeline run keeps IUCN current for any
+# NEW species incrementally.
 #
-# Writes data/checklists/iucn/iucn_status.csv (one row per species). bee_field_guide.R
-# reads that file automatically and shows the IUCN column. Re-run whenever you want to
-# refresh (IUCN publishes a couple of updates a year). Species IUCN has never assessed
-# come back as "NE" (Not Evaluated) -- true for most solitary bees; the bumble bees are
-# the assessed ones.
+# Run this only to RE-CHECK species already in the cache (IUCN publishes a couple of updates a
+# year, so an existing NE / LC could change). It forces a full re-query of every species and
+# rewrites data/checklists/iucn/iucn_status.csv. Needs internet + a free token (see
+# data/secrets/iucn_api.env or the IUCN_REDLIST_KEY env var; free at https://api.iucnredlist.org).
 #
-# Depends on: rredlist, dplyr, stringr (+ config.R).
+#   From the repo root:  Rscript scripts/refresh_iucn_status.R
+#
+# Depends on: dplyr, stringr, rredlist (+ config.R + reference/enrich_lookups.R).
 # =============================================================
 
-if (!requireNamespace("rredlist", quietly = TRUE))
-  try(install.packages("rredlist", repos = "https://cloud.r-project.org"), silent = TRUE)
-suppressPackageStartupMessages({ library(rredlist); library(dplyr); library(stringr) })
-if (!exists("PATHS")) source("scripts/config.R")
+suppressPackageStartupMessages({ library(dplyr); library(stringr) })
+if (!exists("PATHS"))         source("scripts/config.R")
+if (!exists("resolve_iucn"))  source("scripts/reference/enrich_lookups.R")
 
-OUT_DIR     <- "data/checklists/iucn"; dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-SECRET_FILE <- "data/secrets/iucn_api.env"    # gitignored -- paste your token in here
-
-# token: environment variable first, then the gitignored secrets file
-read_secret_key <- function(path) {
-  if (!file.exists(path)) return("")
-  ln <- readLines(path, warn = FALSE)
-  ln <- ln[grepl("^\\s*IUCN_REDLIST_KEY\\s*=", ln)]                 # skip comments / blank lines
-  if (!length(ln)) return("")
-  v  <- sub("^\\s*IUCN_REDLIST_KEY\\s*=\\s*", "", ln[length(ln)])   # last definition wins
-  trimws(gsub('^["\']|["\']$', "", trimws(v)))                      # strip optional quotes
+# species universe: every species/subspecies binomial in the two cleaned bee tables
+grab <- function(path) {
+  if (!file.exists(path)) return(character(0))
+  d <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  if (!all(c("scientific_name", "taxon_rank") %in% names(d))) return(character(0))
+  sp <- str_squish(d$scientific_name[tolower(str_squish(d$taxon_rank)) %in% c("species", "subspecies")])
+  unique(sp[!is.na(sp) & grepl(" ", sp)])
 }
-KEY <- Sys.getenv("IUCN_REDLIST_KEY")
-if (!nzchar(KEY)) KEY <- read_secret_key(SECRET_FILE)
-if (!nzchar(KEY))
-  stop("No IUCN token found. Paste your token into ", SECRET_FILE,
-       " (on the IUCN_REDLIST_KEY= line), or set the IUCN_REDLIST_KEY environment variable. ",
-       "Free token: https://api.iucnredlist.org.")
+species <- sort(unique(c(grab(PATHS$specimen_clean), grab(PATHS$inat_clean))))
+message(sprintf("Forcing a full IUCN re-check of %d bee species...", length(species)))
 
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (length(a) == 1 && is.na(a)) ||
-                            (is.character(a) && length(a) == 1 && !nzchar(a))) b else a
-CODE_NAME <- c(EX = "Extinct", EW = "Extinct in the Wild", RE = "Regionally Extinct",
-               CR = "Critically Endangered", EN = "Endangered", VU = "Vulnerable",
-               NT = "Near Threatened", LC = "Least Concern", DD = "Data Deficient",
-               NE = "Not Evaluated", LR = "Lower Risk")
-name_of <- function(code) { n <- unname(CODE_NAME[toupper(code)]); if (is.na(n)) code else n }
+tab <- resolve_iucn(species, force = TRUE)
+thr <- tab$scientific_name[toupper(tab$iucn_code) %in% c("CR", "EN", "VU", "NT")]
+message(sprintf("Done: %d species in the cache; %d threatened/near-threatened.", nrow(tab), length(thr)))
+if (length(thr)) message("  Flagged: ", paste(sort(thr), collapse = ", "))
 
-# ---- species universe: every species-level bee in the two cleaned tables ----
-grab <- function(df) data.frame(
-  rank    = tolower(str_squish(df$taxon_rank)),
-  genus   = str_squish(df$genus),
-  epithet = tolower(word(str_squish(df$species), -1)),
-  stringsAsFactors = FALSE)
-spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
-inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
-sp <- bind_rows(grab(spec), grab(inat)) %>%
-  filter(rank %in% c("species", "subspecies"), genus != "", epithet != "") %>%
-  transmute(genus, epithet, scientific_name = paste(genus, epithet)) %>%
-  distinct() %>% arrange(scientific_name)
-message(sprintf("Querying IUCN Red List (v4, via rredlist) for %d bee species...", nrow(sp)))
-
-# A few species IUCN assesses under a different ACCEPTED name (synonyms). A literal
-# name-for-name query returns NE for these, so query the accepted name instead. IUCN's
-# pensylvanicus assessment explicitly covers B. sonorus, and fervidus covers B. californicus.
-IUCN_SYNONYM <- c("Bombus sonorus"      = "Bombus pensylvanicus",
-                  "Bombus californicus" = "Bombus fervidus")
-
-# ---- latest global category for one species (NE if not assessed / not found) --
-get_code <- function(g, e) {
-  res <- tryCatch(rredlist::rl_species_latest(genus = g, species = e, key = KEY, parse = TRUE),
-                  error = function(err) NULL)                 # 404 = not in the Red List -> NE
-  if (is.null(res)) return(list(code = "NE", year = NA))
-  code <- tryCatch(res$red_list_category$code, error = function(e2) NULL)
-  year <- tryCatch(res$year_published %||% res$assessment_date, error = function(e2) NA)
-  list(code = toupper(code %||% "NE"), year = year %||% NA)
-}
-
-rows <- lapply(seq_len(nrow(sp)), function(i) {
-  nm  <- sp$scientific_name[i]
-  qnm <- if (nm %in% names(IUCN_SYNONYM)) unname(IUCN_SYNONYM[nm]) else nm   # query accepted name
-  cat <- tryCatch(get_code(word(qnm, 1), word(qnm, 2)),
-                  error = function(e) { message("  ! ", nm, ": ", conditionMessage(e)); NULL })
-  if (is.null(cat)) cat <- list(code = "NE", year = NA)
-  if (i %% 10 == 0) message(sprintf("  ...%d/%d", i, nrow(sp)))
-  Sys.sleep(0.34)                                             # ~3 req/sec, courteous to the API
-  note <- if (qnm != nm && cat$code != "NE") sprintf(" (as %s)", qnm) else ""
-  data.frame(scientific_name = nm,
-             iucn_code = cat$code, iucn_category = paste0(name_of(cat$code), note),
-             assessment_year = as.character(cat$year %||% ""), stringsAsFactors = FALSE)
-})
-out <- do.call(rbind, rows)
-out$source       <- "IUCN Red List API v4 (rredlist)"
-out$retrieved_on <- as.character(Sys.Date())
-
-# Don't clobber a good cache with a failed pull: if EVERY species came back NE but the
-# existing cache held real assessments, IUCN was almost certainly unreachable -- keep it.
-CACHE_FILE   <- file.path(OUT_DIR, "iucn_status.csv")
-new_assessed <- sum(out$iucn_code != "NE")
-old_assessed <- if (file.exists(CACHE_FILE))
-  sum(toupper(read.csv(CACHE_FILE, stringsAsFactors = FALSE)$iucn_code) != "NE") else 0
-if (new_assessed == 0 && old_assessed > 0) {
-  message("IUCN refresh returned no assessments (offline or API issue?) -- keeping the existing cache.")
-} else {
-  write.csv(out, CACHE_FILE, row.names = FALSE)
-  thr <- out$scientific_name[out$iucn_code %in% c("CR", "EN", "VU", "NT")]
-  message(sprintf("Wrote %s  (%d species; %d threatened/near-threatened)", CACHE_FILE, nrow(out), length(thr)))
-  if (length(thr)) message("  Flagged: ", paste(thr, collapse = ", "))
-}
-
-# When run on its own, rebuild the species field guide so the refreshed IUCN column shows
-# up immediately. Under run_all_analysis.R (RUNNING_ALL is set) the loop rebuilds it, so skip.
+# When run on its own, rebuild the species field guide so the refreshed column shows up.
 FIELD_GUIDE <- "scripts/analysis/bee_field_guide.R"
 if (!exists("RUNNING_ALL") && file.exists(FIELD_GUIDE)) {
   message("Rebuilding the field guide with the refreshed IUCN column...")

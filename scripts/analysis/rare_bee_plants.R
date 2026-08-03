@@ -34,8 +34,6 @@ if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # 
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 OUT_DIR <- "data/analysis/conservation"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
 
 RARE_CUT      <- 15                              # a bee is "rare" if we have < this many records
 SPECIES_RANKS <- c("species", "subspecies")

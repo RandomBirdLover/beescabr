@@ -24,7 +24,7 @@
 # trip, logged as a single "TP" survey-event -- so each TP record is one
 # independent survey walk, the same unit of effort as BST/UPMON/OT; TP's larger
 # total just reflects being surveyed on more days. Year comparisons are restricted
-# to the intern survey window (Mar-Sep) so seasonal coverage is comparable.
+# to the intern survey window (Mar-Oct) so seasonal coverage is comparable.
 #
 # Run from the repo root:  Rscript scripts/analysis/diversity_indices.R
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
@@ -38,18 +38,17 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")  # canonical caption helper (single source)
 OUT_DIR       <- "data/analysis/diversity"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
-WINDOW_MONTHS <- 3:9                 # intern survey window (Mar-Sep) for year comparisons
+WINDOW_MONTHS <- 3:10                 # intern survey window (Mar-Oct) for year comparisons
 MIN_SITE_REC  <- 15                  # a site needs this many records to enter NMDS/PERMANOVA
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
 # consistent scope caption stamped on every figure
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 # ---- 1. SURVEY-ONLY bee records (both methods), with keys + grouping ----------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -107,11 +106,12 @@ plot_indices <- function(dfin, file, title, cap, group_lab) {
   g <- ggplot(long, aes(x = group, y = value, fill = rank)) +
     geom_col(position = position_dodge(0.8), width = 0.7) +
     facet_wrap(~ metric, scales = "free_y") +
-    # rank = focal species (ink) vs coarser genus (stone background)
-    scale_fill_manual(values = c(species = BEE_NEUTRAL[["dark"]], genus = BEE_NEUTRAL[["light"]]), name = "rank") +
-    labs(title = title, caption = cap, x = group_lab, y = NULL) +
-    theme_beescabr(11) +
-    theme(panel.grid.major.x = element_blank())
+    scale_fill_manual(values = c(species = "#2166ac", genus = "#8c8c8c"), name = "rank") +
+    labs(title = title, subtitle = cap, x = group_lab, y = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(color = "#b2182b"),
+          panel.grid.major.x = element_blank())
   ggsave(file, g, width = 9, height = 6.2, dpi = 200, bg = "white")
 }
 # tiny long-pivot helper (avoid tidyr dep)
@@ -120,11 +120,11 @@ tidyr_pivot <- function(df, cols) {
     data.frame(rank = df$rank, group = df$group, metric = c, value = df[[c]])))
 }
 plot_indices(div_tr, file.path(OUT_DIR, "diversity_by_transect.png"),
-             "Bee Diversity by Transect",
-             scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus", n = nrow(rec)),
+             "Bee diversity by transect (CABR)",
+             scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus"),
              "transect")
 
-# ---- 3. ALPHA DIVERSITY BY YEAR (survey-only, both methods, Mar-Sep, species) --
+# ---- 3. ALPHA DIVERSITY BY YEAR (survey-only, both methods, Mar-Oct, species) --
 rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
 My_sp <- comm_matrix(rec_win, "year", "species_key")
 div_yr <- cbind(rank = "species", alpha_indices(My_sp))
@@ -135,12 +135,13 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
             invSimpson_q2 = "Inverse Simpson (q2)", pielou_evenness = "Pielou evenness (J)")
   long$metric <- factor(lvls[long$metric], levels = lvls)
   g <- ggplot(long, aes(x = factor(group), y = value, group = 1)) +
-    geom_line(color = BEE_NEUTRAL[["dark"]]) + geom_point(color = BEE_NEUTRAL[["dark"]], size = 2) +
+    geom_line(color = "#2166ac") + geom_point(color = "#2166ac", size = 2) +
     facet_wrap(~ metric, scales = "free_y") +
     labs(title = "Bee diversity by year (CABR)",
-         caption = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level", n = nrow(rec)),
+         subtitle = scope_cap("survey records only, Mar-Oct window", "lethal + non-lethal pooled", "species-level"),
          x = "year", y = NULL) +
-    theme_beescabr(11)
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 }
 
@@ -158,14 +159,13 @@ rad <- rbind(rad_df(as.integer(sp_pool), "both pooled"),
 g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
   geom_line(linewidth = 0.9) + geom_point(size = 1) +
   scale_y_log10() +
-  # method owns colour: pooled = dark ink, lethal = purple (net), non-lethal = vermillion (photo)
-  scale_color_manual(values = c("both pooled" = BEE_INK$primary,
-                                "lethal (net)" = unname(BEE_METHOD_COL["lethal"]),
-                                "non-lethal (photo)" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
+  scale_color_manual(values = c("both pooled" = "black", "lethal (net)" = "#1b7837",
+                                "non-lethal (photo)" = "#762a83")) +
   labs(title = "Rank-abundance (dominance) of CABR bee species",
-       caption = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level", n = nrow(rec)),
+       subtitle = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
-  theme_beescabr(11)
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
 ggsave(file.path(OUT_DIR, "diversity_rank_abundance.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 
 # ---- 5. NMDS + PERMANOVA: does composition differ by transect/year? ----------
@@ -188,16 +188,17 @@ mds <- tryCatch(vegan::metaMDS(Msite, distance = "bray", autotransform = FALSE, 
                 error = function(e) NULL)
 if (!is.null(mds)) {
   sc <- as.data.frame(vegan::scores(mds, display = "sites")); sc$transect <- meta$transect
-  ptr <- with(perm, bee_test("PERMANOVA (Bray-Curtis, transect)", sprintf("R2=%.2f, p=%.3f", R2[1], `Pr(>F)`[1])))
+  ptr <- with(perm, sprintf("PERMANOVA transect: R2=%.2f, p=%.3f", R2[1], `Pr(>F)`[1]))
   g <- ggplot(sc, aes(NMDS1, NMDS2, color = transect, label = meta$site)) +
     geom_point(size = 3) + geom_text(vjust = -0.8, size = 2.6, show.legend = FALSE) +
-    scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
+    scale_color_manual(values = c(BST = "#1b7837", UPMON = "#762a83", TP = "#2166ac", OT = "#d95f02")) +
     labs(title = "Bee community composition by transect (NMDS, Bray-Curtis)",
-         caption = scope_cap(scope = sprintf("survey records only; sites = transect x year (>=%d records)", MIN_SITE_REC),
-                             method = "lethal + non-lethal pooled", rank = "species-level",
-                             n = sum(Msite), sig = paste0(ptr, sprintf(" (NMDS stress %.2f)", mds$stress))),
+         subtitle = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
+                           sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
+                           sprintf("  (stress %.2f)", mds$stress)),
          x = "NMDS1", y = "NMDS2") +
-    theme_beescabr(11)
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
   ggsave(file.path(OUT_DIR, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
 }
 

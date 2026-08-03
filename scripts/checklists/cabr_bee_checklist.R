@@ -16,8 +16,13 @@
 suppressWarnings(suppressMessages({library(dplyr); library(readr)}))
 if (!exists("lookup_subtree"))   source("scripts/checklists/checklist_build.R")
 if (!exists("cabr_survey_box"))  source("scripts/spatial/spatial_utils.R")
+if (!exists("enrich_iucn_columns")) source("scripts/reference/enrich_lookups.R")  # bake IUCN status
 
 CABR_OUT_DIR <- "data/checklists/cabr"
+
+# bake the current IUCN category onto a checklist frame (species rows only; NE otherwise),
+# offline-safe. Kept a one-liner so every checklist write carries the same live status.
+.cl_add_iucn <- function(x) if (is.null(x) || !"scientific_name" %in% names(x)) x else enrich_iucn_columns(x)
 
 # bees_sf   : RAW iNat bee observations as an sf POINT layer in PROJECT_CRS (taxon_id carried).
 # lookup    : the taxonomy lookup (sd_bee_taxonomy_lookup.csv) -- the normalized tree source.
@@ -32,10 +37,12 @@ build_cabr_bee_checklists <- function(bees_sf, lookup, specimens = NULL, holway_
   obs <- spatial_split(bees_sf, cabr_survey_box, "CABR iNat")
   ids <- unique(as.character(obs$taxon_id)); ids <- ids[!is.na(ids) & ids != ""]
   cabr_inat <- lookup_subtree(lookup, lookup |> filter(taxon_id %in% ids), "CABR iNat")
+  cabr_inat <- .cl_add_iucn(cabr_inat)
   write_csv(cabr_inat, file.path(CABR_OUT_DIR, "cabr_raw_inat_native_bee_checklist.csv"), na = "")
 
   # 2. specimen: lookup subtree of the specimen taxa (specimen-only leaves kept, blank taxon_id)
   cabr_specimen <- if (!is.null(specimens)) lookup_subtree(lookup, specimens, "CABR specimen") else NULL
+  cabr_specimen <- .cl_add_iucn(cabr_specimen)
   if (!is.null(cabr_specimen))
     write_csv(cabr_specimen, file.path(CABR_OUT_DIR, "cabr_specimen_native_bee_checklist.csv"), na = "")
 
@@ -44,6 +51,7 @@ build_cabr_bee_checklists <- function(bees_sf, lookup, specimens = NULL, holway_
   cabr_official <- combine_checklists(list(specimen = cabr_specimen, inat = cabr_inat))
   if (!is.null(cabr_official) && !is.null(holway_sub))
     cabr_official$holway <- .cl_own_key(cabr_official) %in% .cl_own_key(holway_sub)
+  cabr_official <- .cl_add_iucn(cabr_official)
   write_csv(cabr_official, file.path(CABR_OUT_DIR, "cabr_official_native_bee_checklist.csv"), na = "")
 
   invisible(list(inat = cabr_inat, specimen = cabr_specimen, official = cabr_official))

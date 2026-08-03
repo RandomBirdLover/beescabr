@@ -283,6 +283,13 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   df$plant_genus <- .pp$plant_genus; df$plant_species <- .pp$plant_species
 
   clean <- df |> select(any_of(IPC_COLUMN_ORDER))
+
+  # bake the genus-level common name onto each plant record (fetched once from iNaturalist,
+  # cache-backed, offline-safe) so figures/field guides read a column, never the network.
+  if (!exists("enrich_plant_common_column")) source("scripts/reference/enrich_lookups.R")
+  clean <- tryCatch(enrich_plant_common_column(clean),
+                    error = function(e) { message("  !! common-name enrichment skipped: ", conditionMessage(e)); clean })
+
   location_review <- ipc_location_review(df)   # survey pins to re-check -- review artifact, not a clean column
 
   if (write) {

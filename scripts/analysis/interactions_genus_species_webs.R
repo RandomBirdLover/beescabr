@@ -47,8 +47,6 @@ MIN_REC     <- 20     # ... and at least this many species+plant records to draw
 TOP_PLANTS  <- 30     # cap plant genera shown per web for legibility
 dir.create(WEB_DIR, recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
 
 # ---- H2' specialization + fixed-marginal null (self-contained) ---------------
 .shannon <- function(x) { p <- x / sum(x); p <- p[p > 0]; -sum(p * log(p)) }

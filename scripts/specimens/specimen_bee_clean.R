@@ -277,6 +277,13 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
     stop("Stopping so you can review/fix the flagged rows in the raw .xlsx, then re-run. Review files: ", review_dir)
 
   clean <- df |> strip_control_chars() |> select(any_of(SBC_COLUMN_ORDER))
+
+  # bake the current IUCN Red List status onto each species (fetched once, cache-backed,
+  # offline-safe) so the analysis layer reads a column instead of hitting the network.
+  if (!exists("enrich_iucn_columns")) source("scripts/reference/enrich_lookups.R")
+  clean <- tryCatch(enrich_iucn_columns(clean),
+                    error = function(e) { message("  !! IUCN enrichment skipped: ", conditionMessage(e)); clean })
+
   dir.create(dirname(clean_out), recursive = TRUE, showWarnings = FALSE)
   write.csv(clean, clean_out, row.names = FALSE, na = "")
 

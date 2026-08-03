@@ -1,30 +1,27 @@
 # =============================================================
-# Q11 -- Yield by group: who finds what?
+# Q11 -- Yield: who/what finds the most, on a FAIR footing?
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
-# THE QUESTION: how much does each surveyor group x method contribute, and what
-# does each group uniquely add? Groups present in the data:
-#     * intern  x lethal      (specimens -- every specimen is an intern collection)
-#     * intern  x non-lethal  (iNaturalist photos logged by interns)
-#     * beeple  x non-lethal  (iNaturalist photos by the beeple community group)
-#     * unattributed x non-lethal (on-transect iNat records with no surveyor tag)
-#   (there is no beeple-lethal: only interns collect specimens.)
+# Two companion figures, BOTH restricted to a fair comparison window:
+#   SCOPE  = survey records only (is_survey = TRUE)
+#   SEASON = March-October (the months lethal netting actually ran; non-lethal
+#            photography runs year-round, so we clip it to the same window).
+# Without both clips the comparison would partly measure WHEN/HOW each ran, not yield.
 #
-# METRICS per group, reported for TWO scopes side by side:
-#     * n_records                -- raw effort/output
-#     * species / genera          -- distinct taxa recorded
-#     * species_per_100_records   -- efficiency (unique species yield per effort)
-#     * exclusive_species/genera  -- taxa found ONLY by that group in that scope
-#                                    (what would be missed without them)
+#   FIGURE A -- yield by METHOD:  lethal (net) vs non-lethal (iNat photo).
+#               Untagged on-transect iNat records (no surveyor) are dropped, so
+#               non-lethal = attributed survey photos (beeple + interns).
+#   FIGURE B -- yield by SURVEYOR GROUP:  beeple (non-lethal photos) vs
+#               intern (lethal specimens only) -- each program by its primary method.
 #
-# SCOPE is stated on every output:
-#     * survey-only (is_survey = TRUE)  -- fair comparison of standardized effort
-#     * all-records                     -- full credit incl. casual/off-transect iNat
-#   Descriptive counts -- no hypothesis test, so no p-value (method's effect on
-#   ID resolution is the tested question and lives in coverage_method_venn.R / Q2).
+# METRICS per bar (4 panels): n_records (effort), species (distinct taxa),
+#   species_per_100_records (efficiency), exclusive_species (found ONLY by that
+#   method/group in this window -- what would be missed without it).
+# Descriptive counts -- no hypothesis test (method's effect on ID resolution is
+# tested in coverage_method_venn.R / Q2).
 #
 # Run from the repo root:  Rscript scripts/analysis/coverage_yield_by_group.R
-# Depends on: dplyr, stringr, ggplot2 (+ config.R).
+# Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
 for (pkg in c("ggplot2")) {
@@ -35,15 +32,15 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SCOPE")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/coverage"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
+WINDOW_MONTHS <- 3:10                                   # Mar-Oct: the lethal-netting season
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
-# ---- 1. pool records with group + method + taxonomy keys --------------------
+# ---- 1. pool records with group + method + taxonomy keys + month ------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
 
@@ -54,77 +51,87 @@ prep <- function(df, method) {
     method     = method,
     surveyor   = st,
     is_survey  = is_true(df$is_survey),
+    month      = suppressWarnings(as.integer(substr(df$observed_on, 6, 7))),
     taxon_rank = df$taxon_rank, genus = df$genus, species = df$species,
     stringsAsFactors = FALSE) %>%
     mutate(
-      group = paste(surveyor, method),
       species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
                              !is.na(species) & species != "", paste(genus, word(species, -1)), NA),
       genus_key   = ifelse(taxon_rank %in% GENUS_RANKS & !is.na(genus) & genus != "", genus, NA))
 }
-rec <- bind_rows(prep(spec, "lethal"), prep(inat, "non-lethal"))
+# FAIR window: survey records only, Mar-Oct
+rec <- bind_rows(prep(spec, "lethal"), prep(inat, "nonlethal")) %>%
+  filter(is_survey, !is.na(month), month %in% WINDOW_MONTHS)
+message(sprintf("Survey records in the Mar-Oct window: %d (lethal %d, non-lethal %d)",
+                nrow(rec), sum(rec$method == "lethal"), sum(rec$method == "nonlethal")))
 
-# ---- 2. yield metrics for one scope -----------------------------------------
-yield_for_scope <- function(d, scope_label) {
-  # exclusive taxa: recorded by exactly one group within this scope
-  excl_sp <- d %>% filter(!is.na(species_key)) %>% distinct(group, species_key) %>%
+# ---- 2. yield metrics for a grouping column (d must carry a `grp` column) ----
+yield_tbl <- function(d) {
+  excl_sp <- d %>% filter(!is.na(species_key)) %>% distinct(grp, species_key) %>%
     count(species_key) %>% filter(n == 1) %>% pull(species_key)
-  excl_gn <- d %>% filter(!is.na(genus_key)) %>% distinct(group, genus_key) %>%
-    count(genus_key) %>% filter(n == 1) %>% pull(genus_key)
-
-  d %>% group_by(group) %>%
+  d %>% group_by(grp) %>%
     summarise(
-      n_records        = n(),
-      species          = n_distinct(species_key[!is.na(species_key)]),
-      genera           = n_distinct(genus_key[!is.na(genus_key)]),
+      n_records         = n(),
+      species           = n_distinct(species_key[!is.na(species_key)]),
+      genera            = n_distinct(genus_key[!is.na(genus_key)]),
       exclusive_species = n_distinct(species_key[!is.na(species_key) & species_key %in% excl_sp]),
-      exclusive_genera  = n_distinct(genus_key[!is.na(genus_key) & genus_key %in% excl_gn]),
       .groups = "drop") %>%
-    mutate(species_per_100_records = round(100 * species / n_records, 1),
-           scope = scope_label) %>%
-    arrange(desc(n_records))
+    mutate(species_per_100_records = round(100 * species / n_records, 1))
 }
-all_tbl <- yield_for_scope(rec, "all records")
-srv_tbl <- yield_for_scope(filter(rec, is_survey), "survey-only")
 
-out <- bind_rows(srv_tbl, all_tbl) %>%
-  select(scope, group, n_records, species, genera,
-         species_per_100_records, exclusive_species, exclusive_genera)
-write.csv(out, file.path(OUT_DIR, "coverage_yield_by_group.csv"), row.names = FALSE)
-message("Q11 group-yield table:"); print(as.data.frame(out), row.names = FALSE)
-
-# ---- 3. exclusive-taxa lists (what each group alone contributes) -------------
-excl_list <- function(d, scope_label) {
-  sp <- d %>% filter(!is.na(species_key)) %>% distinct(group, species_key) %>%
-    count(species_key) %>% filter(n == 1) %>% pull(species_key)
-  d %>% filter(!is.na(species_key), species_key %in% sp) %>%
-    distinct(group, species_key) %>% mutate(scope = scope_label) %>%
-    arrange(group, species_key)
+# ---- 3. one 4-panel yield figure -------------------------------------------
+plot_yield <- function(tbl, title, excl_label, fill_vals, fill_labels, fill_name, file, w = 7.5) {
+  metrics <- c(n_records = "Records", species = "Species recorded",
+               species_per_100_records = "Species / 100 records",
+               exclusive_species = excl_label)
+  long <- do.call(rbind, lapply(names(metrics), function(m)
+    data.frame(grp = tbl$grp, metric = metrics[[m]], value = tbl[[m]], stringsAsFactors = FALSE)))
+  long$metric <- factor(long$metric, levels = unname(metrics))
+  long$grp    <- factor(long$grp, levels = tbl$grp)
+  g <- ggplot(long, aes(x = grp, y = value, fill = grp)) +
+    geom_col(width = 0.62) +
+    geom_text(aes(label = value), vjust = -0.35, size = 2.7, colour = BEE_INK$secondary) +
+    facet_wrap(~ metric, scales = "free_y") +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+    scale_fill_manual(values = fill_vals, labels = fill_labels, name = fill_name) +
+    labs(title = title,
+         caption = scope_cap("survey records only, Mar-Oct window (fair comparison)",
+                             "lethal (specimen net) vs non-lethal (iNat photo)", "species"),
+         x = NULL, y = NULL) +
+    theme_beescabr(11) +
+    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),   # groups named in the legend -- no need to repeat on x
+          panel.grid.major.x = element_blank())
+  ggsave(file, g, width = w, height = 6, dpi = 200, bg = "white")
 }
-excl_out <- bind_rows(excl_list(filter(rec, is_survey), "survey-only"),
-                      excl_list(rec, "all records"))
-write.csv(excl_out, file.path(OUT_DIR, "coverage_yield_by_group_exclusive_species.csv"), row.names = FALSE)
 
-# ---- 4. figure: 4 metric panels, group on x, scope as dodged fill ------------
-metrics <- c(n_records = "Records", species = "Species recorded",
-             species_per_100_records = "Species / 100 records",
-             exclusive_species = "Group-exclusive species")
-long <- do.call(rbind, lapply(names(metrics), function(m)
-  data.frame(scope = out$scope, group = out$group, metric = metrics[[m]],
-             value = out[[m]], stringsAsFactors = FALSE)))
-long$metric <- factor(long$metric, levels = unname(metrics))
-long$group  <- factor(long$group, levels = out$group[out$scope == "all records"])
+# ---- 4a. FIGURE A -- by method (drop untagged non-lethal) -------------------
+recA <- rec %>% filter(surveyor != "unattributed") %>%
+  mutate(grp = factor(method, levels = c("lethal", "nonlethal")))
+tblA <- yield_tbl(recA)
+tblA <- tblA[match(c("lethal", "nonlethal"), tblA$grp), ]; tblA <- tblA[!is.na(tblA$grp), ]
+write.csv(tblA, file.path(OUT_DIR, "coverage_yield_by_method.csv"), row.names = FALSE)
+message("\nYield by METHOD (survey-only, Mar-Oct):"); print(as.data.frame(tblA), row.names = FALSE)
+plot_yield(tblA, "Q11 - Yield by method (CABR bees, survey-only, Mar-Oct)",
+           "Method-exclusive species",
+           fill_vals = BEE_METHOD_COL, fill_labels = BEE_METHOD_LABEL, fill_name = "method",
+           file = file.path(OUT_DIR, "coverage_yield_by_method.png"))
 
-g <- ggplot(long, aes(x = group, y = value, fill = scope)) +
-  geom_col(position = position_dodge(0.8), width = 0.7) +
-  facet_wrap(~ metric, scales = "free_y") +
-  scale_fill_manual(values = BEE_SCOPE, name = "scope") +   # house scope: survey-only accent vs all-records grey
-  labs(title = "Q11 - Yield by surveyor group x method (CABR bees)",
-       caption = scope_cap("survey-only vs all records (both shown)",
-                            "lethal (specimens) + non-lethal (iNaturalist)", "species"),
-       x = NULL, y = NULL) +
-  theme_beescabr(11) +
-  theme(axis.text.x = element_text(angle = 25, hjust = 1),
-        panel.grid.major.x = element_blank())
-ggsave(file.path(OUT_DIR, "coverage_yield_by_group.png"), g, width = 10, height = 6.5, dpi = 200, bg = "white")
-message("Wrote coverage_yield_by_group.{csv,png} + coverage_yield_by_group_exclusive_species.csv to ", OUT_DIR)
+# ---- 4b. FIGURE B -- by surveyor group: beeple photos vs intern specimens ---
+recB <- rec %>%
+  filter((surveyor == "beeple" & method == "nonlethal") |
+         (surveyor == "intern" & method == "lethal")) %>%
+  mutate(grp = ifelse(method == "lethal", "intern (lethal)", "beeple (non-lethal)"))
+GRP_B <- c("beeple (non-lethal)", "intern (lethal)")
+recB$grp <- factor(recB$grp, levels = GRP_B)
+tblB <- yield_tbl(recB)
+tblB <- tblB[match(GRP_B, tblB$grp), ]; tblB <- tblB[!is.na(tblB$grp), ]
+write.csv(tblB, file.path(OUT_DIR, "coverage_yield_by_group.csv"), row.names = FALSE)
+message("\nYield by SURVEYOR GROUP (beeple photos vs intern specimens, Mar-Oct):")
+print(as.data.frame(tblB), row.names = FALSE)
+GRP_COL <- setNames(c(BEE_METHOD_COL[["nonlethal"]], BEE_METHOD_COL[["lethal"]]), GRP_B)
+plot_yield(tblB, "Q11 - Yield by surveyor group (CABR bees, survey-only, Mar-Oct)",
+           "Group-exclusive species",
+           fill_vals = GRP_COL, fill_labels = GRP_B, fill_name = "surveyor group",
+           file = file.path(OUT_DIR, "coverage_yield_by_group.png"))
+
+message("\nWrote coverage_yield_by_method.{csv,png} + coverage_yield_by_group.{csv,png} to ", OUT_DIR)

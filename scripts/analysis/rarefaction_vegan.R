@@ -12,7 +12,7 @@
 # both methods pooled unless the comparison IS the method split):
 #   1. per TRANSECT  -- rarefy all transects to the smallest transect's total
 #                       ("is OT really poorer, or just under-sampled?")
-#   2. per YEAR      -- Mar-Sep window; rarefy all years to the lowest-count year
+#   2. per YEAR      -- Mar-Oct window; rarefy all years to the lowest-count year
 #   3. beeple vs intern -- rarefy the two observer groups to a common effort
 #   4. observations vs specimens -- non-lethal iNaturalist vs lethal specimens
 # Genus rank = robust (every ID'd record counts); species rank = finer but sparser.
@@ -32,14 +32,13 @@ for (pkg in c("vegan", "ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")  # canonical caption helper (single source)
 OUT_DIR       <- "data/analysis/rarefaction"
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
-WINDOW_MONTHS <- 3:9
+WINDOW_MONTHS <- 3:10
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
 
 # ---- 1. survey-only bee records with keys + grouping vars --------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -96,17 +95,18 @@ draw <- function(M, key, title, rank, cols = NULL) {
   unit <- UNIT(rank)
   tab <- rarefy_table(M); write.csv(tab, file.path(OUT_DIR, paste0(key, "_vegan.csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
-  cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank, n = sum(M))
-  cols <- if (is.null(cols)) setNames(grDevices::colorRampPalette(BEE_SEQ)(nrow(M)), rownames(M)) else cols  # ordinal groups (years) -> blue sequential
+  cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
+  cols <- if (is.null(cols)) setNames(scales::hue_pal()(nrow(M)), rownames(M)) else cols
   g1 <- ggplot(cdf, aes(n, S, color = group)) +
     geom_vline(xintercept = minN, linetype = "dashed", color = "grey50") +
     annotate("text", x = minN, y = 0, label = sprintf(" rarefy to %d", minN),
              hjust = 0, vjust = 0, size = 3, color = "grey40") +
     geom_line(linewidth = 0.9) +
     scale_color_manual(values = cols, name = NULL) +
-    labs(title = sprintf("%s (%s) - rarefaction curve", title, rank), caption = cap,
+    labs(title = sprintf("%s (%s) - rarefaction curve", title, rank), subtitle = cap,
          x = "records sampled", y = paste0("expected ", unit)) +
-    theme_beescabr(11)
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
   ggsave(file.path(OUT_DIR, paste0(key, "_vegan_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
               data.frame(group = tab$group, kind = sprintf("rarefied to %d", minN), S = tab$rarefied_richness))
@@ -114,12 +114,13 @@ draw <- function(M, key, title, rank, cols = NULL) {
   g2 <- ggplot(bd, aes(group, S, fill = kind)) +
     geom_col(position = position_dodge(0.8), width = 0.7) +
     geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3) +
-    scale_fill_manual(values = setNames(c(BEE_NEUTRAL[["light"]], BEE_NEUTRAL[["dark"]]),   # stone (observed) / ink (rarefied)
+    scale_fill_manual(values = setNames(c("#b8b8b8", "#2166ac"),
                                         c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
-    labs(title = sprintf("%s (%s) - rarefied richness", title, rank), caption = cap,
+    labs(title = sprintf("%s (%s) - rarefied richness", title, rank), subtitle = cap,
          x = NULL, y = unit) +
-    theme_beescabr(11) +
-    theme(panel.grid.major.x = element_blank())
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"),
+          panel.grid.major.x = element_blank())
   ggsave(file.path(OUT_DIR, paste0(key, "_vegan_bars.png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
@@ -129,7 +130,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
 # Every comparison is run twice -- once at genus rank (robust: every ID'd record
 # counts) and once at species rank (finer, but only species-resolved records).
 RANKS <- c(species = "species_key", genus = "genus_key")
-TCOLS <- BEE_TRANSECT   # house transect palette
+TCOLS <- c(BST = "#1b7837", UPMON = "#762a83", TP = "#2166ac", OT = "#d95f02")
 rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
 
 for (rk in names(RANKS)) {
@@ -139,16 +140,16 @@ for (rk in names(RANKS)) {
   Mt <- comm(filter(rec, transect %in% TRANSECTS), "transect", kc)
   Mt <- Mt[intersect(TRANSECTS, rownames(Mt)), , drop = FALSE]
   draw(Mt, paste0("by_transect_", rk), "Bees by transect", rk, TCOLS)
-  # 2. year (Mar-Sep)
-  draw(comm(rec_win, "year", kc), paste0("by_year_", rk), "Bees by year (Mar-Sep)", rk)
+  # 2. year (Mar-Oct)
+  draw(comm(rec_win, "year", kc), paste0("by_year_", rk), "Bees by year (Mar-Oct)", rk)
   # 3. observer: beeple vs intern
   draw(comm(filter(rec, surveyor %in% c("beeple", "intern")), "surveyor", kc),
        paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
-       c(intern = BEE_NEUTRAL[["dark"]], beeple = BEE_NEUTRAL[["light"]]))   # intern = house ink (focus), beeple = stone (background)
+       c(beeple = "#2166ac", intern = "#1a9850"))
   # 4. method: observations (iNaturalist) vs specimens
   draw(comm(rec, "obs_type", kc), paste0("by_method_", rk),
        "Bees: observations vs specimens", rk,
-       c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
+       c(observation = "#4575b4", specimen = "#d73027"))
 }
 
 message("Wrote by_{transect,year,observer,method}_{species,genus}_vegan.{csv,curves.png,bars.png} to ", OUT_DIR)

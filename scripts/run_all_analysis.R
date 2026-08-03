@@ -22,27 +22,13 @@ source("scripts/analysis/conservation_status.R")   # shared IUCN / conservation 
 source("scripts/analysis/plant_names.R")           # shared plant-genus common-name labels (one source)
 source("scripts/analysis/forage_selectivity.R")    # shared bee-genus forage selectivity (one source)
 
-# Refresh IUCN Red List statuses FIRST, so the field guide and the rare-species figure
-# use current listings and any newly threatened species is caught. Best-effort: it needs
-# internet + an API token; if it can't reach IUCN (offline, no token, API down) it keeps
-# the last cached data/checklists/iucn/iucn_status.csv and the rest of the run proceeds.
-# (refresh_iucn_status.R lives in scripts/, not scripts/analysis/, so it is NOT in the
-# auto-discovered loop below -- sourcing it here is the single place it runs.)
+# IUCN Red List status (per bee species) and plant-genus common names are no longer refreshed
+# here -- they are now BAKED INTO THE CLEANED TABLES + CHECKLISTS at data-cleaning time
+# (scripts/reference/enrich_lookups.R, called by the *_clean.R scripts + cabr_bee_checklist.R,
+# fetched once and cached). This run stays fully OFFLINE and just reads those columns/caches.
+# To force-refresh existing IUCN assessments or common names, run the standalone tools:
+#   Rscript scripts/refresh_iucn_status.R   |   Rscript scripts/refresh_plant_common_names.R
 RUNNING_ALL <- TRUE
-message("\n===== refresh_iucn_status.R (IUCN Red List) =====")
-tryCatch(source("scripts/refresh_iucn_status.R"),
-         error = function(e) message("  !! IUCN refresh skipped: ", conditionMessage(e),
-                                     "\n     (using the last cached iucn_status.csv; run stays offline-safe)"))
-
-# Refresh PLANT-GENUS COMMON NAMES next, same best-effort contract: it fills genera the
-# local plant-taxonomy files don't name by asking the public iNaturalist taxa API (no
-# token needed). Offline/blocked -> it keeps the local-seed + previously fetched cache,
-# and figures fall back to the Latin genus for anything still unnamed. Lives in scripts/
-# (not scripts/analysis/), so it is NOT in the auto-discovered loop below.
-message("\n===== refresh_plant_common_names.R (plant genus common names) =====")
-tryCatch(source("scripts/refresh_plant_common_names.R"),
-         error = function(e) message("  !! plant common-name refresh skipped: ", conditionMessage(e),
-                                     "\n     (using the last cached plant_genus_common.csv; run stays offline-safe)"))
 
 .modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",
               "conservation_status.R", "plant_names.R", "forage_selectivity.R",

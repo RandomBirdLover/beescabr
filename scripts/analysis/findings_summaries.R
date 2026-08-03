@@ -44,6 +44,10 @@ fs   <- .rd("data/analysis/interactions/forage_selectivity_summary.csv")
 h2   <- .rd("data/analysis/interactions/interactions_genus_h2.csv")
 acc  <- .rd("data/analysis/accumulation/transect_accumulation_summary.csv")
 holw <- .rd("data/analysis/coverage/coverage_cabr_not_on_holway.csv")
+yld_m <- .rd("data/analysis/coverage/coverage_yield_by_method.csv")
+yld_g <- .rd("data/analysis/coverage/coverage_yield_by_group.csv")
+.pick <- function(df, g, col) if (is.null(df)) "-" else {
+  v <- df[[col]][as.character(df$grp) == g]; if (length(v)) .chr(v[1]) else "-" }
 
 fs_sel <- if (!is.null(fs)) sum(fs$forage_pattern == "Selective") else NA
 fs_tot <- .n(fs)
@@ -119,7 +123,7 @@ fw("phenology_activity",
    "estimator",
    "When bees (per genus/species) and flowering plants are active across the year; Rayleigh tests seasonal concentration.",
    c(method = "circular-mean activity ridgelines + Rayleigh test of seasonal concentration",
-     confound = "seasonal survey effort (interns ~Mar-Sep) can drive apparent bee seasonality -- read timing, not intensity"),
+     confound = "seasonal survey effort (interns ~Mar-Oct) can drive apparent bee seasonality -- read timing, not intensity"),
    "phenology_bee_genus.png; phenology_bee_species.png; phenology_plant_genus.png; *_rayleigh.csv")
 
 # ============================ DESCRIPTIVE ====================================
@@ -196,12 +200,28 @@ fw("coverage_id_targets",
    character(0),
    "coverage_id_targets.csv; coverage_id_targets_*.png; coverage_id_completeness.png")
 
-fw("coverage_yield_by_group",
-   "Yield by taxonomic group",
+fw("coverage_yield_by_method",
+   "Yield by method (lethal vs non-lethal)",
    "descriptive",
-   "How many taxa each higher group (family/genus) contributes, and each method's exclusive species.",
-   character(0),
-   "coverage_yield_by_group.csv; coverage_yield_by_group_exclusive_species.csv; coverage_yield_by_group.png")
+   sprintf("Fair footing (survey-only, Mar-Oct): lethal & non-lethal record ~equal species (%s vs %s) and each adds method-exclusive species (%s vs %s -- complementary); lethal is far more efficient per record (%s vs %s species/100), non-lethal wins on volume (%s vs %s records).",
+           .pick(yld_m, "lethal", "species"),            .pick(yld_m, "nonlethal", "species"),
+           .pick(yld_m, "lethal", "exclusive_species"),  .pick(yld_m, "nonlethal", "exclusive_species"),
+           .pick(yld_m, "lethal", "species_per_100_records"), .pick(yld_m, "nonlethal", "species_per_100_records"),
+           .pick(yld_m, "lethal", "n_records"),          .pick(yld_m, "nonlethal", "n_records")),
+   c(scope = "survey records only, March-October window (fair comparison; untagged non-lethal dropped)",
+     takeaway = "methods are complementary -- each finds species the other misses; keep both"),
+   "coverage_yield_by_method.csv; coverage_yield_by_method.png")
+
+fw("coverage_yield_by_group",
+   "Yield by surveyor group (beeple vs intern)",
+   "descriptive",
+   sprintf("Fair footing (survey-only, Mar-Oct): beeple photos & intern specimens record ~equal species (%s vs %s) and ~equal group-exclusive species (%s vs %s), despite beeple logging far more records (%s vs %s).",
+           .pick(yld_g, "beeple (non-lethal)", "species"),           .pick(yld_g, "intern (lethal)", "species"),
+           .pick(yld_g, "beeple (non-lethal)", "exclusive_species"), .pick(yld_g, "intern (lethal)", "exclusive_species"),
+           .pick(yld_g, "beeple (non-lethal)", "n_records"),         .pick(yld_g, "intern (lethal)", "n_records")),
+   c(scope = "survey records only, March-October window",
+     note  = "beeple = non-lethal photos; intern = lethal specimens only (each program by its primary method)"),
+   "coverage_yield_by_group.csv; coverage_yield_by_group.png")
 
 fw("coverage_cabr_share_of_county",
    "CABR share of county diversity",
@@ -228,7 +248,7 @@ fw("phenology_effort",
    "Survey effort by month",
    "descriptive",
    "Survey effort across months and years -- the context for every seasonal/annual pattern in the other analyses.",
-   c(note = "documents the effort skew (interns ~Mar-Sep, beeple year-round; 2024-heavy) that the inferential tests control for"),
+   c(note = "documents the effort skew (interns ~Mar-Oct, beeple year-round; 2024-heavy) that the inferential tests control for"),
    "effort_by_month.csv; effort_by_month.png; effort_year_month_grid.png")
 
 # ---- master index -----------------------------------------------------------

@@ -333,6 +333,12 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
 
+  # bake the current IUCN Red List status onto each species (fetched once, cache-backed,
+  # offline-safe) so the analysis layer reads a column instead of hitting the network.
+  if (!exists("enrich_iucn_columns")) source("scripts/reference/enrich_lookups.R")
+  clean <- tryCatch(enrich_iucn_columns(clean),
+                    error = function(e) { message("  !! IUCN enrichment skipped: ", conditionMessage(e)); clean })
+
   # hand-back worklists (review artifacts, kept OUT of the clean table):
   #   * fix_behavior    -- behavioral fields to fix (see ibc_fix_behavior)
   #   * location_review -- survey pins to re-check (location_needs_fix, see ibc_location_review)
