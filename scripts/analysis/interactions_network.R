@@ -431,11 +431,14 @@ show_genera <- .sel$genus[.sel$selective]
 Mg_show <- Mg[, intersect(colnames(Mg), show_genera), drop = FALSE]
 web_plot(Mg_show, file.path(OUT_DIR, "interactions_web_genus.png"), "genus", 30, Inf,
          col_of_bee = bee_col, thickness = "share", favorite_of = pref_of, sparse_omitted = TRUE)   # red heart = favourite; sparse genera dropped
-# species web: colour links by the species' GENUS (same palette); thickness = share. A legend
-# is needed because the top bars are species, not genera.
-sp_col <- setNames(GENUS_COLOR(word(colnames(Ms), 1)), colnames(Ms))
-web_plot(Ms, file.path(OUT_DIR, "interactions_web_species.png"), "species", 30, 30,
-         col_of_bee = sp_col, thickness = "share")   # colour = genus (readable from each species label); no separate legend needed
+# species web: colour links by the species' GENUS (same palette); thickness = share.
+# Show ONLY species whose GENUS has a real plant preference -- the "not reliable yet" species
+# are DROPPED entirely (not greyed), matching the genus web; then top 30 of what remains.
+sp_reliable <- word(colnames(Ms), 1) %in% .sel$genus[.sel$selective]
+Ms_show <- Ms[, sp_reliable, drop = FALSE]
+sp_col  <- setNames(GENUS_COLOR(word(colnames(Ms_show), 1)), colnames(Ms_show))
+web_plot(Ms_show, file.path(OUT_DIR, "interactions_web_species.png"), "species", 30, 30,
+         col_of_bee = sp_col, thickness = "share", sparse_omitted = TRUE)   # colour = genus; unreliable species omitted
 
 # (bipartite::plotweb figures were removed -- the dependency-free web_plot figures
 #  above cover the same data legibly; plotweb's label packing was unreadable.)

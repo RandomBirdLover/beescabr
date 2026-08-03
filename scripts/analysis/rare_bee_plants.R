@@ -11,7 +11,10 @@
 #
 # A "plant visit" = a bee record (specimen net OR iNaturalist photo) that carries a
 # plant_genus, pooled across methods. Counts are small (these bees are rarely seen) --
-# read them as "where the few sightings concentrate," not as visit rates. No p-value.
+# read them as WHAT THE BEE WAS RECORDED ON ("where the few sightings concentrate"), NOT as
+# what it prefers: with so few records you can't separate a real preference from whatever
+# was blooming. The one exception: threatened bees with >= 20 records get an availability-
+# corrected PREFERRED plant (same matched test as the genus webs); the rest stay recorded-only.
 #
 # TWO figures:
 #   A. HUBS  -- plant genera ranked by HOW MANY different rare (< RARE_CUT record) bee
@@ -48,6 +51,8 @@ grab <- function(df, method) data.frame(
   common_name   = str_squish(df$common_name),
   plant_genus   = str_squish(df$plant_genus),
   plant_species = str_squish(df$plant_species),
+  month         = suppressWarnings(as.integer(substr(df$observed_on, 6, 7))),
+  year          = suppressWarnings(as.integer(substr(df$observed_on, 1, 4))),
   stringsAsFactors = FALSE)
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
@@ -79,13 +84,51 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_s
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(breaks = scales::breaks_width(2), expand = expansion(mult = c(0, 0.32))) +
   labs(title = sprintf("Plant hubs for the park's rare bees (bees with < %d records each)", RARE_CUT),
+       subtitle = str_wrap("Bar = how many different rare bee species were RECORDED on each plant (a conservation hub) -- NOT a preference. Rare bees have too few records to correct for availability, so this is where their sightings fall, not what they favour.", 100),
        caption = str_wrap(paste0(scope_cap(sprintf("%d bee species with < %d records; records with a plant recorded",
                             length(rare_keys), RARE_CUT), "specimen net + iNat photo pooled", "plant genus"),
-                            "  |  bar = number of different rare bee species that use each plant (hubs shown: used by 2+)"), 96),
-       x = "number of different rare bee species", y = NULL) +
+                            "  |  bar = number of different rare bee species RECORDED on each plant (hubs shown: used by 2+)"), 96),
+       x = "number of different rare bee species (recorded on this plant)", y = NULL) +
   theme_beescabr(11) +
-  theme(legend.position = "none", panel.grid.major.y = element_blank())
+  theme(legend.position = "none", panel.grid.major.y = element_blank(),
+        plot.subtitle = element_text(size = 8.5))
 ggsave(file.path(OUT_DIR, "rare_bee_plant_hubs.png"), gA, width = 9, height = 5.8, dpi = 200, bg = "white")
+
+# ---- 3b. species-level PREFERRED plant (availability-corrected) -------------
+# Same matched approach as the genus forage-selectivity test, keyed to ONE bee species:
+# expected plant use = for each (year, month, method) cell the species was recorded in, the
+# community's plant-use shares in that same cell (leave-one-out), blended by the species'
+# effort per cell; preference = observed / expected. Only trustworthy with enough records --
+# returns NA below SP_PREF_MIN, because with a handful of sightings you can't separate a real
+# preference from whatever happened to be blooming.
+SP_PREF_MIN <- 20
+sp_visits <- rec %>% filter(!is.na(species_key), has(plant_genus), !is.na(month), !is.na(year))
+preferred_plant_sp <- function(sp_key) {
+  d <- sp_visits; plants <- sort(unique(d$plant_genus)); P <- length(plants)
+  isb <- d$species_key == sp_key; rb <- d[isb, , drop = FALSE]; n <- nrow(rb)
+  if (n < SP_PREF_MIN) return(list(pref = NA_character_, ratio = NA_real_, n = n))
+  rc <- d[!isb, , drop = FALSE]
+  x  <- as.numeric(table(factor(rb$plant_genus, plants))); names(x) <- plants
+  gmarg <- as.numeric(table(factor(d$plant_genus, plants))); gmarg <- gmarg / sum(gmarg)
+  rb$ym <- rb$year * 100L + rb$month; rc$ym <- rc$year * 100L + rc$month
+  MIN_CELL <- 8; REG <- 0.05
+  share_of <- function(pg) { t <- as.numeric(table(factor(pg, plants))); if (sum(t) == 0) NULL else t / sum(t) }
+  cw <- table(paste(rb$ym, rb$method, sep = "|")) / n; E <- numeric(P)
+  for (k in names(cw)) {
+    parts <- strsplit(k, "|", fixed = TRUE)[[1]]; ymk <- as.integer(parts[1]); mth <- parts[2]; mm <- ymk %% 100L
+    m1 <- rc$ym == ymk & rc$method == mth; sh <- if (sum(m1) >= MIN_CELL) share_of(rc$plant_genus[m1]) else NULL
+    if (is.null(sh)) { m2 <- rc$month == mm & rc$method == mth; sh <- if (sum(m2) >= MIN_CELL) share_of(rc$plant_genus[m2]) else NULL }
+    if (is.null(sh)) { m3 <- rc$month == mm;                    sh <- if (sum(m3) >= MIN_CELL) share_of(rc$plant_genus[m3]) else gmarg }
+    if (is.null(sh)) sh <- gmarg
+    E <- E + as.numeric(cw[k]) * sh
+  }
+  if (sum(E) <= 0) E <- gmarg; E <- E / sum(E); E <- (1 - REG) * E + REG / P; names(E) <- plants
+  ratio <- ifelse(E > 0, (x / n) / E, NA_real_); names(ratio) <- plants
+  elig <- x >= pmax(3, 0.05 * n)
+  if (!any(elig)) return(list(pref = NA_character_, ratio = NA_real_, n = n))
+  pref <- names(which.max(ifelse(elig, ratio, -Inf)))
+  list(pref = pref, ratio = round(unname(ratio[pref]), 1), n = n)
+}
 
 # ---- 4. FIGURE B: each IUCN-threatened bee's plants -------------------------
 # threatened set comes from the shared module (IUCN CR/EN/VU, live from the cache)
@@ -118,7 +161,18 @@ named_tbl <- pg %>% left_join(top_sp, by = c("label", "plant_genus")) %>%
   left_join(tot, by = "label") %>% arrange(label, desc(visits), plant_genus)
 write.csv(named_tbl, file.path(OUT_DIR, "rare_named_bee_plants.csv"), row.names = FALSE)
 
-panel_of <- setNames(sprintf("%s\n%d records  -  %d plant visits", tot$label, tot$n_records, tot$n_visits), tot$label)
+# availability-corrected PREFERRED plant per threatened bee (NA where < SP_PREF_MIN records)
+pref_of <- setNames(lapply(NAMED$species_key, preferred_plant_sp), NAMED$label)
+# strip = what the bee was RECORDED on (bars) + its availability-corrected PREFERRED plant
+# where records allow, else an explicit "too few to judge" note.
+panel_of <- setNames(vapply(tot$label, function(L) {
+  pf <- pref_of[[L]]
+  l3 <- if (!is.na(pf$pref)) sprintf("PREFERS %s -- %.1fx vs available (recorded-most may differ)", plant_label(pf$pref), pf$ratio)
+        else "too few records to judge a preference (bars = where sightings fall)"
+  sprintf("%s\n%d records  -  %d plant visits\n%s", L, tot$n_records[tot$label == L], tot$n_visits[tot$label == L], l3)
+}, character(1)), tot$label)
+# The availability-corrected PREFERRED plant is called out in each panel's strip ("PREFERS X -- Nx
+# vs available") rather than marked on the bar -- the strip wording carries it cleanly.
 plot_df  <- pg %>% mutate(panel = panel_of[label], row_key = paste(label, plant_genus, sep = "@@"))
 lev <- plot_df %>% arrange(visits, plant_genus) %>% pull(row_key)
 plot_df$row_key <- factor(plot_df$row_key, levels = unique(lev))
@@ -128,16 +182,18 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   facet_wrap(~ panel, ncol = 1, scales = "free") +
   scale_y_discrete(labels = function(x) plant_label(sub("^.*@@", "", x))) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
-  labs(title = "Plants used by the park's IUCN-threatened bees",
-       caption = str_wrap(paste0(scope_cap("IUCN-threatened bees (CR/EN/VU), records with a plant recorded",
+  scale_x_continuous(expand = expansion(mult = c(0, 0.20))) +
+  labs(title = "Plants the park's IUCN-threatened bees were RECORDED on",
+       subtitle = str_wrap("Bars = where each bee's records fall (what it was RECORDED on, NOT corrected for what was blooming). The strip above each panel names an availability-corrected PREFERRED plant only where a bee has >= 20 records; below that, records are too few to tell a preference from availability.", 100),
+       caption = str_wrap(paste0(scope_cap("IUCN-threatened bees (CR/EN/VU); bars = records with a plant recorded; preference = matched availability where n>=20",
                             "specimen net + iNat photo pooled", "plant genus"),
-                            "  |  Threatened set read live from the IUCN Red List cache. Low n: where the few sightings concentrate"), 92),
+                            "  |  Threatened set read live from the IUCN Red List cache."), 92),
        x = "plant visits (records with this plant recorded)", y = NULL) +
   theme_beescabr(11) +
   theme(legend.position = "none", panel.grid.major.y = element_blank(),
-        strip.text = element_text(face = "bold", hjust = 0, size = 10, lineheight = 1.05))
+        plot.subtitle = element_text(size = 8.5),
+        strip.text = element_text(face = "bold", hjust = 0, size = 9, lineheight = 1.15))
 ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,
-       width = 8.5, height = 2.0 + 3.1 * length(unique(plot_df$panel)), dpi = 200, bg = "white")
+       width = 11, height = 2.2 + 3.1 * length(unique(plot_df$panel)), dpi = 200, bg = "white")
 
 message("Wrote rare_bee_plant_hubs.{png,csv} + rare_named_bee_plants.{png,csv} to ", OUT_DIR)

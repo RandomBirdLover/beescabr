@@ -46,6 +46,7 @@ acc  <- .rd("data/analysis/accumulation/transect_accumulation_summary.csv")
 holw <- .rd("data/analysis/coverage/coverage_cabr_not_on_holway.csv")
 yld_m <- .rd("data/analysis/coverage/coverage_yield_by_method.csv")
 yld_g <- .rd("data/analysis/coverage/coverage_yield_by_group.csv")
+lsb   <- .rd("data/analysis/least_sampled/least_sampled_bees.csv")
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
   v <- df[[col]][as.character(df$grp) == g]; if (length(v)) .chr(v[1]) else "-" }
 
@@ -157,10 +158,11 @@ fw("bee_field_guide_genus",
    "bee_field_guide_genus.html; bee_field_guide_genus.csv; bee_field_guide_genus.png")
 
 fw("rare_bee_plants",
-   "Plants used by the park's rare / at-risk bees",
+   "Plants the park's rare / at-risk bees were recorded on",
    "descriptive",
-   "Which plants the rare (< threshold records) and IUCN-threatened bees rely on -- management-facing.",
-   c(note = "low counts: read as 'where the few sightings concentrate', not visit rates",
+   "Which plants the rare (< threshold records) and IUCN-threatened bees were RECORDED on -- management-facing. Bars = where sightings fall (NOT a preference: too few records to correct for availability). Threatened bees with >=20 records also get an availability-corrected PREFERRED plant, which can differ from the most-recorded one (e.g. Bombus californicus recorded most on milkvetch but prefers paintbrush; B. sonorus prefers stinkweed).",
+   c(recorded_vs_preferred = "bars = recorded-on (availability-blended); PREFERRED (starred) = availability-corrected, shown only where n>=20 -- same matched test as the genus webs",
+     note = "low counts: read as 'where the few sightings concentrate', not visit rates or preference",
      threatened_source = "IUCN threatened set read live from the IUCN cache"),
    "rare_bee_plant_hubs.csv/png; rare_named_bee_plants.csv/png")
 
@@ -203,25 +205,30 @@ fw("coverage_id_targets",
 fw("coverage_yield_by_method",
    "Yield by method (lethal vs non-lethal)",
    "descriptive",
-   sprintf("Fair footing (survey-only, Mar-Oct): lethal & non-lethal record ~equal species (%s vs %s) and each adds method-exclusive species (%s vs %s -- complementary); lethal is far more efficient per record (%s vs %s species/100), non-lethal wins on volume (%s vs %s records).",
-           .pick(yld_m, "lethal", "species"),            .pick(yld_m, "nonlethal", "species"),
-           .pick(yld_m, "lethal", "exclusive_species"),  .pick(yld_m, "nonlethal", "exclusive_species"),
-           .pick(yld_m, "lethal", "species_per_100_records"), .pick(yld_m, "nonlethal", "species_per_100_records"),
-           .pick(yld_m, "lethal", "n_records"),          .pick(yld_m, "nonlethal", "n_records")),
-   c(scope = "survey records only, March-October window (fair comparison; untagged non-lethal dropped)",
-     takeaway = "methods are complementary -- each finds species the other misses; keep both"),
-   "coverage_yield_by_method.csv; coverage_yield_by_method.png")
+   sprintf("Fair footing (survey-only, Mar-Oct, 2021-2023): at SPECIES level lethal netting records more species (%s vs %s) and far more method-exclusive species (%s vs %s) despite fewer records; but at GENUS level the two are even -- non-lethal edges ahead (%s vs %s genera; exclusive %s vs %s). So lethal's species advantage is mostly ID RESOLUTION (specimens key to species, photos stall at genus), not detection.",
+           .pick(yld_m, "lethal", "species"),           .pick(yld_m, "nonlethal", "species"),
+           .pick(yld_m, "lethal", "exclusive_species"), .pick(yld_m, "nonlethal", "exclusive_species"),
+           .pick(yld_m, "lethal", "genera"),            .pick(yld_m, "nonlethal", "genera"),
+           .pick(yld_m, "lethal", "exclusive_genera"),  .pick(yld_m, "nonlethal", "exclusive_genera")),
+   c(scope    = "SURVEY-ONLY, March-October, 2021-2023 (year-clipped so both methods share the window)",
+     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (strangers and intern iNat photos are NOT included -- see coverage_yield_by_group for the contribution view that adds them)",
+     controls_for = "season (Mar-Oct) + year (2021-2023) + survey scope -- removes non-lethal's 3 extra years",
+     species_vs_genus = "species-level = detection + ID resolution; genus-level = detection alone (photos not penalised for stalling at genus)",
+     takeaway = "specimens win on species-level yield/efficiency; detection (genus) is about even -- the gap is ID resolution, not who finds more bees"),
+   "coverage_yield_by_method.csv; coverage_yield_by_method.png; coverage_yield_by_method_genus.png")
 
 fw("coverage_yield_by_group",
-   "Yield by surveyor group (beeple vs intern)",
+   "Yield by surveyor group (interns / beeple / strangers)",
    "descriptive",
-   sprintf("Fair footing (survey-only, Mar-Oct): beeple photos & intern specimens record ~equal species (%s vs %s) and ~equal group-exclusive species (%s vs %s), despite beeple logging far more records (%s vs %s).",
-           .pick(yld_g, "beeple (non-lethal)", "species"),           .pick(yld_g, "intern (lethal)", "species"),
-           .pick(yld_g, "beeple (non-lethal)", "exclusive_species"), .pick(yld_g, "intern (lethal)", "exclusive_species"),
-           .pick(yld_g, "beeple (non-lethal)", "n_records"),         .pick(yld_g, "intern (lethal)", "n_records")),
-   c(scope = "survey records only, March-October window",
-     note  = "beeple = non-lethal photos; intern = lethal specimens only (each program by its primary method)"),
-   "coverage_yield_by_group.csv; coverage_yield_by_group.png")
+   sprintf("Who logged CABR's bees, Mar-Oct 2021-2023 (ALL records incl. casual public): intern net specimens find the most species (%s) and by far the most group-exclusive species (%s), vs beeple survey photos (%s species, %s excl) and casual 'stranger' photos (%s species, %s excl). Netted specimens are the biggest unique contributor.",
+           .pick(yld_g, "interns (lethal)", "species"),        .pick(yld_g, "interns (lethal)", "exclusive_species"),
+           .pick(yld_g, "beeple (non-lethal)", "species"),     .pick(yld_g, "beeple (non-lethal)", "exclusive_species"),
+           .pick(yld_g, "strangers (non-lethal)", "species"),  .pick(yld_g, "strangers (non-lethal)", "exclusive_species")),
+   c(scope   = "ALL records incl. casual public (NOT survey-only), Mar-Oct 2021-2023",
+     groups  = "interns = lethal net specimens (survey); beeple = non-lethal survey photos; strangers = casual iNaturalist photos by non-surveyor public (not a survey)",
+     excludes = "intern iNaturalist photos (none exist in 2021-2023; interns only photographed from 2024)",
+     vs_method_figure = "coverage_yield_by_method is SURVEY-ONLY (structured lethal vs non-lethal) and so excludes strangers"),
+   "coverage_yield_by_group.csv; coverage_yield_by_group.png; coverage_yield_by_group_genus.png")
 
 fw("coverage_cabr_share_of_county",
    "CABR share of county diversity",
@@ -233,9 +240,28 @@ fw("coverage_cabr_share_of_county",
 fw("records_per_genus_by_evidence",
    "Evidence backing each genus",
    "descriptive",
-   "How much (and what kind of) evidence backs each bee genus -- specimen vs photo, ID resolution.",
+   "How much (and what kind of) evidence backs each bee genus -- lethal specimen vs non-lethal iNat photo, per genus.",
    character(0),
    "records_per_genus_by_evidence.csv; records_per_genus_by_evidence.png")
+
+fw("records_per_species_by_evidence",
+   "Evidence backing each species",
+   "descriptive",
+   "How much (and what kind of) evidence backs each bee SPECIES -- lethal specimen vs non-lethal iNat photo, one row per species (genus-only records excluded); species with <10 records flagged as thin.",
+   character(0),
+   "records_per_species_by_evidence.csv; records_per_species_by_evidence.png")
+
+fw("least_sampled_bees",
+   "Least-sampled bees -- go-find-it sheet",
+   "descriptive",
+   sprintf("The %s bee species with <10 records TOTAL across both methods -- under-detected by netting AND iNaturalist -- each with its per-method split and when/where/on-what-flower context. Coverage split: %s.",
+           .chr(.n(lsb)),
+           if (is.null(lsb)) "run to populate" else paste(sprintf("%d %s", as.integer(table(lsb$coverage)), names(table(lsb$coverage))), collapse = ", ")),
+   c(threshold   = "least sampled = < 10 records total (both methods pooled), the project's thin-evidence line",
+     coverage    = "both (thin) = a few of each method; photo-only = never netted (also a specimen bounty); specimen-only = never photographed (also an iNat bounty)",
+     context     = "when (peak months + active span), where (top transect), flower (top plant genera) pooled across both methods, + an example iNat photo URL",
+     vs_bounties = "bee_bounties lists taxa MISSING from one method; this keeps the under-sampled species and adds the find-it context in one sheet"),
+   "least_sampled_bees.csv; least_sampled_bees.html; least_sampled_bees.png")
 
 fw("spatial_richness_map",
    "Spatial richness maps",

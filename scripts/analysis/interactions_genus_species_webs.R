@@ -211,21 +211,21 @@ n_tested <- sum(!is.na(h2_tbl$H2prime))
 ov <- h2_tbl %>% filter(!is.na(H2prime), !is.na(H2prime_p), H2prime_p < 0.05) %>%
   mutate(bee_genus = factor(bee_genus, levels = rev(bee_genus)))
 drop_note <- if (length(ns_dropped)) {
-    sprintf("  Dropped as NOT significant once flight-season & method are controlled (their apparent partitioning was a timing/method artefact): %s.",
+    sprintf("  Generalists -- their species overlap on the same plants, with no significant partitioning once flight-season & method are controlled (not shown): %s.",
             paste(sort(ns_dropped), collapse = ", "))
   } else ""
 g <- ggplot(ov, aes(x = H2prime, y = bee_genus)) +
   geom_col(width = 0.72, fill = "#3C3B36") +
   geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-  labs(title = "Within-genus niche partitioning: significant genera only",
+  labs(title = "Within-genus niche partitioning: which bee genera have SPECIALIST species?",
        subtitle = str_wrap(paste0(
-         sprintf("Do a genus's species split up plant genera more than their differing flight seasons & survey methods already explain? Showing the %d of %d tested genera that are significant (season+method-controlled permutation null, p<0.05).",
+         sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for the species' differing flight seasons & survey methods -- higher bar = stronger specialisation. Showing the %d of %d tested genera whose species significantly specialise (p<0.05).",
                  nrow(ov), n_tested), drop_note), 96),
-       x = "within-genus H2'  (0 = species overlap on plants, 1 = each on its own)", y = NULL) +
+       x = "within-genus H2'   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12),
         legend.position = "none", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
-       width = 9, height = max(3.2, 0.5 * nrow(ov) + 1.8), dpi = 200, bg = "white")
+       width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 1.8), dpi = 200, bg = "white")
 message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")

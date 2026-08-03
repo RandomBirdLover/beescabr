@@ -142,6 +142,10 @@ iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 note_txt <- if (HAVE_IUCN) {
   "IUCN = current IUCN Red List category: CR/EN/VU = threatened, NT = near threatened, LC = least concern, DD = data deficient, NE = not evaluated (most solitary bees). * marks threatened/near-threatened species. Source: IUCN Red List API v4."
 } else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
+# Records/Status caveat -- this guide pools ALL data (no survey-only filter), so those two
+# columns reflect detection/photo effort, not a survey-controlled abundance estimate.
+status_note <- "Records and Status count ALL data -- specimen nets plus every iNaturalist photo, including casual public sightings, across all years -- so they show how often a species is DETECTED/photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read 'common' on public photos alone; treat rare/uncommon/common as recording frequency, not true density."
+note_txt <- paste(status_note, note_txt)
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>CABR Native Bee Field Guide</title>',
 '<style>',
@@ -167,7 +171,7 @@ html <- paste0(
 '.iucn.i-dd,.iucn.i-ne{background:#efefef;color:#98968f}',
 '</style></head><body>',
 '<h1>CABR native bee field guide</h1>',
-'<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used; where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare/uncommon/common). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
+'<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used; where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare/uncommon/common &mdash; counts all data incl. casual photos, so it is recording frequency, not true abundance). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
 '<p class="sub"><b>Most-recorded flowers = the plants this species was seen on most often</b>, which reflects how much each plant was blooming and sampled as much as any true preference &mdash; read it as &quot;where it was seen,&quot; not proof of what it likes best. (Whether a bee <i>favours</i> a plant beyond its availability is tested at the genus level in the companion by-genus guide&#39;s &quot;Forage preference&quot; column.)</p>',
 '<table id="t"><thead><tr>',
 '<th>Bee</th><th class="num">Records</th>', iucn_th, '<th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Where to find</th><th>Status</th>',
