@@ -27,9 +27,10 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR <- "data/analysis/coverage"
+OUT_DIR <- "data/analysis/coverage/footprint"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
 
 CHECKLIST_CABR   <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
 CHECKLIST_HOLWAY <- "data/checklists/sd_county/sd_holway_native_bee_checklist.csv"

@@ -12,7 +12,7 @@
 #
 # Species with < MIN_CONF records are flagged low-confidence (peak/season rest on a
 # few points). Outputs a CSV, a styled sortable HTML table, and a PNG table image to
-# data/analysis/field_guide/.
+# data/analysis/reference/field_guide/.
 #
 # Run from the repo root:  Rscript scripts/analysis/bee_field_guide.R
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
@@ -23,7 +23,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label_species")) source("scripts/analysis/forage_selectivity.R")  # species-level forage preference
-OUT_DIR       <- "data/analysis/field_guide"
+OUT_DIR       <- "data/analysis/reference/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)

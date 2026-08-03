@@ -20,7 +20,7 @@
 #
 # Together with the species guide this covers EVERY bee record once (species guide =
 # pinned records; this = the whole genus). Outputs a CSV, a styled sortable HTML
-# table, and a PNG table image to data/analysis/field_guide/.
+# table, and a PNG table image to data/analysis/reference/field_guide/.
 #
 # Run from the repo root:  Rscript scripts/analysis/bee_field_guide_genus.R
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
@@ -31,7 +31,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label")) source("scripts/analysis/forage_selectivity.R")  # shared selectivity (likes vs available)
-OUT_DIR       <- "data/analysis/field_guide"
+OUT_DIR       <- "data/analysis/reference/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
 UNCOMMON_CUT  <- 50          # < this -> "uncommon"; >= this -> "common"

@@ -19,7 +19,7 @@ for (pkg in c("sf", "ggplot2", "cowplot")) {
 suppressPackageStartupMessages({ library(sf); library(dplyr); library(stringr); library(ggplot2) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")
-OUT_DIR <- "data/analysis/coverage"; dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+OUT_DIR <- "data/analysis/coverage/footprint"; dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 BND_COUNTY <- "data/spatial/boundaries/san_diego_county/sd_county_boundary.shp"
 BND_CABR   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
@@ -69,15 +69,14 @@ g <- ggplot() +
            arrow = arrow(length = unit(0.14, "cm"), type = "closed")) +
   annotate("label", x = ax, y = ay, label = call_txt, hjust = 0, vjust = 0.5,
            size = 3.7, lineheight = 1.05, color = BEE_INK$primary, fill = "white",
-           label.padding = unit(0.5, "lines")) +   # label.size dropped -- annotate() ignores it (warned)
+           label.size = 0.3, label.padding = unit(0.5, "lines")) +
   annotate("text", x = cc[1] - 1500, y = cc[2] - 3500, label = "Point Loma", hjust = 1,
            size = 3, fontface = "italic", color = BEE_INK$muted) +
   coord_sf(xlim = c(bb["xmin"], bb["xmax"] + (bb["xmax"] - bb["xmin"]) * 0.30),
            ylim = c(bb["ymin"], bb["ymax"]), expand = TRUE) +
   labs(title = sprintf("One dot on the county map holds %.0f%% of San Diego County's native bees", sp_pct),
-       caption = str_wrap(paste0(sprintf("Cabrillo National Monument (%.0f acres) shown on the San Diego County boundary. It holds %.0f%% of the county's native bee species (%d of %d) and %.0f%% of its genera (%d of %d) on ~%.3f%% of its land -- roughly %sx its share by area. CABR official checklist vs Holway SD County checklist (v3).",
-                    cabr_acres, sp_pct, n_cabr_sp, n_hol_sp, gen_pct, n_cabr_gn, n_hol_gn, area_pct, format(round(overrep, -2), big.mark = ",")),
-                    "  |  Source: ", BEE_SOURCE, " (data as of ", bee_data_asof(), ")"), 78)) +
+       caption = str_wrap(sprintf("Cabrillo National Monument (%.0f acres) shown on the San Diego County boundary. It holds %.0f%% of the county's native bee species (%d of %d) and %.0f%% of its genera (%d of %d) on ~%.3f%% of its land -- roughly %sx its share by area. CABR official checklist vs Holway SD County checklist (v3).",
+                    cabr_acres, sp_pct, n_cabr_sp, n_hol_sp, gen_pct, n_cabr_gn, n_hol_gn, area_pct, format(round(overrep, -2), big.mark = ",")), 78)) +
   theme_void(base_size = 12) +
   theme(plot.title = element_text(face = "bold", size = 15, colour = BEE_INK$primary, margin = margin(b = 6)),
         plot.caption = element_text(colour = BEE_INK$secondary, size = 9, hjust = 0, margin = margin(t = 8)),

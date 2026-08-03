@@ -39,7 +39,7 @@ if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared p
 SPECIES_PAL <- c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7",
                  "#7D3C98","#117A65","#8B4513","#2C3E50","#66A61E","#A6761D",
                  "#B03A2E","#1F78B4","#E7298A","#F0A202")
-OUT_DIR   <- "data/analysis/interactions"
+OUT_DIR   <- "data/analysis/interactions/networks"
 WEB_DIR   <- file.path(OUT_DIR, "genus_species_webs")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_SPECIES <- 2      # a bee genus needs at least this many species to compare them
@@ -47,6 +47,8 @@ MIN_REC     <- 20     # ... and at least this many species+plant records to draw
 TOP_PLANTS  <- 30     # cap plant genera shown per web for legibility
 dir.create(WEB_DIR, recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
 
 # ---- H2' specialization + fixed-marginal null (self-contained) ---------------
 .shannon <- function(x) { p <- x / sum(x); p <- p[p > 0]; -sum(p * log(p)) }

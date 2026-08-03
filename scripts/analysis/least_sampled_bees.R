@@ -24,7 +24,7 @@
 # the under-sampled species and attaches the find-it context in a single table.
 #
 # Outputs CSV + a styled sortable HTML table + a PNG table image to
-# data/analysis/least_sampled/.
+# data/analysis/coverage/least_sampled/.
 #
 # Run from the repo root:  Rscript scripts/analysis/least_sampled_bees.R
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
@@ -35,7 +35,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table"))  try(source("scripts/analysis/conservation_status.R"), silent = TRUE)  # IUCN (optional)
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")                                # plant common names
 
-OUT_DIR       <- "data/analysis/least_sampled"
+OUT_DIR       <- "data/analysis/coverage/least_sampled"
 SPECIES_RANKS <- c("species", "subspecies")
 THIN_TOTAL    <- 10          # < this many records TOTAL (both methods) -> "least sampled"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

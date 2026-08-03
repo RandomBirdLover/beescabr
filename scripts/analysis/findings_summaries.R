@@ -40,13 +40,13 @@ fw <- function(name, title, type, key_finding, details = character(0), outputs =
 }
 
 # ---- live numbers (best-effort) ---------------------------------------------
-fs   <- .rd("data/analysis/interactions/forage_selectivity_summary.csv")
-h2   <- .rd("data/analysis/interactions/interactions_genus_h2.csv")
-acc  <- .rd("data/analysis/accumulation/transect_accumulation_summary.csv")
-holw <- .rd("data/analysis/coverage/coverage_cabr_not_on_holway.csv")
-yld_m <- .rd("data/analysis/coverage/coverage_yield_by_method.csv")
-yld_g <- .rd("data/analysis/coverage/coverage_yield_by_group.csv")
-lsb   <- .rd("data/analysis/least_sampled/least_sampled_bees.csv")
+fs   <- .rd("data/analysis/interactions/networks/forage_selectivity_summary.csv")
+h2   <- .rd("data/analysis/interactions/networks/interactions_genus_h2.csv")
+acc  <- .rd("data/analysis/richness/accumulation/transect_accumulation_summary.csv")
+holw <- .rd("data/analysis/coverage/checklist_gaps/coverage_cabr_not_on_holway.csv")
+yld_m <- .rd("data/analysis/coverage/method_comparison/coverage_yield_by_method.csv")
+yld_g <- .rd("data/analysis/coverage/method_comparison/coverage_yield_by_group.csv")
+lsb   <- .rd("data/analysis/coverage/least_sampled/least_sampled_bees.csv")
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
   v <- df[[col]][as.character(df$grp) == g]; if (length(v)) .chr(v[1]) else "-" }
 

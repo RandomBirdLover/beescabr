@@ -49,7 +49,7 @@ if (!exists("PATHS")) source("scripts/config.R")   # PATHS$specimen_clean, PATHS
 # master_per_survey_info.csv is not in config's PATHS list; name it here.
 PER_SURVEY_INFO <- "data/project_info/master_per_survey_info.csv"
 
-OUT_DIR         <- "data/analysis/accumulation"
+OUT_DIR         <- "data/analysis/richness/accumulation"
 TRANSECTS       <- c("BST", "UPMON", "TP", "OT")          # the lines, in legend order
 SPECIES_RANKS   <- c("species", "subspecies")             # ranks that resolve to a species
 GENUS_RANKS     <- c("species", "subspecies", "subgenus", # ranks that pin a genus
@@ -146,7 +146,7 @@ plot_accumulation <- function(key_col, rank_label, file) {
 
   png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
   bee_base_par()                     # house-style fonts + muted axis/label colours
-  op <- par(mar = c(4.2, 4.4, 3.4, 1), oma = c(3.4, 0, 0, 0))   # oma bottom for the caption
+  op <- par(mar = c(4.2, 4.4, 3.4, 1))
   plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
        xlab = "Number of surveys", ylab = paste("Number of", rank_label))
   for (key in names(sacs)) {                                 # all transect x method curves, one panel
@@ -167,8 +167,6 @@ plot_accumulation <- function(key_col, rank_label, file) {
          title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
          col = BEE_INK$secondary, lwd = 2.5, lty = LTY[c("lethal", "nonlethal")], bty = "n",
          cex = 0.9, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
-  bee_caption_base(scope = "survey records only", n = nrow(expanded),
-                   method = "lethal (net) + non-lethal (photo), by transect", rank = rank_label, cex = 0.55)
   par(op)
 }
 plot_accumulation("species_key", "species", file.path(OUT_DIR, "accumulation_species.png"))

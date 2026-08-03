@@ -28,12 +28,13 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SET")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage"
+OUT_DIR       <- "data/analysis/coverage/off_transect"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
 
 # ---- 1. pool records, flag on/off-transect + taxonomy keys ------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -79,29 +80,23 @@ message("Genera:  ",
         paste(sprintf("%s=%d", summ$region[summ$rank=="genus"], summ$n[summ$rank=="genus"]), collapse="  "))
 message("Off-only species (surveys miss these): ", length(offonly_sp))
 
-# ---- 3. figure: on-only / shared / off-only, species + genus (horizontal grouped) --
-# horizontal so the rank/label sit flush and the off-transect-only bar (what surveys miss) reads clean.
-reg_lab <- c("on-only" = "on-transect only", "both" = "both", "off-only" = "off-transect only")
+# ---- 3. figure: on-only / shared / off-only, species + genus -----------------
+# set-overlap colours: on-only = ink (focal set), off-only = sienna (the other set),
+# and "both" = the two MIXED -- the Lab (perceptual) midpoint of the on-only + off-only
+# hues (#3C3B36 + #B0632B -> #764F32), so the shared bar literally looks like the two blended.
+BOTH_BLEND <- "#764F32"
 plot_df <- summ %>%
-  mutate(region = factor(reg_lab[region],
-                         levels = c("on-transect only", "both", "off-transect only")),
-         rank   = factor(rank, levels = c("genus", "species")))   # species on top
-g <- ggplot(plot_df, aes(x = n, y = rank, fill = region)) +
-  geom_col(position = position_dodge(0.72), width = 0.64) +
-  geom_text(aes(label = n), position = position_dodge(0.72),
-            hjust = -0.3, colour = BEE_INK$secondary, size = 3.4) +
-  # set-overlap concept: on-transect = focal ink, shared = stone (background), off-transect = ochre (what surveys miss)
-  scale_fill_manual(values = c("on-transect only" = unname(BEE_SET["a_only"]),
-                               "both"              = unname(BEE_SET["shared"]),
-                               "off-transect only" = unname(BEE_SET["b_only"])), name = NULL) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.10))) +
-  labs(title = "On-transect vs off-transect bee coverage",
-       caption = scope_cap(scope = "all records (on = is_survey TRUE; off = casual iNaturalist)",
-                           method = "lethal + non-lethal (off-transect is non-lethal only)",
-                           rank = "species & genus", n = nrow(rec)),  # descriptive -- no test, so no p-value
-       x = "distinct taxa", y = NULL) +
+  mutate(region = factor(region, levels = c("on-only", "both", "off-only")),
+         rank = factor(rank, levels = c("species", "genus")))
+g <- ggplot(plot_df, aes(x = rank, y = n, fill = region)) +
+  geom_col(position = position_dodge(0.8), width = 0.7) +
+  geom_text(aes(label = n), position = position_dodge(0.8), vjust = -0.3, size = 3.4) +
+  scale_fill_manual(values = c("on-only" = unname(BEE_SET["a_only"]),
+                               "both"     = BOTH_BLEND,
+                               "off-only" = unname(BEE_SET["b_only"])), name = NULL) +
+  labs(title = "On-transect vs Off-transect Bee Coverage",
+       x = NULL, y = "distinct taxa") +
   theme_beescabr(11) +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "top", legend.justification = "left")
-ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 4.0, dpi = 200, bg = "white")
+  theme(panel.grid.major.x = element_blank())
+ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, dpi = 200, bg = "white")
 message("Wrote coverage_offtransect.{png,_summary.csv,_taxa.csv} to ", OUT_DIR)

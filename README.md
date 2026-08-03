@@ -491,7 +491,7 @@ That one module drives **both** downstream products, so they can never disagree:
 - the **interaction-web colours** (`interactions_network.R`, `interactions_web_genus.png` / `_species.png`) — selective genera get a distinct colour, generalists / too-sparse genera stay neutral grey; and
 - the by-genus field guide's **Forage preference** column (`bee_field_guide_genus.R`).
 
-A per-genus summary — the statistics (both p-values) plus the finding — is written to `data/analysis/interactions/forage_selectivity_summary.csv` (same `*_summary.csv` convention as the other analyses). Line thickness in the two overview webs encodes each bee's *preference share*; the per-genus focused webs use raw counts. Plant labels are common names (see `plant_names.R`).
+A per-genus summary — the statistics (both p-values) plus the finding — is written to `data/analysis/interactions/interactions/forage_selectivity_summary.csv` (same `*_summary.csv` convention as the other analyses). Line thickness in the two overview webs encodes each bee's *preference share*; the per-genus focused webs use raw counts. Plant labels are common names (see `plant_names.R`).
 
 **Findings (data as of 2026-08-02): 17 of 31 bee genera are selective, and the set is stable** across every level of control — plain abundance → +month → +year → +method all return essentially the same selective genera. That stability *is* the result: these preferences are robust, not artefacts of when, what year, or how the bees were sampled. What the year control *did* change is some of the **favourites** (the plant a genus most over-uses), because a "favourite" measured against a whole-season average can be a good-year bloom rather than a true preference:
 

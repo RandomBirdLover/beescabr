@@ -27,10 +27,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_IDSTATUS")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage"
+OUT_DIR       <- "data/analysis/coverage/id_resolution"
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
 
 ## NOTE (#7 -- method scope is intentional; do NOT "fix" it down to one method):
 ## This POOLS lethal (specimen) + non-lethal (photo) records on purpose -- question #7 asks what
@@ -103,14 +104,10 @@ g <- ggplot(long, aes(x = n, y = target, fill = cat)) +
   geom_text(data = lab, aes(x = total, y = target, label = sprintf("%.0f%% ID'd", pct_id)),
             hjust = -0.12, size = 2.8, color = "grey25", inherit.aes = FALSE) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.13))) +
-  # lightness = resolution status, hue = method. resolved (BOTH methods, to species) = the DARK red/blue
-  # blend (a purple). specimen-keyable & photo-needs-ID are UNRESOLVED -> the LIGHT method colours -- the
-  # same faded red/blue the per-method panels use for "genus-only", so a pale bar always = "still needs ID".
-  scale_fill_manual(values = c(
-    "resolved (to species)" = grDevices::colorRampPalette(c(unname(BEE_METHOD_COL["lethal"]), unname(BEE_METHOD_COL["nonlethal"])))(3)[2],
-    "specimen (keyable)"    = grDevices::colorRampPalette(c(unname(BEE_METHOD_COL["lethal"]),    "white"))(3)[2],
-    "photo (needs ID)"      = grDevices::colorRampPalette(c(unname(BEE_METHOD_COL["nonlethal"]), "white"))(3)[2]),
-    name = NULL) +
+  # ID-progress ramp: blue = resolved (done), vermillion = specimen-keyable (ACT here), grey = photo (can't act)
+  scale_fill_manual(values = c("resolved (to species)" = unname(BEE_IDSTATUS["resolved"]),
+                               "specimen (keyable)"    = unname(BEE_IDSTATUS["keyable"]),
+                               "photo (needs ID)"      = unname(BEE_IDSTATUS["stuck"])), name = NULL) +
   labs(title = sprintf("Q7 - Species-level ID: work done vs all %d remaining targets", nrow(top)),
        caption = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
@@ -140,10 +137,6 @@ method_genus_fig <- function(m, file, method_label) {
   long$cat   <- factor(long$cat, levels = c("identified to species", "genus-only (unresolved)"))
   long$genus <- factor(long$genus, levels = rev(method_genera))   # alphabetical (A at top)
   pct <- 100 * sum(d$species) / sum(d$total)
-  # this panel is a SINGLE method, so colour it in that method's hue (red = specimen, blue = photo):
-  # solid = identified (done), lightened = genus-only (not yet).
-  mcol       <- unname(BEE_METHOD_COL[if (m == "specimen") "lethal" else "nonlethal"])
-  mcol_faded <- grDevices::colorRampPalette(c(mcol, "white"))(3)[2]
   # per-genus % identified to species, labelled at the end of each bar (0-record genera get no label)
   lab2 <- d %>% filter(total > 0) %>% transmute(genus, total, pct_id = 100 * species / total)
   lab2$genus <- factor(lab2$genus, levels = rev(method_genera))
@@ -153,8 +146,8 @@ method_genus_fig <- function(m, file, method_label) {
               hjust = -0.15, size = 2.7, color = "grey25", inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
     scale_y_discrete(drop = FALSE) +   # keep EVERY shared genus, even 0-record ones (e.g. photo-only Xenoglossa has 0 specimens) so specimen & photo align row-for-row
-    scale_fill_manual(values = c("identified to species"   = mcol,         # solid method colour = done
-                                 "genus-only (unresolved)" = mcol_faded),   # faded method colour = not yet
+    scale_fill_manual(values = c("identified to species"   = unname(BEE_IDSTATUS["resolved"]),  # blue = done
+                                 "genus-only (unresolved)" = unname(BEE_IDSTATUS["stuck"])),     # grey = not yet
                       name = NULL) +
     labs(title = sprintf("Q7 - %s: species-level ID progress (all %d genera)", method_label, length(method_genera)),
          caption = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
@@ -179,7 +172,7 @@ funnel$method <- factor(funnel$method, levels = c("specimen", "photo"))
 gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
   geom_col(position = position_dodge(0.72), width = 0.68) +
   geom_text(aes(label = format(n, big.mark = ",")), position = position_dodge(0.72), vjust = -0.3, size = 3) +
-  # method now has its own colours (red net / blue photo), kept off the transect palette
+  # method now has its own colours (purple net / vermillion photo), kept off the transect palette
   scale_fill_manual(values = c(specimen = unname(BEE_METHOD_COL["lethal"]),
                                photo    = unname(BEE_METHOD_COL["nonlethal"])), name = NULL,
                     labels = c(specimen = "specimen (net)", photo = "photo (iNat)")) +

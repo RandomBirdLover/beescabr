@@ -24,7 +24,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage"
+OUT_DIR       <- "data/analysis/coverage/records_by_evidence"
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 norm <- function(x) str_squish(as.character(x))

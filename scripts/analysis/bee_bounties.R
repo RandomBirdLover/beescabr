@@ -32,11 +32,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/bee_bounties"
+OUT_DIR       <- "data/analysis/coverage/bee_bounties"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
+scope_cap <- function(src) sprintf("Scope: ALL records  |  context from %s  |  ranks: species + genus", src)
 
 # ---- 1. read + key both sources ---------------------------------------------
 read_prep <- function(f) {
@@ -120,7 +120,7 @@ bar <- function(df, ncol_records, title, sub, fill, file) {
     geom_col(fill = fill, width = 0.72) +
     geom_text(aes(label = .data[[ncol_records]]), hjust = -0.25, size = 3) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-    labs(title = sprintf("%s (all %d species)", title, nrow(d)), caption = str_wrap(sub, 95),
+    labs(title = sprintf("%s (all %d species)", title, nrow(d)), subtitle = str_wrap(sub, 95),
          x = "records in the source method (more = easier to target)", y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.y = element_text(face = "italic", colour = BEE_INK$muted), panel.grid.major.y = element_blank())
@@ -128,13 +128,11 @@ bar <- function(df, ncol_records, title, sub, fill, file) {
 }
 bar(specimen_bounty, "n_photo_records",
     "Specimen Bee Bounty - species to COLLECT",
-    paste0("In iNaturalist photos but no specimen - net a voucher.  ",
-           scope_cap(scope = "all records", method = "context: iNaturalist observations", rank = "species + genus")),
+    paste0("In iNaturalist photos but no specimen - net a voucher.  ", scope_cap("iNaturalist")),
     unname(BEE_METHOD_COL["lethal"]), file.path(OUT_DIR, "specimen_bee_bounty.png"))   # collect = net = purple
 bar(inat_bounty, "n_specimen_records",
     "iNaturalist Bee Bounty - species to PHOTOGRAPH",
-    paste0("In specimens but not on iNaturalist - get a community photo.  ",
-           scope_cap(scope = "all records", method = "context: specimen vouchers", rank = "species + genus")),
+    paste0("In specimens but not on iNaturalist - get a community photo.  ", scope_cap("specimens")),
     unname(BEE_METHOD_COL["nonlethal"]), file.path(OUT_DIR, "inaturalist_bee_bounty.png"))   # photograph = vermillion
 
 message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} to ", OUT_DIR)
@@ -156,12 +154,11 @@ sb_sp <- specimen_bounty$taxon[specimen_bounty$rank == "species"]
 sb_gn <- specimen_bounty$taxon[specimen_bounty$rank == "genus"]
 sb_tgt <- inat_geo %>% filter(species_key %in% sb_sp | genus_key %in% sb_gn)
 g1 <- ggplot() + base_pts +
-  geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 1.3, alpha = 0.6) +   # net-targets = rose-red (lethal)
+  geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 1.3, alpha = 0.6) +   # net-targets = purple
   coord_quickmap() +
   labs(title = "Specimen Bee Bounty - where to NET a voucher",
-       caption = scope_cap(scope = sprintf("iNaturalist sightings of %d collect-target taxa (photographed, never collected); grey = all iNat effort",
-                                           length(sb_sp) + length(sb_gn)),
-                          method = "non-lethal (iNat GPS points)", rank = "species + genus", n = nrow(sb_tgt)),
+       subtitle = str_wrap(sprintf("iNaturalist sightings of the %d taxa photographed but never collected (grey = all iNat effort)",
+                                    length(sb_sp) + length(sb_gn)), 92),
        x = NULL, y = NULL) + map_theme
 ggsave(file.path(OUT_DIR, "specimen_bee_bounty_map.png"), g1, width = 7.5, height = 8, dpi = 200, bg = "white")
 
@@ -185,9 +182,8 @@ g2 <- ggplot() + base_pts +
   scale_fill_manual(values = BEE_TRANSECT, name = "transect corridor") +
   coord_sf(expand = TRUE) +
   labs(title = "iNaturalist Bee Bounty - where to PHOTOGRAPH (walk these trails)",
-       caption = scope_cap(scope = sprintf("%d taxa held only as specimens; shaded band = transect trail (specimen coords are centroids, red dots)",
-                                           length(ib_sp) + length(ib_gn)),
-                          method = "lethal (specimen) targets on transect corridors", rank = "species + genus", n = nrow(ib_spec)),
+       subtitle = str_wrap(sprintf("%d taxa held only as specimens; shaded band = that transect's walked trail (specimen coords are transect centroids, red dots)",
+                                    length(ib_sp) + length(ib_gn)), 92),
        x = NULL, y = NULL) + map_theme
 ggsave(file.path(OUT_DIR, "inaturalist_bee_bounty_map.png"), g2, width = 7.8, height = 8, dpi = 200, bg = "white")
 message("Wrote specimen_bee_bounty_map.png + inaturalist_bee_bounty_map.png to ", OUT_DIR)

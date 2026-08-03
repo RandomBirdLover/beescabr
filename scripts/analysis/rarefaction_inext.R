@@ -14,7 +14,7 @@
 #   less sensitive to sampling effort -- useful alongside raw richness.
 #
 # FOUR COMPARISONS, each at BOTH genus and species rank (survey records only):
-#   1. per TRANSECT   2. per YEAR (Mar-Oct)   3. beeple vs intern
+#   1. per TRANSECT   2. per YEAR (Mar-Sep)   3. beeple vs intern
 #   4. observations vs specimens (non-lethal iNaturalist vs lethal specimens)
 #
 # NOTE: iNEXT could not be installed in the build sandbox (no CRAN access there),
@@ -34,15 +34,17 @@ if (!requireNamespace("iNEXT", quietly = TRUE))
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-OUT_DIR       <- "data/analysis/rarefaction"
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+OUT_DIR       <- "data/analysis/richness/rarefaction"
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
-WINDOW_MONTHS <- 3:10
+WINDOW_MONTHS <- 3:9
 QVALS         <- c(0, 1, 2)     # Hill orders
 NBOOT         <- 50             # bootstrap reps for CIs (raise to 100+ for final)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
+scope_cap <- function() "Scope: survey records only  |  Method: lethal + non-lethal pooled  |  Rank: species"
 
 # ---- 1. survey-only bee records (same prep as the vegan script) --------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -77,30 +79,40 @@ abun_list <- function(df, group_col, key_col, keep = NULL) {
 }
 
 # ---- 2. run iNEXT for one comparison: curves + standardized tables -----------
-run_inext <- function(gl, key, title, rank) {
+# house colours onto a ggiNEXT plot (sets both colour + fill, keyed to the group/assemblage)
+add_cols <- function(p, cols) if (is.null(cols)) p else
+  p + ggplot2::scale_colour_manual(values = cols, name = NULL, aesthetics = c("colour", "fill"))
+
+run_inext <- function(gl, key, title, rank, cols = NULL) {
   if (length(gl) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
   out <- iNEXT::iNEXT(gl, q = QVALS, datatype = "abundance", nboot = NBOOT)
+  # nest each comparison in its own by_<dimension>/ sub-folder; strip the redundant
+  # "by_<dim>_" prefix from filenames so they read e.g. by_transect/species_inext_size.png
+  dimdir <- sub(paste0("_", rank, "$"), "", key)   # "by_transect_species" -> "by_transect"
+  stub   <- rank                                   # "species" / "genus"
+  outsub <- file.path(OUT_DIR, dimdir); dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
   sub <- sprintf("Scope: survey records only  |  Method: lethal + non-lethal pooled  |  Rank: %s", rank)
-  th  <- theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(color = "#b2182b"))
+  th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary),  # house ink on ggiNEXT text
+               plot.subtitle = element_text(colour = BEE_INK$note))
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q
-  g1 <- iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
-    labs(title = sprintf("%s (%s) - iNEXT size-based (q0/q1/q2)", title, rank), subtitle = sub) + th
-  ggsave(file.path(OUT_DIR, paste0(key, "_inext_size.png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
+  g1 <- add_cols(iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
+    labs(title = sprintf("%s (%s) - iNEXT size-based (q0/q1/q2)", title, rank), subtitle = sub) + th, cols)
+  ggsave(file.path(outsub, paste0(stub, "_inext_size.png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
-  g3 <- iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
-    labs(title = sprintf("%s (%s) - iNEXT coverage-based (q0/q1/q2)", title, rank), subtitle = sub) + th
-  ggsave(file.path(OUT_DIR, paste0(key, "_inext_coverage.png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
+  g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
+    labs(title = sprintf("%s (%s) - iNEXT coverage-based (q0/q1/q2)", title, rank), subtitle = sub) + th, cols)
+  ggsave(file.path(outsub, paste0(stub, "_inext_coverage.png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
-  write.csv(out$AsyEst, file.path(OUT_DIR, paste0(key, "_inext_asymptotic.csv")), row.names = FALSE)
+  write.csv(out$AsyEst, file.path(outsub, paste0(stub, "_inext_asymptotic.csv")), row.names = FALSE)
   # standardized to a common COVERAGE (default: the lowest coverage among groups) --
   # this is the fairest apples-to-apples comparison
   estC <- iNEXT::estimateD(gl, q = QVALS, datatype = "abundance", base = "coverage")
-  write.csv(estC, file.path(OUT_DIR, paste0(key, "_inext_by_coverage.csv")), row.names = FALSE)
+  write.csv(estC, file.path(outsub, paste0(stub, "_inext_by_coverage.csv")), row.names = FALSE)
   # ...and standardized to a common SAMPLE SIZE (the lowest group's n), the direct
   # analogue of the vegan "rarefy to lowest" number
   minN <- min(vapply(gl, sum, numeric(1)))
   estS <- iNEXT::estimateD(gl, q = QVALS, datatype = "abundance", base = "size", level = minN)
-  write.csv(estS, file.path(OUT_DIR, paste0(key, "_inext_by_size.csv")), row.names = FALSE)
+  write.csv(estS, file.path(outsub, paste0(stub, "_inext_by_size.csv")), row.names = FALSE)
   message(sprintf("  %-11s: iNEXT done (min n = %d). q0 by coverage:\n%s", key, minN,
                   paste(utils::capture.output(print(estC[estC$Order.q == 0,
                         c("Assemblage", "m", "SC", "qD")])), collapse = "\n")))
@@ -113,13 +125,16 @@ message("iNEXT rarefaction/extrapolation:")
 for (rk in names(RANKS)) {
   kc <- RANKS[[rk]]; message(sprintf(" %s rank:", rk))
   run_inext(abun_list(filter(rec, transect %in% TRANSECTS), "transect", kc, TRANSECTS),
-            paste0("by_transect_", rk), "Bees by transect", rk)
-  run_inext(abun_list(rec_win, "year", kc),
-            paste0("by_year_", rk), "Bees by year (Mar-Oct)", rk)
+            paste0("by_transect_", rk), "Bees by transect", rk, cols = BEE_TRANSECT)   # transect palette
+  gl_y <- abun_list(rec_win, "year", kc)
+  run_inext(gl_y, paste0("by_year_", rk), "Bees by year (Mar-Sep)", rk,
+            cols = setNames(grDevices::colorRampPalette(BEE_SEQ)(length(gl_y)), names(gl_y)))   # year -> blue sequential
   run_inext(abun_list(rec, "surveyor", kc, c("beeple", "intern")),
-            paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk)
+            paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
+            cols = c(intern = "#3C3B36", beeple = "#C0BBB0"))   # intern = house ink (focus) / beeple = stone (background)
   run_inext(abun_list(rec, "obs_type", kc, c("observation", "specimen")),
-            paste0("by_method_", rk), "Bees: observations vs specimens", rk)
+            paste0("by_method_", rk), "Bees: observations vs specimens", rk,
+            cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours
 }
 
-message("Wrote by_{transect,year,observer,method}_{species,genus}_inext_* to ", OUT_DIR)
+message("Wrote {species,genus}_inext_* under by_{transect,year,observer,method}/ in ", OUT_DIR)
