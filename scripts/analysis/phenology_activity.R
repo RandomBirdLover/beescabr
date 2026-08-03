@@ -21,7 +21,7 @@
 # also tracks the peak (green = spring, peach = autumn). A month-share CSV is
 # written alongside each figure.
 #
-# CAVEAT: interns survey ~Mar-Oct and beeple (non-lethal) run year-round, so the
+# CAVEAT: interns survey ~Mar-Sep and beeple (non-lethal) run year-round, so the
 # winter tails partly reflect WHO was sampling, not just biology.
 #
 # Run from the repo root:  Rscript scripts/analysis/phenology_activity.R
@@ -38,17 +38,21 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style (ink tokens + >=10 rule)
+if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
 OUT_DIR       <- "data/analysis/phenology"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-MIN_RECORDS   <- 10       # a taxon needs this many records to draw a ridge
+MIN_RECORDS   <- BEE_MIN_RECORDS   # shared >=10-record rule: sparser taxa are excluded (too few to read a season)
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
+# figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
+# reinforced by peak-day ordering. Never a categorical transect, so it stays local, not a house concept.
 SPRING_FALL   <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
 MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- ridgeline phenology: one density curve per taxon, peak-ordered ----------
-phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL) {
+phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL, title = NULL) {
   df <- df[!is.na(df$taxon) & df$taxon != "" & !is.na(df$doy), ]
   keep <- names(which(table(df$taxon) >= min_records))
   df <- df[df$taxon %in% keep, ]
@@ -71,14 +75,14 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     scale_fill_gradientn(colors = SPRING_FALL, guide = "none") +
     scale_x_continuous(breaks = MONTH_STARTS, labels = month.abb,
                        limits = c(1, 366), expand = c(0.01, 0)) +
-    labs(title = sprintf("%s phenology - seasonal activity (ridgeline)", label),
+    labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
          subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
                             length(ord), min_records),
          caption = scope, x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
           plot.title  = element_text(face = "bold"),
-          plot.caption = element_text(color = "#b2182b", hjust = 0, size = 8, face = "bold"))
+          plot.caption = element_text(color = BEE_INK$note, hjust = 0, size = 8, face = "bold"))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 
@@ -109,6 +113,12 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
 
 doy_of <- function(x) suppressWarnings(as.integer(format(as.Date(x), "%j")))
 
+## NOTE (#12 -- non-lethal-only is intentional; do NOT add lethal/specimen data here):
+## The plant phenology below is built from iNat SURVEY records only (is_survey == TRUE, non-lethal) --
+## question #12 asks for "plant phenology based on the survey data (nonlethal only)." Excluding
+## specimen/lethal data is deliberate, not a bug. (The BEE phenology in section 2 pools both methods --
+## that is a separate extension, not the #12 deliverable.) The scope differs from #7 (both methods)
+## because each matches its own question. Keep it survey / non-lethal only.
 # ---- 1. FLOWERING-PLANT phenology (per plant genus; survey records = flowering) -
 # A plant is around all year, so "recorded" != "flowering". By survey protocol a
 # plant is only photographed/logged WHEN IT IS FLOWERING, so survey records are the
@@ -124,14 +134,44 @@ message(sprintf("Building phenology ridgelines:\n  Flowering plants: %d of %d re
                 nrow(plants), nrow(plants_all),
                 sum(!is_true(plants_all$is_survey)),
                 sum(is_true(plants_all$is_survey) & tolower(str_squish(plants_all$flower_flowering)) == "no")))
-phenology_ridge(data.frame(taxon = str_squish(plants$plant_genus), doy = doy_of(plants$observed_on)),
+phenology_ridge(data.frame(taxon = plant_label(str_squish(plants$plant_genus)), doy = doy_of(plants$observed_on)),
                 file.path(OUT_DIR, "phenology_plant_genus.png"), "Flowering plant genus",
                 scope = paste0("Scope: FLOWERING records only - survey plant records are in-flower by protocol\n",
-                               "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."))
+                               "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."),
+                title = "Seasonal Plant Bloom by Genus")
 
-# ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
+
+# ---- 1b. COMBINED plant BLOOM-EVIDENCE phenology (folds in bee-associated flowers) ----
+# The #12 figure above uses only STANDALONE survey plant observations, so a plant that bees
+# clearly use but that nobody logged as its own plant record is under-represented (or absent).
+# This COMPANION figure ADDS bloom evidence from the flowers bees were recorded ON -- a bee on
+# plant X on date D means X was in bloom on D. Three pooled sources, each a (plant_genus, date)
+# bloom point:
+#   * survey flowering plant observations (the #12 set)
+#   * iNaturalist bee records carrying a plant_genus (the flower_visited obs-field)
+#   * specimen records carrying a plant_genus (collection tags)
+# Kept SEPARATE from the #12 figure (which stays survey-plant-only by protocol). Broader coverage,
+# but it blends sources and their differing effort -- read it as "when is each plant in bloom,
+# across all evidence," a companion to (not a replacement for) the protocol-clean plant curve.
+pg <- function(x) str_squish(as.character(x))
+bloom <- bind_rows(
+  data.frame(plant_genus = pg(plants$plant_genus), observed_on = plants$observed_on, src = "survey plant obs",         stringsAsFactors = FALSE),
+  data.frame(plant_genus = pg(inat$plant_genus),   observed_on = inat$observed_on,   src = "bee-on-flower (iNat field)", stringsAsFactors = FALSE),
+  data.frame(plant_genus = pg(spec$plant_genus),   observed_on = spec$observed_on,   src = "bee-on-flower (specimen tag)", stringsAsFactors = FALSE)) %>%
+  filter(!is.na(plant_genus), plant_genus != "")
+message(sprintf("  Bloom evidence (combined): %d points  [survey plant obs %d, iNat bee-visited %d, specimen-tagged %d]",
+                nrow(bloom), sum(bloom$src == "survey plant obs"),
+                sum(bloom$src == "bee-on-flower (iNat field)"), sum(bloom$src == "bee-on-flower (specimen tag)")))
+phenology_ridge(data.frame(taxon = plant_label(bloom$plant_genus), doy = doy_of(bloom$observed_on)),
+                file.path(OUT_DIR, "phenology_plant_genus_bloom_evidence.png"), "Plant bloom (all evidence)",
+                scope = paste0("Scope: BLOOM EVIDENCE pooled - survey in-flower plant records + every plant a bee was recorded on\n",
+                               "(iNat flower_visited obs-field + specimen tags). A bee on a plant = it was in bloom then.\n",
+                               "Companion to the survey-plant-only bloom figure; broader coverage, but blends sources & effort."),
+                title = "Seasonal Plant Bloom by Genus (all bloom evidence)")
+
+# ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 bees <- bind_rows(spec[c("observed_on", "taxon_rank", "genus", "species")],
                   inat[c("observed_on", "taxon_rank", "genus", "species")])
 bees$doy <- doy_of(bees$observed_on)
@@ -139,11 +179,11 @@ bees$doy <- doy_of(bees$observed_on)
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% GENUS_RANKS & !is.na(bees$genus),
                             str_squish(bees$genus), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus")
+  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus", title = "Seasonal Bee Activity by Genus")
 
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% SPECIES_RANKS & !is.na(bees$genus) & bees$species != "",
                             paste(str_squish(bees$genus), word(bees$species, -1)), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species")
+  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species", title = "Seasonal Bee Activity by Species")
 
 message("\nDone. Phenology ridgelines + tables in: ", normalizePath(OUT_DIR))
