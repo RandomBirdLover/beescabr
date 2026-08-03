@@ -147,18 +147,11 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
   ggsave(file, g, width = 7.4, height = 8.2, dpi = 200, bg = "white")
 }
 
-draw_map("species_richness", "CABR bee species richness by grid cell",
-         "species", file.path(OUT_DIR, "map_species_richness.png"))
-draw_map("genus_richness", "CABR bee genus richness by grid cell",
-         "genera", file.path(OUT_DIR, "map_genus_richness.png"), palette = "mako")
-draw_map("n_records", "CABR bee sampling effort by grid cell",
-         "records", file.path(OUT_DIR, "map_sampling_effort.png"),
-         palette = "inferno", trans = "log10")
-if (any(!is.na(cells$rarefied_richness)))
-  draw_map("rarefied_richness",
-           sprintf("CABR bee richness, rarefied to %d records/cell", RAREFY_N),
-           sprintf("species / %d recs", RAREFY_N),
-           file.path(OUT_DIR, "map_rarefied_richness.png"), palette = "viridis")
+# Grid-cell maps intentionally NOT drawn -- they were hard to read (no basemap, UTM axes) and are
+# superseded by the per-transect richness/effort bar charts below. The per-cell values still live in
+# spatial_richness_grid.csv (written above). To bring a map back, call draw_map(...) (kept above), e.g.
+#   draw_map("rarefied_richness", "CABR bee richness, rarefied", "species/cell",
+#            file.path(OUT_DIR, "map_rarefied_richness.png"))
 
 # ---- 5. per-transect richness (BOTH methods) -- specimens' reliable unit ------
 # Specimen coordinates are transect centroids, so specimens are summarised BY
@@ -222,4 +215,4 @@ gB <- ggplot(eff_long, aes(transect, value, fill = method)) +
 ggsave(file.path(OUT_DIR, "transect_richness.png"), gA, width = 6.4, height = 5, dpi = 200, bg = "white")
 ggsave(file.path(OUT_DIR, "transect_effort.png"),   gB, width = 6.4, height = 5, dpi = 200, bg = "white")
 
-message("Spatial richness maps + per-transect richness written to ", OUT_DIR)
+message("Per-transect richness + effort charts (+ spatial_richness_grid.csv) written to ", OUT_DIR)
