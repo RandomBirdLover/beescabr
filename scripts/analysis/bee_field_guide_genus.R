@@ -111,6 +111,7 @@ rows <- lapply(gen_keys, function(k) {
     status         = status_call(nrow(d)),
     conservation   = if (k %in% CONSERV_GENERA) paste(CONSERV_FLAGGED$scientific_name[word(CONSERV_FLAGGED$scientific_name, 1) == k], collapse = "; ") else "",
     peak_day       = md_of(peak),
+    peak_doy       = if (is.na(peak)) 999L else as.integer(round(peak)),   # hidden chronological sort key
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
     n_plant_genera = length(fl),
@@ -132,18 +133,19 @@ message(sprintf("Genus field guide: %d genera (%d never yet ID'd to species; %d 
 
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
+st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$status == "rare"
   tag <- if (r$n_species == 0) '<span class="cn">not yet ID&#39;d to species</span>' else ""
   cs  <- if (r$conservation != "") sprintf('<sup class="cs" title="includes at-risk: %s">*</sup>', esc(r$conservation)) else ""
   pref_cls <- if (grepl("^Selective", r$forage_pref)) "pref-sel" else if (grepl("^Generalist", r$forage_pref)) "pref-gen" else "pref-na"
   sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td><td class="num">%d</td><td class="num">%d</td>',
-                 '<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="%s">%s</td><td class="loc">%s</td>',
-                 '<td><span class="pill st-%s">%s</span></td></tr>'),
+                 '<td data-sort="%d">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="%s">%s</td><td class="loc">%s</td>',
+                 '<td data-sort="%d"><span class="pill st-%s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$genus), cs, tag, r$n_records, r$n_species,
-          esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
+          r$peak_doy, esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
           esc(r$flower_breadth), esc(r$top_plant), pref_cls, esc(r$forage_pref),
-          esc(r$where_to_find), r$status, r$status)
+          esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>CABR Native Bee Field Guide - by genus</title>',
@@ -174,13 +176,16 @@ html <- paste0(
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<p class="note">', esc(CONSERV_LEGEND), '</p>',
 '<script>',
-'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
-'var t=h.closest("table"),b=t.tBodies[0],rows=[].slice.call(b.rows);',
-'h._d=!h._d;var d=h._d?1:-1;',
-'rows.sort(function(x,y){var a=x.cells[i].innerText.trim(),c=y.cells[i].innerText.trim();',
-'var na=parseFloat(a.replace(/[^0-9.\\-]/g,"")),nc=parseFloat(c.replace(/[^0-9.\\-]/g,""));',
-'if(!isNaN(na)&&!isNaN(nc))return(na-nc)*d;return a.localeCompare(c)*d;});',
-'rows.forEach(function(r){b.appendChild(r);});});});',
+'(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
+'function pv(r,c){var x=r.cells[c];if(!x)return"";var s=x.getAttribute("data-sort");return s!==null?s:x.innerText.trim();}',
+'function isnum(s){return s!==""&&/^-?[0-9,]+(\\.[0-9]+)?%?$/.test(s);}',
+'var NUM=[];for(var c=0;c<NC;c++){var all=true,any=false;for(var r=0;r<ROWS.length;r++){var v=pv(ROWS[r],c);if(v==="")continue;any=true;if(!isnum(v)){all=false;break;}}NUM[c]=any&&all;}',
+'var CC=-1,CD=1;[].forEach.call(T.tHead.rows[0].cells,function(h,i){h.style.cursor="pointer";h.addEventListener("click",function(){',
+'if(CC===i){CD=-CD;}else{CC=i;CD=1;}var d=CD;',
+'ROWS.sort(function(x,y){var a=pv(x,i),c=pv(y,i);',
+'if(NUM[i])return(parseFloat(a.replace(/[^0-9.\\-]/g,""))-parseFloat(c.replace(/[^0-9.\\-]/g,"")))*d;',
+'return a.localeCompare(c)*d;});',
+'ROWS.forEach(function(r){B.appendChild(r);});});});})();',
 '</script></body></html>')
 writeLines(html, file.path(OUT_DIR, "bee_field_guide_genus.html"))
 

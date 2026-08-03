@@ -51,7 +51,8 @@ RAREFY_N      <- 20             # rarefy cells with >= this many records to this
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")   # for the per-transect richness summary
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-# scope_cap() now provided by theme_beescabr.R (adds n / sig / source + data date)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
+                                                   scope, method, rank)
 
 # ---- 1. ALL bee records with coordinates + taxonomy keys ---------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -140,7 +141,7 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
   g <- ggplot(dat) +
     geom_sf(aes(fill = .data[[fill_col]]), color = "white", linewidth = 0.15) +
     scale_fill_gradientn(colours = BEE_SEQ, name = legend_lab, trans = trans) +   # magnitude = house blue ramp (palette arg now unused)
-    labs(title = title, caption = cap, x = NULL, y = NULL) +
+    labs(title = title, subtitle = cap, x = NULL, y = NULL) +
     coord_sf(datum = CRS_UTM) +
     base_theme
   ggsave(file, g, width = 7.4, height = 8.2, dpi = 200, bg = "white")
@@ -181,17 +182,44 @@ tr_tbl <- bind_rows(tr_key(spec, "lethal"), tr_key(inat, "nonlethal")) %>%
 write.csv(tr_tbl, file.path(OUT_DIR, "transect_richness.csv"), row.names = FALSE)
 message("Per-transect richness (both methods): ",
         paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
-tr_long <- bind_rows(
-  data.frame(transect = tr_tbl$transect, rank = "species", richness = tr_tbl$species_richness),
-  data.frame(transect = tr_tbl$transect, rank = "genus",   richness = tr_tbl$genus_richness))
-gtr <- ggplot(tr_long, aes(x = reorder(transect, -richness), y = richness, fill = rank)) +
-  geom_col(position = "dodge", width = 0.7) +
-  scale_fill_manual(values = c(species = BEE_NEUTRAL[["dark"]], genus = BEE_NEUTRAL[["light"]]), name = NULL) +   # species = house ink (focus), genus = stone
-  labs(title = "CABR bee richness by transect (both methods, all records)",
-       caption = str_wrap(scope_cap("all records, per transect (specimens' reliable unit)",
-                                     "lethal + non-lethal pooled", "genus + species"), 62),
-       x = "transect", y = "distinct taxa") +
-  base_theme
-ggsave(file.path(OUT_DIR, "transect_richness.png"), gtr, width = 6.5, height = 5, dpi = 200, bg = "white")
+# TWO separate, legible per-transect bar charts (a clearer replacement for the raw grid maps):
+#   transect_richness.png -- distinct species + genera per transect
+#   transect_effort.png   -- record count per transect, split lethal (net) vs non-lethal (photo)
+# Both share the same transect order (richest first).
+tr_lvl <- as.character(tr_tbl$transect[order(-tr_tbl$species_richness)])   # shared x order (richest first)
+tt <- tr_tbl; tt$transect <- factor(tt$transect, levels = tr_lvl)
+lab_col <- BEE_INK$secondary
+
+rich_long <- bind_rows(
+  data.frame(transect = tt$transect, rank = "species", value = tt$species_richness),
+  data.frame(transect = tt$transect, rank = "genus",   value = tt$genus_richness))
+rich_long$rank <- factor(rich_long$rank, levels = c("species", "genus"))
+gA <- ggplot(rich_long, aes(transect, value, fill = rank)) +
+  geom_col(position = position_dodge(0.72), width = 0.66) +
+  geom_text(aes(label = value), position = position_dodge(0.72), vjust = -0.35, size = 3, colour = lab_col) +
+  scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = NULL) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
+  labs(title = "CABR bee richness by transect",
+       subtitle = str_wrap(scope_cap("all records, per transect (off-transect excluded)", "lethal + non-lethal", "genus + species"), 72),
+       x = NULL, y = "distinct taxa") +
+  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5))
+
+eff_long <- bind_rows(
+  data.frame(transect = tt$transect, method = "non-lethal (photo)", value = tt$records_nonlethal),
+  data.frame(transect = tt$transect, method = "lethal (net)",       value = tt$records_lethal))
+eff_long$method <- factor(eff_long$method, levels = c("non-lethal (photo)", "lethal (net)"))
+gB <- ggplot(eff_long, aes(transect, value, fill = method)) +
+  geom_col(width = 0.66) +
+  geom_text(data = tt, aes(transect, n_records, label = n_records), vjust = -0.35, size = 3, colour = lab_col, inherit.aes = FALSE) +
+  scale_fill_manual(values = setNames(unname(BEE_METHOD_COL[c("nonlethal", "lethal")]),
+                                      c("non-lethal (photo)", "lethal (net)")), name = NULL) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
+  labs(title = "CABR bee sampling effort by transect",
+       subtitle = str_wrap(scope_cap("all records, per transect (off-transect excluded)", "net vs photo", "records"), 72),
+       x = NULL, y = "records") +
+  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5))
+
+ggsave(file.path(OUT_DIR, "transect_richness.png"), gA, width = 6.4, height = 5, dpi = 200, bg = "white")
+ggsave(file.path(OUT_DIR, "transect_effort.png"),   gB, width = 6.4, height = 5, dpi = 200, bg = "white")
 
 message("Spatial richness maps + per-transect richness written to ", OUT_DIR)

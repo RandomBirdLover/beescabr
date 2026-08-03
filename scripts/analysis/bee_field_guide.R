@@ -102,6 +102,7 @@ rows <- lapply(sp_keys, function(k) {
     confidence     = if (nrow(d) < MIN_CONF) "low (n<10)" else "ok",
     status         = status_call(nrow(d)),
     peak_day       = md_of(peak),
+    peak_doy       = if (is.na(peak)) 999L else as.integer(round(peak)),   # hidden chronological sort key
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
     n_plant_genera = length(fl),
@@ -130,20 +131,21 @@ esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub
 diet_class <- function(s) ifelse(grepl("^Special", s), "sp", ifelse(grepl("^General", s), "ge",
                           ifelse(grepl("^Moder", s), "mo", "na")))
 pref_class <- function(s) ifelse(grepl("^Selective", s), "pref-sel", ifelse(grepl("^Generalist", s), "pref-gen", "pref-na"))
+st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$confidence != "ok"
   cs <- if (r$conservation != "") sprintf('<sup class="cs" title="%s">*</sup>', esc(r$conservation)) else ""
   iucn_td <- if (HAVE_IUCN) sprintf('<td class="num"><span class="iucn i-%s" title="%s">%s</span></td>',
                                     tolower(r$iucn), esc(r$iucn_name), esc(r$iucn)) else ""
   sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td><td class="num">%d</td>%s',
-                 '<td>%s</td><td>%s</td><td>%s</td><td><span class="pill %s">%s</span></td>',
+                 '<td data-sort="%d">%s</td><td>%s</td><td>%s</td><td><span class="pill %s">%s</span></td>',
                  '<td><span class="pill %s">%s</span></td><td class="loc">%s</td>',
-                 '<td><span class="pill st-%s">%s</span></td></tr>'),
+                 '<td data-sort="%d"><span class="pill st-%s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$bee), cs,
           if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "",
-          r$n_records, iucn_td, esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
+          r$n_records, iucn_td, r$peak_doy, esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
           diet_class(r$diet), esc(r$diet), pref_class(r$forage_pref), esc(r$forage_pref),
-          esc(r$where_to_find), r$status, r$status)
+          esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 note_txt <- if (HAVE_IUCN) {
@@ -186,13 +188,16 @@ html <- paste0(
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<p class="note">', esc(note_txt), '</p>',
 '<script>',
-'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
-'var t=h.closest("table"),b=t.tBodies[0],rows=[].slice.call(b.rows);',
-'h._d=!h._d;var d=h._d?1:-1;',
-'rows.sort(function(x,y){var a=x.cells[i].innerText.trim(),c=y.cells[i].innerText.trim();',
-'var na=parseFloat(a.replace(/[^0-9.\\-]/g,"")),nc=parseFloat(c.replace(/[^0-9.\\-]/g,""));',
-'if(!isNaN(na)&&!isNaN(nc))return(na-nc)*d;return a.localeCompare(c)*d;});',
-'rows.forEach(function(r){b.appendChild(r);});});});',
+'(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
+'function pv(r,c){var x=r.cells[c];if(!x)return"";var s=x.getAttribute("data-sort");return s!==null?s:x.innerText.trim();}',
+'function isnum(s){return s!==""&&/^-?[0-9,]+(\\.[0-9]+)?%?$/.test(s);}',
+'var NUM=[];for(var c=0;c<NC;c++){var all=true,any=false;for(var r=0;r<ROWS.length;r++){var v=pv(ROWS[r],c);if(v==="")continue;any=true;if(!isnum(v)){all=false;break;}}NUM[c]=any&&all;}',
+'var CC=-1,CD=1;[].forEach.call(T.tHead.rows[0].cells,function(h,i){h.style.cursor="pointer";h.addEventListener("click",function(){',
+'if(CC===i){CD=-CD;}else{CC=i;CD=1;}var d=CD;',
+'ROWS.sort(function(x,y){var a=pv(x,i),c=pv(y,i);',
+'if(NUM[i])return(parseFloat(a.replace(/[^0-9.\\-]/g,""))-parseFloat(c.replace(/[^0-9.\\-]/g,"")))*d;',
+'return a.localeCompare(c)*d;});',
+'ROWS.forEach(function(r){B.appendChild(r);});});});})();',
 '</script></body></html>')
 writeLines(html, file.path(OUT_DIR, "bee_field_guide_species.html"))
 
