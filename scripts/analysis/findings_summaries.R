@@ -287,6 +287,15 @@ fw("phenology_effort",
    c(note = "documents the effort skew (interns ~Mar-Oct, beeple year-round; 2024-heavy) that the inferential tests control for"),
    "effort_by_month.csv; effort_by_month.png; effort_year_month_grid.png")
 
+fw("nps_summary_tables",
+   "NPS descriptive summary tables -- plain counts, no interpretation",
+   "descriptive",
+   "The bare descriptive tables for the data-focused NPS report: participation (surveyors, trips, span), bee totals (genera/species/records), plant totals, methods, and full genus/species checklists -- deliberately counts only, no tests or interpretation.",
+   c(scope    = "ALL records (not survey-only); the report's factual backbone that every other analysis interprets",
+     contents = "participation (field surveyors + iNat users + trips + year span), bee + plant genus/species counts, method breakdown, and bee/plant checklists",
+     no_stats = "descriptive by design -- no p-values or estimators here; the inferential findings live in the other summaries"),
+   "nps_participation.csv; nps_bees_summary.csv; nps_bee_species_checklist.csv; nps_bee_genera_checklist.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_genera_checklist.csv")
+
 # ---- master index -----------------------------------------------------------
 idx <- do.call(rbind, .index)
 idx <- idx[order(match(idx$type, c("inferential", "estimator", "descriptive")), idx$analysis), ]

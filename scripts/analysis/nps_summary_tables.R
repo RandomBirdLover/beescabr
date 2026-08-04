@@ -20,7 +20,7 @@
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-OUT_DIR       <- "data/analysis/nps_summary"
+OUT_DIR       <- "data/analysis/reference/nps_summary"
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 kv <- function(...) { x <- list(...); data.frame(metric = names(x), value = unlist(x), row.names = NULL) }

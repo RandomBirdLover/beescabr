@@ -68,8 +68,7 @@ g <- ggplot() +
            curvature = 0.28, linewidth = 0.5, color = BEE_INK$secondary,
            arrow = arrow(length = unit(0.14, "cm"), type = "closed")) +
   annotate("label", x = ax, y = ay, label = call_txt, hjust = 0, vjust = 0.5,
-           size = 3.7, lineheight = 1.05, color = BEE_INK$primary, fill = "white",
-           label.size = 0.3, label.padding = unit(0.5, "lines")) +
+           size = 3.7, lineheight = 1.05, color = BEE_INK$primary, fill = "white") +
   annotate("text", x = cc[1] - 1500, y = cc[2] - 3500, label = "Point Loma", hjust = 1,
            size = 3, fontface = "italic", color = BEE_INK$muted) +
   coord_sf(xlim = c(bb["xmin"], bb["xmax"] + (bb["xmax"] - bb["xmin"]) * 0.30),
