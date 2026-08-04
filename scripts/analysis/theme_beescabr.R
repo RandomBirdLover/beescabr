@@ -62,6 +62,10 @@ BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRA
 # BEE_METHOD_COL, NOT this -- method has its own colours.
 BEE_SET <- c(a_only = BEE_NEUTRAL[["dark"]], shared = BEE_NEUTRAL[["light"]], b_only = BEE_ACCENT)
 
+# ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
+# resolved (done) = indigo focus; keyable (specimen, ACT here) = orchid accent; stuck (photo) = lavender background.
+BEE_IDSTATUS <- c(resolved = BEE_NEUTRAL[["dark"]], keyable = BEE_ACCENT, stuck = BEE_NEUTRAL[["light"]])
+
 # ---- ID PROGRESS (Q7): removed -- coverage_id_targets.R now colours by METHOD (red = specimen,
 # blue = photo, purple = the red/blue blend for "resolved", i.e. a mix of both methods), derived
 # straight from BEE_METHOD_COL. No separate ID-status palette needed.
