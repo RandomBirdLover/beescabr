@@ -30,7 +30,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage/method_comparison"
+OUT_DIR       <- "data/analysis/coverage/surveyor_groups"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 WINDOW_MONTHS <- 3:10
@@ -120,9 +120,9 @@ plot_yield <- function(tbl, title, excl_label, rank = c("species", "genus"), fil
 
 plot_yield(tbl, "Q11 - Yield by surveyor group: SPECIES-level (CABR bees)",
            "Group-exclusive species", rank = "species",
-           file = file.path(OUT_DIR, "coverage_yield_by_group.png"))
+           file = file.path(OUT_DIR, "coverage_yield_by_group_species.png"))
 plot_yield(tbl, "Q11 - Yield by surveyor group: GENUS-level (CABR bees)",
            "Group-exclusive genera", rank = "genus",
            file = file.path(OUT_DIR, "coverage_yield_by_group_genus.png"))
 
-message("\nWrote coverage_yield_by_group.csv + .png + _genus.png (species + genus levels) to ", OUT_DIR)
+message("\nWrote coverage_yield_by_group.csv + _species.png + _genus.png (species + genus levels) to ", OUT_DIR)

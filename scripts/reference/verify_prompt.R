@@ -48,6 +48,10 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
   nm  <- if ("scientific_name" %in% names(needs)) as.character(needs$scientific_name) else rep("", nrow(needs))
   rk  <- if ("rank" %in% names(needs)) as.character(needs$rank) else rep("", nrow(needs))
   tid <- suppressWarnings(as.integer(needs$taxon_id))
+  # per-taxon evidence source (attached upstream by .pv_attach_evidence); NA cols -> not shown
+  ns  <- if ("n_spec" %in% names(needs)) suppressWarnings(as.integer(needs$n_spec)) else rep(NA_integer_, nrow(needs))
+  nr  <- if ("n_inat_research" %in% names(needs)) suppressWarnings(as.integer(needs$n_inat_research)) else rep(NA_integer_, nrow(needs))
+  nn  <- if ("n_inat_needsid" %in% names(needs)) suppressWarnings(as.integer(needs$n_inat_needsid)) else rep(NA_integer_, nrow(needs))
   prev_rejected <- suppressWarnings(as.integer(prev_rejected))
   keep <- integer(0); rej <- integer(0)
   # iNat place the whole pipeline is scoped to (San Diego County 25-mi buffer). Resolved from config
@@ -61,9 +65,21 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
     # clickable link: this taxon's records filtered to San Diego County -> "is it actually found in SD?"
     sd_url <- sprintf("https://www.inaturalist.org/observations?place_id=%s&taxon_id=%s&verifiable=any", sd_place, tid[i])
     if (verbose) {
-      message(sprintf("    %s (id %s%s)%s", nm[i], tid[i],
-                      if (nzchar(rk[i])) paste0(", ", rk[i]) else "", tag))
-      message(sprintf("       is it in San Diego? open %s", sd_url))
+      rankstr <- if (nzchar(rk[i])) paste0(", ", rk[i]) else ""
+      ev <- ""
+      if (!is.na(ns[i])) {                                    # evidence attached -> show the source
+        ninat <- nr[i] + nn[i]
+        ev <- sprintf("evidence: %d specimen · %d iNat", ns[i], ninat)
+        if (ninat > 0) ev <- sprintf("%s (%d research-grade, %d needs-ID)", ev, nr[i], nn[i])
+      }
+      reject_note <- if (tid[i] %in% prev_rejected) "   [REJECTED before — verified now?]" else ""
+      message(sprintf("    %s (id %s%s)%s%s", nm[i], tid[i], rankstr,
+                      if (nzchar(ev)) paste0(" — ", ev) else "", reject_note))
+      has_inat <- !is.na(ns[i]) && (nr[i] + nn[i]) > 0
+      if (!is.na(ns[i]) && !has_inat && ns[i] > 0)            # specimen-only -> the iNat link is a dead end
+        message("       specimen-only (voucher) — no iNat record to check")
+      else
+        message(sprintf("       check iNat in San Diego: %s", sd_url))
     }
     repeat {
       # verbose run shows name + SD link above (via message), so the input line stays short;
@@ -153,6 +169,35 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
   out
 }
 
+# .pv_attach_evidence(): attach per-taxon evidence counts (specimen vouchers, research-grade iNat,
+# needs-ID iNat) so the prompt can show WHERE each record came from. Matches records by taxon_id OR
+# scientific_name (same rule the checklist-gap analysis uses). Graceful: missing tables -> all zero.
+.pv_attach_evidence <- function(needs, spec = NULL, inat = NULL) {
+  needs$n_spec <- 0L; needs$n_inat_research <- 0L; needs$n_inat_needsid <- 0L
+  if (!"taxon_id" %in% names(needs) || !nrow(needs)) return(needs)
+  low <- function(x) tolower(trimws(as.character(x)))
+  tid <- suppressWarnings(as.integer(needs$taxon_id)); sci <- low(needs$scientific_name)
+  idx <- function(df, i) {
+    if (is.null(df) || !nrow(df)) return(integer(0))
+    hit <- rep(FALSE, nrow(df))
+    if ("taxon_id" %in% names(df) && !is.na(tid[i]))
+      hit <- hit | (suppressWarnings(as.integer(df$taxon_id)) == tid[i])
+    if ("scientific_name" %in% names(df) && nzchar(sci[i]))
+      hit <- hit | (low(df$scientific_name) == sci[i])
+    which(hit)
+  }
+  for (i in seq_len(nrow(needs))) {
+    needs$n_spec[i] <- length(idx(spec, i))
+    ii <- idx(inat, i)
+    if (length(ii) && "quality_grade" %in% names(inat)) {
+      qg <- low(inat$quality_grade[ii])
+      needs$n_inat_research[i] <- sum(qg == "research")
+      needs$n_inat_needsid[i]  <- sum(qg != "research")
+    } else needs$n_inat_needsid[i] <- length(ii)
+  }
+  needs
+}
+
 # prompt_verify_taxa(): DRIVER. Prompt over ALL unverified rows (previously-rejected included, so
 # a later-confirmed record is never locked out -- it is re-shown with a "rejected before" note).
 # Verified ids -> verified_taxa.csv; rejected ids -> rejected_taxa.csv; a verify un-rejects.
@@ -164,6 +209,13 @@ prompt_verify_taxa <- function(lookup_df,
   needs <- unverified_rows(lookup_df)
   if (!nrow(needs)) { if (verbose) message("  [verify] nothing new to verify."); return(invisible(NULL)) }
   needs$scientific_name <- .pv_fill_names(needs)   # higher ranks (complex/subgenus/genus) show a readable name
+  # attach evidence source (specimen vs iNat research/needs-ID) so the prompt shows where it came from
+  .rd_ev <- function(p) tryCatch(if (!is.null(p) && file.exists(p))
+                                   utils::read.csv(p, stringsAsFactors = FALSE, check.names = FALSE) else NULL,
+                                 error = function(e) NULL)
+  needs <- .pv_attach_evidence(needs,
+                               .rd_ev(if (exists("PATHS")) PATHS$specimen_clean else NULL),
+                               .rd_ev(if (exists("PATHS")) PATHS$inat_clean else NULL))
   prev_rejected <- .pv_read_ids(rejected_path)
   res <- resolve_verification_interactive(needs, prev_rejected, prompt_fn, interactive_ok, verbose)
   if (write) {

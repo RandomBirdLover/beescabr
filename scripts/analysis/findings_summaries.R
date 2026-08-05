@@ -44,11 +44,12 @@ fs   <- .rd("data/analysis/interactions/networks/forage_selectivity_summary.csv"
 h2   <- .rd("data/analysis/interactions/networks/interactions_genus_h2.csv")
 acc  <- .rd("data/analysis/richness/accumulation/transect_accumulation_summary.csv")
 holw <- .rd("data/analysis/coverage/checklist_gaps/coverage_cabr_not_on_holway.csv")
-yld_m <- .rd("data/analysis/coverage/method_comparison/coverage_yield_by_method.csv")
-yld_g <- .rd("data/analysis/coverage/method_comparison/coverage_yield_by_group.csv")
+yld_m <- .rd("data/analysis/method_comparison/yield/coverage_yield_by_method.csv")
+yld_g <- .rd("data/analysis/coverage/surveyor_groups/coverage_yield_by_group.csv")
 lsb   <- .rd("data/analysis/coverage/least_sampled/least_sampled_bees.csv")
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
-  v <- df[[col]][as.character(df$grp) == g]; if (length(v)) .chr(v[1]) else "-" }
+  key <- if (!is.null(df$grp)) df$grp else df$method   # yield_by_group keys on grp; yield_by_method on method
+  v <- df[[col]][as.character(key) == g]; if (length(v)) .chr(v[1]) else "-" }
 
 fs_sel <- if (!is.null(fs)) sum(fs$forage_pattern == "Selective") else NA
 fs_tot <- .n(fs)
@@ -182,12 +183,29 @@ fw("coverage_cabr_vs_holway",
    c(note = "iNaturalist records flagged for verification before treating as county additions"),
    "coverage_cabr_not_on_holway.csv/png; coverage_cabr_not_on_holway_inat_records.csv")
 
-fw("coverage_method_venn",
-   "Method overlap (net vs photo)",
+fw("yield_by_method",
+   "Yield by method (lethal vs non-lethal Venn)",
    "descriptive",
-   "How the lethal (net) and non-lethal (photo) methods overlap in the taxa they detect.",
-   c(note = "shows each method's unique + shared taxa contribution"),
-   "coverage_method_venn.png; coverage_method_resolution.csv; coverage_method_venn_taxa.csv")
+   "How the lethal and non-lethal methods overlap in the taxa they detect -- each method's unique + shared species and genera (the yield tier of the effort/yield/efficiency comparison).",
+   c(note   = "shows each method's unique + shared taxa contribution",
+     scope  = "ALL records (survey filter off), since 'what each method detects' wants every record",
+     tier   = "YIELD -- see method_comparison/effort for sampling work and method_comparison/efficiency for richness at equal effort"),
+   "method_comparison/yield/yield_by_method.png; coverage_method_resolution.csv; yield_by_method_taxa.csv")
+
+fw("effort_by_method",
+   "Effort by method (survey trips)",
+   "descriptive",
+   "Sampling WORK per method: survey trips, lethal vs non-lethal. The honest denominator for reading yield -- non-lethal logged far more trips than lethal, so raw yield can't be compared directly (see efficiency tier).",
+   c(tier = "EFFORT -- first of the three method-comparison tiers (effort -> yield -> efficiency)"),
+   "method_comparison/effort/coverage_effort_by_method.png; coverage_effort_by_method.csv")
+
+fw("efficiency_by_method",
+   "Efficiency by method (rarefied to equal effort)",
+   "descriptive",
+   "Richness at EQUAL sampling effort (rarefaction): both methods sub-sampled to the smaller method's record total, at species and genus rank. At species level lethal stays ahead (47 vs 33); at genus level the two are even (23 vs 23) -- non-lethal's raw genus lead was an effort artifact.",
+   c(tier   = "EFFICIENCY -- third tier; removes the effort imbalance that makes raw yield unfair to compare",
+     method = "Hurlbert rarefaction to the smaller method's total records, survey records only"),
+   "method_comparison/efficiency/efficiency_by_method_species.png; method_comparison/efficiency/efficiency_by_method_genus.png")
 
 fw("coverage_offtransect",
    "Off-transect coverage",
@@ -216,7 +234,7 @@ fw("coverage_yield_by_method",
      controls_for = "season (Mar-Oct) + year (2021-2023) + survey scope -- removes non-lethal's 3 extra years",
      species_vs_genus = "species-level = detection + ID resolution; genus-level = detection alone (photos not penalised for stalling at genus)",
      takeaway = "specimens win on species-level yield/efficiency; detection (genus) is about even -- the gap is ID resolution, not who finds more bees"),
-   "coverage_yield_by_method.csv; coverage_yield_by_method.png; coverage_yield_by_method_genus.png")
+   "method_comparison/yield/coverage_yield_by_method.csv (table only; the figure is the method Venn, method_comparison/yield/yield_by_method.png)")
 
 fw("coverage_yield_by_group",
    "Yield by surveyor group (interns / beeple / strangers)",
@@ -229,7 +247,7 @@ fw("coverage_yield_by_group",
      groups  = "interns = lethal net specimens (survey); beeple = non-lethal survey photos; strangers = casual iNaturalist photos by non-surveyor public (not a survey)",
      excludes = "intern iNaturalist photos (none exist in 2021-2023; interns only photographed from 2024)",
      vs_method_figure = "coverage_yield_by_method is SURVEY-ONLY (structured lethal vs non-lethal) and so excludes strangers"),
-   "coverage_yield_by_group.csv; coverage_yield_by_group.png; coverage_yield_by_group_genus.png")
+   "coverage/surveyor_groups/coverage_yield_by_group.csv; coverage_yield_by_group_species.png; coverage_yield_by_group_genus.png")
 
 fw("coverage_cabr_share_of_county",
    "CABR share of county diversity",

@@ -73,11 +73,11 @@ g <- ggplot() +
            size = 3, fontface = "italic", color = BEE_INK$muted) +
   coord_sf(xlim = c(bb["xmin"], bb["xmax"] + (bb["xmax"] - bb["xmin"]) * 0.30),
            ylim = c(bb["ymin"], bb["ymax"]), expand = TRUE) +
-  labs(title = sprintf("One dot on the county map holds %.0f%% of San Diego County's native bees", sp_pct),
+  labs(title = sprintf("Cabrillo Holds %.0f%% of San Diego County's Native Bee Species", sp_pct),
        caption = str_wrap(sprintf("Cabrillo National Monument (%.0f acres) shown on the San Diego County boundary. It holds %.0f%% of the county's native bee species (%d of %d) and %.0f%% of its genera (%d of %d) on ~%.3f%% of its land -- roughly %sx its share by area. CABR official checklist vs Holway SD County checklist (v3).",
                     cabr_acres, sp_pct, n_cabr_sp, n_hol_sp, gen_pct, n_cabr_gn, n_hol_gn, area_pct, format(round(overrep, -2), big.mark = ",")), 78)) +
   theme_void(base_size = 12) +
-  theme(plot.title = element_text(face = "bold", size = 15, colour = BEE_INK$primary, margin = margin(b = 6)),
+  theme(plot.title = element_text(face = "bold", size = 15, hjust = 0.5, colour = BEE_INK$primary, margin = margin(b = 6)),
         plot.caption = element_text(colour = BEE_INK$secondary, size = 9, hjust = 0, margin = margin(t = 8)),
         plot.caption.position = "plot", plot.title.position = "plot",
         plot.margin = margin(12, 12, 10, 12))

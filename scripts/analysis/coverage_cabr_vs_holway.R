@@ -176,15 +176,27 @@ png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
     width = 1900, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colours
 op <- par(mar = c(4.5, 12, 3.5, 1))
-bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA,
+bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA, width = 0.8, space = 0.35,
               xlab = "Number of CABR records",
-              main = "CABR bees not on Holway's SD-county checklist\n(bar = records; colour = evidence type)",
+              main = "Bees New to the San Diego County Checklist\n(bar = records; colour = evidence type)",
               cex.names = 0.8)
-legend("bottomright", bty = "n",
-       fill = pal,
-       legend = c("specimen (voucher - solid)",
-                  "iNat research-grade (community-vetted)",
-                  "iNat needs-ID (verify first)"))
+# hatch any taxon NOT resolved to species -- a to-do flag: these still need keying to species
+not_species <- pdat$taxon_rank != "species"
+if (any(not_species)) {
+  tot <- colSums(M); hh <- 0.8 / 2                 # half bar-thickness
+  for (i in which(not_species))
+    rect(0, bp[i] - hh, tot[i], bp[i] + hh, density = 20, angle = 45,
+         col = "white", border = NA, lwd = 1.2, xpd = NA)
+}
+# evidence legend: show ONLY the tiers actually present in the plotted data (today = specimen
+# only; a research-grade or needs-ID candidate auto-adds its row in a future run)
+ev_lab  <- c(specimen      = "specimen (voucher)",
+             inat_research = "iNat research-grade (community-vetted)",
+             inat_needsid  = "iNat needs-ID (not yet community-vetted)")
+present <- rowSums(M) > 0
+legend("bottomright", bty = "n", fill = pal[present], legend = ev_lab[present])
+legend("topright", bty = "n", legend = "hatched = not yet ID'd to species (needs keying)",
+       fill = unname(BEE_EVIDENCE["specimen"]), density = 20, angle = 45, border = BEE_INK$muted)
 par(op); dev.off()
 
 # ---- 6. console summary -----------------------------------------------------

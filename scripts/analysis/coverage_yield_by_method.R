@@ -32,7 +32,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage/method_comparison"
+OUT_DIR       <- "data/analysis/method_comparison/yield"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 WINDOW_MONTHS <- 3:10                                   # Mar-Oct: the lethal-netting season
@@ -93,41 +93,5 @@ write.csv(tbl, file.path(OUT_DIR, "coverage_yield_by_method.csv"), row.names = F
 message("\nYield by METHOD (survey-only, Mar-Oct 2021-2023):"); print(as.data.frame(tbl), row.names = FALSE)
 
 # ---- 3. one 4-panel yield figure (rank = "species" or "genus") --------------
-plot_yield <- function(tbl, title, excl_label, rank = c("species", "genus"), file, w = 7.5) {
-  rank <- match.arg(rank)
-  tbl$method <- factor(tbl$method, levels = c("lethal", "nonlethal"))   # lethal LEFT, non-lethal RIGHT
-  metrics <- if (rank == "species")
-    c(n_records = "Records", species = "Species recorded",
-      species_per_100_records = "Species / 100 records", exclusive_species = excl_label)
-  else
-    c(n_records = "Records", genera = "Genera recorded",
-      genera_per_100_records = "Genera / 100 records", exclusive_genera = excl_label)
-  long <- do.call(rbind, lapply(names(metrics), function(m)
-    data.frame(method = tbl$method, metric = metrics[[m]], value = tbl[[m]], stringsAsFactors = FALSE)))
-  long$metric <- factor(long$metric, levels = unname(metrics))
-  g <- ggplot(long, aes(x = method, y = value, fill = method)) +
-    geom_col(width = 0.62) +
-    geom_text(aes(label = value), vjust = -0.35, size = 2.7, colour = BEE_INK$secondary) +
-    facet_wrap(~ metric, scales = "free_y") +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
-    scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
-    labs(title = title,
-         caption = scope_cap("survey records only, Mar-Oct + 2021-2023 (years both methods ran)",
-                             "lethal (specimen net) vs non-lethal (iNat photo)", rank),
-         x = NULL, y = NULL) +
-    theme_beescabr(11) +
-    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),   # methods named in the legend
-          panel.grid.major.x = element_blank())
-  ggsave(file, g, width = w, height = 6, dpi = 200, bg = "white")
-}
 
-# species-level (detection + ID resolution) ...
-plot_yield(tbl, "Q11 - Yield by method: SPECIES-level (CABR bees)",
-           "Method-exclusive species", rank = "species",
-           file = file.path(OUT_DIR, "coverage_yield_by_method.png"))
-# ... and genus-level (detection alone -- photos not penalised for stalling at genus)
-plot_yield(tbl, "Q11 - Yield by method: GENUS-level (CABR bees)",
-           "Method-exclusive genera", rank = "genus",
-           file = file.path(OUT_DIR, "coverage_yield_by_method_genus.png"))
-
-message("\nWrote coverage_yield_by_method.csv + .png + _genus.png (species + genus levels) to ", OUT_DIR)
+message("\nWrote coverage_yield_by_method.csv (table only -- yield is now shown in the method Venn) to ", OUT_DIR)

@@ -94,9 +94,9 @@ g <- ggplot(plot_df, aes(x = rank, y = n, fill = region)) +
   scale_fill_manual(values = c("on-only" = unname(BEE_SET["a_only"]),
                                "both"     = BOTH_BLEND,
                                "off-only" = unname(BEE_SET["b_only"])), name = NULL) +
-  labs(title = "On-transect vs Off-transect Bee Coverage",
+  labs(title = "On-Transect vs. Off-Transect Bee Coverage",
        x = NULL, y = "distinct taxa") +
   theme_beescabr(11) +
-  theme(panel.grid.major.x = element_blank())
+  theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, dpi = 200, bg = "white")
 message("Wrote coverage_offtransect.{png,_summary.csv,_taxa.csv} to ", OUT_DIR)

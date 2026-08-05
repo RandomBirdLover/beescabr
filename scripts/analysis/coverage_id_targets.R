@@ -86,10 +86,10 @@ message("Top keyable genera: ",
 top <- work %>% arrange(desc(unresolved_total))
 long <- bind_rows(
   data.frame(target = top$target, cat = "resolved (to species)", n = top$resolved_species),
-  data.frame(target = top$target, cat = "specimen (keyable)",    n = top$specimen_unresolved),
-  data.frame(target = top$target, cat = "photo (needs ID)",      n = top$photo_unresolved)) %>%
+  data.frame(target = top$target, cat = "keyable (lethal)",    n = top$specimen_unresolved),
+  data.frame(target = top$target, cat = "stuck (non-lethal)",      n = top$photo_unresolved)) %>%
   filter(n > 0)
-long$cat    <- factor(long$cat, levels = c("resolved (to species)", "specimen (keyable)", "photo (needs ID)"))
+long$cat    <- factor(long$cat, levels = c("resolved (to species)", "keyable (lethal)", "stuck (non-lethal)"))
 # genera A->Z at the top; the parenthesised coarse-rank buckets ((tribe),
 # (subfamily), (epifamily)) sink to the bottom so they don't split the A-Z genus list.
 tg <- unique(as.character(long$target))
@@ -106,15 +106,15 @@ g <- ggplot(long, aes(x = n, y = target, fill = cat)) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.13))) +
   # ID-progress ramp: blue = resolved (done), vermillion = specimen-keyable (ACT here), grey = photo (can't act)
   scale_fill_manual(values = c("resolved (to species)" = unname(BEE_IDSTATUS["resolved"]),
-                               "specimen (keyable)"    = unname(BEE_IDSTATUS["keyable"]),
-                               "photo (needs ID)"      = unname(BEE_IDSTATUS["stuck"])), name = NULL) +
-  labs(title = sprintf("Q7 - Species-level ID: work done vs all %d remaining targets", nrow(top)),
+                               "keyable (lethal)"    = unname(BEE_IDSTATUS["keyable"]),
+                               "stuck (non-lethal)"      = unname(BEE_IDSTATUS["stuck"])), name = NULL) +
+  labs(title = "Latest Progress of ID Resolution by Genus",
        caption = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
-                            scope_cap("all records", "resolved vs specimen-keyable vs photo", "genus / coarse rank")), 82),
+                            scope_cap("all records", "resolved vs lethal-keyable vs non-lethal", "genus / coarse rank")), 82),
        x = "records", y = NULL) +
   theme_beescabr(11) +
-  theme(legend.position = "top", panel.grid.major.y = element_blank())
+  theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "coverage_id_targets.png"), g,
        width = 9.5, height = max(7, 0.30 * nrow(top) + 2), dpi = 200, bg = "white")  # taller for all targets
 
@@ -149,18 +149,18 @@ method_genus_fig <- function(m, file, method_label) {
     scale_fill_manual(values = c("identified to species"   = unname(BEE_IDSTATUS["resolved"]),  # blue = done
                                  "genus-only (unresolved)" = unname(BEE_IDSTATUS["stuck"])),     # grey = not yet
                       name = NULL) +
-    labs(title = sprintf("Q7 - %s: species-level ID progress (all %d genera)", method_label, length(method_genera)),
+    labs(title = sprintf("%s Method: Progress of ID by Genus", method_label),
          caption = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
                               method_label, format(sum(d$species), big.mark = ","),
                               format(sum(d$total), big.mark = ","), pct,
                               scope_cap("records with a genus", method_label, "genus")), 82),
          x = "records", y = NULL) +
     theme_beescabr(11) +
-    theme(legend.position = "top", panel.grid.major.y = element_blank())
+    theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
   ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), dpi = 200, bg = "white")  # taller for all genera
 }
-method_genus_fig("specimen", file.path(OUT_DIR, "coverage_id_targets_specimen.png"), "Specimen (net)")
-method_genus_fig("photo",    file.path(OUT_DIR, "coverage_id_targets_photo.png"),    "Photo (iNaturalist)")
+method_genus_fig("specimen", file.path(OUT_DIR, "coverage_id_targets_specimen.png"), "Lethal")
+method_genus_fig("photo",    file.path(OUT_DIR, "coverage_id_targets_photo.png"),    "Non-Lethal")
 
 # ---- 5. ID-completeness funnel: how far each record got, by method ------------
 grid   <- expand.grid(method = c("specimen", "photo"),
@@ -175,15 +175,15 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
   # method now has its own colours (purple net / vermillion photo), kept off the transect palette
   scale_fill_manual(values = c(specimen = unname(BEE_METHOD_COL["lethal"]),
                                photo    = unname(BEE_METHOD_COL["nonlethal"])), name = NULL,
-                    labels = c(specimen = "specimen (net)", photo = "photo (iNat)")) +
+                    labels = c(specimen = "lethal", photo = "non-lethal")) +
   scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +
-  labs(title = "Q7 - Bee ID completeness: how far each record got, by method",
+  labs(title = "Counts of ID Resolution between Methods",
        caption = str_wrap(sprintf("%s of %s records (%.0f%%) identified to species.  %s",
                             format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
-                            scope_cap("all records", "specimen (net) vs photo (iNat)", "resolution level")), 82),
+                            scope_cap("all records", "lethal vs non-lethal", "resolution level")), 82),
        x = NULL, y = "records") +
   theme_beescabr(11) +
-  theme(legend.position = "top", panel.grid.major.x = element_blank())
+  theme(legend.position = "top", panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, dpi = 200, bg = "white")
 
 message("Wrote coverage_id_targets.{csv,png}, _specimen.png, _photo.png, and coverage_id_completeness.png to ", OUT_DIR)

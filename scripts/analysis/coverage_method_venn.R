@@ -36,7 +36,7 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage/method_comparison"
+OUT_DIR       <- "data/analysis/method_comparison/yield"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 # METHOD is the whole subject here, so it owns colour: its own palette (purple net / vermillion photo),
@@ -61,6 +61,7 @@ genus_set <- function(df) {
 
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
+n_leth <- nrow(spec); n_nonleth <- nrow(inat)   # total bee records per method (all-records scope)
 
 sets <- list(
   species = list(lethal = species_set(spec), nonlethal = species_set(inat)),
@@ -77,7 +78,7 @@ region_table <- function(rank_name, s) {
 }
 taxa_tbl <- rbind(region_table("species", sets$species),
                   region_table("genus",   sets$genus))
-write.csv(taxa_tbl, file.path(OUT_DIR, "coverage_method_venn_taxa.csv"), row.names = FALSE)
+write.csv(taxa_tbl, file.path(OUT_DIR, "yield_by_method_taxa.csv"), row.names = FALSE)
 
 counts <- function(s) c(lethal_only    = length(setdiff(s$lethal, s$nonlethal)),
                         both           = length(intersect(s$lethal, s$nonlethal)),
@@ -97,23 +98,26 @@ venn2 <- function(cc, title) {
   text(2.7, 3.6, cc["lethal_only"],    cex = 1.7, font = 2, col = BEE_INK$primary)
   text(7.3, 3.6, cc["nonlethal_only"], cex = 1.7, font = 2, col = BEE_INK$primary)
   text(5.0, 3.6, cc["both"],           cex = 1.7, font = 2, col = BEE_INK$secondary)
-  text(3.0, 7.2, sprintf("Lethal\n(net) - %d", cc["lethal_only"] + cc["both"]),
+  text(3.0, 7.2, sprintf("Lethal - %d", cc["lethal_only"] + cc["both"]),
        col = COL_LETHAL, font = 2, cex = 0.95)
-  text(7.0, 7.2, sprintf("Non-lethal\n(photo) - %d", cc["nonlethal_only"] + cc["both"]),
+  text(7.0, 7.2, sprintf("Non-lethal - %d", cc["nonlethal_only"] + cc["both"]),
        col = COL_NONLETHAL, font = 2, cex = 0.95)
   title(main = title, line = 0.2)
 }
 
-png(file.path(OUT_DIR, "coverage_method_venn.png"),
+png(file.path(OUT_DIR, "yield_by_method.png"),
     width = 2000, height = 1050, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colours
-op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 2, 0))
+op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 3.6, 0))
 venn2(cn$species, sprintf("Species (%d total)",
       cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
 venn2(cn$genus, sprintf("Genera (%d total)",
       cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
-mtext("Native Bees Sampling Method: Lethal vs Non-Lethal Overlap", outer = TRUE,
+mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.4,
       cex = 1.2, font = 2, col = BEE_INK$primary)
+mtext(sprintf("Records logged:  lethal %s   |   non-lethal %s",
+              format(n_leth, big.mark = ","), format(n_nonleth, big.mark = ",")),
+      outer = TRUE, line = 0.2, cex = 0.9, col = BEE_INK$secondary)
 par(op); dev.off()
 
 # ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------
@@ -156,5 +160,5 @@ for (rk in c("species", "genus")) {
 lo <- taxa_tbl$taxon[taxa_tbl$rank == "species" & taxa_tbl$region == "lethal_only"]
 message("\nSpecies found ONLY by nets (photo-detection gaps), n=", length(lo), ":")
 message("  ", paste(lo, collapse = ", "))
-message("\nWrote: coverage_method_venn.png, coverage_method_venn_taxa.csv")
+message("\nWrote: yield_by_method.png, yield_by_method_taxa.csv")
 message("Done. Outputs in: ", normalizePath(OUT_DIR))
