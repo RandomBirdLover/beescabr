@@ -20,9 +20,9 @@
 #   * GENUS Venn   -- any record that pins a genus. The robust/complete view.
 #
 # SETS ARE COMPUTED FROM THE CURRENT CLEANED TABLES, not the checklist's
-# specimen/inat flags (those are stale -- see coverage_cabr_vs_holway.R). Survey
-# filter is intentionally OFF: "what exists in each method" wants every record
-# (the stakeholders noted survey isn't needed for this overlap).
+# specimen/inat flags (those are stale -- see coverage_cabr_vs_holway.R). Scope is the
+# FAIR WINDOW (survey-only, Mar-Oct, 2021-2023, attributed) so the overlap compares the
+# two methods on equal footing -- the same scope as every other lethal-vs-non-lethal figure.
 #
 # Run from the repo root:  Rscript scripts/analysis/coverage_method_venn.R
 # Depends on: dplyr, stringr (+ config.R). Base-R Venn -- no extra packages.
@@ -61,7 +61,21 @@ genus_set <- function(df) {
 
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
-n_leth <- nrow(spec); n_nonleth <- nrow(inat)   # total bee records per method (all-records scope)
+
+# ---- FAIR WINDOW: same scope as coverage_yield_by_method.R / efficiency, so every
+# method comparison shares one definition of lethal vs non-lethal: survey records only,
+# Mar-Oct, 2021-2023, attributed (unattributed/casual dropped; interns' 2024 photos excluded).
+is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
+WINDOW_MONTHS <- 3:10; WINDOW_YEARS <- 2021:2023
+fair_window <- function(df) {
+  st <- str_squish(tolower(as.character(df$surveyor_type)))
+  st[is.na(st) | st == ""] <- "unattributed"
+  mo <- suppressWarnings(as.integer(substr(df$observed_on, 6, 7)))
+  yr <- suppressWarnings(as.integer(substr(df$observed_on, 1, 4)))
+  df[is_true(df$is_survey) & mo %in% WINDOW_MONTHS & yr %in% WINDOW_YEARS & st != "unattributed", , drop = FALSE]
+}
+spec <- fair_window(spec); inat <- fair_window(inat)
+n_leth <- nrow(spec); n_nonleth <- nrow(inat)   # bee records per method in the fair window
 
 sets <- list(
   species = list(lethal = species_set(spec), nonlethal = species_set(inat)),
@@ -115,9 +129,9 @@ venn2(cn$genus, sprintf("Genera (%d total)",
       cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
 mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.4,
       cex = 1.2, font = 2, col = BEE_INK$primary)
-mtext(sprintf("Records logged:  lethal %s   |   non-lethal %s",
+mtext(sprintf("Fair window (survey-only, Mar-Oct 2021-2023):  lethal %s records   |   non-lethal %s records",
               format(n_leth, big.mark = ","), format(n_nonleth, big.mark = ",")),
-      outer = TRUE, line = 0.2, cex = 0.9, col = BEE_INK$secondary)
+      outer = TRUE, line = 0.2, cex = 0.85, col = BEE_INK$secondary)
 par(op); dev.off()
 
 # ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------

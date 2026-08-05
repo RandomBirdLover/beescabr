@@ -87,7 +87,7 @@ g_inset <- ggplot() +
   geom_sf(data = pl,   fill = "#F1EFEA", color = "#A7A399", linewidth = 0.3) +
   geom_sf(data = cabr, fill = unname(BEE_SEQ[5]), color = unname(BEE_SEQ[5]), linewidth = 0.15) +
   coord_sf(xlim = c(plbb["xmin"], plbb["xmax"]), ylim = c(plbb["ymin"], plbb["ymax"]), expand = FALSE) +
-  labs(title = "CABR on Point Loma") +
+  labs(title = "Cabrillo National Monument on Point Loma") +
   theme_void(base_size = 9) +
   theme(plot.title = element_text(size = 9, face = "bold", hjust = 0.5, colour = BEE_INK$secondary,
                                   margin = margin(t = 3, b = 2)),

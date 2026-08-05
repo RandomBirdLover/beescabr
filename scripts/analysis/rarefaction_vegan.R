@@ -110,9 +110,10 @@ draw <- function(M, key, title, rank, cols = NULL) {
              hjust = 0, vjust = 0, size = 3, color = "grey40") +
     geom_line(linewidth = 0.9) +
     scale_color_manual(values = cols, name = NULL) +
-    labs(title = sprintf("%s (%s) - rarefaction curve", title, rank), subtitle = cap,
+    labs(title = title, subtitle = paste0(sprintf("%s-level, rarefaction curve  |  ", rank), cap),
          x = "records sampled", y = paste0("expected ", unit)) +
-    theme_beescabr(11)
+    theme_beescabr(11) +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
   ggsave(file.path(outsub, paste0(stub, "_vegan_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
               data.frame(group = tab$group, kind = sprintf("rarefied to %d", minN), S = tab$rarefied_richness))
@@ -122,10 +123,11 @@ draw <- function(M, key, title, rank, cols = NULL) {
     geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3) +
     scale_fill_manual(values = setNames(c("#C0BBB0", "#3C3B36"),   # stone (observed) / ink (rarefied)
                                         c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
-    labs(title = sprintf("%s (%s) - rarefied richness", title, rank), subtitle = cap,
+    labs(title = title, subtitle = paste0(sprintf("%s-level, rarefied richness  |  ", rank), cap),
          x = NULL, y = unit) +
     theme_beescabr(11) +
-    theme(panel.grid.major.x = element_blank())
+    theme(panel.grid.major.x = element_blank(),
+          plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
   ggsave(file.path(outsub, paste0(stub, "_vegan_bars.png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
@@ -136,7 +138,8 @@ draw <- function(M, key, title, rank, cols = NULL) {
 # counts) and once at species rank (finer, but only species-resolved records).
 RANKS <- c(species = "species_key", genus = "genus_key")
 TCOLS <- BEE_TRANSECT   # house transect palette
-rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
+rec_win  <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
+rec_fair <- rec %>% filter(month %in% 3:10, year %in% 2021:2023)   # FAIR WINDOW for the lethal-vs-non-lethal comparisons (matches yield_by_method/efficiency/Venn; drops 2024 intern photos)
 
 for (rk in names(RANKS)) {
   kc <- RANKS[[rk]]
@@ -144,16 +147,16 @@ for (rk in names(RANKS)) {
   # 1. transect
   Mt <- comm(filter(rec, transect %in% TRANSECTS), "transect", kc)
   Mt <- Mt[intersect(TRANSECTS, rownames(Mt)), , drop = FALSE]
-  draw(Mt, paste0("by_transect_", rk), "Bees by transect", rk, TCOLS)
+  draw(Mt, paste0("by_transect_", rk), "Bees by Transect", rk, TCOLS)
   # 2. year (Mar-Sep)
-  draw(comm(rec_win, "year", kc), paste0("by_year_", rk), "Bees by year (Mar-Sep)", rk)
-  # 3. observer: beeple vs intern
-  draw(comm(filter(rec, surveyor %in% c("beeple", "intern")), "surveyor", kc),
-       paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
+  draw(comm(rec_win, "year", kc), paste0("by_year_", rk), "Bees by Year", rk)
+  # 3. observer: beeple vs intern (fair window -- lethal vs non-lethal comparison)
+  draw(comm(filter(rec_fair, surveyor %in% c("beeple", "intern")), "surveyor", kc),
+       paste0("by_observer_", rk), "Bees by Observer: Beeple vs Intern", rk,
        c(intern = "#3C3B36", beeple = "#C0BBB0"))   # intern = house ink (focus), beeple = stone (background)
-  # 4. method: observations (iNaturalist) vs specimens
-  draw(comm(rec, "obs_type", kc), paste0("by_method_", rk),
-       "Bees: observations vs specimens", rk,
+  # 4. method: observations (iNaturalist) vs specimens (fair window)
+  draw(comm(rec_fair, "obs_type", kc), paste0("by_method_", rk),
+       "Bees: Observations vs Specimens", rk,
        c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
 }
 

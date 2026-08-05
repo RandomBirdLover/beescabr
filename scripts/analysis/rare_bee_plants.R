@@ -83,14 +83,15 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_s
             hjust = -0.08, size = 3.0, colour = BEE_INK$secondary) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(breaks = scales::breaks_width(2), expand = expansion(mult = c(0, 0.32))) +
-  labs(title = sprintf("Plant hubs for the park's rare bees (bees with < %d records each)", RARE_CUT),
-       subtitle = str_wrap("Bar = how many different rare bee species were RECORDED on each plant (a conservation hub) -- NOT a preference. Rare bees have too few records to correct for availability, so this is where their sightings fall, not what they favour.", 100),
+  labs(title = "Plant Hubs for the Park's Rare Bees",
+       subtitle = str_wrap(sprintf("Bar = how many different rare bee species (< %d records each) were RECORDED on each plant (a conservation hub) -- NOT a preference. Rare bees have too few records to correct for availability, so this is where their sightings fall, not what they favour.", RARE_CUT), 100),
        caption = str_wrap(paste0(scope_cap(sprintf("%d bee species with < %d records; records with a plant recorded",
-                            length(rare_keys), RARE_CUT), "specimen net + iNat photo pooled", "plant genus"),
+                            length(rare_keys), RARE_CUT), "lethal + non-lethal pooled", "plant genus"),
                             "  |  bar = number of different rare bee species RECORDED on each plant (hubs shown: used by 2+)"), 96),
        x = "number of different rare bee species (recorded on this plant)", y = NULL) +
   theme_beescabr(11) +
-  theme(legend.position = "none", panel.grid.major.y = element_blank(),
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none", panel.grid.major.y = element_blank(),
         plot.subtitle = element_text(size = 8.5))
 ggsave(file.path(OUT_DIR, "rare_bee_plant_hubs.png"), gA, width = 9, height = 5.8, dpi = 200, bg = "white")
 
@@ -183,14 +184,15 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   scale_y_discrete(labels = function(x) plant_label(sub("^.*@@", "", x))) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.20))) +
-  labs(title = "Plants the park's IUCN-threatened bees were RECORDED on",
+  labs(title = "Plant Hubs for the Park's IUCN-Threatened Bees",
        subtitle = str_wrap("Bars = where each bee's records fall (what it was RECORDED on, NOT corrected for what was blooming). The strip above each panel names an availability-corrected PREFERRED plant only where a bee has >= 20 records; below that, records are too few to tell a preference from availability.", 100),
        caption = str_wrap(paste0(scope_cap("IUCN-threatened bees (CR/EN/VU); bars = records with a plant recorded; preference = matched availability where n>=20",
-                            "specimen net + iNat photo pooled", "plant genus"),
+                            "lethal + non-lethal pooled", "plant genus"),
                             "  |  Threatened set read live from the IUCN Red List cache."), 92),
        x = "plant visits (records with this plant recorded)", y = NULL) +
   theme_beescabr(11) +
-  theme(legend.position = "none", panel.grid.major.y = element_blank(),
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none", panel.grid.major.y = element_blank(),
         plot.subtitle = element_text(size = 8.5),
         strip.text = element_text(face = "bold", hjust = 0, size = 9, lineheight = 1.15))
 ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,

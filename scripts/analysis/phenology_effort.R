@@ -88,7 +88,8 @@ gA <- ggplot(long, aes(x = month_lab, y = value, fill = in_window)) +
                             "lethal + non-lethal trips pooled", "n/a (effort)"), 80),
        x = NULL, y = NULL) +
   theme_beescabr(11) +
-  theme(legend.position = "top", panel.grid.major.x = element_blank())
+  theme(legend.position = "top", panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "effort_by_month.png"), gA, width = 8.5, height = 6.5, dpi = 200, bg = "white")
 
 # ---- 4. figure B: year x month trip-count grid (coverage gaps) ---------------
@@ -107,6 +108,6 @@ gB <- ggplot(grid, aes(x = month_lab, y = factor(year), fill = trips)) +
        caption = scope_cap("per-survey log", "all trips", "n/a (effort)"),
        x = NULL, y = NULL) +
   theme_beescabr(11) +
-  theme(panel.grid = element_blank())
+  theme(panel.grid = element_blank(), plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "effort_year_month_grid.png"), gB, width = 9, height = 4.6, dpi = 200, bg = "white")
 message("Wrote effort_by_month.{csv,png} + effort_year_month_grid.png to ", OUT_DIR)

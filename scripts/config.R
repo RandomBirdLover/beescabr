@@ -49,6 +49,19 @@ TAXON_TRACHEOPHYTA <- 211194L
 PLACE_POINT_LOMA    <- 132551L
 PLACE_CABR_MONUMENT <- 4715L
 
+# ---- Analysis scope: the FAIR WINDOW (journal method-comparison) --------------
+# The pipeline feeds TWO papers with different scopes:
+#   * JOURNAL paper (lethal vs non-lethal method comparison) -- must compare the two
+#     methods on equal footing, so every method-comparison figure restricts to the
+#     FAIR WINDOW: survey records only (is_survey), FAIR_MONTHS, FAIR_YEARS, and
+#     attributed only (blank/casual surveyor_type dropped). This keeps "non-lethal"
+#     to beeple survey photos -- no casual public, no interns' 2024 iNaturalist photos.
+#   * NPS CABRILLO REPORT (what bees the park holds) -- wants ALL records, casual
+#     public included, so report figures do NOT apply this window.
+# Defined ONCE here so the window can't drift across scripts (it did before this).
+FAIR_MONTHS <- 3:10          # Mar-Oct: the standardized survey protocol season (interns netted Mar through Oct)
+FAIR_YEARS  <- 2021:2023     # the only years the lethal-netting surveys ran (so non-lethal gets no extra years)
+
 # ---- DuckDB cache ------------------------------------------------------------
 # One on-disk DuckDB file acts as the cache for BOTH observation objects
 # (with a spatial geometry column) and taxon request objects. This replaces

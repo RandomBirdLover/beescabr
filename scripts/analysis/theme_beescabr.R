@@ -36,7 +36,7 @@ BEE_TRANSECT <- c(BST = "#009E73", UPMON = "#CC79A7", TP = "#0072B2", OT = "#E69
 BEE_METHOD_LTY   <- c(lethal = 1, nonlethal = 2)                 # solid = lethal net, dashed = non-lethal photo
 BEE_METHOD_PCH   <- c(lethal = 16, nonlethal = 17)              # filled circle = net, triangle = photo
 BEE_METHOD_COL   <- c(lethal = "#D8455F", nonlethal = "#6B6FCE") # rose-red = net (lethal), periwinkle = photo (non-lethal)
-BEE_METHOD_LABEL <- c(lethal = "lethal (specimen net)", nonlethal = "non-lethal (iNat photo)")
+BEE_METHOD_LABEL <- c(lethal = "lethal", nonlethal = "non-lethal")
 
 # ---- EVIDENCE / ID-confidence: LAVENDER ordinal ramp (strong -> faint) ------
 # TEAL ordinal ramp (deep teal voucher -> pale teal needs-ID). Moved OFF purple so evidence no longer

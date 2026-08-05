@@ -74,9 +74,10 @@ M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
 barplot(M, horiz = TRUE, las = 1, border = NA, cex.names = 0.82,
         col = c(nonlethal = COL_NONLETHAL, lethal = COL_LETHAL),
         xlab = "Bee-visit records (whole park)",
-        main = sprintf("Top %d plant genera visited by bees at CABR\n(bar split by survey method)", TOP_N))
+        main = sprintf("Top %d Plant Genera Visited by Bees", TOP_N))
+mtext("bar split by survey method", side = 3, line = 0.3, cex = 0.8, col = BEE_INK$secondary)
 legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col = BEE_INK$primary,
-       legend = c("non-lethal (photo/iNat)", "lethal (net/specimen)"))
+       legend = c("non-lethal", "lethal"))
 if (any(bee_low_n(top$whole_park)))
   mtext(BEE_LOW_N_NOTE, side = 1, line = 4.2, cex = 0.7, adj = 0, col = BEE_INK$secondary)
 par(op); dev.off()
@@ -108,7 +109,9 @@ Mplot  <- Mmon[nrow(Mmon):1, , drop = FALSE]
 ramp_m <- grDevices::colorRampPalette(BEE_SEQ)(24)   # house red ramp (magnitude)
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = ramp_m, axes = FALSE, xlab = "", ylab = "",
-      main = sprintf("When are the top %d plants visited? (log records/month)\ny-axis ranked by the bees' favourite -- 1 = most visit records", TOP_MONTH))
+      main = sprintf("When Top %d Plant Genera are Visited by Bees", TOP_MONTH))
+mtext("log records/month; y-axis ranked by the bees' favourite (1 = most visit records)",
+      side = 3, line = 0.4, cex = 0.75, col = BEE_INK$secondary)
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.66)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",

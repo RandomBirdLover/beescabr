@@ -136,11 +136,15 @@ genus_web <- function(M, file, genus, h2lab) {
   text(px, yP - 0.022, plant_label(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = "#2C2A26")   # plant labels = common name (Latin), black (matches bee labels)
   # species label carries its % concentration on its single most-used plant (the thick link shows which)
   text(bx, yB + 0.024, sprintf("%s  %d%%", epithet, top_share), srt = 45, adj = 0, cex = 0.74, col = "#2C2A26", font = 3)
-  mtext(sprintf("%s: species (top, coloured) x plant genus (bottom, green)  --  %d species, %d plant genera",
-                genus, nb, np), side = 3, line = 6.0, font = 2, cex = 1.0, col = BEE_INK$primary)
+  mtext(sprintf("Which Plants Each %s Species Uses", genus),
+        side = 3, line = 6.5, font = 2, cex = 1.1, col = BEE_INK$primary)
+  mtext(sprintf("species (top), plant genus (bottom)   |   %d species, %d plant genera", nb, np),
+        side = 3, line = 5.7, cex = 0.66, col = BEE_INK$secondary)
   mtext("Thickness = visit records; % after each species = share of its visits on its single most-used plant (its thickest link).",
         side = 3, line = 5.0, cex = 0.62, col = BEE_INK$secondary)
-  mtext(h2lab, side = 1, line = 7.2, cex = 0.8, col = BEE_INK$note)
+  h2_lines <- strsplit(str_wrap(h2lab, 76), "\n")[[1]]   # wrap so the note fits the canvas (was clipping both edges)
+  for (k in seq_along(h2_lines))
+    mtext(h2_lines[k], side = 1, line = 5.9 + 0.9 * k, cex = 0.8, col = BEE_INK$note)
   par(op); dev.off()
 }
 
@@ -220,13 +224,14 @@ g <- ggplot(ov, aes(x = H2prime, y = bee_genus)) +
   geom_col(width = 0.72, fill = "#3C3B36") +
   geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-  labs(title = "Within-genus niche partitioning: which bee genera have SPECIALIST species?",
+  labs(title = "Which Bee Genera Have Specialist Species?",
        subtitle = str_wrap(paste0(
          sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for the species' differing flight seasons & survey methods -- higher bar = stronger specialisation. Showing the %d of %d tested genera whose species significantly specialise (p<0.05).",
                  nrow(ov), n_tested), drop_note), 96),
+       caption = "Within-genus niche partitioning",
        x = "within-genus H2'   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
   theme_beescabr(11) +
-  theme(plot.title = element_text(face = "bold", size = 12),
+  theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
         legend.position = "none", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
        width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 1.8), dpi = 200, bg = "white")

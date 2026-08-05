@@ -146,26 +146,30 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 }
 
-# ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT BY METHOD (survey-only, species) ---
+# ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT BY METHOD -------------------------
+# This is a lethal-vs-non-lethal COMPARISON, so it uses the shared FAIR WINDOW
+# (survey-only, Mar-Oct, 2021-2023) -- same scope as yield_by_method / efficiency /
+# the Venn, so non-lethal is beeple survey photos (no 2024 intern photos).
 rad_df <- function(counts, lab) {
   counts <- sort(counts[counts > 0], decreasing = TRUE)
   data.frame(method = lab, rank = seq_along(counts), rel_abund = counts / sum(counts))
 }
-sp_leth <- table(rec$species_key[rec$method == "lethal"])
-sp_nonl <- table(rec$species_key[rec$method == "nonlethal"])
-sp_pool <- table(rec$species_key)
+rad_rec <- rec %>% filter(month %in% 3:10, year %in% 2021:2023)   # fair window (survey records are already attributed)
+sp_leth <- table(rad_rec$species_key[rad_rec$method == "lethal"])
+sp_nonl <- table(rad_rec$species_key[rad_rec$method == "nonlethal"])
+sp_pool <- table(rad_rec$species_key)
 rad <- rbind(rad_df(as.integer(sp_pool), "both pooled"),
-             rad_df(as.integer(sp_leth), "lethal (net)"),
-             rad_df(as.integer(sp_nonl), "non-lethal (photo)"))
+             rad_df(as.integer(sp_leth), "lethal"),
+             rad_df(as.integer(sp_nonl), "non-lethal"))
 g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
   geom_line(linewidth = 0.9) + geom_point(size = 1) +
   scale_y_log10() +
-  # method owns colour: pooled = dark ink, lethal = purple (net), non-lethal = vermillion (photo)
+  # method owns colour: pooled = dark ink, lethal = house lethal colour, non-lethal = house non-lethal colour
   scale_color_manual(values = c("both pooled" = BEE_INK$primary,
-                                "lethal (net)" = unname(BEE_METHOD_COL["lethal"]),
-                                "non-lethal (photo)" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
+                                "lethal" = unname(BEE_METHOD_COL["lethal"]),
+                                "non-lethal" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
   labs(title = "Rank-Abundance of Bee Species",
-       subtitle = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
+       subtitle = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11) +
   theme(plot.title = element_text(hjust = 0.5))

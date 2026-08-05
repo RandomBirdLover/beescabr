@@ -81,7 +81,8 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
          caption = scope, x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
-          plot.title  = element_text(face = "bold"),
+          plot.title  = element_text(face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5),
           plot.caption = element_text(color = BEE_INK$note, hjust = 0, size = 8, face = "bold"))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
@@ -134,11 +135,8 @@ message(sprintf("Building phenology ridgelines:\n  Flowering plants: %d of %d re
                 nrow(plants), nrow(plants_all),
                 sum(!is_true(plants_all$is_survey)),
                 sum(is_true(plants_all$is_survey) & tolower(str_squish(plants_all$flower_flowering)) == "no")))
-phenology_ridge(data.frame(taxon = plant_label(str_squish(plants$plant_genus)), doy = doy_of(plants$observed_on)),
-                file.path(OUT_DIR, "phenology_plant_genus.png"), "Flowering plant genus",
-                scope = paste0("Scope: FLOWERING records only - survey plant records are in-flower by protocol\n",
-                               "(flower_flowering='no' dropped; this is bloom timing, not year-round plant presence)."),
-                title = "Seasonal Plant Bloom by Genus")
+# (The survey-plant-only ridgeline was retired -- the pooled BLOOM-EVIDENCE figure below
+#  supersedes it. `plants` is still built above because it is one of the three pooled sources.)
 
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
@@ -166,10 +164,10 @@ message(sprintf("  Bloom evidence (combined): %d points  [survey plant obs %d, i
                 sum(bloom$src == "bee-on-flower (iNat field)"), sum(bloom$src == "bee-on-flower (specimen tag)")))
 phenology_ridge(data.frame(taxon = plant_label(bloom$plant_genus), doy = doy_of(bloom$observed_on)),
                 file.path(OUT_DIR, "phenology_plant_genus_bloom_evidence.png"), "Plant bloom (all evidence)",
-                scope = paste0("Scope: BLOOM EVIDENCE pooled - survey in-flower plant records + every plant a bee was recorded on\n",
+                scope = paste0("All bloom evidence: survey in-flower plant records + every plant a bee was recorded on\n",
                                "(iNat flower_visited obs-field + specimen tags). A bee on a plant = it was in bloom then.\n",
-                               "Companion to the survey-plant-only bloom figure; broader coverage, but blends sources & effort."),
-                title = "Seasonal Plant Bloom by Genus (all bloom evidence)")
+                               "Broader coverage than survey plant records alone, but blends sources & their differing effort."),
+                title = "Seasonal Plant Bloom by Genus")
 
 # ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 bees <- bind_rows(spec[c("observed_on", "taxon_rank", "genus", "species")],

@@ -80,7 +80,8 @@ g <- ggplot(long, aes(x = n, y = lab, fill = method)) +
        x = "Number of records", y = NULL,
        caption = if (anyn) sprintf("* fewer than %d records total -- thin evidence base; read the composition with care", BEE_MIN_RECORDS) else NULL) +
   theme_beescabr(11) +
-  theme(panel.grid.major.y = element_blank(),
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid.major.y = element_blank(),
         axis.text.y = element_text(size = 7.5, face = "italic"))
 ggsave(file.path(OUT_DIR, "records_per_species_by_evidence.png"), g,
        width = 9.5, height = max(6, 0.20 * nrow(wide) + 1.6), dpi = 200, bg = "white", limitsize = FALSE)

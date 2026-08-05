@@ -1,17 +1,18 @@
 # =============================================================
-# Q11 -- Yield by SURVEYOR GROUP (who logged the park's bees, 2021-2023?)
+# Q11 -- Yield by group: survey methods vs off-survey records (2021-2023)
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
 # WINDOW: March-October 2021-2023 (the years/season lethal netting ran).
-# This figure is a CONTRIBUTION view -- it includes CASUAL public records, so it is NOT
-# limited to structured surveys. Three contributor groups:
-#   * interns (lethal)      -- net specimens (a structured survey; interns only collect)
-#   * beeple (non-lethal)   -- iNaturalist photos by the beeple community-science group (survey)
-#   * strangers (non-lethal)-- casual iNaturalist photos by the public, NOT on the surveyor
-#                              roster and NOT part of a survey (is_survey = FALSE)
-# Intern iNaturalist photos are EXCLUDED (there are none in 2021-2023; interns only
-# photographed from 2024 on). NOTE the scope difference from coverage_yield_by_method.R,
-# which is SURVEY-ONLY (structured lethal vs non-lethal) and so excludes strangers.
+# Groups are defined by SURVEY DATE (is_survey), not surveyor identity, so the two method
+# bars are a fair survey-only lethal-vs-non-lethal comparison and everything logged off the
+# survey schedule pools into one bar:
+#   * lethal (intern)      -- net specimens ON survey dates (interns only collect)
+#   * non-lethal (beeple)  -- iNaturalist survey photos ON survey dates (beeple group)
+#   * non-survey dates     -- EVERY record logged outside survey dates (is_survey = FALSE),
+#                             both lethal (off-date specimens) and non-lethal (casual photos)
+# Intern iNaturalist photos are EXCLUDED (none in 2021-2023; interns only photographed from
+# 2024 on). The two survey bars match coverage_yield_by_method.R's survey-only scope; the
+# non-survey bar is the extra "what got logged off-schedule" context.
 #
 # TWO figures (species + genus rank), 4 panels each: n_records (effort), taxa recorded,
 #   taxa_per_100_records (efficiency), group-exclusive taxa (found ONLY by that group).
@@ -35,11 +36,12 @@ SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 WINDOW_MONTHS <- 3:10
 WINDOW_YEARS  <- 2021:2023
-GRPS   <- c("interns (lethal)", "beeple (non-lethal)", "strangers (non-lethal)")   # lethal first; casual last
+GRPS   <- c("lethal (intern)", "non-lethal (beeple)", "non-survey dates")   # two survey-date methods + off-survey records
 GRP_COL <- setNames(c(BEE_METHOD_COL[["lethal"]], BEE_METHOD_COL[["nonlethal"]], BEE_INK[["muted"]]), GRPS)
-SUBTITLE <- "interns = lethal net specimens (survey) | beeple = non-lethal survey photos | strangers = casual iNaturalist photos by the public (NOT a survey)"
+SUBTITLE <- "lethal (intern) = net specimens on survey dates | non-lethal (beeple) = survey photos on survey dates | non-survey dates = every record logged outside survey dates (both methods)"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 norm <- function(x) str_squish(tolower(as.character(x)))
+is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
 # ---- 1. pool records, tag contributor group + taxonomy keys + month/year ----
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -53,11 +55,17 @@ keys <- function(df) df %>% mutate(
   month = suppressWarnings(as.integer(substr(observed_on, 6, 7))),
   year  = suppressWarnings(as.integer(substr(observed_on, 1, 4))))
 
-sp <- keys(spec) %>% transmute(grp = "interns (lethal)", taxon_rank, species_key, genus_key, month, year)
+# Group by SURVEY DATE, not surveyor identity: the two method bars are survey-only
+# (so lethal vs non-lethal is a fair same-window comparison), and every off-survey-date
+# record -- lethal or non-lethal -- pools into "non-survey dates".
+sp <- keys(spec) %>%
+      mutate(grp = ifelse(is_true(is_survey), "lethal (intern)", "non-survey dates")) %>%
+      transmute(grp, taxon_rank, species_key, genus_key, month, year)
 iu <- keys(inat) %>% mutate(st = norm(surveyor_type),
-        grp = case_when(st == "beeple" ~ "beeple (non-lethal)",
-                        st == "intern" ~ "intern-photo-EXCLUDE",     # interns' iNat photos -- dropped
-                        TRUE           ~ "strangers (non-lethal)")) %>%
+        grp = case_when(st == "intern"                      ~ "intern-photo-EXCLUDE",   # interns' iNat photos dropped (avoid double-counting intern effort)
+                        st == "beeple" & is_true(is_survey)  ~ "non-lethal (beeple)",
+                        !is_true(is_survey)                  ~ "non-survey dates",        # off-survey photos (blank surveyor + beeple off-date)
+                        TRUE                                 ~ "other-EXCLUDE")) %>%
       transmute(grp, taxon_rank, species_key, genus_key, month, year)
 
 rec <- bind_rows(sp, iu) %>%
@@ -106,22 +114,23 @@ plot_yield <- function(tbl, title, excl_label, rank = c("species", "genus"), fil
     geom_text(aes(label = value), vjust = -0.35, size = 2.7, colour = BEE_INK$secondary) +
     facet_wrap(~ metric, scales = "free_y") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
-    scale_fill_manual(values = GRP_COL, name = "surveyor group") +
+    scale_fill_manual(values = GRP_COL, name = "group") +
     labs(title = title, subtitle = str_wrap(SUBTITLE, 96),
-         caption = scope_cap("ALL records incl. casual public (NOT survey-only), Mar-Oct 2021-2023",
-                             "lethal specimens (interns) + non-lethal photos (beeple + public)", rank),
+         caption = scope_cap("grouped by survey date (is_survey), Mar-Oct 2021-2023",
+                             "lethal specimens + non-lethal photos", rank),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
           plot.subtitle = element_text(size = 8.5),
-          panel.grid.major.x = element_blank())
+          panel.grid.major.x = element_blank(),
+          plot.title = element_text(hjust = 0.5))
   ggsave(file, g, width = w, height = 6.2, dpi = 200, bg = "white")
 }
 
-plot_yield(tbl, "Q11 - Yield by surveyor group: SPECIES-level (CABR bees)",
+plot_yield(tbl, "Bee Yield by Recording Group at Species Level",
            "Group-exclusive species", rank = "species",
            file = file.path(OUT_DIR, "coverage_yield_by_group_species.png"))
-plot_yield(tbl, "Q11 - Yield by surveyor group: GENUS-level (CABR bees)",
+plot_yield(tbl, "Bee Yield by Recording Group at Genus Level",
            "Group-exclusive genera", rank = "genus",
            file = file.path(OUT_DIR, "coverage_yield_by_group_genus.png"))
 

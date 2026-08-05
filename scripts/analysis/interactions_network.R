@@ -95,13 +95,15 @@ heatmap_gg <- function(M, file, rank_label) {
     ggplot2::scale_fill_gradientn(colours = BEE_SEQ, trans = "log", na.value = "white",
                                   name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +   # magnitude = house blue ramp
     ggplot2::labs(
-      title = sprintf("Plant genus × bee %s — visitation network (all taxa)", rank_label),
-      subtitle = sprintf("%d plant genera × %d bee %s pooled across both methods",
+      title = "Plant and Bee Visitation Heatmap",
+      subtitle = sprintf("%d plant genera by %d bee %s, both methods pooled",
                          nrow(M), ncol(M), rank_label),
       x = paste("bee", rank_label), y = "plant (common name)") +
     ggplot2::scale_y_discrete(labels = function(x) plant_label(x)) +   # common name (Latin) on the plant axis
     theme_beescabr(8) +
     ggplot2::theme(
+      plot.title  = ggplot2::element_text(hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(hjust = 0.5),
       axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6),
       axis.text.y = ggplot2::element_text(size = 6),
       panel.grid  = ggplot2::element_blank())
@@ -116,7 +118,7 @@ heatmap_base <- function(M, file, rank_label, top_plants = 30) {   # fallback if
   op <- par(mar = c(10, 9, 3, 1))
   image(seq_len(ncol(M2)), seq_len(nrow(M2)), t(log1p(M2)),
         col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # house blue ramp
-        main = sprintf("Plant genus x bee %s (top %d plants)", rank_label, top_plants))
+        main = "Plant and Bee Visitation Heatmap")
   axis(1, seq_len(ncol(M2)), colnames(M2), las = 2, cex.axis = 0.7)
   axis(2, seq_len(nrow(M2)), plant_label(rownames(M2)), las = 1, cex.axis = 0.7); par(op); dev.off()
 }
@@ -148,7 +150,9 @@ plot(beebee_plot,
      vertex.label.color = "black", vertex.label.cex = 0.6, vertex.label.dist = 0.5,
      edge.width = pmin(0.25 * E(beebee_plot)$weight, 3),
      edge.color = adjustcolor("grey60", 0.5), layout = layout_with_fr,
-     main = sprintf("Bee genera linked by shared plant genera (>= %d shared)\nnode size = plant-genera breadth; rim = specialists", MIN_SHARED))
+     main = "Bee Genera Linked by Shared Plant Genera")
+mtext(sprintf(">= %d shared plant genera   |   node size = plant-genera breadth   |   rim = specialists", MIN_SHARED),
+      side = 3, line = 0.3, cex = 0.75, col = BEE_INK$secondary)
 dev.off()
 
 # ---- 4. per-bee-species specialization / rarity table -----------------------
@@ -399,8 +403,9 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
     }
   }
 
-  mtext(sprintf("Plant genus (bottom) - bee %s (top): visitation web  [top %d x %d]",
-                rank_label, np, nb), side = 3, line = 8.0, font = 2, cex = 1.05, col = BEE_INK$primary)
+  mtext("Plant and Bee Visitation Network", side = 3, line = 8.3, font = 2, cex = 1.15, col = BEE_INK$primary)
+  mtext(sprintf("plant genus (bottom), bee %s (top)   [top %d x %d]", rank_label, np, nb),
+        side = 3, line = 7.6, cex = 0.7, col = BEE_INK$secondary)
   thick <- if (thickness == "share") "Thickness = share of that bee's visits (where visits pile up)."
            else "Thickness = number of visit records."
   if (sparse_omitted) {

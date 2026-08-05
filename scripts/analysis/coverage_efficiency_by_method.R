@@ -21,6 +21,8 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR       <- "data/analysis/method_comparison/efficiency"
 SPECIES_RANKS <- c("species", "subspecies")
+WINDOW_MONTHS <- 3:10          # Mar-Oct: the lethal-netting season
+WINDOW_YEARS  <- 2021:2023     # the only years lethal netting ran (fair vs non-lethal)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
@@ -37,10 +39,19 @@ rarefy_rows <- function(M, n) {
 }
 specnum_rows <- function(M) if (has_vegan) as.numeric(vegan::specnumber(M)) else rowSums(M > 0)
 
-# ---- 1. survey-only bee records, keyed at species + genus -------------------
+# ---- 1. FAIR-WINDOW bee records, keyed at species + genus -------------------
+# Same fair window as coverage_yield_by_method.R so every method-comparison figure shares
+# one definition of "non-lethal": survey records only, Mar-Oct, 2021-2023, attributed
+# (unattributed/casual dropped). The 2021-2023 clip means interns' iNaturalist photos --
+# which only start in 2024 -- are NOT counted as non-lethal; non-lethal = beeple survey photos.
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
-prep <- function(df, method) df %>% filter(is_true(is_survey)) %>%
+prep <- function(df, method) df %>%
+  mutate(st = str_squish(tolower(as.character(surveyor_type))),
+         st = ifelse(is.na(st) | st == "", "unattributed", st),
+         .mo = suppressWarnings(as.integer(substr(observed_on, 6, 7))),
+         .yr = suppressWarnings(as.integer(substr(observed_on, 1, 4)))) %>%
+  filter(is_true(is_survey), .mo %in% WINDOW_MONTHS, .yr %in% WINDOW_YEARS, st != "unattributed") %>%
   transmute(method = method, taxon_rank, genus, species,
     species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
                            !is.na(species) & species != "", paste(genus, word(species, -1)), NA),
@@ -91,7 +102,7 @@ eff_fig <- function(key_col, rank_lab, file) {
     scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
     labs(title = sprintf("Efficiency by Method at %s Level", rank_lab),
          subtitle = "As recorded vs at equal sampling effort (rarefaction) -- as a count and as a rate",
-         caption = str_wrap(sprintf("The per-100-records rate favours the smaller-record method (a sampling-depth artifact): 'as recorded' non-lethal looks low only because its many records dilute the rate. 'At equal effort' rarefies both methods to the smaller total (%s records) -- the fair comparison, in either counts or rates. Survey records only.", format(minN, big.mark = ",")), 104),
+         caption = str_wrap(sprintf("The per-100-records rate favours the smaller-record method (a sampling-depth artifact): 'as recorded' non-lethal looks low only because its many records dilute the rate. 'At equal effort' rarefies both methods to the smaller total (%s records) -- the fair comparison, in either counts or rates. Fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos); non-lethal = beeple survey photos.", format(minN, big.mark = ",")), 108),
          x = NULL, y = NULL) +
     theme_beescabr(12) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

@@ -92,15 +92,15 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
   stub   <- rank                                   # "species" / "genus"
   outsub <- file.path(OUT_DIR, dimdir); dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
   sub <- sprintf("Scope: survey records only  |  Method: lethal + non-lethal pooled  |  Rank: %s", rank)
-  th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary),  # house ink on ggiNEXT text
-               plot.subtitle = element_text(colour = BEE_INK$note))
+  th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary, hjust = 0.5),  # house ink, centred
+               plot.subtitle = element_text(colour = BEE_INK$note, hjust = 0.5))
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q
   g1 <- add_cols(iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
-    labs(title = sprintf("%s (%s) - iNEXT size-based (q0/q1/q2)", title, rank), subtitle = sub) + th, cols)
+    labs(title = title, subtitle = paste0(sprintf("%s-level, iNEXT size-based (Hill q0/q1/q2)  |  ", rank), sub)) + th, cols)
   ggsave(file.path(outsub, paste0(stub, "_inext_size.png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
   g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
-    labs(title = sprintf("%s (%s) - iNEXT coverage-based (q0/q1/q2)", title, rank), subtitle = sub) + th, cols)
+    labs(title = title, subtitle = paste0(sprintf("%s-level, iNEXT coverage-based (Hill q0/q1/q2)  |  ", rank), sub)) + th, cols)
   ggsave(file.path(outsub, paste0(stub, "_inext_coverage.png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
   write.csv(out$AsyEst, file.path(outsub, paste0(stub, "_inext_asymptotic.csv")), row.names = FALSE)
@@ -120,20 +120,21 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
 
 # ---- 3. every comparison at BOTH ranks (genus + species) ---------------------
 RANKS   <- c(species = "species_key", genus = "genus_key")
-rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
+rec_win  <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
+rec_fair <- rec %>% filter(month %in% 3:10, year %in% 2021:2023)   # FAIR WINDOW for the lethal-vs-non-lethal comparisons (matches yield_by_method/efficiency/Venn; drops 2024 intern photos)
 message("iNEXT rarefaction/extrapolation:")
 for (rk in names(RANKS)) {
   kc <- RANKS[[rk]]; message(sprintf(" %s rank:", rk))
   run_inext(abun_list(filter(rec, transect %in% TRANSECTS), "transect", kc, TRANSECTS),
-            paste0("by_transect_", rk), "Bees by transect", rk, cols = BEE_TRANSECT)   # transect palette
+            paste0("by_transect_", rk), "Bees by Transect", rk, cols = BEE_TRANSECT)   # transect palette
   gl_y <- abun_list(rec_win, "year", kc)
-  run_inext(gl_y, paste0("by_year_", rk), "Bees by year (Mar-Sep)", rk,
+  run_inext(gl_y, paste0("by_year_", rk), "Bees by Year", rk,
             cols = setNames(grDevices::colorRampPalette(BEE_SEQ)(length(gl_y)), names(gl_y)))   # year -> blue sequential
-  run_inext(abun_list(rec, "surveyor", kc, c("beeple", "intern")),
-            paste0("by_observer_", rk), "Bees by observer (beeple vs intern)", rk,
+  run_inext(abun_list(rec_fair, "surveyor", kc, c("beeple", "intern")),
+            paste0("by_observer_", rk), "Bees by Observer: Beeple vs Intern", rk,
             cols = c(intern = "#3C3B36", beeple = "#C0BBB0"))   # intern = house ink (focus) / beeple = stone (background)
-  run_inext(abun_list(rec, "obs_type", kc, c("observation", "specimen")),
-            paste0("by_method_", rk), "Bees: observations vs specimens", rk,
+  run_inext(abun_list(rec_fair, "obs_type", kc, c("observation", "specimen")),
+            paste0("by_method_", rk), "Bees: Observations vs Specimens", rk,
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours
 }
 

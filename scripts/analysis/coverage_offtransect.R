@@ -10,7 +10,8 @@
 # DEFINITION:
 #   on-transect  = is_survey == TRUE  (standardized survey effort; both methods --
 #                  every specimen is survey-collected, plus survey iNaturalist)
-#   off-transect = is_survey == FALSE (casual park-wide iNaturalist; non-lethal)
+#   off-transect = is_survey == FALSE (casual park-wide records, BOTH methods --
+#                  mostly non-lethal iNaturalist plus a few off-date specimens)
 #
 # OUTPUTS: species/genus split into on-only / shared / off-only, and the list of
 # off-only taxa (candidate park residents the standardized surveys are missing).
