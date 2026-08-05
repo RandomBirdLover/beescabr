@@ -156,7 +156,7 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
 # ---- 5. per-transect richness (BOTH methods) -- specimens' reliable unit ------
 # Specimen coordinates are transect centroids, so specimens are summarised BY
 # TRANSECT here rather than gridded above. Both methods pooled, all-records; the
-# four transects only (off-transect records carry no transect and are excluded).
+# named transects plus OT (off-transect) as its own bar -- see TRANSECTS.
 tr_key <- function(df, method) df %>% transmute(
   method = method, transect = toupper(str_squish(transect)),
   species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
@@ -192,25 +192,28 @@ gA <- ggplot(rich_long, aes(transect, value, fill = rank)) +
   geom_text(aes(label = value), position = position_dodge(0.72), vjust = -0.35, size = 3, colour = lab_col) +
   scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = NULL) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
-  labs(title = "CABR bee richness by transect",
-       subtitle = str_wrap(scope_cap("all records, per transect (off-transect excluded)", "lethal + non-lethal", "genus + species"), 72),
+  labs(title = "Bee Richness by Transect",
+       subtitle = str_wrap(scope_cap("all records, by transect (OT = off-transect)", "lethal + non-lethal", "genus + species"), 72),
        x = NULL, y = "distinct taxa") +
-  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5))
+  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
+                     plot.title = element_text(hjust = 0.5))
 
 eff_long <- bind_rows(
-  data.frame(transect = tt$transect, method = "non-lethal (photo)", value = tt$records_nonlethal),
-  data.frame(transect = tt$transect, method = "lethal (net)",       value = tt$records_lethal))
-eff_long$method <- factor(eff_long$method, levels = c("non-lethal (photo)", "lethal (net)"))
+  data.frame(transect = tt$transect, method = "non-lethal", value = tt$records_nonlethal),
+  data.frame(transect = tt$transect, method = "lethal",     value = tt$records_lethal))
+eff_long$method <- factor(eff_long$method, levels = c("non-lethal", "lethal"))
 gB <- ggplot(eff_long, aes(transect, value, fill = method)) +
   geom_col(width = 0.66) +
   geom_text(data = tt, aes(transect, n_records, label = n_records), vjust = -0.35, size = 3, colour = lab_col, inherit.aes = FALSE) +
   scale_fill_manual(values = setNames(unname(BEE_METHOD_COL[c("nonlethal", "lethal")]),
-                                      c("non-lethal (photo)", "lethal (net)")), name = NULL) +
+                                      c("non-lethal", "lethal")), name = NULL) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
-  labs(title = "CABR bee sampling effort by transect",
-       subtitle = str_wrap(scope_cap("all records, per transect (off-transect excluded)", "net vs photo", "records"), 72),
+  labs(title = "Bee Sampling Effort by Transect",
+       subtitle = str_wrap(scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"), 72),
+       caption = str_wrap("Note: TP shows about double the effort of the other transects because it was surveyed as two separate transects each survey.", 90),
        x = NULL, y = "records") +
-  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5))
+  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
+                     plot.title = element_text(hjust = 0.5))
 
 ggsave(file.path(OUT_DIR, "transect_richness.png"), gA, width = 6.4, height = 5, dpi = 200, bg = "white")
 ggsave(file.path(OUT_DIR, "transect_effort.png"),   gB, width = 6.4, height = 5, dpi = 200, bg = "white")

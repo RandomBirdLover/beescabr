@@ -138,10 +138,11 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
   g <- ggplot(long, aes(x = factor(group), y = value, group = 1)) +
     geom_line(color = "#3C3B36") + geom_point(color = "#3C3B36", size = 2) +
     facet_wrap(~ metric, scales = "free_y") +
-    labs(title = "Bee diversity by year (CABR)",
+    labs(title = "Bee Diversity by Year",
          subtitle = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
          x = "year", y = NULL) +
-    theme_beescabr(11)
+    theme_beescabr(11) +
+    theme(plot.title = element_text(hjust = 0.5))
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 }
 
@@ -163,10 +164,11 @@ g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
   scale_color_manual(values = c("both pooled" = BEE_INK$primary,
                                 "lethal (net)" = unname(BEE_METHOD_COL["lethal"]),
                                 "non-lethal (photo)" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
-  labs(title = "Rank-abundance (dominance) of CABR bee species",
+  labs(title = "Rank-Abundance of Bee Species",
        subtitle = scope_cap("survey records only", "compared: lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
-  theme_beescabr(11)
+  theme_beescabr(11) +
+  theme(plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "diversity_rank_abundance.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 
 # ---- 5. NMDS + PERMANOVA: does composition differ by transect/year? ----------
@@ -193,12 +195,13 @@ if (!is.null(mds)) {
   g <- ggplot(sc, aes(NMDS1, NMDS2, color = transect, label = meta$site)) +
     geom_point(size = 3) + geom_text(vjust = -0.8, size = 2.6, show.legend = FALSE) +
     scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
-    labs(title = "Bee community composition by transect (NMDS, Bray-Curtis)",
+    labs(title = "Bee Community Composition by Transect",
          subtitle = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
                            sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
                            sprintf("  (stress %.2f)", mds$stress)),
          x = "NMDS1", y = "NMDS2") +
-    theme_beescabr(11)
+    theme_beescabr(11) +
+    theme(plot.title = element_text(hjust = 0.5))
   ggsave(file.path(OUT_DIR, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
 }
 
