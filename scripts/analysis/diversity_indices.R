@@ -118,10 +118,15 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
     scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
     scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.08))) +
     labs(title = title, subtitle = cap,
+         caption = str_wrap(paste("Only evenness shown: comparing richness / Shannon / Simpson across groups of",
+           "unequal sampling effort is biased (more effort finds more species), so those are given",
+           "effort-standardized in the rarefaction (iNEXT) figures. Pielou evenness is a ratio, so it",
+           "is effort-robust and kept here."), 110),
          x = group_lab, y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
     theme_beescabr(11) +
-    theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
-  ggsave(file, g, width = 7.5, height = 5, dpi = 200, bg = "white")
+    theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(hjust = 0, size = 7.5))
+  ggsave(file, g, width = 7.5, height = 5.4, dpi = 200, bg = "white")
 }
 plot_evenness(div_tr, file.path(OUT_DIR, "diversity_evenness_by_transect.png"),
              "Bee Evenness by Transect",
@@ -133,20 +138,25 @@ rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
 My_sp <- comm_matrix(rec_win, "year", "species_key")
 div_yr <- cbind(rank = "species", alpha_indices(My_sp))
 write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE)
+# EVENNESS ONLY (why: see caption). Raw richness/Shannon/Simpson across years of unequal effort
+# are biased -> those live effort-standardized in rarefaction (iNEXT by_year). Evenness stays.
+WHY_EVEN <- paste("Only evenness shown: comparing richness / Shannon / Simpson across groups of",
+                  "unequal sampling effort is biased (more effort finds more species), so those are",
+                  "given effort-standardized in the rarefaction (iNEXT) figures. Pielou evenness is a",
+                  "ratio, so it is effort-robust and kept here.")
 {
-  long <- tidyr_pivot(div_yr, c("richness", "hill_q1_expShannon", "invSimpson_q2", "pielou_evenness"))
-  lvls <- c(richness = "Richness (S)", hill_q1_expShannon = "Effective #species (exp H, q1)",
-            invSimpson_q2 = "Inverse Simpson (q2)", pielou_evenness = "Pielou evenness (J)")
-  long$metric <- factor(lvls[long$metric], levels = lvls)
-  g <- ggplot(long, aes(x = factor(group), y = value, group = 1)) +
-    geom_line(color = "#3C3B36") + geom_point(color = "#3C3B36", size = 2) +
-    facet_wrap(~ metric, scales = "free_y") +
-    labs(title = "Bee Diversity by Year",
+  d <- div_yr[!is.na(div_yr$pielou_evenness), ]
+  g <- ggplot(d, aes(x = factor(group), y = pielou_evenness, group = 1)) +
+    geom_line(color = "#3C3B36") + geom_point(color = "#3C3B36", size = 2.4) +
+    geom_text(aes(label = sprintf("%.2f", pielou_evenness)), vjust = -0.9, size = 3, colour = BEE_INK$secondary) +
+    scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0.02, 0.1))) +
+    labs(title = "Bee Evenness by Year",
          subtitle = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
-         x = "year", y = NULL) +
+         caption = str_wrap(WHY_EVEN, 110),
+         x = "year", y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
     theme_beescabr(11) +
-    theme(plot.title = element_text(hjust = 0.5))
-  ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
+    theme(plot.title = element_text(hjust = 0.5), plot.caption = element_text(hjust = 0, size = 7.5))
+  ggsave(file.path(OUT_DIR, "diversity_evenness_by_year.png"), g, width = 8.5, height = 5.4, dpi = 200, bg = "white")
 }
 
 # ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT by paper --------------------------
