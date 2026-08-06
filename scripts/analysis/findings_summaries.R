@@ -44,11 +44,10 @@ fs   <- .rd("data/analysis/interactions/networks/forage_selectivity_summary.csv"
 h2   <- .rd("data/analysis/interactions/networks/interactions_genus_h2.csv")
 acc  <- .rd("data/analysis/richness/accumulation/transect_accumulation_summary.csv")
 holw <- .rd("data/analysis/coverage/checklist_gaps/coverage_cabr_not_on_holway.csv")
-yld_m <- .rd("data/analysis/method_comparison/yield/coverage_yield_by_method.csv")
-yld_g <- .rd("data/analysis/coverage/surveyor_groups/coverage_yield_by_group.csv")
+yld_m <- .rd("data/analysis/method_comparison/yield/coverage_yield_by_method_journal.csv")
 lsb   <- .rd("data/analysis/coverage/least_sampled/least_sampled_bees.csv")
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
-  key <- if (!is.null(df$grp)) df$grp else df$method   # yield_by_group keys on grp; yield_by_method on method
+  key <- if (!is.null(df$grp)) df$grp else df$method   # yield_by_method keys on method
   v <- df[[col]][as.character(key) == g]; if (length(v)) .chr(v[1]) else "-" }
 
 fs_sel <- if (!is.null(fs)) sum(fs$forage_pattern == "Selective") else NA
@@ -230,24 +229,11 @@ fw("coverage_yield_by_method",
            .pick(yld_m, "lethal", "genera"),            .pick(yld_m, "nonlethal", "genera"),
            .pick(yld_m, "lethal", "exclusive_genera"),  .pick(yld_m, "nonlethal", "exclusive_genera")),
    c(scope    = "SURVEY-ONLY, March-October, 2021-2023 (year-clipped so both methods share the window)",
-     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (general public and intern iNat photos are NOT included -- see coverage_yield_by_group for the contribution view that adds them)",
+     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (general public and intern iNat photos are NOT included -- see the REPORT figure coverage_yield_by_method_report_* for the all-records contributor view that adds them)",
      controls_for = "season (Mar-Oct) + year (2021-2023) + survey scope -- removes non-lethal's 3 extra years",
      species_vs_genus = "species-level = detection + ID resolution; genus-level = detection alone (photos not penalised for stalling at genus)",
      takeaway = "specimens win on species-level yield/efficiency; detection (genus) is about even -- the gap is ID resolution, not who finds more bees"),
-   "method_comparison/yield/coverage_yield_by_method.csv (table only; the figure is the method Venn, method_comparison/yield/yield_by_method.png)")
-
-fw("coverage_yield_by_group",
-   "Yield by group: survey methods vs off-survey records",
-   "descriptive",
-   sprintf("What logged CABR's bees, Mar-Oct 2021-2023, grouped by survey DATE: on survey dates, lethal net specimens record the most species (%s; %s group-exclusive) vs non-lethal survey photos (%s species, %s excl); records logged OFF survey dates add %s species (%s excl). The two survey bars are a fair survey-only lethal-vs-non-lethal comparison; the non-survey bar is off-schedule context.",
-           .pick(yld_g, "lethal (intern)", "species"),        .pick(yld_g, "lethal (intern)", "exclusive_species"),
-           .pick(yld_g, "non-lethal (beeple)", "species"),    .pick(yld_g, "non-lethal (beeple)", "exclusive_species"),
-           .pick(yld_g, "non-survey dates", "species"),       .pick(yld_g, "non-survey dates", "exclusive_species")),
-   c(scope   = "Mar-Oct 2021-2023; grouped by survey date (is_survey), not surveyor identity",
-     groups  = "lethal (intern) = net specimens on survey dates; non-lethal (beeple) = survey photos on survey dates; non-survey dates = every off-survey-date record, both methods",
-     excludes = "intern iNaturalist photos (none exist in 2021-2023; interns only photographed from 2024)",
-     vs_method_figure = "the two survey bars share coverage_yield_by_method's survey-only lethal-vs-non-lethal scope; the non-survey bar is the extra off-schedule context"),
-   "coverage/surveyor_groups/coverage_yield_by_group.csv; coverage_yield_by_group_species.png; coverage_yield_by_group_genus.png")
+   "method_comparison/yield/coverage_yield_by_method_journal.csv (table only; the journal figure is the method Venn, method_comparison/yield/yield_by_method_journal.png). REPORT all-records contributor/method view: coverage_yield_by_method_report_{species,genus}.png")
 
 fw("coverage_cabr_share_of_county",
    "CABR share of county diversity",

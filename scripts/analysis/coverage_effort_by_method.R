@@ -8,6 +8,13 @@
 # (see coverage_yield_by_method + the rarefaction figures). This figure states the
 # effort plainly so the yield and rarefaction comparisons can be read fairly.
 #
+# JOURNAL ONLY (method comparison): restricted to the FAIR WINDOW (FAIR_MONTHS/
+# FAIR_YEARS in config.R = Mar-Oct 2021-2023) so non-lethal isn't credited with trips
+# outside the lethal-netting years.
+# TRANSECT CAVEAT: a lethal (net) survey trip covers all 3 transects, whereas a
+# non-lethal (photo) survey trip covers only one transect -- so raw trip counts
+# understate lethal's per-trip coverage. Stated in the caption.
+#
 # SOURCE: the per-survey log (one row = one survey trip), which tags each trip's method.
 # Run from the repo root:  Rscript scripts/analysis/coverage_effort_by_method.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
@@ -20,11 +27,16 @@ if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # s
 OUT_DIR <- "data/analysis/method_comparison/effort"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-# ---- 1. trips per method from the per-survey log ----------------------------
+# ---- 1. trips per method from the per-survey log (FAIR WINDOW) ---------------
+# Journal figure -> restrict to the shared fair window (FAIR_MONTHS/FAIR_YEARS in
+# config.R) so non-lethal isn't credited with trips outside the lethal-netting years.
 psf <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else "data/project_info/master_per_survey_info.csv"
 p <- read.csv(psf, stringsAsFactors = FALSE, check.names = FALSE)
 p$method <- str_squish(tolower(p$method))
-tr <- p %>% filter(method %in% c("lethal", "non-lethal")) %>% count(method, name = "trips")
+.d  <- as.Date(p$date)
+p$mo <- as.integer(format(.d, "%m")); p$yr <- as.integer(format(.d, "%Y"))
+tr <- p %>% filter(method %in% c("lethal", "non-lethal"),
+                   mo %in% FAIR_MONTHS, yr %in% FAIR_YEARS) %>% count(method, name = "trips")
 tr$method <- factor(tr$method, levels = c("lethal", "non-lethal"))
 write.csv(tr, file.path(OUT_DIR, "coverage_effort_by_method.csv"), row.names = FALSE)
 message(sprintf("Survey trips by method: %s",
@@ -38,8 +50,13 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
   scale_fill_manual(values = fill_cols, guide = "none") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
   labs(title = "Effort by Method",
-       subtitle = "Survey trips per method",
-       caption = "Effort = survey trips (one row per trip). Non-lethal logged far more trips than lethal --\nthe effort context for reading the yield (Venn) and rarefaction comparisons fairly.",
+       subtitle = "Survey trips per method (fair window: Mar-Oct 2021-2023)",
+       caption = paste0(
+         "Effort = survey trips (one row per trip), restricted to the fair window (Mar-Oct 2021-2023) so\n",
+         "non-lethal isn't credited with trips outside the lethal-netting years. Non-lethal logged far more\n",
+         "trips than lethal -- the effort context for reading the yield (Venn) and rarefaction comparisons fairly.\n",
+         "NOTE: a lethal (net) trip covers all 3 transects, while a non-lethal (photo) trip covers one transect --\n",
+         "so raw trip counts understate lethal's per-trip coverage."),
        x = NULL, y = "survey trips") +
   theme_beescabr(12) +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

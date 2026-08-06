@@ -1,21 +1,21 @@
 # =============================================================
-# Q13 -- Effort calendar: observations and trips by month
+# Q13 -- Effort calendar: survey trips and records by month. SPLIT figure.
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
-# THE QUESTION: when across the year (and across years) does surveying actually
-# happen? This is the effort backdrop every seasonal/phenology result sits on --
-# apparent "activity" in a month is bounded by whether anyone surveyed that month.
+# THE QUESTION: when across the year (and across years) does surveying happen?
+# This is the effort backdrop every seasonal result sits on -- apparent "activity"
+# in a month is bounded by whether anyone surveyed that month.
 #
-# SOURCE: the per-survey log (one row = one survey trip/day). Per month we report
-#   * trips           -- number of survey events (rows)
-#   * observations    -- sum of recorded observations (n_obs)
-#   * obs per trip    -- mean intensity
-#   * intern vs beeple and lethal vs non-lethal trip splits
-# Plus a year x month grid so coverage gaps are visible across seasons.
+# SOURCE: the per-survey log (one row = one survey trip/day), tagged with method
+# (lethal / non-lethal) and year.
 #
-# The intern survey window is Mar-Sep; this calendar shows exactly how effort
-# tapers outside it, so downstream seasonal comparisons stay honest.
-# Descriptive counts -- no hypothesis test, so no p-value.
+# SPLIT -- both figures are produced for BOTH papers:
+#   * JOURNAL -> the FAIR WINDOW (FAIR_MONTHS/FAIR_YEARS = Mar-Oct 2021-2023):
+#       calendar shows only the window months, trips + records split by method
+#       colour; the year x month grid is restricted to the same window.
+#   * REPORT  -> ALL trips, ALL months, ALL years, both methods -- the full effort
+#       picture, same method-colour encoding.
+# "Observations" is renamed "Records" throughout. Descriptive counts -- no test.
 #
 # Run from the repo root:  Rscript scripts/analysis/phenology_effort.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
@@ -29,12 +29,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/phenology"
-WINDOW_MONTHS <- 3:9
-MONTH_ABB     <- month.abb
+OUT_DIR   <- "data/analysis/phenology"
+MONTH_ABB <- month.abb
+MCOL      <- c("lethal" = unname(BEE_METHOD_COL["lethal"]), "non-lethal" = unname(BEE_METHOD_COL["nonlethal"]))
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s", scope, method, rank)
 
 # ---- 1. read the per-survey log ---------------------------------------------
 psf_path <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else
@@ -47,67 +46,76 @@ p <- p %>% mutate(
   n_obs = suppressWarnings(as.numeric(n_obs)),
   role   = str_squish(tolower(role)),
   method = str_squish(tolower(method))) %>%
-  filter(!is.na(month))
+  filter(!is.na(month), method %in% c("lethal", "non-lethal"))
 message(sprintf("Survey trips: %d across %d-%d", nrow(p), min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
 
-# ---- 2. monthly effort table -------------------------------------------------
-by_month <- p %>% group_by(month) %>%
-  summarise(trips           = n(),
-            observations    = sum(n_obs, na.rm = TRUE),
-            obs_per_trip     = round(mean(n_obs, na.rm = TRUE), 1),
-            intern_trips     = sum(role == "intern", na.rm = TRUE),
-            beeple_trips     = sum(role == "beeple", na.rm = TRUE),
-            lethal_trips     = sum(method == "lethal", na.rm = TRUE),
-            nonlethal_trips  = sum(method == "non-lethal", na.rm = TRUE),
-            .groups = "drop") %>%
-  right_join(data.frame(month = 1:12), by = "month") %>%
-  mutate(across(-month, ~ ifelse(is.na(.), 0, .)),
-         month_lab = factor(MONTH_ABB[month], levels = MONTH_ABB),
-         in_window = month %in% WINDOW_MONTHS) %>%
-  arrange(month)
-write.csv(by_month[, c("month","month_lab","trips","observations","obs_per_trip",
-                       "intern_trips","beeple_trips","lethal_trips","nonlethal_trips")],
-          file.path(OUT_DIR, "effort_by_month.csv"), row.names = FALSE)
-message("Trips in Mar-Sep window: ",
-        sum(by_month$trips[by_month$in_window]), " of ", sum(by_month$trips),
-        sprintf(" (%.0f%%)", 100*sum(by_month$trips[by_month$in_window])/sum(by_month$trips)))
+# ---- 2. effort calendar (trips + records by month, split by method) ----------
+calendar_fig <- function(dat, months_shown, file, subtitle, scope_txt) {
+  mm <- dat %>% group_by(month, method) %>%
+    summarise(trips = n(), records = sum(n_obs, na.rm = TRUE), .groups = "drop")
+  long <- bind_rows(
+    data.frame(month = mm$month, method = mm$method, metric = "Survey trips", value = mm$trips),
+    data.frame(month = mm$month, method = mm$method, metric = "Records",      value = mm$records))
+  long$metric    <- factor(long$metric, levels = c("Survey trips", "Records"))
+  long$method    <- factor(long$method, levels = c("lethal", "non-lethal"))
+  long$month_lab <- factor(MONTH_ABB[long$month], levels = MONTH_ABB[months_shown])
+  long <- long[!is.na(long$month_lab), ]
+  # write the backing table
+  wide <- mm; wide$month_lab <- MONTH_ABB[wide$month]
+  write.csv(wide[order(wide$month, wide$method),
+                 c("month", "month_lab", "method", "trips", "records")],
+            sub("\\.png$", ".csv", file), row.names = FALSE)
+  g <- ggplot(long, aes(x = month_lab, y = value, fill = method)) +
+    geom_col(width = 0.72) +   # stacked by method
+    facet_wrap(~ metric, scales = "free_y", ncol = 1) +
+    scale_x_discrete(drop = FALSE) +
+    scale_fill_manual(values = MCOL, name = NULL) +
+    labs(title = "Survey Effort Calendar", subtitle = subtitle,
+         caption = str_wrap(scope_cap(scope_txt, "lethal + non-lethal (by colour)", "n/a (effort)"), 84),
+         x = NULL, y = NULL) +
+    theme_beescabr(11) +
+    theme(legend.position = "top", panel.grid.major.x = element_blank(),
+          plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+  ggsave(file, g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
+}
 
-# ---- 3. figure A: trips + observations by month (window shaded) --------------
-long <- bind_rows(
-  data.frame(month_lab = by_month$month_lab, metric = "Survey trips",  value = by_month$trips,        in_window = by_month$in_window),
-  data.frame(month_lab = by_month$month_lab, metric = "Observations",  value = by_month$observations, in_window = by_month$in_window))
-long$metric <- factor(long$metric, levels = c("Survey trips", "Observations"))
-gA <- ggplot(long, aes(x = month_lab, y = value, fill = in_window)) +
-  geom_col(width = 0.72) +
-  facet_wrap(~ metric, scales = "free_y", ncol = 1) +
-  # in-window = focal blue, outside = grey background (scope-style accent vs grey)
-  scale_fill_manual(values = c("TRUE" = unname(BEE_SCOPE["survey-only"]), "FALSE" = unname(BEE_SCOPE["all records"])),
-                    labels = c("TRUE" = "Mar-Sep window", "FALSE" = "outside window"), name = NULL) +
-  labs(title = "Survey Effort Calendar",
-       caption = str_wrap(scope_cap(paste0("per-survey log, all trips ", min(p$year, na.rm = TRUE), "-", max(p$year, na.rm = TRUE)),
-                            "lethal + non-lethal trips pooled", "n/a (effort)"), 80),
-       x = NULL, y = NULL) +
-  theme_beescabr(11) +
-  theme(legend.position = "top", panel.grid.major.x = element_blank(),
-        plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "effort_by_month.png"), gA, width = 8.5, height = 6.5, dpi = 200, bg = "white")
+# ---- 3. year x month trip-count grid ----------------------------------------
+grid_fig <- function(dat, months_shown, file, subtitle) {
+  yrs <- sort(unique(dat$year[!is.na(dat$year)]))
+  grid <- dat %>% filter(!is.na(year)) %>% count(year, month, name = "trips") %>%
+    right_join(expand.grid(year = yrs, month = months_shown), by = c("year", "month")) %>%
+    mutate(trips = ifelse(is.na(trips), 0, trips),
+           month_lab = factor(MONTH_ABB[month], levels = MONTH_ABB[months_shown]),
+           dark = trips > max(trips, na.rm = TRUE) * 0.5)
+  g <- ggplot(grid, aes(x = month_lab, y = factor(year), fill = trips)) +
+    geom_tile(color = "white", linewidth = 0.4) +
+    geom_text(aes(label = ifelse(trips > 0, trips, ""), colour = dark), size = 3, show.legend = FALSE) +
+    scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
+    scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +
+    labs(title = "Survey Trips by Year and Month", subtitle = subtitle,
+         caption = scope_cap("per-survey log", "lethal + non-lethal pooled", "n/a (effort)"),
+         x = NULL, y = NULL) +
+    theme_beescabr(11) +
+    theme(panel.grid = element_blank(), plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5))
+  ggsave(file, g, width = 9, height = 4.6, dpi = 200, bg = "white")
+}
 
-# ---- 4. figure B: year x month trip-count grid (coverage gaps) ---------------
-grid <- p %>% filter(!is.na(year)) %>% count(year, month, name = "trips") %>%
-  right_join(expand.grid(year = sort(unique(p$year[!is.na(p$year)])), month = 1:12),
-             by = c("year","month")) %>%
-  mutate(trips = ifelse(is.na(trips), 0, trips),
-         month_lab = factor(MONTH_ABB[month], levels = MONTH_ABB),
-         dark = trips > max(trips, na.rm = TRUE) * 0.5)   # dark cells -> white label for contrast
-gB <- ggplot(grid, aes(x = month_lab, y = factor(year), fill = trips)) +
-  geom_tile(color = "white", linewidth = 0.4) +
-  geom_text(aes(label = ifelse(trips > 0, trips, ""), colour = dark), size = 3, show.legend = FALSE) +
-  scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
-  scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +   # magnitude = house blue sequential ramp
-  labs(title = "Survey Trips by Year and Month",
-       caption = scope_cap("per-survey log", "all trips", "n/a (effort)"),
-       x = NULL, y = NULL) +
-  theme_beescabr(11) +
-  theme(panel.grid = element_blank(), plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "effort_year_month_grid.png"), gB, width = 9, height = 4.6, dpi = 200, bg = "white")
-message("Wrote effort_by_month.{csv,png} + effort_year_month_grid.png to ", OUT_DIR)
+# ---- 4. run both scopes -----------------------------------------------------
+p_journal <- p %>% filter(month %in% FAIR_MONTHS, year %in% FAIR_YEARS)
+all_months <- sort(unique(p$month))
+
+calendar_fig(p_journal, FAIR_MONTHS, file.path(OUT_DIR, "effort_by_month_journal.png"),
+             "Fair window: Mar-Oct 2021-2023, trips + records split by method",
+             "per-survey log, fair window (Mar-Oct 2021-2023)")
+calendar_fig(p, all_months, file.path(OUT_DIR, "effort_by_month_report.png"),
+             sprintf("All trips %d-%d, all months, split by method", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)),
+             sprintf("per-survey log, all trips %d-%d", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
+
+grid_fig(p_journal, FAIR_MONTHS, file.path(OUT_DIR, "effort_year_month_grid_journal.png"),
+         "Fair window: Mar-Oct 2021-2023")
+grid_fig(p, all_months, file.path(OUT_DIR, "effort_year_month_grid_report.png"),
+         sprintf("All trips %d-%d", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
+
+message(sprintf("Journal window trips: %d | Report (all) trips: %d", nrow(p_journal), nrow(p)))
+message("Wrote effort_by_month_{journal,report}.{png,csv} + effort_year_month_grid_{journal,report}.png to ", OUT_DIR)

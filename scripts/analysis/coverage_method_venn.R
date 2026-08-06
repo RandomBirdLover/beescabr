@@ -20,9 +20,14 @@
 #   * GENUS Venn   -- any record that pins a genus. The robust/complete view.
 #
 # SETS ARE COMPUTED FROM THE CURRENT CLEANED TABLES, not the checklist's
-# specimen/inat flags (those are stale -- see coverage_cabr_vs_holway.R). Scope is the
-# FAIR WINDOW (survey-only, Mar-Oct, 2021-2023, attributed) so the overlap compares the
-# two methods on equal footing -- the same scope as every other lethal-vs-non-lethal figure.
+# specimen/inat flags (those are stale -- see coverage_cabr_vs_holway.R).
+#
+# SPLIT FIGURE -- runs at TWO scopes, one per paper:
+#   * _journal -> FAIR WINDOW (survey-only, Mar-Oct 2021-2023, attributed) so the
+#                 overlap compares the two methods on equal footing -- the same scope
+#                 as every other lethal-vs-non-lethal figure. Method-comparison paper.
+#   * _report  -> ALL RECORDS (every specimen vs every iNaturalist photo, no window,
+#                 casual public included) -- the park's full picture. NPS report.
 #
 # Run from the repo root:  Rscript scripts/analysis/coverage_method_venn.R
 # Depends on: dplyr, stringr (+ config.R). Base-R Venn -- no extra packages.
@@ -59,30 +64,41 @@ genus_set <- function(df) {
     distinct(genus) %>% pull(genus)
 }
 
-spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
-inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
+spec_all <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
+inat_all <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
 
-# ---- FAIR WINDOW: same scope as coverage_yield_by_method.R / efficiency, so every
-# method comparison shares one definition of lethal vs non-lethal: survey records only,
-# Mar-Oct, 2021-2023, attributed (unattributed/casual dropped; interns' 2024 photos excluded).
+# ---- FAIR WINDOW helper -----------------------------------------------------
+# Same scope as coverage_yield_by_method.R / efficiency, so every method comparison
+# shares one definition of lethal vs non-lethal: survey records only, Mar-Oct,
+# 2021-2023, attributed (unattributed/casual dropped; interns' 2024 photos excluded).
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-WINDOW_MONTHS <- 3:10; WINDOW_YEARS <- 2021:2023
 fair_window <- function(df) {
   st <- str_squish(tolower(as.character(df$surveyor_type)))
   st[is.na(st) | st == ""] <- "unattributed"
   mo <- suppressWarnings(as.integer(substr(df$observed_on, 6, 7)))
   yr <- suppressWarnings(as.integer(substr(df$observed_on, 1, 4)))
-  df[is_true(df$is_survey) & mo %in% WINDOW_MONTHS & yr %in% WINDOW_YEARS & st != "unattributed", , drop = FALSE]
+  df[is_true(df$is_survey) & mo %in% FAIR_MONTHS & yr %in% FAIR_YEARS & st != "unattributed", , drop = FALSE]
 }
-spec <- fair_window(spec); inat <- fair_window(inat)
-n_leth <- nrow(spec); n_nonleth <- nrow(inat)   # bee records per method in the fair window
 
-sets <- list(
-  species = list(lethal = species_set(spec), nonlethal = species_set(inat)),
-  genus   = list(lethal = genus_set(spec),   nonlethal = genus_set(inat))
+# ---- TWO SCOPES (this figure is a SPLIT) ------------------------------------
+#   * journal -> FAIR WINDOW: methods compared on equal footing (the method-
+#                comparison paper). Drops casual public + interns' 2024 photos.
+#   * report  -> ALL RECORDS: every specimen vs every iNaturalist photo, no window,
+#                casual public included -- the park's full "what nets vs photos found".
+SCOPES <- list(
+  journal = list(
+    spec = fair_window(spec_all), inat = fair_window(inat_all),
+    subfn = function(nl, nn) sprintf(
+      "Fair window (survey-only, Mar-Oct 2021-2023):  lethal %s records   |   non-lethal %s records",
+      format(nl, big.mark = ","), format(nn, big.mark = ","))),
+  report = list(
+    spec = spec_all, inat = inat_all,
+    subfn = function(nl, nn) sprintf(
+      "All records (every specimen vs every iNaturalist photo, no window):  lethal %s records   |   non-lethal %s records",
+      format(nl, big.mark = ","), format(nn, big.mark = ",")))
 )
 
-# ---- 2. region membership table (per rank) ----------------------------------
+# ---- region membership + counts (per rank) ----------------------------------
 region_table <- function(rank_name, s) {
   L <- s$lethal; N <- s$nonlethal
   all_taxa <- sort(union(L, N))
@@ -90,16 +106,11 @@ region_table <- function(rank_name, s) {
             ifelse(all_taxa %in% L, "lethal_only", "nonlethal_only"))
   data.frame(rank = rank_name, taxon = all_taxa, region = region, row.names = NULL)
 }
-taxa_tbl <- rbind(region_table("species", sets$species),
-                  region_table("genus",   sets$genus))
-write.csv(taxa_tbl, file.path(OUT_DIR, "yield_by_method_taxa.csv"), row.names = FALSE)
-
 counts <- function(s) c(lethal_only    = length(setdiff(s$lethal, s$nonlethal)),
                         both           = length(intersect(s$lethal, s$nonlethal)),
                         nonlethal_only = length(setdiff(s$nonlethal, s$lethal)))
-cn <- list(species = counts(sets$species), genus = counts(sets$genus))
 
-# ---- 3. Venn figure (2 panels: species | genus) -----------------------------
+# ---- Venn drawing -----------------------------------------------------------
 draw_circle <- function(x, y, r, col) {
   a <- seq(0, 2 * pi, length.out = 200)
   polygon(x + r * cos(a), y + r * sin(a), col = col, border = "grey45", lwd = 1.5)
@@ -119,60 +130,76 @@ venn2 <- function(cc, title) {
   title(main = title, line = 0.2)
 }
 
-png(file.path(OUT_DIR, "yield_by_method.png"),
-    width = 2000, height = 1050, res = 200)
-bee_base_par()                                    # house-style fonts + muted axis/title colours
-op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 3.6, 0))
-venn2(cn$species, sprintf("Species (%d total)",
-      cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
-venn2(cn$genus, sprintf("Genera (%d total)",
-      cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
-mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.4,
-      cex = 1.2, font = 2, col = BEE_INK$primary)
-mtext(sprintf("Fair window (survey-only, Mar-Oct 2021-2023):  lethal %s records   |   non-lethal %s records",
-              format(n_leth, big.mark = ","), format(n_nonleth, big.mark = ",")),
-      outer = TRUE, line = 0.2, cex = 0.85, col = BEE_INK$secondary)
-par(op); dev.off()
-
-# ---- 3b. STATISTICAL TEST: does taxonomic resolution depend on method? -------
-# Chi-square on a 2x2 contingency (method x resolution), where resolution =
-# "species-level" (species/subspecies) vs "coarser". Tests the Q2 hypothesis that
-# nets reach species more often than photos. Uses every bee record with a genus.
+# ---- chi-square: does taxonomic resolution depend on method? ----------------
+# 2x2 (method x resolution); resolution = "species-level" (species/subspecies) vs
+# "coarser". Tests the Q2 hypothesis that nets reach species more often than photos.
 res_cat <- function(df, method) {
   df <- df[!is.na(df$genus) & df$genus != "", ]
   data.frame(method = method,
              resolution = ifelse(df$taxon_rank %in% SPECIES_RANKS, "species-level", "coarser"))
 }
-rc   <- rbind(res_cat(spec, "lethal"), res_cat(inat, "nonlethal"))
-ctab <- table(method = rc$method, resolution = rc$resolution)
-chi  <- suppressWarnings(chisq.test(ctab))
-pct_species <- prop.table(ctab, 1)[, "species-level"] * 100
-write.csv(data.frame(method = rownames(ctab), n_records = as.integer(rowSums(ctab)),
-                     n_species_level = as.integer(ctab[, "species-level"]),
-                     pct_species_level = round(pct_species, 1), row.names = NULL),
-          file.path(OUT_DIR, "coverage_method_resolution.csv"), row.names = FALSE)
-writeLines(c(
-  "TEST: taxonomic resolution (species-level vs coarser) x survey method",
-  "Pearson chi-square test of independence on the 2x2 contingency table.",
-  "",
-  sprintf("  X-squared = %.1f, df = %d, p = %s",
-          chi$statistic, chi$parameter, format.pval(chi$p.value, digits = 3, eps = 1e-16)),
-  sprintf("  lethal (net) reaches species: %.1f%%   non-lethal (photo): %.1f%%",
-          pct_species["lethal"], pct_species["nonlethal"]),
-  "",
-  "Interpretation: p < 0.05 -> ID resolution is not independent of method."),
-  file.path(OUT_DIR, "coverage_method_resolution_chisq.txt"))
-message(sprintf("\nResolution x method chi-square: X2=%.1f, df=%d, p=%.2e  (lethal %.0f%% vs non-lethal %.0f%% species-level)",
-                chi$statistic, chi$parameter, chi$p.value, pct_species["lethal"], pct_species["nonlethal"]))
 
-# ---- 4. console summary -----------------------------------------------------
-for (rk in c("species", "genus")) {
-  cc <- cn[[rk]]
-  message(sprintf("\n%s: %d lethal-only, %d shared, %d non-lethal-only",
-                  toupper(rk), cc["lethal_only"], cc["both"], cc["nonlethal_only"]))
+# ---- run BOTH scopes --------------------------------------------------------
+run_scope <- function(scope, spec, inat, subfn) {
+  sfx <- paste0("_", scope)
+  sets <- list(
+    species = list(lethal = species_set(spec), nonlethal = species_set(inat)),
+    genus   = list(lethal = genus_set(spec),   nonlethal = genus_set(inat)))
+  n_leth <- nrow(spec); n_nonleth <- nrow(inat)
+
+  taxa_tbl <- rbind(region_table("species", sets$species),
+                    region_table("genus",   sets$genus))
+  write.csv(taxa_tbl, file.path(OUT_DIR, paste0("yield_by_method_taxa", sfx, ".csv")), row.names = FALSE)
+  cn <- list(species = counts(sets$species), genus = counts(sets$genus))
+
+  png(file.path(OUT_DIR, paste0("yield_by_method", sfx, ".png")),
+      width = 2000, height = 1050, res = 200)
+  bee_base_par()                                  # house-style fonts + muted axis/title colours
+  op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 3.6, 0))
+  venn2(cn$species, sprintf("Species (%d total)",
+        cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
+  venn2(cn$genus, sprintf("Genera (%d total)",
+        cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
+  mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.4,
+        cex = 1.2, font = 2, col = BEE_INK$primary)
+  mtext(subfn(n_leth, n_nonleth), outer = TRUE, line = 0.2, cex = 0.85, col = BEE_INK$secondary)
+  par(op); dev.off()
+
+  rc   <- rbind(res_cat(spec, "lethal"), res_cat(inat, "nonlethal"))
+  ctab <- table(method = rc$method, resolution = rc$resolution)
+  chi  <- suppressWarnings(chisq.test(ctab))
+  pct_species <- prop.table(ctab, 1)[, "species-level"] * 100
+  write.csv(data.frame(method = rownames(ctab), n_records = as.integer(rowSums(ctab)),
+                       n_species_level = as.integer(ctab[, "species-level"]),
+                       pct_species_level = round(pct_species, 1), row.names = NULL),
+            file.path(OUT_DIR, paste0("coverage_method_resolution", sfx, ".csv")), row.names = FALSE)
+  writeLines(c(
+    sprintf("TEST (%s scope): taxonomic resolution (species-level vs coarser) x survey method", scope),
+    "Pearson chi-square test of independence on the 2x2 contingency table.",
+    "",
+    sprintf("  X-squared = %.1f, df = %d, p = %s",
+            chi$statistic, chi$parameter, format.pval(chi$p.value, digits = 3, eps = 1e-16)),
+    sprintf("  lethal (net) reaches species: %.1f%%   non-lethal (photo): %.1f%%",
+            pct_species["lethal"], pct_species["nonlethal"]),
+    "",
+    "Interpretation: p < 0.05 -> ID resolution is not independent of method."),
+    file.path(OUT_DIR, paste0("coverage_method_resolution_chisq", sfx, ".txt")))
+
+  message(sprintf("\n[%s] Resolution x method chi-square: X2=%.1f, df=%d, p=%.2e  (lethal %.0f%% vs non-lethal %.0f%% species-level)",
+                  scope, chi$statistic, chi$parameter, chi$p.value, pct_species["lethal"], pct_species["nonlethal"]))
+  for (rk in c("species", "genus")) {
+    cc <- cn[[rk]]
+    message(sprintf("[%s] %s: %d lethal-only, %d shared, %d non-lethal-only",
+                    scope, toupper(rk), cc["lethal_only"], cc["both"], cc["nonlethal_only"]))
+  }
+  lo <- taxa_tbl$taxon[taxa_tbl$rank == "species" & taxa_tbl$region == "lethal_only"]
+  message(sprintf("[%s] Species found ONLY by nets (photo-detection gaps), n=%d:", scope, length(lo)))
+  message("  ", paste(lo, collapse = ", "))
 }
-lo <- taxa_tbl$taxon[taxa_tbl$rank == "species" & taxa_tbl$region == "lethal_only"]
-message("\nSpecies found ONLY by nets (photo-detection gaps), n=", length(lo), ":")
-message("  ", paste(lo, collapse = ", "))
-message("\nWrote: yield_by_method.png, yield_by_method_taxa.csv")
+
+for (scope in names(SCOPES)) {
+  s <- SCOPES[[scope]]
+  run_scope(scope, s$spec, s$inat, s$subfn)
+}
+message("\nWrote {journal,report} Venns: yield_by_method_{journal,report}.png (+ taxa/resolution CSVs)")
 message("Done. Outputs in: ", normalizePath(OUT_DIR))

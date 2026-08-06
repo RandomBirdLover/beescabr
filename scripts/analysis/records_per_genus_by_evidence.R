@@ -30,6 +30,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR <- "data/analysis/coverage/records_by_evidence"
+MIN_SHOWN <- 50    # figure shows only genera with >= this many total records (long tail dropped; full list in CSV)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 norm <- function(x) str_squish(as.character(x))
 
@@ -64,27 +65,29 @@ print(head(wide[, c("genus", "lethal", "nonlethal", "total")], 10), row.names = 
 
 # ---- 3. figure: stacked bars, one row per genus, coloured by METHOD ----------
 # stack order lethal (rose, base) -> non-lethal (periwinkle, tip); genera by total.
-lab <- paste0(wide$genus, bee_low_n_mark(wide$total))   # append '*' to thin genera
+# figure shows only genera with >= MIN_SHOWN total records; the long tail is dropped for
+# readability -- the FULL list stays in the CSV written above.
+wf  <- wide %>% filter(total >= MIN_SHOWN)
+lab <- wf$genus
 long <- bind_rows(
-  data.frame(genus = wide$genus, lab = lab, total = wide$total, method = "lethal",    n = wide$lethal),
-  data.frame(genus = wide$genus, lab = lab, total = wide$total, method = "nonlethal", n = wide$nonlethal))
+  data.frame(genus = wf$genus, lab = lab, total = wf$total, method = "lethal",    n = wf$lethal),
+  data.frame(genus = wf$genus, lab = lab, total = wf$total, method = "nonlethal", n = wf$nonlethal))
 long$method <- factor(long$method, levels = c("lethal", "nonlethal"))
 long$lab    <- factor(long$lab, levels = rev(lab))     # biggest total at the top
 
-anyn <- any(wide$thin)
 g <- ggplot(long, aes(x = n, y = lab, fill = method)) +
   geom_col(width = 0.74, position = position_stack(reverse = TRUE)) +   # lethal (base) -> non-lethal (tip)
-  geom_text(data = wide, aes(x = total, y = factor(lab, levels = rev(lab)), label = total),
+  geom_text(data = wf, aes(x = total, y = factor(genus, levels = rev(lab)), label = total),
             hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
   scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
   labs(title = "Total Records of Bee Genera",
-       x = "Number of records", y = NULL,
-       caption = if (anyn) sprintf("* fewer than %d records total -- thin evidence base; read the composition with care", BEE_MIN_RECORDS) else NULL) +
+       subtitle = sprintf("Genera with >= %d records (%d of %d shown; full list in the CSV)", MIN_SHOWN, nrow(wf), nrow(wide)),
+       x = "Number of records", y = NULL) +
   theme_beescabr(11) +
-  theme(plot.title = element_text(hjust = 0.5),
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
         panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "records_per_genus_by_evidence.png"), g,
-       width = 9, height = max(5, 0.30 * nrow(wide) + 1.6), dpi = 200, bg = "white")
+       width = 9, height = max(5, 0.34 * nrow(wf) + 1.7), dpi = 200, bg = "white")
 
 message("\nWrote records_per_genus_by_evidence.{csv,png} to ", OUT_DIR)

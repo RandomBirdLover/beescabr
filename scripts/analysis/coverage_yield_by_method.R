@@ -1,23 +1,25 @@
 # =============================================================
-# Q11 -- Yield by METHOD: which method finds the most, on a FAIR footing?
+# Q11 -- Yield of RECORDS: what each method / contributor turned up. SPLIT figure.
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
-# Restricted to a fair comparison window so we measure the METHOD, not when/how it ran:
-#   SCOPE  = survey records only (is_survey = TRUE)
-#   SEASON = March-October (the months lethal netting ran)
-#   YEARS  = 2021-2023 (the only years lethal netting ran; non-lethal photography continued
-#            2024-2026 with no lethal counterpart, so those years are clipped out).
-# Untagged on-transect iNat records (no surveyor) are dropped, so non-lethal = attributed
-# survey photos. NOTE: in this fair window every intern record is a specimen (lethal) and
-# every beeple record is a photo (non-lethal), so "yield by method" and "yield by surveyor
-# group" would be the SAME two bars -- the group figure was dropped as redundant.
+# SPLIT -- feeds BOTH papers with different scopes:
 #
-# TWO figures (species + genus rank), 4 panels each: n_records (effort), taxa recorded,
-#   taxa_per_100_records (efficiency), method-exclusive taxa (found ONLY by that method).
-#   * SPECIES-level  = detection + ID resolution (a record must be keyed to species)
-#   * GENUS-level    = detection alone (photos not penalised for stalling at genus)
-# Descriptive counts -- no hypothesis test (the coverage-standardized richness comparison
-# lives in rarefaction_inext.R / rarefaction_vegan.R; method x ID resolution in Q2).
+#   * JOURNAL (method comparison) -> the FAIR WINDOW: survey records only,
+#     Mar-Oct, 2021-2023, attributed (untagged/casual dropped; interns' 2024 photos
+#     excluded). Two methods on equal footing: lethal (net) vs non-lethal (photo).
+#     Written as a backing TABLE (_journal.csv) -- the journal *figure* for yield is
+#     the method Venn (coverage_method_venn.R). Yield = records + taxa + group-exclusive;
+#     the per-100 rate (and the FAIR rarefied per-100) is the efficiency figure's job
+#     (coverage_efficiency_by_method.R), NOT here.
+#
+#   * REPORT (what the park holds) -> ALL RECORDS, no window, everyone included.
+#     ONE figure with two stacked views of the SAME pile of records:
+#       - by CONTRIBUTOR: general public | beeple | interns
+#           (interns = all their records: lethal specimens + their 2024 photos)
+#       - by METHOD:      lethal | non-lethal   (every record collapsed to method)
+#     Because interns' bar holds all their records, the two views reconcile to the
+#     same grand total. Three metrics per view: records, taxa recorded, group-exclusive.
+#     Run at BOTH species and genus rank.
 #
 # Run from the repo root:  Rscript scripts/analysis/coverage_yield_by_method.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
@@ -35,12 +37,10 @@ if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # s
 OUT_DIR       <- "data/analysis/method_comparison/yield"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-WINDOW_MONTHS <- 3:10                                   # Mar-Oct: the lethal-netting season
-WINDOW_YEARS  <- 2021:2023                              # the only years lethal netting ran (fair vs non-lethal)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
-# ---- 1. pool records with method + taxonomy keys + month/year ---------------
+# ---- 1. pool records with method + surveyor + taxonomy keys + month/year -----
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
 
@@ -60,38 +60,117 @@ prep <- function(df, method) {
                              !is.na(species) & species != "", paste(genus, word(species, -1)), NA),
       genus_key   = ifelse(taxon_rank %in% GENUS_RANKS & !is.na(genus) & genus != "", genus, NA))
 }
-# FAIR window: survey records only, Mar-Oct, 2021-2023, untagged non-lethal dropped.
-rec <- bind_rows(prep(spec, "lethal"), prep(inat, "nonlethal")) %>%
-  filter(is_survey, !is.na(month), month %in% WINDOW_MONTHS,
-         !is.na(year), year %in% WINDOW_YEARS, surveyor != "unattributed")
-message(sprintf("Survey records in the fair window (Mar-Oct, 2021-2023): %d (lethal %d, non-lethal %d)",
-                nrow(rec), sum(rec$method == "lethal"), sum(rec$method == "nonlethal")))
+rec_all <- bind_rows(prep(spec, "lethal"), prep(inat, "nonlethal"))
 
-# ---- 2. yield metrics (both species- and genus-level) -----------------------
-# species_key needs a species/subspecies ID; genus_key counts anything that pins a genus
-# (species/subgenus/complex/genus), so the genus metrics DON'T penalise photos ID'd only to
-# genus -- a cleaner read on DETECTION, separate from ID resolution.
-yield_tbl <- function(d) {
-  excl_sp <- d %>% filter(!is.na(species_key)) %>% distinct(method, species_key) %>%
+# ---- 2. yield-by-group engine (grouping column is a parameter) --------------
+# group-exclusive = a taxon recorded by ONLY that group within the chosen grouping.
+yield_by <- function(d, gcol) {
+  d <- d %>% mutate(grp = .data[[gcol]])
+  excl_sp <- d %>% filter(!is.na(species_key)) %>% distinct(grp, species_key) %>%
     count(species_key) %>% filter(n == 1) %>% pull(species_key)
-  excl_gn <- d %>% filter(!is.na(genus_key)) %>% distinct(method, genus_key) %>%
+  excl_gn <- d %>% filter(!is.na(genus_key)) %>% distinct(grp, genus_key) %>%
     count(genus_key) %>% filter(n == 1) %>% pull(genus_key)
-  d %>% group_by(method) %>%
+  # NOTE: no per-100 rate here -- taxa/100 (and the fair RAREFIED per-100) is the
+  # efficiency figure's job (coverage_efficiency_by_method.R); duplicating a raw
+  # rate in the yield table just weakens that story. Yield = records + taxa + exclusive.
+  d %>% group_by(grp) %>%
     summarise(
       n_records         = n(),
       species           = n_distinct(species_key[!is.na(species_key)]),
       genera            = n_distinct(genus_key[!is.na(genus_key)]),
       exclusive_species = n_distinct(species_key[!is.na(species_key) & species_key %in% excl_sp]),
       exclusive_genera  = n_distinct(genus_key[!is.na(genus_key) & genus_key %in% excl_gn]),
-      .groups = "drop") %>%
-    mutate(species_per_100_records = round(100 * species / n_records, 1),
-           genera_per_100_records  = round(100 * genera  / n_records, 1))
+      .groups = "drop")
 }
-tbl <- yield_tbl(rec)
-tbl <- tbl[match(c("lethal", "nonlethal"), tbl$method), ]; tbl <- tbl[!is.na(tbl$method), ]
-write.csv(tbl, file.path(OUT_DIR, "coverage_yield_by_method.csv"), row.names = FALSE)
-message("\nYield by METHOD (survey-only, Mar-Oct 2021-2023):"); print(as.data.frame(tbl), row.names = FALSE)
 
-# ---- 3. one 4-panel yield figure (rank = "species" or "genus") --------------
+# =============================================================================
+# JOURNAL -- fair-window method table (backs the journal Venn / efficiency figs)
+# =============================================================================
+rec_fair <- rec_all %>%
+  filter(is_survey, !is.na(month), month %in% FAIR_MONTHS,
+         !is.na(year), year %in% FAIR_YEARS, surveyor != "unattributed")
+tbl_j <- yield_by(rec_fair, "method")
+tbl_j <- tbl_j[match(c("lethal", "nonlethal"), tbl_j$grp), ]; tbl_j <- tbl_j[!is.na(tbl_j$grp), ]
+names(tbl_j)[1] <- "method"
+write.csv(tbl_j, file.path(OUT_DIR, "coverage_yield_by_method_journal.csv"), row.names = FALSE)
+message(sprintf("JOURNAL (fair window): lethal %d recs / %d sp / %d gen ; non-lethal %d recs / %d sp / %d gen",
+                tbl_j$n_records[1], tbl_j$species[1], tbl_j$genera[1],
+                tbl_j$n_records[2], tbl_j$species[2], tbl_j$genera[2]))
 
-message("\nWrote coverage_yield_by_method.csv (table only -- yield is now shown in the method Venn) to ", OUT_DIR)
+# =============================================================================
+# REPORT -- ALL records, two reconciling views (by contributor + by method)
+# =============================================================================
+rep_rec <- rec_all %>%
+  mutate(
+    contributor = case_when(
+      method == "lethal"        ~ "interns",                # all specimens are intern-collected
+      surveyor == "beeple"      ~ "beeple",
+      surveyor == "intern"      ~ "interns",                # interns' 2024 iNaturalist photos
+      TRUE                      ~ "general public"),        # blank/unattributed casual photos
+    method_lbl = ifelse(method == "lethal", "lethal", "non-lethal"))
+
+CONTRIB <- c("general public", "beeple", "interns")
+METHODL <- c("lethal", "non-lethal")
+tbl_c <- yield_by(rep_rec, "contributor"); tbl_c <- tbl_c[match(CONTRIB, tbl_c$grp), ]
+tbl_m <- yield_by(rep_rec, "method_lbl");  tbl_m <- tbl_m[match(METHODL, tbl_m$grp), ]
+write.csv(tbl_c, file.path(OUT_DIR, "coverage_yield_by_method_report_contributor.csv"), row.names = FALSE)
+write.csv(tbl_m, file.path(OUT_DIR, "coverage_yield_by_method_report_method.csv"),      row.names = FALSE)
+message(sprintf("REPORT by contributor: %s",
+                paste(sprintf("%s=%d recs", tbl_c$grp, tbl_c$n_records), collapse = "  ")))
+message(sprintf("REPORT by method:      %s   (grand totals reconcile: contrib=%d, method=%d)",
+                paste(sprintf("%s=%d recs", tbl_m$grp, tbl_m$n_records), collapse = "  "),
+                sum(tbl_c$n_records), sum(tbl_m$n_records)))
+
+# palette: purple = net/lethal/interns, vermillion = photo/non-lethal/beeple, gray = public
+GRP_COL <- c(
+  "general public" = unname(BEE_INK$muted),
+  "beeple"         = unname(BEE_METHOD_COL["nonlethal"]),
+  "interns"        = unname(BEE_METHOD_COL["lethal"]),
+  "lethal"         = unname(BEE_METHOD_COL["lethal"]),
+  "non-lethal"     = unname(BEE_METHOD_COL["nonlethal"]))
+GRP_LEVELS <- c(CONTRIB, METHODL)
+
+# melt one yield table (chosen rank) into (section, group, metric, value) for 3 metrics
+report_long <- function(tbl, section, rank) {
+  m <- if (rank == "species")
+    c(n_records = "Records", species = "Species Recorded", exclusive_species = "Group-Exclusive Species")
+  else
+    c(n_records = "Records", genera = "Genera Recorded", exclusive_genera = "Group-Exclusive Genera")
+  do.call(rbind, lapply(names(m), function(k)
+    data.frame(section = section, group = tbl$grp, metric = m[[k]],
+               value = tbl[[k]], stringsAsFactors = FALSE)))
+}
+
+plot_report <- function(rank, file) {
+  metrics <- if (rank == "species")
+    c("Records", "Species Recorded", "Group-Exclusive Species")
+  else
+    c("Records", "Genera Recorded", "Group-Exclusive Genera")
+  long <- rbind(report_long(tbl_c, "By Contributor", rank),
+                report_long(tbl_m, "By Method",      rank))
+  long$group <- factor(long$group, levels = GRP_LEVELS)
+  long$panel <- factor(paste0(long$section, ": ", long$metric),
+                       levels = c(paste0("By Contributor: ", metrics),
+                                  paste0("By Method: ",      metrics)))
+  ttl <- sprintf("Bee Yield of Records at %s Level", tools::toTitleCase(rank))
+  g <- ggplot(long, aes(x = group, y = value, fill = group)) +
+    geom_col(width = 0.66) +
+    geom_text(aes(label = value), vjust = -0.35, size = 2.7, colour = BEE_INK$secondary) +
+    facet_wrap(~ panel, scales = "free", ncol = 3) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
+    scale_fill_manual(values = GRP_COL, guide = "none") +
+    labs(title = ttl,
+         subtitle = "All records (no window). Top: who found them (general public / beeple / interns). Bottom: by method (all records pooled).",
+         caption = "REPORT scope: every specimen + every iNaturalist photo, survey or not. Interns' bar = their specimens + 2024 photos, so\nthe two views reconcile to the same total. Group-exclusive = a taxon recorded by ONLY that group within its view.",
+         x = NULL, y = NULL) +
+    theme_beescabr(11) +
+    theme(axis.text.x = element_text(size = 8.5),
+          panel.grid.major.x = element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(size = 8.7, hjust = 0.5))
+  ggsave(file, g, width = 9.5, height = 6.4, dpi = 200, bg = "white")
+}
+plot_report("species", file.path(OUT_DIR, "coverage_yield_by_method_report_species.png"))
+plot_report("genus",   file.path(OUT_DIR, "coverage_yield_by_method_report_genus.png"))
+
+message("\nWrote JOURNAL table (_journal.csv) + REPORT figure (_report_{species,genus}.png) + report CSVs to ", OUT_DIR)

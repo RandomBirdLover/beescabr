@@ -84,19 +84,24 @@ plot_df <- data.frame(
   lab = c(sprintf("%.3f%%   (%.0f acres of ~%s sq mi)", area_pct, CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ",")),
           sprintf("%.0f%%   (%d of %d species)", sp_pct, n_cabr_sp, n_hol_sp),
           sprintf("%.0f%%   (%d of %d genera)", gen_pct, n_cabr_gn, n_hol_gn)))
-g <- ggplot(plot_df, aes(x = pct, y = measure, fill = pct)) +
-  geom_col(width = 0.62) +
-  geom_text(aes(label = lab), hjust = 0, nudge_x = 0.8, size = 3.5, colour = BEE_INK$secondary) +
-  scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
-  scale_x_continuous(limits = c(0, max(gen_pct) * 1.65), expand = expansion(mult = c(0, 0))) +
-  labs(title = sprintf("Cabrillo Carries ~%.0f%% of San Diego County's Native Bee Genera on %.3f%% of the Land",
-                       gen_pct, area_pct),
+# lollipop (line + dot), NOT bars: land area is ~0.006%, so a bar is invisible and reads as
+# "missing". A dot anchors every measure -- the land-area dot sits right at zero (the point of
+# the figure), while the species/genus dots still show magnitude by position.
+g <- ggplot(plot_df, aes(x = pct, y = measure, colour = pct)) +
+  geom_segment(aes(x = 0, xend = pct, yend = measure), linewidth = 1.8) +
+  geom_point(size = 5.5) +
+  geom_text(aes(label = lab), hjust = 0, nudge_x = 1.1, size = 3.5, colour = BEE_INK$secondary) +
+  scale_colour_gradientn(colors = BEE_SEQ, guide = "none") +
+  scale_x_continuous(limits = c(0, max(gen_pct) * 1.7), expand = expansion(mult = c(0.02, 0))) +
+  labs(title = sprintf("Cabrillo Carries ~%.0f%% of San Diego County's Native Bees on ~%.3f%% of Its Land",
+                       sp_pct, area_pct),
        caption = str_wrap(paste0(scope_cap("CABR official checklist vs Holway San Diego County checklist (v3)",
                             "specimen + iNaturalist", "distinct species & genera"),
                             sprintf("  |  CABR = %.0f acres of ~%s sq mi. It holds ~1 in 9 of the county's bee species and %.0f%% of its genera -- roughly %sx its share by area.",
                                     CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ","), gen_pct, format(round(overrep, -2), big.mark = ","))), 104),
        x = "CABR's share of San Diego County (%)", y = NULL) +
   theme_beescabr(12) +
-  theme(legend.position = "none", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
+  theme(legend.position = "none", panel.grid.major.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_DIR, "cabr_share_of_county.png"), g, width = 9.5, height = 4.8, dpi = 200, bg = "white")
 message("Wrote cabr_share_of_county.{png,csv} to ", OUT_DIR)
