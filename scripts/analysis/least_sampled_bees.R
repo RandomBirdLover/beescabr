@@ -37,7 +37,7 @@ if (!exists("plant_label")) source("scripts/analysis/plant_names.R")            
 
 OUT_DIR       <- "data/analysis/coverage/least_sampled"
 SPECIES_RANKS <- c("species", "subspecies")
-THIN_TOTAL    <- 10          # < this many records TOTAL (both methods) -> "least sampled"
+THIN_TOTAL    <- 50          # < this many records TOTAL (both methods) -> "least sampled" (matches the report's 50-record floor)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 has <- function(x) !is.na(x) & x != ""
 

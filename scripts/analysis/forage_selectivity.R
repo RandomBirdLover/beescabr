@@ -39,7 +39,7 @@
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
 
-SELECT_MIN_REC     <- 20                                            # min plant-visit records to judge selectivity
+SELECT_MIN_REC     <- 50                                            # REPORT floor: min plant-visit records to judge selectivity (& to state a field-guide preference)
 SELECT_GENUS_RANKS <- c("species", "subspecies", "subgenus", "complex", "genus")
 SELECT_B           <- 4999                                          # Monte-Carlo reps (higher = stabler p near the 0.05 cutoff)
 
@@ -193,7 +193,7 @@ forage_preference_label <- function(genus, plant_fmt = function(x) x, min_rec = 
     else if (!is.na(r$n_records) && r$n_records >= min_rec)
       "Generalist (visits ~ availability)"
     else
-      "too few records to judge"
+      "not enough records"
   }, character(1))
 }
 
@@ -273,6 +273,6 @@ forage_preference_label_species <- function(species, plant_fmt = function(x) x, 
     else if (!is.na(r$n_records) && r$n_records >= min_rec)
       "Generalist (visits ~ availability)"
     else
-      "too few records to judge"
+      "not enough records"
   }, character(1))
 }

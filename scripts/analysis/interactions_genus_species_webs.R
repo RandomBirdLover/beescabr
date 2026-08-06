@@ -43,7 +43,7 @@ OUT_DIR   <- "data/analysis/interactions/networks"
 WEB_DIR   <- file.path(OUT_DIR, "genus_species_webs")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_SPECIES <- 2      # a bee genus needs at least this many species to compare them
-MIN_REC     <- 20     # ... and at least this many species+plant records to draw a web
+MIN_REC     <- 25     # ... and at least this many species+plant records to draw a web
 TOP_PLANTS  <- 30     # cap plant genera shown per web for legibility
 dir.create(WEB_DIR, recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
@@ -212,27 +212,40 @@ write.csv(sp_tbl, file.path(OUT_DIR, "interactions_genus_species_specialization.
 message("Webs written to ", WEB_DIR, " (", nrow(keep), " genera)")
 print(h2_tbl, row.names = FALSE)
 
-# ---- 3. overview: within-genus H2' -- SIGNIFICANT genera only -----------------
+# ---- 3. overview: within-genus H2' ------------------------------------------
+# Dark bar + H2' = genera whose species SIGNIFICANTLY partition plants. Genera with too few
+# records to test (< MIN_REC, but >= 2 species) are kept as GRAY "not enough records" bars
+# rather than silently dropped, so the overview shows the whole multi-species set honestly.
 n_tested <- sum(!is.na(h2_tbl$H2prime))
-ov <- h2_tbl %>% filter(!is.na(H2prime), !is.na(H2prime_p), H2prime_p < 0.05) %>%
-  mutate(bee_genus = factor(bee_genus, levels = rev(bee_genus)))
+GRAY_STUB <- 0.06                                     # tiny visible stub for the "no score" bars
+ov_sig <- h2_tbl %>% filter(!is.na(H2prime), !is.na(H2prime_p), H2prime_p < 0.05) %>%
+  transmute(bee_genus, x = H2prime, status = "specialist species", lab = sprintf("%.2f", H2prime))
+ov_gray <- if (nrow(dropped))
+  data.frame(bee_genus = sort(dropped$bee_genus), x = GRAY_STUB, status = "not enough records",
+             lab = "not enough records", stringsAsFactors = FALSE) else ov_sig[0, ]
+ov <- bind_rows(ov_sig, ov_gray)
+ov$bee_genus <- factor(ov$bee_genus,
+  levels = rev(c(ov_sig$bee_genus[order(-ov_sig$x)], sort(ov_gray$bee_genus))))
+ov$status <- factor(ov$status, levels = c("specialist species", "not enough records"))
 drop_note <- if (length(ns_dropped)) {
-    sprintf("  Generalists -- their species overlap on the same plants, with no significant partitioning once flight-season & method are controlled (not shown): %s.",
+    sprintf("  Generalists -- species overlap on the same plants, no significant partitioning once flight-season & method are controlled (not shown): %s.",
             paste(sort(ns_dropped), collapse = ", "))
   } else ""
-g <- ggplot(ov, aes(x = H2prime, y = bee_genus)) +
-  geom_col(width = 0.72, fill = "#3C3B36") +
-  geom_text(aes(label = sprintf("%.2f", H2prime)), hjust = -0.2, size = 3.2, colour = BEE_INK$secondary) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
+g <- ggplot(ov, aes(x = x, y = bee_genus, fill = status)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = lab), hjust = -0.12, size = 3.0, colour = BEE_INK$secondary) +
+  scale_fill_manual(values = c("specialist species" = "#3C3B36",
+                               "not enough records" = unname(BEE_INK$muted)), name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
   labs(title = "Which Bee Genera Have Specialist Species?",
        subtitle = str_wrap(paste0(
-         sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for the species' differing flight seasons & survey methods -- higher bar = stronger specialisation. Showing the %d of %d tested genera whose species significantly specialise (p<0.05).",
-                 nrow(ov), n_tested), drop_note), 96),
+         sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for flight season & method -- higher bar = stronger specialisation. Dark = the %d of %d tested genera whose species significantly specialise (p<0.05); GRAY = too few records (<%d) to test.",
+                 nrow(ov_sig), n_tested, MIN_REC), drop_note), 96),
        caption = "Within-genus niche partitioning",
        x = "within-genus H2'   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
-        legend.position = "none", panel.grid.major.y = element_blank())
+        legend.position = "top", panel.grid.major.y = element_blank())
 ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
-       width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 1.8), dpi = 200, bg = "white")
+       width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 2.0), dpi = 200, bg = "white")
 message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")

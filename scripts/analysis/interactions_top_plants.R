@@ -30,7 +30,7 @@ if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # s
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 OUT_DIR   <- "data/analysis/interactions/top_plants"
 TOP_N     <- 10          # top plants for the headline table/figure
-TOP_MONTH <- 12          # plants shown in the month heatmap
+TOP_MONTH <- 10          # plants shown in the month heatmap (matched to TOP_N)
 COL_LETHAL <- unname(BEE_METHOD_COL["lethal"]); COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # purple net / vermillion photo
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"

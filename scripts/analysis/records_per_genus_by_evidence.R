@@ -30,64 +30,64 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_DIR <- "data/analysis/coverage/records_by_evidence"
-MIN_SHOWN <- 50    # figure shows only genera with >= this many total records (long tail dropped; full list in CSV)
+MIN_REPORT  <- 50    # report (all records) figure cutoff
+MIN_JOURNAL <- 25    # journal (fair window) figure cutoff -- fewer records, so a lower bar
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 norm <- function(x) str_squish(as.character(x))
+is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
-# ---- 1. pool records, tag METHOD (lethal = specimen, non-lethal = any iNat photo) ----
+# ---- 1. pool records with a genus, tag METHOD + fair-window fields -----------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
+grab <- function(df, method) {
+  st <- str_squish(tolower(as.character(df$surveyor_type))); st[is.na(st) | st == ""] <- "unattributed"
+  d <- data.frame(genus = norm(df$genus), method = method,
+                  surv = is_true(df$is_survey), st = st,
+                  mo = suppressWarnings(as.integer(substr(df$observed_on, 6, 7))),
+                  yr = suppressWarnings(as.integer(substr(df$observed_on, 1, 4))),
+                  stringsAsFactors = FALSE)
+  d[!is.na(d$genus) & d$genus != "", ]
+}
+rec_all  <- bind_rows(grab(spec, "lethal"), grab(inat, "nonlethal"))
+# fair window (journal): survey-only, Mar-Oct 2021-2023, attributed
+rec_fair <- rec_all %>% filter(surv, mo %in% FAIR_MONTHS, yr %in% FAIR_YEARS, st != "unattributed")
 
-spec_ev <- spec %>%
-  filter(!is.na(genus), norm(genus) != "") %>%
-  transmute(genus = norm(genus), method = "lethal")
-inat_ev <- inat %>%                                    # research-grade + needs-ID pooled = non-lethal
-  filter(!is.na(genus), norm(genus) != "") %>%
-  transmute(genus = norm(genus), method = "nonlethal")
-rec <- bind_rows(spec_ev, inat_ev)
-message(sprintf("Records with a genus: %d (lethal/specimen %d, non-lethal/iNat %d)",
-                nrow(rec), sum(rec$method == "lethal"), sum(rec$method == "nonlethal")))
-
-# ---- 2. per-genus method composition + total --------------------------------
-wide <- rec %>%
-  count(genus, method, name = "n") %>%
-  tidyr::pivot_wider(names_from = method, values_from = n, values_fill = 0)
-for (col in c("lethal", "nonlethal"))
-  if (is.null(wide[[col]])) wide[[col]] <- 0L          # guard: a method may be entirely absent
-wide <- wide %>%
-  mutate(total = lethal + nonlethal,
-         thin  = bee_low_n(total)) %>%                 # shared <10-record flag
-  arrange(desc(total))
-write.csv(wide, file.path(OUT_DIR, "records_per_genus_by_evidence.csv"), row.names = FALSE)
-
-message("\nTop genera by records:")
-print(head(wide[, c("genus", "lethal", "nonlethal", "total")], 10), row.names = FALSE)
-
-# ---- 3. figure: stacked bars, one row per genus, coloured by METHOD ----------
-# stack order lethal (rose, base) -> non-lethal (periwinkle, tip); genera by total.
-# figure shows only genera with >= MIN_SHOWN total records; the long tail is dropped for
-# readability -- the FULL list stays in the CSV written above.
-wf  <- wide %>% filter(total >= MIN_SHOWN)
-lab <- wf$genus
-long <- bind_rows(
-  data.frame(genus = wf$genus, lab = lab, total = wf$total, method = "lethal",    n = wf$lethal),
-  data.frame(genus = wf$genus, lab = lab, total = wf$total, method = "nonlethal", n = wf$nonlethal))
-long$method <- factor(long$method, levels = c("lethal", "nonlethal"))
-long$lab    <- factor(long$lab, levels = rev(lab))     # biggest total at the top
-
-g <- ggplot(long, aes(x = n, y = lab, fill = method)) +
-  geom_col(width = 0.74, position = position_stack(reverse = TRUE)) +   # lethal (base) -> non-lethal (tip)
-  geom_text(data = wf, aes(x = total, y = factor(genus, levels = rev(lab)), label = total),
-            hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
-  scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
-  labs(title = "Total Records of Bee Genera",
-       subtitle = sprintf("Genera with >= %d records (%d of %d shown; full list in the CSV)", MIN_SHOWN, nrow(wf), nrow(wide)),
-       x = "Number of records", y = NULL) +
-  theme_beescabr(11) +
-  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
-        panel.grid.major.y = element_blank())
-ggsave(file.path(OUT_DIR, "records_per_genus_by_evidence.png"), g,
-       width = 9, height = max(5, 0.34 * nrow(wf) + 1.7), dpi = 200, bg = "white")
-
-message("\nWrote records_per_genus_by_evidence.{csv,png} to ", OUT_DIR)
+# ---- 2. figure builder: per-genus method composition, trimmed by threshold ---
+# SPLIT figure: report = ALL records (>= MIN_REPORT); journal = FAIR WINDOW (>= MIN_JOURNAL).
+# The long tail is dropped from the FIGURE for readability -- the full list stays in the CSV.
+make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
+  wide <- rec %>% count(genus, method, name = "n") %>%
+    tidyr::pivot_wider(names_from = method, values_from = n, values_fill = 0)
+  for (col in c("lethal", "nonlethal")) if (is.null(wide[[col]])) wide[[col]] <- 0L
+  wide <- wide %>% mutate(total = lethal + nonlethal) %>% arrange(desc(total))
+  write.csv(wide, out_csv, row.names = FALSE)
+  wf  <- wide %>% filter(total >= min_shown)
+  lab <- wf$genus
+  long <- bind_rows(
+    data.frame(genus = wf$genus, method = "lethal",    n = wf$lethal),
+    data.frame(genus = wf$genus, method = "nonlethal", n = wf$nonlethal))
+  long$method <- factor(long$method, levels = c("lethal", "nonlethal"))
+  long$genus  <- factor(long$genus, levels = rev(lab))
+  g <- ggplot(long, aes(x = n, y = genus, fill = method)) +
+    geom_col(width = 0.74, position = position_stack(reverse = TRUE)) +
+    geom_text(data = wf, aes(x = total, y = factor(genus, levels = rev(lab)), label = total),
+              hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
+    scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
+    labs(title = "Total Records of Bee Genera",
+         subtitle = sprintf("%s -- genera with >= %d records (%d of %d shown; full list in the CSV)",
+                            scope_lab, min_shown, nrow(wf), nrow(wide)),
+         x = "Number of records", y = NULL) +
+    theme_beescabr(11) +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
+          panel.grid.major.y = element_blank())
+  ggsave(out_png, g, width = 9, height = max(5, 0.34 * nrow(wf) + 1.7), dpi = 200, bg = "white")
+  message(sprintf("  %-32s %d of %d genera >= %d records", scope_lab, nrow(wf), nrow(wide), min_shown))
+}
+make_fig(rec_all,  MIN_REPORT,  "All records (report)",
+         file.path(OUT_DIR, "records_per_genus_by_evidence_report.png"),
+         file.path(OUT_DIR, "records_per_genus_by_evidence_report.csv"))
+make_fig(rec_fair, MIN_JOURNAL, "Fair window: Mar-Oct 2021-2023 (journal)",
+         file.path(OUT_DIR, "records_per_genus_by_evidence_journal.png"),
+         file.path(OUT_DIR, "records_per_genus_by_evidence_journal.csv"))
+message("\nWrote records_per_genus_by_evidence_{report,journal}.{csv,png} to ", OUT_DIR)

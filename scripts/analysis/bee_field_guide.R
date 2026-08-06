@@ -28,6 +28,7 @@ SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
 UNCOMMON_CUT  <- 50          # < this -> "uncommon"; >= this -> "common"
+CLAIM_MIN     <- 50          # < this many records -> DON'T claim an interpretive column (diet); reads "not enough records"
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -106,7 +107,7 @@ rows <- lapply(sp_keys, function(k) {
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
     n_plant_genera = length(fl),
-    diet           = diet_call(length(fl), nrow(pv)),
+    diet           = if (nrow(d) < CLAIM_MIN) "not enough records" else diet_call(length(fl), nrow(pv)),
     where_to_find  = where_call(d),
     stringsAsFactors = FALSE)
 })

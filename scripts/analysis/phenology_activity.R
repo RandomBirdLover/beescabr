@@ -43,7 +43,7 @@ if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared p
 OUT_DIR       <- "data/analysis/phenology"
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-MIN_RECORDS   <- BEE_MIN_RECORDS   # shared >=10-record rule: sparser taxa are excluded (too few to read a season)
+MIN_RECORDS   <- 25   # REPORT floor for phenology: a taxon needs >=25 records to draw a seasonal curve
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
 # figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
 # reinforced by peak-day ordering. Never a categorical transect, so it stays local, not a house concept.

@@ -35,6 +35,7 @@ OUT_DIR       <- "data/analysis/reference/field_guide"
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
 UNCOMMON_CUT  <- 50          # < this -> "uncommon"; >= this -> "common"
+CLAIM_MIN     <- 50          # < this many records -> DON'T claim an interpretive column (flower breadth); reads "not enough records"
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -115,7 +116,7 @@ rows <- lapply(gen_keys, function(k) {
     active_months  = active_months(d$doy),
     top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
     n_plant_genera = length(fl),
-    flower_breadth = breadth_call(length(fl), nrow(pv)),
+    flower_breadth = if (nrow(d) < CLAIM_MIN) "not enough records" else breadth_call(length(fl), nrow(pv)),
     top_plant      = top_plant,
     where_to_find  = where_call(d),
     stringsAsFactors = FALSE)
@@ -170,7 +171,7 @@ html <- paste0(
 '</style></head><body>',
 '<h1>CABR native bee field guide - by genus</h1>',
 '<p class="sub">Companion to the species guide: one row per GENUS, pooling every record of that genus (specimen net + iNaturalist, all ID ranks) so the hard-to-ID diverse genera keep their flower associations for planting. &quot;Species ID&#39;d&quot; = distinct species we have pinned in the genus (0 = none yet). Peak day = circular mean of record dates; active months = 5th-95th percentile; flower breadth = how many plant genera the genus uses (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+); most-used plant = its single most-recorded plant and that plant&#39;s share of the genus&#39;s flower visits (a raw count, not a preference &mdash; see Forage preference); where = favoured transect(s) or an off-transect centre + buffer; status = how often the genus is recorded here (rare/uncommon/common &mdash; Records and Status count ALL data incl. casual iNaturalist photos across all years, so they are recording frequency, not survey-controlled abundance). Rows in grey are rarely recorded (peak/season are rough). Click a column header to sort.</p>',
-'<p class="sub"><b>Most-recorded flowers and Most-used plant are exactly that &mdash; the plants seen most often</b>, which blends how much the plant was blooming and sampled with genuine preference, so neither is proof the genus &quot;likes&quot; it best. <b>Forage preference</b> corrects for that, matching on bloom timing, year AND survey method: a matched Monte-Carlo chi-square compares the genus&#39;s visits to what the rest of the community recorded <i>in the same month, year and method (net vs photo)</i> &mdash; so a one-good-year bloom (drought/rain) or a photo-vs-net sampling quirk can&#39;t masquerade as a preference. &quot;Selective &rarr; plant (N&times; vs available)&quot; = visits that plant N times more than its same-year-month availability would predict; &quot;Generalist&quot; = visits roughly in proportion to what&#39;s around then (no real preference); &quot;too few records&quot; = not enough data to judge. Caveat: &quot;availability&quot; is the community&#39;s realized plant use per year-month (a strong proxy, not an independent bloom census), and genera whose p sits near 0.05 are borderline.</p>',
+'<p class="sub"><b>Most-recorded flowers and Most-used plant are exactly that &mdash; the plants seen most often</b>, which blends how much the plant was blooming and sampled with genuine preference, so neither is proof the genus &quot;likes&quot; it best. <b>Forage preference</b> corrects for that, matching on bloom timing, year AND survey method: a matched Monte-Carlo chi-square compares the genus&#39;s visits to what the rest of the community recorded <i>in the same month, year and method (net vs photo)</i> &mdash; so a one-good-year bloom (drought/rain) or a photo-vs-net sampling quirk can&#39;t masquerade as a preference. &quot;Selective &rarr; plant (N&times; vs available)&quot; = visits that plant N times more than its same-year-month availability would predict; &quot;Generalist&quot; = visits roughly in proportion to what&#39;s around then (no real preference); &quot;not enough records&quot; = too few to judge. Caveat: &quot;availability&quot; is the community&#39;s realized plant use per year-month (a strong proxy, not an independent bloom census), and genera whose p sits near 0.05 are borderline.</p>',
 '<table id="t"><thead><tr>',
 '<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Flower breadth</th><th>Most-used plant</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',

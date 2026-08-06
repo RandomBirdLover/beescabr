@@ -38,7 +38,7 @@ if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # 
 OUT_DIR <- "data/analysis/reference/conservation"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-RARE_CUT      <- 15                              # a bee is "rare" if we have < this many records
+RARE_CUT      <- 25                              # a bee is "rare" if we have < this many records
 SPECIES_RANKS <- c("species", "subspecies")
 has <- function(x) !is.na(x) & x != ""
 

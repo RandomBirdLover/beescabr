@@ -47,7 +47,7 @@ CRS_LATLON    <- 4326
 CRS_UTM       <- 32611          # UTM zone 11N -- CABR / San Diego, metres
 CELL_M        <- 75             # grid cell size (metres); accuracy median ~4 m
 MAX_ACCURACY  <- 250            # drop iNat points looser than this (metres); NA kept
-RAREFY_N      <- 20             # rarefy cells with >= this many records to this count
+RAREFY_N      <- 50             # REPORT floor: rarefy grid cells with >= this many records to this count
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")   # for the per-transect richness summary
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
@@ -159,12 +159,16 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
 # named transects plus OT (off-transect) as its own bar -- see TRANSECTS.
 tr_key <- function(df, method) df %>% transmute(
   method = method, transect = toupper(str_squish(transect)),
+  surveyor  = str_squish(tolower(as.character(surveyor_type))),
+  is_survey = is_true(is_survey),
+  month = suppressWarnings(as.integer(substr(observed_on, 6, 7))),
+  year  = suppressWarnings(as.integer(substr(observed_on, 1, 4))),
   species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
                          !is.na(species) & species != "", paste(genus, word(species, -1)), NA),
   genus_key   = ifelse(taxon_rank %in% GENUS_RANKS & !is.na(genus) & genus != "", genus, NA))
-tr_tbl <- bind_rows(tr_key(spec, "lethal"), tr_key(inat, "nonlethal")) %>%
-  filter(transect %in% TRANSECTS) %>%
-  group_by(transect) %>%
+recs2 <- bind_rows(tr_key(spec, "lethal"), tr_key(inat, "nonlethal")) %>% filter(transect %in% TRANSECTS)
+
+summ <- function(dat) dat %>% group_by(transect) %>%
   summarise(n_records         = n(),
             genus_richness    = n_distinct(genus_key[!is.na(genus_key)]),
             species_richness  = n_distinct(species_key[!is.na(species_key)]),
@@ -172,17 +176,20 @@ tr_tbl <- bind_rows(tr_key(spec, "lethal"), tr_key(inat, "nonlethal")) %>%
             records_nonlethal = sum(method == "nonlethal"),
             .groups = "drop") %>%
   arrange(desc(species_richness))
-write.csv(tr_tbl, file.path(OUT_DIR, "transect_richness.csv"), row.names = FALSE)
-message("Per-transect richness (both methods): ",
+
+tr_tbl <- summ(recs2)                                    # REPORT: all records, all transects
+# JOURNAL fair window: survey-only, Mar-Oct 2021-2023, lethal = intern nets (all specimens),
+# non-lethal = beeple photos. OT drops out naturally (no 2021-2023 surveys).
+tr_tbl_fair <- summ(recs2 %>% filter(is_survey, month %in% FAIR_MONTHS, year %in% FAIR_YEARS,
+                                     method == "lethal" | (method == "nonlethal" & surveyor == "beeple")))
+write.csv(tr_tbl,      file.path(OUT_DIR, "transect_richness.csv"),      row.names = FALSE)
+write.csv(tr_tbl_fair, file.path(OUT_DIR, "transect_effort_journal.csv"), row.names = FALSE)
+message("Per-transect richness (report, all records): ",
         paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
-# TWO separate, legible per-transect bar charts (a clearer replacement for the raw grid maps):
-#   transect_richness.png -- distinct species + genera per transect
-#   transect_effort.png   -- record count per transect, split lethal (net) vs non-lethal (photo)
-# Both share the same transect order (richest first).
-tr_lvl <- as.character(tr_tbl$transect[order(-tr_tbl$species_richness)])   # shared x order (richest first)
-tt <- tr_tbl; tt$transect <- factor(tt$transect, levels = tr_lvl)
 lab_col <- BEE_INK$secondary
 
+# ---- transect_richness.png -- REPORT ONLY: distinct species + genera per transect ----
+tt <- tr_tbl; tt$transect <- factor(tt$transect, levels = as.character(tr_tbl$transect[order(-tr_tbl$species_richness)]))
 rich_long <- bind_rows(
   data.frame(transect = tt$transect, rank = "species", value = tt$species_richness),
   data.frame(transect = tt$transect, rank = "genus",   value = tt$genus_richness))
@@ -197,25 +204,31 @@ gA <- ggplot(rich_long, aes(transect, value, fill = rank)) +
        x = NULL, y = "distinct taxa") +
   base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
                      plot.title = element_text(hjust = 0.5))
-
-eff_long <- bind_rows(
-  data.frame(transect = tt$transect, method = "non-lethal", value = tt$records_nonlethal),
-  data.frame(transect = tt$transect, method = "lethal",     value = tt$records_lethal))
-eff_long$method <- factor(eff_long$method, levels = c("non-lethal", "lethal"))
-gB <- ggplot(eff_long, aes(transect, value, fill = method)) +
-  geom_col(width = 0.66) +
-  geom_text(data = tt, aes(transect, n_records, label = n_records), vjust = -0.35, size = 3, colour = lab_col, inherit.aes = FALSE) +
-  scale_fill_manual(values = setNames(unname(BEE_METHOD_COL[c("nonlethal", "lethal")]),
-                                      c("non-lethal", "lethal")), name = NULL) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
-  labs(title = "Bee Sampling Effort by Transect",
-       subtitle = str_wrap(scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"), 72),
-       caption = str_wrap("Note: TP shows about double the effort of the other transects because it was surveyed as two separate transects each survey.", 90),
-       x = NULL, y = "records") +
-  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
-                     plot.title = element_text(hjust = 0.5))
-
 ggsave(file.path(OUT_DIR, "transect_richness.png"), gA, width = 6.4, height = 5, dpi = 200, bg = "white")
-ggsave(file.path(OUT_DIR, "transect_effort.png"),   gB, width = 6.4, height = 5, dpi = 200, bg = "white")
 
-message("Per-transect richness + effort charts (+ spatial_richness_grid.csv) written to ", OUT_DIR)
+# ---- transect_effort -- SPLIT: records per transect, lethal vs non-lethal ----
+effort_chart <- function(tbl, file, scope_lab) {
+  tbl$transect <- factor(tbl$transect, levels = as.character(tbl$transect[order(-tbl$n_records)]))
+  eff_long <- bind_rows(
+    data.frame(transect = tbl$transect, method = "non-lethal", value = tbl$records_nonlethal),
+    data.frame(transect = tbl$transect, method = "lethal",     value = tbl$records_lethal))
+  eff_long$method <- factor(eff_long$method, levels = c("non-lethal", "lethal"))
+  g <- ggplot(eff_long, aes(transect, value, fill = method)) +
+    geom_col(width = 0.66) +
+    geom_text(data = tbl, aes(transect, n_records, label = n_records), vjust = -0.35, size = 3, colour = lab_col, inherit.aes = FALSE) +
+    scale_fill_manual(values = setNames(unname(BEE_METHOD_COL[c("nonlethal", "lethal")]),
+                                        c("non-lethal", "lethal")), name = NULL) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
+    labs(title = "Bee Sampling Effort by Transect", subtitle = str_wrap(scope_lab, 74),
+         caption = str_wrap("Note: TP shows about double the effort of the other transects because it was surveyed as two separate transects each survey.", 90),
+         x = NULL, y = "records") +
+    base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
+                       plot.title = element_text(hjust = 0.5))
+  ggsave(file, g, width = 6.4, height = 5, dpi = 200, bg = "white")
+}
+effort_chart(tr_tbl, file.path(OUT_DIR, "transect_effort_report.png"),
+             scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"))
+effort_chart(tr_tbl_fair, file.path(OUT_DIR, "transect_effort_journal.png"),
+             "Fair window: survey-only, Mar-Oct 2021-2023 (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)")
+
+message("Wrote transect_richness.png (report) + transect_effort_{report,journal}.png (+ spatial_richness_grid.csv) to ", OUT_DIR)

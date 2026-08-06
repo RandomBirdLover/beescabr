@@ -19,12 +19,16 @@
 # recorded no identifiable bee still count as effort (an empty row that flattens
 # the curve) -- that is the honest picture of survey return.
 #
-# THE LAYOUT: one panel per rank, with all transect x method curves OVERLAID on a single
-# plot -- COLOUR = transect (BST, UPMON, TP, OT) and LINE STYLE = method (solid = lethal net,
-# dashed = non-lethal photo). Two legends carry the two keys (transect colour, method style).
-# A `lethal` survey's taxa come from the specimen table (net), a `non-lethal` survey's from
-# iNaturalist (photo). The per-transect lethal/non-lethal split is also in the summary table.
-# Just TWO figures: species (Fig 1) and genera (Fig 2).
+# SPLIT by paper:
+#   * REPORT (_report) -- transect COMPLETENESS: one panel per rank, ONE curve PER TRANSECT
+#     (both methods POOLED -- method is noise for completeness), COLOUR = transect, + the
+#     Chao2 completeness table. "How well-sampled is each part of the park?"  ALL survey records.
+#   * JOURNAL (_journal) -- METHOD comparison as SMALL MULTIPLES: one panel per transect,
+#     each lethal vs non-lethal (lethal = intern nets, non-lethal = beeple photos), FAIR
+#     WINDOW (Mar-Oct 2021-2023). Shows the method effect is consistent ACROSS transects,
+#     not a pooling artifact. OT is dropped -- it was added in 2024 (no 2021-2023 surveys),
+#     so only BST/TP/UPMON appear; the freed grid cell holds the legend.
+# Each at BOTH ranks: species (Fig 1) and genera (Fig 2).
 #
 # RANK RULES: for the SPECIES figure only species-level IDs count (subspecies
 # rolled up). For the GENUS figure any ID that pins a genus counts
@@ -75,10 +79,12 @@ inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = F
 # lethal survey  -> specimen (net);  non-lethal survey -> iNat survey rows (photo)
 recs <- bind_rows(
   spec %>% transmute(date = trimws(observed_on), transect = toupper(trimws(transect)),
-                     method = "lethal", taxon_rank, genus, species),
+                     method = "lethal", taxon_rank, genus, species,
+                     surveyor = str_squish(tolower(as.character(surveyor_type))), is_survey = is_true(is_survey)),
   inat %>% filter(is_true(is_survey)) %>%
            transmute(date = trimws(observed_on), transect = toupper(trimws(transect)),
-                     method = "nonlethal", taxon_rank, genus, species)
+                     method = "nonlethal", taxon_rank, genus, species,
+                     surveyor = str_squish(tolower(as.character(surveyor_type))), is_survey = TRUE)
 ) %>%
   mutate(
     species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
@@ -86,9 +92,18 @@ recs <- bind_rows(
                          paste(genus, word(species, -1)), NA_character_),
     genus_key   = ifelse(taxon_rank %in% GENUS_RANKS & !is.na(genus) & genus != "",
                          genus, NA_character_),
+    month = suppressWarnings(as.integer(substr(date, 6, 7))),
+    year  = suppressWarnings(as.integer(substr(date, 1, 4))),
     k = paste(date, transect, method)
   )
-recs_by_key <- split(recs, recs$k)   # fast per-survey lookup
+recs_by_key <- split(recs, recs$k)   # fast per-survey lookup (report: all survey records)
+
+# fair window (JOURNAL method comparison): survey-only, Mar-Oct 2021-2023,
+# lethal = intern nets (all specimens are intern), non-lethal = beeple photos only
+# (drops casual public + interns' 2024 iNaturalist photos).
+recs_fair <- recs %>% filter(is_survey, month %in% FAIR_MONTHS, year %in% FAIR_YEARS,
+                             method == "lethal" | (method == "nonlethal" & surveyor == "beeple"))
+recs_by_key_fair <- split(recs_fair, recs_fair$k)
 
 # ---- 2. authoritative survey list, expanded to one row per (day x transect) --
 surv <- read.csv(PER_SURVEY_INFO, stringsAsFactors = FALSE, check.names = FALSE)
@@ -100,18 +115,22 @@ expanded <- surv[rep(seq_len(nrow(surv)), lengths(tl)), c("date", "method"), dro
 expanded$transect <- toupper(trimws(unlist(tl)))
 expanded <- expanded[expanded$transect %in% TRANSECTS, ]
 expanded$k <- paste(expanded$date, expanded$transect, expanded$method)
+expanded$year  <- suppressWarnings(as.integer(substr(expanded$date, 1, 4)))
+expanded$month <- suppressWarnings(as.integer(substr(expanded$date, 6, 7)))
+# survey events inside the fair window (journal method comparison)
+expanded_fair <- expanded[expanded$year %in% FAIR_YEARS & expanded$month %in% FAIR_MONTHS, ]
 
 # ---- 3. survey x taxa presence matrix for one group of surveys --------------
 # key_col = "species_key" or "genus_key". Rows are surveys (empty rows kept as
 # effort); columns are the taxa ever seen in that group.
-survey_taxa_matrix <- function(survey_rows, key_col) {
+survey_taxa_matrix <- function(survey_rows, key_col, lookup = recs_by_key) {
   taxa <- sort(unique(na.omit(
-    unlist(lapply(recs_by_key[survey_rows$k], function(df) df[[key_col]])))))
+    unlist(lapply(lookup[survey_rows$k], function(df) df[[key_col]])))))
   M <- matrix(0L, nrow = nrow(survey_rows), ncol = length(taxa),
               dimnames = list(NULL, taxa))
   if (length(taxa) == 0L) return(M)
   for (i in seq_len(nrow(survey_rows))) {
-    df <- recs_by_key[[survey_rows$k[i]]]
+    df <- lookup[[survey_rows$k[i]]]
     if (is.null(df)) next
     kk <- unique(na.omit(df[[key_col]]))
     if (length(kk)) M[i, kk] <- 1L
@@ -128,17 +147,17 @@ accumulate <- function(survey_rows, key_col) {
   specaccum(M, method = "random", permutations = PERMUTATIONS)
 }
 
-# Two figures only (species, genera). Each OVERLAYS all transect x method mean curves on
-# ONE panel -- COLOUR = transect, LINE STYLE = method (solid = lethal net, dashed = non-lethal
-# photo). Two legends carry the keys. CI bands are omitted on purpose (up to 8 overlapping
-# polygons are unreadable); the Chao2 +/- SE uncertainty lives in the summary table (section 5).
+# Two figures only (species, genera). Each OVERLAYS one curve PER TRANSECT (both methods
+# POOLED -- for completeness, method is noise): COLOUR = transect (BST, UPMON, TP, OT).
+# A single transect legend. CI bands are omitted (overlapping polygons are unreadable);
+# the Chao2 +/- SE uncertainty lives in the summary table (section 5).
 plot_accumulation <- function(key_col, rank_label, file) {
-  sacs <- list(); meta <- list()
-  for (tr in TRANSECTS) for (m in c("nonlethal", "lethal")) {
-    rows <- expanded[expanded$transect == tr & expanded$method == m, ]
+  sacs <- list()
+  for (tr in TRANSECTS) {
+    rows <- expanded[expanded$transect == tr, ]         # BOTH methods pooled
     if (!nrow(rows)) next
     s <- accumulate(rows, key_col); if (is.null(s)) next
-    key <- paste(tr, m); sacs[[key]] <- s; meta[[key]] <- list(tr = tr, m = m)
+    sacs[[tr]] <- s
   }
   if (!length(sacs)) { message("No ", rank_label, " to plot."); return(invisible()) }
   xmax <- max(vapply(sacs, function(s) max(s$sites),    numeric(1)))
@@ -149,28 +168,67 @@ plot_accumulation <- function(key_col, rank_label, file) {
   op <- par(mar = c(4.2, 4.4, 3.4, 1))
   plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
        xlab = "Number of surveys", ylab = paste("Number of", rank_label))
-  for (key in names(sacs)) {                                 # all transect x method curves, one panel
-    mt <- meta[[key]]
-    lines(sacs[[key]]$sites, sacs[[key]]$richness, col = COLS[mt$tr], lwd = 2.5, lty = LTY[mt$m])
-  }
+  for (tr in names(sacs))                                  # one curve per transect (methods pooled)
+    lines(sacs[[tr]]$sites, sacs[[tr]]$richness, col = COLS[tr], lwd = 2.8)
   title(main = sprintf("Native Bee %s Accumulation by Survey Effort",
                        paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
         col.main = BEE_INK$primary, font.main = 2)
-  # both legends grouped in the bottom-right: transect (COLOUR) anchored low, method
-  # (LINE STYLE) stacked just above it (yjust = 0 pins the method box's base above the
-  # transect box; shared right edge keeps them aligned).
-  lg_t <- legend("bottomright", title = "transect", legend = TRANSECTS,
-                 col = COLS[TRANSECTS], lwd = 2.5, lty = 1, bty = "n", cex = 0.9,
-                 text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
-  gap <- 0.03 * diff(par("usr")[3:4])
-  legend(x = lg_t$rect$left + lg_t$rect$w, y = lg_t$rect$top + gap, xjust = 1, yjust = 0,
-         title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
-         col = BEE_INK$secondary, lwd = 2.5, lty = LTY[c("lethal", "nonlethal")], bty = "n",
-         cex = 0.9, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+  legend("bottomright", title = "transect", legend = names(sacs),
+         col = COLS[names(sacs)], lwd = 2.8, lty = 1, bty = "n", cex = 0.9,
+         text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
   par(op)
 }
-plot_accumulation("species_key", "species", file.path(OUT_DIR, "accumulation_species.png"))
-plot_accumulation("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera.png"))
+plot_accumulation("species_key", "species", file.path(OUT_DIR, "accumulation_species_report.png"))
+plot_accumulation("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_report.png"))
+
+# ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
+# One panel PER TRANSECT (2x2), each showing lethal vs non-lethal accumulation in the
+# fair window -- so the method effect can be checked for consistency across transects
+# (not hidden by pooling). Shared axes across panels for comparability. Lethal = intern
+# nets, non-lethal = beeple photos, Mar-Oct 2021-2023.
+plot_accumulation_method <- function(key_col, rank_label, file) {
+  curves <- list()
+  for (tr in TRANSECTS) for (m in c("lethal", "nonlethal")) {
+    rows <- expanded_fair[expanded_fair$transect == tr & expanded_fair$method == m, ]
+    if (!nrow(rows)) next
+    M <- survey_taxa_matrix(rows, key_col, lookup = recs_by_key_fair)
+    if (ncol(M) == 0L || nrow(M) == 0L) next
+    curves[[tr]][[m]] <- specaccum(M, method = "random", permutations = PERMUTATIONS)
+  }
+  # OT is dropped here automatically: it was not surveyed in 2021-2023 (added in 2024),
+  # so it has no fair-window data. Only the lethal-era transects (BST/TP/UPMON) appear.
+  present <- intersect(TRANSECTS, names(curves))
+  if (!length(present)) { message("No ", rank_label, " (journal) to plot."); return(invisible()) }
+  allc <- unlist(curves, recursive = FALSE)
+  xmax <- max(vapply(allc, function(s) max(s$sites),    numeric(1)))
+  ymax <- max(vapply(allc, function(s) max(s$richness), numeric(1)))
+
+  ncell <- length(present) + 1                       # +1 cell for the shared legend
+  nc <- min(2, ncell); nr <- ceiling(ncell / nc)
+  png(file, width = 850 * nc, height = 650 * nr, res = 200); on.exit(dev.off())
+  bee_base_par()
+  op <- par(mfrow = c(nr, nc), oma = c(3, 3, 5, 1), mar = c(2.6, 2.8, 2.2, 0.8), mgp = c(2, 0.6, 0))
+  for (tr in present) {
+    plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "", ylab = "")
+    title(main = tr, col.main = COLS[tr], font.main = 2, line = 0.5)
+    for (m in names(curves[[tr]]))
+      lines(curves[[tr]][[m]]$sites, curves[[tr]][[m]]$richness, col = METHOD_COL[m], lwd = 2.8, lty = LTY[m])
+  }
+  plot.new()                                         # final cell = shared method legend
+  legend("center", title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
+         col = METHOD_COL[c("lethal", "nonlethal")], lwd = 2.8, lty = LTY[c("lethal", "nonlethal")],
+         bty = "n", cex = 1.1, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+  mtext("Number of surveys", side = 1, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
+  mtext(paste("Number of", rank_label), side = 2, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
+  mtext(sprintf("Native Bee %s Accumulation: Lethal vs Non-Lethal by Transect",
+                paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
+        side = 3, outer = TRUE, line = 2.2, col = BEE_INK$primary, font = 2, cex = 1.05)
+  mtext("Fair window: survey-only, Mar-Oct 2021-2023  (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)",
+        side = 3, outer = TRUE, line = 0.6, col = BEE_INK$secondary, cex = 0.68)
+  par(op)
+}
+plot_accumulation_method("species_key", "species", file.path(OUT_DIR, "accumulation_species_journal.png"))
+plot_accumulation_method("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_journal.png"))
 
 # ---- 5. summary table + incidence-based richness estimates -------------------
 # richness_est(): observed richness plus the Chao2 incidence estimate of TRUE

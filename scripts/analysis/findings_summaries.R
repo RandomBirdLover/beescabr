@@ -93,7 +93,7 @@ fw("genera_and_species_accumulation",
    c(method = "Chao2 asymptotic richness vs observed, per transect + park",
      per_transect_completeness = acc_line,
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
-   "transect_accumulation_summary.csv; accumulation_species.png; accumulation_genera.png")
+   "transect_accumulation_summary.csv; REPORT: accumulation_{species,genera}_report.png (transect completeness); JOURNAL: accumulation_{species,genera}_journal.png (lethal vs non-lethal, fair window)")
 
 fw("rarefaction_inext",
    "Coverage-based rarefaction/extrapolation (iNEXT)",
@@ -117,7 +117,7 @@ fw("diversity_indices",
    "Diversity indices and community composition (NMDS) by transect and year.",
    c(method = "Shannon/Simpson/evenness + rank-abundance + NMDS ordination",
      assumption = "diversity indices are effort-sensitive; the 2024-heavy skew inflates apparent year differences"),
-   "diversity_by_transect.csv; diversity_by_year.csv; diversity_nmds_composition.png; diversity_rank_abundance.png")
+   "diversity_by_transect.csv; diversity_by_year.csv; REPORT: diversity_nmds_composition.png, diversity_rank_abundance_report.png (pooled + per-transect combined); JOURNAL: diversity_rank_abundance_journal.png")
 
 fw("phenology_activity",
    "Seasonal activity phenology (+ Rayleigh test)",

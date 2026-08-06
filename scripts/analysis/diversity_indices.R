@@ -44,7 +44,7 @@ SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9                 # intern survey window (Mar-Sep) for year comparisons
-MIN_SITE_REC  <- 15                  # a site needs this many records to enter NMDS/PERMANOVA
+MIN_SITE_REC  <- 50                  # REPORT floor: a site (transect x year) needs this many records to enter NMDS/PERMANOVA
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
@@ -146,34 +146,59 @@ write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE
   ggsave(file.path(OUT_DIR, "diversity_by_year.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
 }
 
-# ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT BY METHOD -------------------------
-# This is a lethal-vs-non-lethal COMPARISON, so it uses the shared FAIR WINDOW
-# (survey-only, Mar-Oct, 2021-2023) -- same scope as yield_by_method / efficiency /
-# the Venn, so non-lethal is beeple survey photos (no 2024 intern photos).
+# ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT by paper --------------------------
+# JOURNAL: lethal-vs-non-lethal comparison, FAIR WINDOW (survey-only, Mar-Oct 2021-2023)
+#          -- same scope as yield_by_method / efficiency / the Venn.
+# REPORT : the park's community SHAPE, ALL records -- ONE combined figure: the pooled
+#          whole-park line (bold) over the per-transect curves (thin, nearly overlapping).
 rad_df <- function(counts, lab) {
   counts <- sort(counts[counts > 0], decreasing = TRUE)
-  data.frame(method = lab, rank = seq_along(counts), rel_abund = counts / sum(counts))
+  data.frame(grp = lab, rank = seq_along(counts), rel_abund = counts / sum(counts))
 }
-rad_rec <- rec %>% filter(month %in% 3:10, year %in% 2021:2023)   # fair window (survey records are already attributed)
-sp_leth <- table(rad_rec$species_key[rad_rec$method == "lethal"])
-sp_nonl <- table(rad_rec$species_key[rad_rec$method == "nonlethal"])
-sp_pool <- table(rad_rec$species_key)
-rad <- rbind(rad_df(as.integer(sp_pool), "both pooled"),
-             rad_df(as.integer(sp_leth), "lethal"),
-             rad_df(as.integer(sp_nonl), "non-lethal"))
-g <- ggplot(rad, aes(rank, rel_abund, color = method)) +
-  geom_line(linewidth = 0.9) + geom_point(size = 1) +
-  scale_y_log10() +
-  # method owns colour: pooled = dark ink, lethal = house lethal colour, non-lethal = house non-lethal colour
+
+# -- JOURNAL: 3 lines (pooled / lethal / non-lethal), fair window ----------------
+rad_rec <- rec %>% filter(month %in% FAIR_MONTHS, year %in% FAIR_YEARS)
+radJ <- rbind(rad_df(as.integer(table(rad_rec$species_key)),                              "both pooled"),
+              rad_df(as.integer(table(rad_rec$species_key[rad_rec$method == "lethal"])),    "lethal"),
+              rad_df(as.integer(table(rad_rec$species_key[rad_rec$method == "nonlethal"])), "non-lethal"))
+gJ <- ggplot(radJ, aes(rank, rel_abund, color = grp)) +
+  geom_line(linewidth = 0.9) + geom_point(size = 1) + scale_y_log10() +
   scale_color_manual(values = c("both pooled" = BEE_INK$primary,
                                 "lethal" = unname(BEE_METHOD_COL["lethal"]),
                                 "non-lethal" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
   labs(title = "Rank-Abundance of Bee Species",
        subtitle = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
-  theme_beescabr(11) +
-  theme(plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "diversity_rank_abundance.png"), g, width = 9, height = 6, dpi = 200, bg = "white")
+  theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
+ggsave(file.path(OUT_DIR, "diversity_rank_abundance_journal.png"), gJ, width = 9, height = 6, dpi = 200, bg = "white")
+
+# -- REPORT: ALL records (park community shape) ----------------------------------
+key_all <- function(df, method) df %>% transmute(
+  method = method, transect = toupper(str_squish(transect)),
+  species_key = ifelse(taxon_rank %in% SPECIES_RANKS & !is.na(genus) & genus != "" &
+                         !is.na(species) & species != "", paste(genus, word(species, -1)), NA))
+rec_all <- bind_rows(key_all(spec, "lethal"), key_all(inat, "nonlethal")) %>% filter(!is.na(species_key))
+# ONE combined figure: pooled whole-park line (bold) OVER the per-transect curves (thin).
+# The transect curves nearly overlap the pooled line -- a small, homogeneous park.
+radR <- rad_df(as.integer(table(rec_all$species_key)), "all bees (pooled)")
+radT <- do.call(rbind, lapply(TRANSECTS, function(tr) {
+  cc <- table(rec_all$species_key[rec_all$transect == tr]); if (!length(cc)) return(NULL)
+  rad_df(as.integer(cc), tr)
+}))
+comb <- rbind(radT, radR)                                  # pooled last => drawn on top
+comb$grp <- factor(comb$grp, levels = c("all bees (pooled)", TRANSECTS))
+rad_cols <- c("all bees (pooled)" = BEE_INK$primary, setNames(unname(BEE_TRANSECT[TRANSECTS]), TRANSECTS))
+rad_lwd  <- c("all bees (pooled)" = 1.7, setNames(rep(0.8, length(TRANSECTS)), TRANSECTS))
+gR <- ggplot(comb, aes(rank, rel_abund, color = grp, linewidth = grp)) +
+  geom_line() + scale_y_log10() +
+  scale_color_manual(values = rad_cols, name = NULL) +
+  scale_linewidth_manual(values = rad_lwd, guide = "none") +
+  labs(title = "Rank-Abundance of Cabrillo's Bee Species",
+       subtitle = paste0("bold = whole park pooled; thin = per transect  |  ",
+                         scope_cap("all records", "lethal + non-lethal", "species-level")),
+       x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
+  theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
+ggsave(file.path(OUT_DIR, "diversity_rank_abundance_report.png"), gR, width = 9, height = 6, dpi = 200, bg = "white")
 
 # ---- 5. NMDS + PERMANOVA: does composition differ by transect/year? ----------
 # sites = transect x year (survey-only, both methods pooled), species community.
