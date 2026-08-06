@@ -188,23 +188,11 @@ message("Per-transect richness (report, all records): ",
         paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
 lab_col <- BEE_INK$secondary
 
-# ---- transect_richness.png -- REPORT ONLY: distinct species + genera per transect ----
-tt <- tr_tbl; tt$transect <- factor(tt$transect, levels = as.character(tr_tbl$transect[order(-tr_tbl$species_richness)]))
-rich_long <- bind_rows(
-  data.frame(transect = tt$transect, rank = "species", value = tt$species_richness),
-  data.frame(transect = tt$transect, rank = "genus",   value = tt$genus_richness))
-rich_long$rank <- factor(rich_long$rank, levels = c("species", "genus"))
-gA <- ggplot(rich_long, aes(transect, value, fill = rank)) +
-  geom_col(position = position_dodge(0.72), width = 0.66) +
-  geom_text(aes(label = value), position = position_dodge(0.72), vjust = -0.35, size = 3, colour = lab_col) +
-  scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = NULL) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
-  labs(title = "Bee Richness by Transect",
-       subtitle = str_wrap(scope_cap("all records, by transect (OT = off-transect)", "lethal + non-lethal", "genus + species"), 72),
-       x = NULL, y = "distinct taxa") +
-  base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
-                     plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "transect_richness.png"), gA, width = 6.4, height = 5, dpi = 200, bg = "white")
+# ---- transect_richness.png -- RETIRED -----------------------------------------
+# The raw observed-richness-per-transect bar chart was RETIRED: comparing raw richness
+# across transects with unequal sampling effort is biased (more effort finds more species).
+# The correct, effort-standardized version is rarefaction_{vegan,inext}.R -> by_transect/.
+# The per-transect counts are still written to transect_richness.csv (above) as backing data.
 
 # ---- transect_effort -- SPLIT: records per transect, lethal vs non-lethal ----
 effort_chart <- function(tbl, file, scope_lab) {

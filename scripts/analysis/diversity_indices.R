@@ -99,29 +99,32 @@ div_tr <- rbind(cbind(rank = "species", alpha_indices(Mt_sp)),
                 cbind(rank = "genus",   alpha_indices(Mt_gn)))
 write.csv(div_tr, file.path(OUT_DIR, "diversity_by_transect.csv"), row.names = FALSE)
 
-plot_indices <- function(dfin, file, title, cap, group_lab) {
-  long <- dfin %>%
-    tidyr_pivot(c("richness", "hill_q1_expShannon", "invSimpson_q2", "pielou_evenness"))
-  lvls <- c(richness = "Richness (S)", hill_q1_expShannon = "Effective #species (exp H, q1)",
-            invSimpson_q2 = "Inverse Simpson (q2)", pielou_evenness = "Pielou evenness (J)")
-  long$metric <- factor(lvls[long$metric], levels = lvls)
-  g <- ggplot(long, aes(x = group, y = value, fill = rank)) +
-    geom_col(position = position_dodge(0.8), width = 0.7) +
-    facet_wrap(~ metric, scales = "free_y") +
-    # rank = focal species (ink) vs coarser genus (stone background)
-    scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
-    labs(title = title, subtitle = cap, x = group_lab, y = NULL) +
-    theme_beescabr(11) +
-    theme(panel.grid.major.x = element_blank())
-  ggsave(file, g, width = 9, height = 6.2, dpi = 200, bg = "white")
-}
-# tiny long-pivot helper (avoid tidyr dep)
+# tiny long-pivot helper (avoid tidyr dep) -- still used by the by-year section below
 tidyr_pivot <- function(df, cols) {
   do.call(rbind, lapply(cols, function(c)
     data.frame(rank = df$rank, group = df$group, metric = c, value = df[[c]])))
 }
-plot_indices(div_tr, file.path(OUT_DIR, "diversity_by_transect.png"),
-             "Bee diversity by transect (CABR)",
+# EVENNESS ONLY. The raw richness / Shannon / Simpson panels were RETIRED -- comparing them
+# across groups of unequal sampling effort is biased; the effort-standardized versions live in
+# rarefaction_{vegan,inext}.R (iNEXT Hill q0/q1/q2). Pielou EVENNESS (J = H / log S) is a ratio
+# and is fairly effort-robust, so it stays as its own figure (kept at Lauren's request). The full
+# index table (all four measures) is still written to diversity_by_transect.csv as backing data.
+plot_evenness <- function(dfin, file, title, cap, group_lab) {
+  d <- dfin[!is.na(dfin$pielou_evenness), ]
+  g <- ggplot(d, aes(x = group, y = pielou_evenness, fill = rank)) +
+    geom_col(position = position_dodge(0.8), width = 0.7) +
+    geom_text(aes(label = sprintf("%.2f", pielou_evenness)), position = position_dodge(0.8),
+              vjust = -0.35, size = 3, colour = BEE_INK$secondary) +
+    scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
+    scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.08))) +
+    labs(title = title, subtitle = cap,
+         x = group_lab, y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
+    theme_beescabr(11) +
+    theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
+  ggsave(file, g, width = 7.5, height = 5, dpi = 200, bg = "white")
+}
+plot_evenness(div_tr, file.path(OUT_DIR, "diversity_evenness_by_transect.png"),
+             "Bee Evenness by Transect",
              scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus"),
              "transect")
 
