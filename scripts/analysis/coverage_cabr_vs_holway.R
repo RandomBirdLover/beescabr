@@ -40,7 +40,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("holway_id_set")) source("scripts/analysis/not_on_holway.R")  # check the NEWEST helper, so a stale session reloads the updated file
 if (!exists("BEE_EVIDENCE")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 CHECKLIST_CABR <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
-OUT_DIR        <- "data/analysis/coverage/checklist_gaps"   # keep with the other coverage_* outputs (not loose in analysis/)
+OUT_DIR        <- file.path(DIR_REPORT, "coverage/checklist_gaps")   # report-only (park's county additions / QC)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 norm <- function(x) str_squish(as.character(x))            # trim/collapse whitespace

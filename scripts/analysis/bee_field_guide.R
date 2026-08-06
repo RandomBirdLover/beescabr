@@ -23,7 +23,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label_species")) source("scripts/analysis/forage_selectivity.R")  # species-level forage preference
-OUT_DIR       <- "data/analysis/reference/field_guide"
+OUT_DIR       <- file.path(DIR_REPORT, "reference/field_guide")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)

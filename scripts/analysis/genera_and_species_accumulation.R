@@ -53,7 +53,8 @@ if (!exists("PATHS")) source("scripts/config.R")   # PATHS$specimen_clean, PATHS
 # master_per_survey_info.csv is not in config's PATHS list; name it here.
 PER_SURVEY_INFO <- "data/project_info/master_per_survey_info.csv"
 
-OUT_DIR         <- "data/analysis/richness/accumulation"
+OUT_JOURNAL     <- file.path(DIR_JOURNAL, "richness/accumulation")  # method small-multiples (fair window)
+OUT_REPORT      <- file.path(DIR_REPORT,  "richness/accumulation")  # per-transect completeness + Chao2 table
 TRANSECTS       <- c("BST", "UPMON", "TP", "OT")          # the lines, in legend order
 SPECIES_RANKS   <- c("species", "subspecies")             # ranks that resolve to a species
 GENUS_RANKS     <- c("species", "subspecies", "subgenus", # ranks that pin a genus
@@ -68,7 +69,8 @@ METHOD_COL   <- BEE_METHOD_COL    # curve colour = method: poppy = net (lethal),
 LTY          <- BEE_METHOD_LTY    # secondary cue: solid = lethal, dashed = non-lethal
 METHOD_LABEL <- BEE_METHOD_LABEL
 
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 
 # ---- 1. bee records, tagged with method + join keys -------------------------
 is_true <- function(x) toupper(trimws(as.character(x))) == "TRUE"
@@ -178,8 +180,8 @@ plot_accumulation <- function(key_col, rank_label, file) {
          text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
   par(op)
 }
-plot_accumulation("species_key", "species", file.path(OUT_DIR, "accumulation_species_report.png"))
-plot_accumulation("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_report.png"))
+plot_accumulation("species_key", "species", file.path(OUT_REPORT, "accumulation_species_report.png"))
+plot_accumulation("genus_key",   "genera",  file.path(OUT_REPORT, "accumulation_genera_report.png"))
 
 # ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
 # One panel PER TRANSECT (2x2), each showing lethal vs non-lethal accumulation in the
@@ -227,8 +229,8 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
         side = 3, outer = TRUE, line = 0.6, col = BEE_INK$secondary, cex = 0.68)
   par(op)
 }
-plot_accumulation_method("species_key", "species", file.path(OUT_DIR, "accumulation_species_journal.png"))
-plot_accumulation_method("genus_key",   "genera",  file.path(OUT_DIR, "accumulation_genera_journal.png"))
+plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_species_journal.png"))
+plot_accumulation_method("genus_key",   "genera",  file.path(OUT_JOURNAL, "accumulation_genera_journal.png"))
 
 # ---- 5. summary table + incidence-based richness estimates -------------------
 # richness_est(): observed richness plus the Chao2 incidence estimate of TRUE
@@ -262,11 +264,11 @@ summary_tbl <- do.call(rbind, lapply(TRANSECTS, function(tr) {
     genera_pct_complete  = rg["pct"],
     row.names = NULL)
 }))
-write.csv(summary_tbl, file.path(OUT_DIR, "transect_accumulation_summary.csv"), row.names = FALSE)
+write.csv(summary_tbl, file.path(OUT_REPORT, "transect_accumulation_summary.csv"), row.names = FALSE)
 
 message("Per-transect survey effort + observed / Chao2-estimated richness:")
 print(summary_tbl, row.names = FALSE)
 message("Chao2 estimates TRUE richness; the +/- SE (standard error) is how uncertain that\n",
         "estimate is -- true richness is ~95% likely within +/-2 SE. A large SE (e.g. OT)\n",
         "means the estimate is rough ('sample more here'), not a precise target.")
-message("\nDone. Figures + table in: ", normalizePath(OUT_DIR))
+message("\nDone. Report figures + table in: ", OUT_REPORT, " | Journal small-multiples in: ", OUT_JOURNAL)

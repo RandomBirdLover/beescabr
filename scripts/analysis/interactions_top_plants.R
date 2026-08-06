@@ -28,7 +28,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
-OUT_DIR   <- "data/analysis/interactions/top_plants"
+OUT_DIR   <- file.path(DIR_REPORT, "interactions/top_plants")
 TOP_N     <- 10          # top plants for the headline table/figure
 TOP_MONTH <- 10          # plants shown in the month heatmap (matched to TOP_N)
 COL_LETHAL <- unname(BEE_METHOD_COL["lethal"]); COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # purple net / vermillion photo

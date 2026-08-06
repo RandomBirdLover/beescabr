@@ -24,7 +24,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR <- "data/analysis/method_comparison/effort"
+OUT_DIR <- file.path(DIR_JOURNAL, "method_comparison/effort")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- 1. trips per method from the per-survey log (FAIR WINDOW) ---------------

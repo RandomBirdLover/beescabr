@@ -39,7 +39,7 @@ if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared p
 SPECIES_PAL <- c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7",
                  "#7D3C98","#117A65","#8B4513","#2C3E50","#66A61E","#A6761D",
                  "#B03A2E","#1F78B4","#E7298A","#F0A202")
-OUT_DIR   <- "data/analysis/interactions/networks"
+OUT_DIR   <- file.path(DIR_REPORT, "interactions/networks")
 WEB_DIR   <- file.path(OUT_DIR, "genus_species_webs")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_SPECIES <- 2      # a bee genus needs at least this many species to compare them

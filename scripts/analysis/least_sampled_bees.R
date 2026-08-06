@@ -35,7 +35,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table"))  try(source("scripts/analysis/conservation_status.R"), silent = TRUE)  # IUCN (optional)
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")                                # plant common names
 
-OUT_DIR       <- "data/analysis/coverage/least_sampled"
+OUT_DIR       <- file.path(DIR_REPORT, "coverage/least_sampled")
 SPECIES_RANKS <- c("species", "subspecies")
 THIN_TOTAL    <- 50          # < this many records TOTAL (both methods) -> "least sampled" (matches the report's 50-record floor)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

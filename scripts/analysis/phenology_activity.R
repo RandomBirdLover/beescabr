@@ -40,7 +40,7 @@ suppressPackageStartupMessages({
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style (ink tokens + >=10 rule)
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
-OUT_DIR       <- "data/analysis/phenology"
+OUT_DIR       <- file.path(DIR_REPORT, "phenology")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 MIN_RECORDS   <- 25   # REPORT floor for phenology: a taxon needs >=25 records to draw a seasonal curve

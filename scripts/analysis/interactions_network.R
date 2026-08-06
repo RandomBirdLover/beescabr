@@ -45,7 +45,7 @@ HAVE_VEGAN     <- requireNamespace("vegan",     quietly = TRUE)
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
-OUT_DIR       <- "data/analysis/interactions/networks"
+OUT_DIR       <- file.path(DIR_REPORT, "interactions/networks")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 SPECIALIST_MAX_PLANTS <- 2      # visits <= this many plant genera -> "specialist"

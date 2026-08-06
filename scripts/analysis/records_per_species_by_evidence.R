@@ -24,11 +24,12 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage/records_by_evidence"
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/records_by_evidence")
+OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/records_by_evidence")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_REPORT    <- 50    # report (all records) figure cutoff
 MIN_JOURNAL   <- 25    # journal (fair window) figure cutoff -- fewer records, so a lower bar
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 norm <- function(x) str_squish(as.character(x))
 
@@ -88,9 +89,9 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
   message(sprintf("  %-32s %d of %d species >= %d records", scope_lab, nrow(wf), nrow(wide), min_shown))
 }
 make_fig(rec_all,  MIN_REPORT,  "All records (report)",
-         file.path(OUT_DIR, "records_per_species_by_evidence_report.png"),
-         file.path(OUT_DIR, "records_per_species_by_evidence_report.csv"))
+         file.path(OUT_REPORT, "records_per_species_by_evidence_report.png"),
+         file.path(OUT_REPORT, "records_per_species_by_evidence_report.csv"))
 make_fig(rec_fair, MIN_JOURNAL, "Fair window: Mar-Oct 2021-2023 (journal)",
-         file.path(OUT_DIR, "records_per_species_by_evidence_journal.png"),
-         file.path(OUT_DIR, "records_per_species_by_evidence_journal.csv"))
-message("\nWrote records_per_species_by_evidence_{report,journal}.{csv,png} to ", OUT_DIR)
+         file.path(OUT_JOURNAL, "records_per_species_by_evidence_journal.png"),
+         file.path(OUT_JOURNAL, "records_per_species_by_evidence_journal.csv"))
+message("\nWrote records_per_species_by_evidence_{report,journal}.{csv,png} to journal_paper_2026/ + nps_report_2026/")

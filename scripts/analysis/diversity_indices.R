@@ -39,13 +39,15 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/richness/diversity"
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity")  # fair-window rank-abundance (method contrast)
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/diversity")  # evenness, NMDS/PERMANOVA, park-shape rank-abundance, backing CSVs
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9                 # intern survey window (Mar-Sep) for year comparisons
 MIN_SITE_REC  <- 50                  # REPORT floor: a site (transect x year) needs this many records to enter NMDS/PERMANOVA
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
 # consistent scope caption stamped on every figure
@@ -97,7 +99,7 @@ Mt_sp <- comm_matrix(rec, "transect", "species_key")[TRANSECTS, , drop = FALSE]
 Mt_gn <- comm_matrix(rec, "transect", "genus_key")[TRANSECTS, , drop = FALSE]
 div_tr <- rbind(cbind(rank = "species", alpha_indices(Mt_sp)),
                 cbind(rank = "genus",   alpha_indices(Mt_gn)))
-write.csv(div_tr, file.path(OUT_DIR, "diversity_by_transect.csv"), row.names = FALSE)
+write.csv(div_tr, file.path(OUT_REPORT, "diversity_by_transect.csv"), row.names = FALSE)
 
 # tiny long-pivot helper (avoid tidyr dep) -- still used by the by-year section below
 tidyr_pivot <- function(df, cols) {
@@ -128,7 +130,7 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
           plot.caption = element_text(hjust = 0, size = 7.5))
   ggsave(file, g, width = 7.5, height = 5.4, dpi = 200, bg = "white")
 }
-plot_evenness(div_tr, file.path(OUT_DIR, "diversity_evenness_by_transect.png"),
+plot_evenness(div_tr, file.path(OUT_REPORT, "diversity_evenness_by_transect.png"),
              "Bee Evenness by Transect",
              scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus"),
              "transect")
@@ -137,7 +139,7 @@ plot_evenness(div_tr, file.path(OUT_DIR, "diversity_evenness_by_transect.png"),
 rec_win <- rec %>% filter(month %in% WINDOW_MONTHS, !is.na(year))
 My_sp <- comm_matrix(rec_win, "year", "species_key")
 div_yr <- cbind(rank = "species", alpha_indices(My_sp))
-write.csv(div_yr, file.path(OUT_DIR, "diversity_by_year.csv"), row.names = FALSE)
+write.csv(div_yr, file.path(OUT_REPORT, "diversity_by_year.csv"), row.names = FALSE)
 # EVENNESS ONLY (why: see caption). Raw richness/Shannon/Simpson across years of unequal effort
 # are biased -> those live effort-standardized in rarefaction (iNEXT by_year). Evenness stays.
 WHY_EVEN <- paste("Only evenness shown: comparing richness / Shannon / Simpson across groups of",
@@ -156,7 +158,7 @@ WHY_EVEN <- paste("Only evenness shown: comparing richness / Shannon / Simpson a
          x = "year", y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.caption = element_text(hjust = 0, size = 7.5))
-  ggsave(file.path(OUT_DIR, "diversity_evenness_by_year.png"), g, width = 8.5, height = 5.4, dpi = 200, bg = "white")
+  ggsave(file.path(OUT_REPORT, "diversity_evenness_by_year.png"), g, width = 8.5, height = 5.4, dpi = 200, bg = "white")
 }
 
 # ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT by paper --------------------------
@@ -183,7 +185,7 @@ gJ <- ggplot(radJ, aes(rank, rel_abund, color = grp)) +
        subtitle = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "diversity_rank_abundance_journal.png"), gJ, width = 9, height = 6, dpi = 200, bg = "white")
+ggsave(file.path(OUT_JOURNAL, "diversity_rank_abundance_journal.png"), gJ, width = 9, height = 6, dpi = 200, bg = "white")
 
 # -- REPORT: ALL records (park community shape) ----------------------------------
 key_all <- function(df, method) df %>% transmute(
@@ -211,7 +213,7 @@ gR <- ggplot(comb, aes(rank, rel_abund, color = grp, linewidth = grp)) +
                          scope_cap("all records", "lethal + non-lethal", "species-level")),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "diversity_rank_abundance_report.png"), gR, width = 9, height = 6, dpi = 200, bg = "white")
+ggsave(file.path(OUT_REPORT, "diversity_rank_abundance_report.png"), gR, width = 9, height = 6, dpi = 200, bg = "white")
 
 # ---- 5. NMDS + PERMANOVA: does composition differ by transect/year? ----------
 # sites = transect x year (survey-only, both methods pooled), species community.
@@ -225,7 +227,7 @@ meta <- data.frame(site = rownames(Msite),
                    year     = sub(".*_", "", rownames(Msite)))
 set.seed(1)
 perm <- vegan::adonis2(Msite ~ transect + year, data = meta, method = "bray", permutations = 999)
-capture.output(print(perm), file = file.path(OUT_DIR, "diversity_permanova.txt"))
+capture.output(print(perm), file = file.path(OUT_REPORT, "diversity_permanova.txt"))
 message("\nPERMANOVA (Bray-Curtis, transect + year):")
 print(perm)
 
@@ -244,7 +246,7 @@ if (!is.null(mds)) {
          x = "NMDS1", y = "NMDS2") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5))
-  ggsave(file.path(OUT_DIR, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
+  ggsave(file.path(OUT_REPORT, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
 }
 
-message("\nDone. Diversity outputs in: ", normalizePath(OUT_DIR))
+message("\nDone. Report diversity outputs in: ", OUT_REPORT, " | Journal rank-abundance in: ", OUT_JOURNAL)

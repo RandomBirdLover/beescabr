@@ -40,7 +40,8 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/richness/diversity"
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity")  # fair-window per-transect effort
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/diversity")  # grid + per-transect richness/effort (all records)
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 CRS_LATLON    <- 4326
@@ -49,7 +50,8 @@ CELL_M        <- 75             # grid cell size (metres); accuracy median ~4 m
 MAX_ACCURACY  <- 250            # drop iNat points looser than this (metres); NA kept
 RAREFY_N      <- 50             # REPORT floor: rarefy grid cells with >= this many records to this count
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")   # for the per-transect richness summary
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
                                                    scope, method, rank)
@@ -124,7 +126,7 @@ out_csv <- st_drop_geometry(cells) %>%
   select(cell_id, centroid_lon, centroid_lat, n_records,
          genus_richness, species_richness, rarefied_richness) %>%
   arrange(desc(species_richness), desc(n_records))
-write.csv(out_csv, file.path(OUT_DIR, "spatial_richness_grid.csv"), row.names = FALSE)
+write.csv(out_csv, file.path(OUT_REPORT, "spatial_richness_grid.csv"), row.names = FALSE)
 message(sprintf("Occupied cells: %d (cell size %dm). Rarefied to %d: %d cells.",
                 nrow(cells), CELL_M, RAREFY_N, sum(!is.na(cells$rarefied_richness))))
 
@@ -182,8 +184,8 @@ tr_tbl <- summ(recs2)                                    # REPORT: all records, 
 # non-lethal = beeple photos. OT drops out naturally (no 2021-2023 surveys).
 tr_tbl_fair <- summ(recs2 %>% filter(is_survey, month %in% FAIR_MONTHS, year %in% FAIR_YEARS,
                                      method == "lethal" | (method == "nonlethal" & surveyor == "beeple")))
-write.csv(tr_tbl,      file.path(OUT_DIR, "transect_richness.csv"),      row.names = FALSE)
-write.csv(tr_tbl_fair, file.path(OUT_DIR, "transect_effort_journal.csv"), row.names = FALSE)
+write.csv(tr_tbl,      file.path(OUT_REPORT,  "transect_richness.csv"),       row.names = FALSE)
+write.csv(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.csv"), row.names = FALSE)
 message("Per-transect richness (report, all records): ",
         paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
 lab_col <- BEE_INK$secondary
@@ -214,9 +216,10 @@ effort_chart <- function(tbl, file, scope_lab) {
                        plot.title = element_text(hjust = 0.5))
   ggsave(file, g, width = 6.4, height = 5, dpi = 200, bg = "white")
 }
-effort_chart(tr_tbl, file.path(OUT_DIR, "transect_effort_report.png"),
+effort_chart(tr_tbl, file.path(OUT_REPORT, "transect_effort_report.png"),
              scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"))
-effort_chart(tr_tbl_fair, file.path(OUT_DIR, "transect_effort_journal.png"),
+effort_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.png"),
              "Fair window: survey-only, Mar-Oct 2021-2023 (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)")
 
-message("Wrote transect_richness.png (report) + transect_effort_{report,journal}.png (+ spatial_richness_grid.csv) to ", OUT_DIR)
+message("Wrote transect_effort_report.png + spatial_richness_grid.csv + transect_richness.csv to ", OUT_REPORT,
+        " | transect_effort_journal.png/.csv to ", OUT_JOURNAL)

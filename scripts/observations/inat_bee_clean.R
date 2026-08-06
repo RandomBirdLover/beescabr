@@ -199,6 +199,10 @@ ibc_bee_situation <- function(df) {
 # columns, same reasons) so each audience gets its own list:
 #   * flower_not_a_plant_or_unresolved -- a flower_visited that carries no flower_taxon_id,
 #     i.e. it isn't a plant in the lookup (a wrong taxon in the flower field, or a typo).
+#   * flower_not_to_genus -- a flower_visited that DOES resolve to a real plant taxon (it has a
+#     flower_taxon_id) but only at a rank ABOVE genus (family/order, e.g. "Cactaceae",
+#     "Asteraceae"), so plant_genus is blank. The plant is too coarse to use as forage evidence
+#     -> refine it to at least genus. (This is the Diadasia-on-"cactus" case.)
 #   * on_flower_but_no_plant -- the bee_on_flower flag is ticked (a foraging interaction IS
 #     recorded) but no plant was entered. The visit is confirmed; only the plant is missing
 #     -> add it. A bee on the ground or at a nest is NOT on a flower, so those are excluded.
@@ -208,14 +212,20 @@ ibc_bee_situation <- function(df) {
 #     -> in both cases, check the photo and add the plant if the bee is on one.
 # The `action` prompt is tailored per reason (and, for "missing", per survey vs casual).
 # `is_survey` is carried through so clean() can split; NA-safe; priority bad-flower >
-# on-flower-no-plant > missing.
+# not-to-genus > on-flower-no-plant > missing.
 ibc_fix_behavior <- function(clean) {
   n   <- nrow(clean)
   col <- function(c) if (c %in% names(clean)) clean[[c]] else rep(NA, n)
   tf  <- function(c) as.logical(col(c)) %in% TRUE
-  fv   <- col("flower_visited"); ftid <- col("flower_taxon_id")
+  fv   <- col("flower_visited"); ftid <- col("flower_taxon_id"); pg <- col("plant_genus")
   has_flower <- !is.na(fv) & trimws(as.character(fv)) != ""
   bad_flower <- has_flower & (is.na(ftid) | trimws(as.character(ftid)) == "")
+  has_genus  <- !is.na(pg) & trimws(as.character(pg)) != ""                 # flower resolved to a PLANT GENUS
+  # flower resolves to a real plant taxon (has a taxon_id) but only ABOVE genus rank
+  # (family/order, e.g. "Cactaceae", "Asteraceae") -> plant_genus is blank. These used to
+  # fall through every reason (they carry a plant, so not bad/blank/missing); now flagged
+  # so the reviewer refines the plant ID to at least genus (Diadasia's "cactus" problem).
+  not_to_genus <- has_flower & !bad_flower & !has_genus
   is_surv <- as.logical(col("is_survey")) %in% TRUE
   sit     <- as.character(col("bee_situation"))
   answered_no <- as.logical(col("flower_answered_no")) %in% TRUE            # observer said "insect on flower = No"
@@ -223,12 +233,15 @@ ibc_fix_behavior <- function(clean) {
   on_flower_no_plant <- tf("bee_on_flower") & !has_flower & !ground_nest    # flower confirmed, plant blank
   reason  <- dplyr::case_when(
     bad_flower                       ~ "flower_not_a_plant_or_unresolved",
+    not_to_genus                     ~ "flower_not_to_genus",
     on_flower_no_plant               ~ "on_flower_but_no_plant",
     sit == "missing" & !answered_no  ~ "missing_all_behavior_fields",   # NOT flagged if observer answered "No"
     TRUE                             ~ NA_character_)
   # plain-language "do this" prompt so the worklist tells the reviewer what to fix, not just why
   action <- dplyr::case_when(
     reason == "flower_not_a_plant_or_unresolved"    ~ "Open on iNaturalist: the flower entry is not a known plant (typo or wrong taxon) -- correct the plant name or clear it.",
+    reason == "flower_not_to_genus"                 ~ sprintf("Open on iNaturalist: the flower is only identified to %s -- refine the plant ID to at least genus.",
+                                                              ifelse(has_flower, paste0("\"", trimws(as.character(fv)), "\" (above genus rank)"), "family/order")),
     reason == "on_flower_but_no_plant"              ~ "Open on iNaturalist: the bee is marked on a flower but the plant is blank -- add the plant it is visiting.",
     reason == "missing_all_behavior_fields" &  is_surv ~ "Open on iNaturalist: survey obs with no behavior recorded -- add the plant it is on (or mark on-ground / at-nest).",
     reason == "missing_all_behavior_fields" & !is_surv ~ "Open on iNaturalist: no behavior recorded -- if the bee is on a flower, add the plant it is visiting (and tick bee-on-flower).",
@@ -237,7 +250,7 @@ ibc_fix_behavior <- function(clean) {
     mutate(fix_reason = reason, action = action, is_survey = is_surv) |>
     filter(!is.na(fix_reason)) |>
     select(any_of(c("obs_id", "observer", "observed_on", "transect", "taxon_id",
-                    "scientific_name", "flower_visited", "fix_reason", "action", "url", "is_survey")))
+                    "scientific_name", "flower_visited", "plant_genus", "fix_reason", "action", "url", "is_survey")))
 }
 
 # ---- location-fix worklist ------------------------------------------------
@@ -392,13 +405,14 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   n_missing <- sum(fix_behavior$fix_reason == "missing_all_behavior_fields")
   n_badflow <- sum(fix_behavior$fix_reason == "flower_not_a_plant_or_unresolved")
   n_noplant <- sum(fix_behavior$fix_reason == "on_flower_but_no_plant")
+  n_notgen  <- sum(fix_behavior$fix_reason == "flower_not_to_genus")
   bx_kv("Bees", format(nrow(clean), big.mark = ","), " rows — ",
         format(sum(clean$is_survey), big.mark = ","), " survey / ",
         format(sum(!clean$is_survey), big.mark = ","), " other")
   bx_out(basename(out_clean))
   bx_cont("spatial: ", format(n_walk, big.mark = ","), " walk-in re-marked NOT survey · ", format(n_bad, big.mark = ","), " pins off-transect → review")
   bx_cont("annotations: ", format(n_fv, big.mark = ","), " obs with flower_visited")
-  bx_cont("fix_behavior: ", format(n_noplant, big.mark = ","), " on-flower but no plant · ", format(n_missing, big.mark = ","), " missing all fields · ", format(n_badflow, big.mark = ","), " non-plant/unresolved flower")
+  bx_cont("fix_behavior: ", format(n_noplant, big.mark = ","), " on-flower but no plant · ", format(n_missing, big.mark = ","), " missing all fields · ", format(n_badflow, big.mark = ","), " non-plant/unresolved flower · ", format(n_notgen, big.mark = ","), " flower not to genus (family-level)")
   bx_out(basename(IBC_FIX_BEHAVIOR))
   bx_cont("casual add-flower: ", format(nrow(casual_add), big.mark = ","), " casual obs with no behavior → check photo, add a flower")
   bx_out(basename(IBC_CASUAL_ADD))

@@ -15,7 +15,8 @@
 # outputs). Depends on: base R only.
 # =============================================================
 
-FIND_DIR <- "data/analysis/findings"
+if (!exists("DIR_REPORT")) source("scripts/config.R")   # DIR_REPORT / DIR_JOURNAL paper roots
+FIND_DIR <- file.path(DIR_REPORT, "findings")            # pipeline meta lives with the comprehensive (report) paper
 dir.create(FIND_DIR, recursive = TRUE, showWarnings = FALSE)
 .today <- as.character(Sys.Date())
 
@@ -40,12 +41,12 @@ fw <- function(name, title, type, key_finding, details = character(0), outputs =
 }
 
 # ---- live numbers (best-effort) ---------------------------------------------
-fs   <- .rd("data/analysis/interactions/networks/forage_selectivity_summary.csv")
-h2   <- .rd("data/analysis/interactions/networks/interactions_genus_h2.csv")
-acc  <- .rd("data/analysis/richness/accumulation/transect_accumulation_summary.csv")
-holw <- .rd("data/analysis/coverage/checklist_gaps/coverage_cabr_not_on_holway.csv")
-yld_m <- .rd("data/analysis/method_comparison/yield/coverage_yield_by_method_journal.csv")
-lsb   <- .rd("data/analysis/coverage/least_sampled/least_sampled_bees.csv")
+fs   <- .rd(file.path(DIR_REPORT, "interactions/networks/forage_selectivity_summary.csv"))
+h2   <- .rd(file.path(DIR_REPORT, "interactions/networks/interactions_genus_h2.csv"))
+acc  <- .rd(file.path(DIR_REPORT, "richness/accumulation/transect_accumulation_summary.csv"))
+holw <- .rd(file.path(DIR_REPORT, "coverage/checklist_gaps/coverage_cabr_not_on_holway.csv"))
+yld_m <- .rd(file.path(DIR_JOURNAL, "method_comparison/yield/coverage_yield_by_method_journal.csv"))
+lsb   <- .rd(file.path(DIR_REPORT, "coverage/least_sampled/least_sampled_bees.csv"))
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
   key <- if (!is.null(df$grp)) df$grp else df$method   # yield_by_method keys on method
   v <- df[[col]][as.character(key) == g]; if (length(v)) .chr(v[1]) else "-" }

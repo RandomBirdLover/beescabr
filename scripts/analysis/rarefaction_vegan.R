@@ -33,11 +33,16 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/richness/rarefaction"
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction")  # by_method + by_observer (fair-window method comparison)
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # by_transect + by_year (park coverage)
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+# which paper each rarefaction dimension belongs to
+JOURNAL_DIMS  <- c("by_method", "by_observer")
+rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL else OUT_REPORT
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
                                                    scope, method, rank)
@@ -99,7 +104,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
   # "by_<dim>_" prefix from filenames so they read e.g. by_transect/species_vegan.csv
   dimdir <- sub(paste0("_", rank, "$"), "", key)   # "by_transect_species" -> "by_transect"
   stub   <- rank                                   # "species" / "genus"
-  outsub <- file.path(OUT_DIR, dimdir); dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
+  outsub <- file.path(rare_base(dimdir), dimdir); dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
   tab <- rarefy_table(M); write.csv(tab, file.path(outsub, paste0(stub, "_vegan.csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
   cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
@@ -160,4 +165,5 @@ for (rk in names(RANKS)) {
        c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
 }
 
-message("Wrote {species,genus}_vegan.{csv,curves.png,bars.png} under by_{transect,year,observer,method}/ in ", OUT_DIR)
+message("Wrote {species,genus}_vegan.{csv,curves.png,bars.png}: by_{transect,year}/ in ", OUT_REPORT,
+        " | by_{observer,method}/ in ", OUT_JOURNAL)

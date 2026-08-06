@@ -38,9 +38,10 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_IDSTATUS")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage/id_resolution"
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/id_resolution")   # fair-window: completeness, targets(journal), specimen, photo
+OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/id_resolution")   # all-records: targets(report) + the keyable worklist CSV
 SPECIES_RANKS <- c("species", "subspecies")
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 is_true   <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
                                                    scope, method, rank)
@@ -88,7 +89,7 @@ work <- rec %>% filter(!resolved) %>%
   left_join(resolved_by_genus_all, by = c("target" = "genus")) %>%
   mutate(resolved_species = coalesce(resolved_species, 0L)) %>%
   arrange(desc(specimen_unresolved), desc(unresolved_total))
-write.csv(work, file.path(OUT_DIR, "coverage_id_targets.csv"), row.names = FALSE)
+write.csv(work, file.path(OUT_REPORT, "coverage_id_targets.csv"), row.names = FALSE)
 keyable <- work %>% filter(specimen_unresolved > 0)
 message(sprintf("Targets with specimen-backed (keyable) records: %d genera, %d specimens",
                 nrow(keyable), sum(keyable$specimen_unresolved)))
@@ -156,8 +157,8 @@ draw_targets <- function(dat, scope, file, split_done) {
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5, size = 9))
   ggsave(file, g, width = 9.5, height = max(7, 0.30 * nrow(tt) + 2), dpi = 200, bg = "white")
 }
-draw_targets(rec,      "all records",                                  file.path(OUT_DIR, "coverage_id_targets_report.png"),  split_done = FALSE)
-draw_targets(rec_fair, "fair window (survey-only, Mar-Oct 2021-2023)", file.path(OUT_DIR, "coverage_id_targets_journal.png"), split_done = TRUE)
+draw_targets(rec,      "all records",                                  file.path(OUT_REPORT, "coverage_id_targets_report.png"),  split_done = FALSE)
+draw_targets(rec_fair, "fair window (survey-only, Mar-Oct 2021-2023)", file.path(OUT_JOURNAL, "coverage_id_targets_journal.png"), split_done = TRUE)
 
 # ---- 4. per-method species-ID progress (JOURNAL only, FAIR WINDOW) -----------
 # Shared genus set: EVERY named genus in the fair window (no top-N cap), ALPHABETICAL,
@@ -196,8 +197,8 @@ method_genus_fig <- function(m, file, method_label) {
     theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
   ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), dpi = 200, bg = "white")
 }
-method_genus_fig("specimen", file.path(OUT_DIR, "coverage_id_targets_specimen.png"), "Lethal")
-method_genus_fig("photo",    file.path(OUT_DIR, "coverage_id_targets_photo.png"),    "Non-Lethal")
+method_genus_fig("specimen", file.path(OUT_JOURNAL, "coverage_id_targets_specimen.png"), "Lethal")
+method_genus_fig("photo",    file.path(OUT_JOURNAL, "coverage_id_targets_photo.png"),    "Non-Lethal")
 
 # ---- 5. ID-completeness funnel (JOURNAL only, FAIR WINDOW) --------------------
 n_total_f <- nrow(rec_fair); n_res_f <- sum(rec_fair$resolved); pct_res_f <- 100 * n_res_f / n_total_f
@@ -220,6 +221,6 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
        x = NULL, y = "records") +
   theme_beescabr(11) +
   theme(legend.position = "top", panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, dpi = 200, bg = "white")
+ggsave(file.path(OUT_JOURNAL, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, dpi = 200, bg = "white")
 
-message("Wrote coverage_id_targets.csv + _report.png/_journal.png + _specimen.png/_photo.png + coverage_id_completeness.png to ", OUT_DIR)
+message("Wrote coverage_id_targets.csv + _report.png/_journal.png + _specimen.png/_photo.png + coverage_id_completeness.png to journal_paper_2026/ + nps_report_2026/")

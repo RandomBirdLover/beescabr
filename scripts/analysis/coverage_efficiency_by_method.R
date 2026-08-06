@@ -19,7 +19,7 @@ has_vegan <- requireNamespace("vegan", quietly = TRUE)
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/method_comparison/efficiency"
+OUT_DIR       <- file.path(DIR_JOURNAL, "method_comparison/efficiency")
 SPECIES_RANKS <- c("species", "subspecies")
 WINDOW_MONTHS <- 3:10          # Mar-Oct: the lethal-netting season
 WINDOW_YEARS  <- 2021:2023     # the only years lethal netting ran (fair vs non-lethal)

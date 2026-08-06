@@ -19,7 +19,7 @@ for (pkg in c("sf", "ggplot2", "cowplot")) {
 suppressPackageStartupMessages({ library(sf); library(dplyr); library(stringr); library(ggplot2) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")
-OUT_DIR <- "data/analysis/coverage/footprint"; dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint"); dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 BND_COUNTY <- "data/spatial/boundaries/san_diego_county/sd_county_boundary.shp"
 BND_CABR   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"

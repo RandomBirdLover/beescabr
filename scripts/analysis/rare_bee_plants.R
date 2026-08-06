@@ -35,7 +35,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
-OUT_DIR <- "data/analysis/reference/conservation"
+OUT_DIR <- file.path(DIR_REPORT, "reference/conservation")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 RARE_CUT      <- 25                              # a bee is "rare" if we have < this many records

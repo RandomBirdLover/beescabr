@@ -29,10 +29,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR   <- "data/analysis/phenology"
+OUT_JOURNAL <- file.path(DIR_JOURNAL, "phenology")   # fair-window effort calendar + grid
+OUT_REPORT  <- file.path(DIR_REPORT,  "phenology")   # all-records effort calendar + grid
 MONTH_ABB <- month.abb
 MCOL      <- c("lethal" = unname(BEE_METHOD_COL["lethal"]), "non-lethal" = unname(BEE_METHOD_COL["nonlethal"]))
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s", scope, method, rank)
 
 # ---- 1. read the per-survey log ---------------------------------------------
@@ -105,17 +106,17 @@ grid_fig <- function(dat, months_shown, file, subtitle) {
 p_journal <- p %>% filter(month %in% FAIR_MONTHS, year %in% FAIR_YEARS)
 all_months <- sort(unique(p$month))
 
-calendar_fig(p_journal, FAIR_MONTHS, file.path(OUT_DIR, "effort_by_month_journal.png"),
+calendar_fig(p_journal, FAIR_MONTHS, file.path(OUT_JOURNAL, "effort_by_month_journal.png"),
              "Fair window: Mar-Oct 2021-2023, trips + records split by method",
              "per-survey log, fair window (Mar-Oct 2021-2023)")
-calendar_fig(p, all_months, file.path(OUT_DIR, "effort_by_month_report.png"),
+calendar_fig(p, all_months, file.path(OUT_REPORT, "effort_by_month_report.png"),
              sprintf("All trips %d-%d, all months, split by method", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)),
              sprintf("per-survey log, all trips %d-%d", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
 
-grid_fig(p_journal, FAIR_MONTHS, file.path(OUT_DIR, "effort_year_month_grid_journal.png"),
+grid_fig(p_journal, FAIR_MONTHS, file.path(OUT_JOURNAL, "effort_year_month_grid_journal.png"),
          "Fair window: Mar-Oct 2021-2023")
-grid_fig(p, all_months, file.path(OUT_DIR, "effort_year_month_grid_report.png"),
+grid_fig(p, all_months, file.path(OUT_REPORT, "effort_year_month_grid_report.png"),
          sprintf("All trips %d-%d", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
 
 message(sprintf("Journal window trips: %d | Report (all) trips: %d", nrow(p_journal), nrow(p)))
-message("Wrote effort_by_month_{journal,report}.{png,csv} + effort_year_month_grid_{journal,report}.png to ", OUT_DIR)
+message("Wrote effort_by_month_{journal,report}.{png,csv} + effort_year_month_grid_{journal,report}.png to journal_paper_2026/ + nps_report_2026/")

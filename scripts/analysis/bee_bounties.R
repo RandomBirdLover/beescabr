@@ -32,7 +32,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/coverage/bee_bounties"
+OUT_DIR       <- file.path(DIR_REPORT, "coverage/bee_bounties")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

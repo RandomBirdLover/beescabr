@@ -34,10 +34,12 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/method_comparison/yield"
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "method_comparison/yield")   # fair-window backing table
+OUT_REPORT    <- file.path(DIR_REPORT,  "method_comparison/yield")   # all-records contributor/method figures
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
 # ---- 1. pool records with method + surveyor + taxonomy keys + month/year -----
@@ -92,7 +94,7 @@ rec_fair <- rec_all %>%
 tbl_j <- yield_by(rec_fair, "method")
 tbl_j <- tbl_j[match(c("lethal", "nonlethal"), tbl_j$grp), ]; tbl_j <- tbl_j[!is.na(tbl_j$grp), ]
 names(tbl_j)[1] <- "method"
-write.csv(tbl_j, file.path(OUT_DIR, "coverage_yield_by_method_journal.csv"), row.names = FALSE)
+write.csv(tbl_j, file.path(OUT_JOURNAL, "coverage_yield_by_method_journal.csv"), row.names = FALSE)
 message(sprintf("JOURNAL (fair window): lethal %d recs / %d sp / %d gen ; non-lethal %d recs / %d sp / %d gen",
                 tbl_j$n_records[1], tbl_j$species[1], tbl_j$genera[1],
                 tbl_j$n_records[2], tbl_j$species[2], tbl_j$genera[2]))
@@ -113,8 +115,8 @@ CONTRIB <- c("general public", "beeple", "interns")
 METHODL <- c("lethal", "non-lethal")
 tbl_c <- yield_by(rep_rec, "contributor"); tbl_c <- tbl_c[match(CONTRIB, tbl_c$grp), ]
 tbl_m <- yield_by(rep_rec, "method_lbl");  tbl_m <- tbl_m[match(METHODL, tbl_m$grp), ]
-write.csv(tbl_c, file.path(OUT_DIR, "coverage_yield_by_method_report_contributor.csv"), row.names = FALSE)
-write.csv(tbl_m, file.path(OUT_DIR, "coverage_yield_by_method_report_method.csv"),      row.names = FALSE)
+write.csv(tbl_c, file.path(OUT_REPORT, "coverage_yield_by_method_report_contributor.csv"), row.names = FALSE)
+write.csv(tbl_m, file.path(OUT_REPORT, "coverage_yield_by_method_report_method.csv"),      row.names = FALSE)
 message(sprintf("REPORT by contributor: %s",
                 paste(sprintf("%s=%d recs", tbl_c$grp, tbl_c$n_records), collapse = "  ")))
 message(sprintf("REPORT by method:      %s   (grand totals reconcile: contrib=%d, method=%d)",
@@ -170,7 +172,7 @@ plot_report <- function(rank, file) {
           plot.subtitle = element_text(size = 8.7, hjust = 0.5))
   ggsave(file, g, width = 9.5, height = 6.4, dpi = 200, bg = "white")
 }
-plot_report("species", file.path(OUT_DIR, "coverage_yield_by_method_report_species.png"))
-plot_report("genus",   file.path(OUT_DIR, "coverage_yield_by_method_report_genus.png"))
+plot_report("species", file.path(OUT_REPORT, "coverage_yield_by_method_report_species.png"))
+plot_report("genus",   file.path(OUT_REPORT, "coverage_yield_by_method_report_genus.png"))
 
-message("\nWrote JOURNAL table (_journal.csv) + REPORT figure (_report_{species,genus}.png) + report CSVs to ", OUT_DIR)
+message("\nWrote JOURNAL table (_journal.csv) + REPORT figure (_report_{species,genus}.png) + report CSVs to journal_paper_2026/ + nps_report_2026/")

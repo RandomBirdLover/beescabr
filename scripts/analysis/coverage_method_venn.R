@@ -41,14 +41,14 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR       <- "data/analysis/method_comparison/yield"
+YIELD_SUB     <- "method_comparison/yield"   # concept path under each paper root (journal & report)
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 # METHOD is the whole subject here, so it owns colour: its own palette (purple net / vermillion photo),
 # kept off the transect hues -- the same two method colours used wherever method is shown by fill.
 COL_LETHAL    <- unname(BEE_METHOD_COL["lethal"])     # purple     = lethal / specimen (net)
 COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # vermillion = non-lethal / iNat (photo)
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+# each scope writes into its own paper folder (created inside run_scope)
 
 # ---- 1. taxa sets per method ------------------------------------------------
 species_set <- function(df) {
@@ -142,6 +142,8 @@ res_cat <- function(df, method) {
 # ---- run BOTH scopes --------------------------------------------------------
 run_scope <- function(scope, spec, inat, subfn) {
   sfx <- paste0("_", scope)
+  od  <- file.path(if (scope == "journal") DIR_JOURNAL else DIR_REPORT, YIELD_SUB)   # straight into the paper folder
+  dir.create(od, recursive = TRUE, showWarnings = FALSE)
   sets <- list(
     species = list(lethal = species_set(spec), nonlethal = species_set(inat)),
     genus   = list(lethal = genus_set(spec),   nonlethal = genus_set(inat)))
@@ -149,10 +151,10 @@ run_scope <- function(scope, spec, inat, subfn) {
 
   taxa_tbl <- rbind(region_table("species", sets$species),
                     region_table("genus",   sets$genus))
-  write.csv(taxa_tbl, file.path(OUT_DIR, paste0("yield_by_method_taxa", sfx, ".csv")), row.names = FALSE)
+  write.csv(taxa_tbl, file.path(od, paste0("yield_by_method_taxa", sfx, ".csv")), row.names = FALSE)
   cn <- list(species = counts(sets$species), genus = counts(sets$genus))
 
-  png(file.path(OUT_DIR, paste0("yield_by_method", sfx, ".png")),
+  png(file.path(od, paste0("yield_by_method", sfx, ".png")),
       width = 2000, height = 1050, res = 200)
   bee_base_par()                                  # house-style fonts + muted axis/title colours
   op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(2, 0, 3.6, 0))
@@ -172,7 +174,7 @@ run_scope <- function(scope, spec, inat, subfn) {
   write.csv(data.frame(method = rownames(ctab), n_records = as.integer(rowSums(ctab)),
                        n_species_level = as.integer(ctab[, "species-level"]),
                        pct_species_level = round(pct_species, 1), row.names = NULL),
-            file.path(OUT_DIR, paste0("coverage_method_resolution", sfx, ".csv")), row.names = FALSE)
+            file.path(od, paste0("coverage_method_resolution", sfx, ".csv")), row.names = FALSE)
   writeLines(c(
     sprintf("TEST (%s scope): taxonomic resolution (species-level vs coarser) x survey method", scope),
     "Pearson chi-square test of independence on the 2x2 contingency table.",
@@ -183,7 +185,7 @@ run_scope <- function(scope, spec, inat, subfn) {
             pct_species["lethal"], pct_species["nonlethal"]),
     "",
     "Interpretation: p < 0.05 -> ID resolution is not independent of method."),
-    file.path(OUT_DIR, paste0("coverage_method_resolution_chisq", sfx, ".txt")))
+    file.path(od, paste0("coverage_method_resolution_chisq", sfx, ".txt")))
 
   message(sprintf("\n[%s] Resolution x method chi-square: X2=%.1f, df=%d, p=%.2e  (lethal %.0f%% vs non-lethal %.0f%% species-level)",
                   scope, chi$statistic, chi$parameter, chi$p.value, pct_species["lethal"], pct_species["nonlethal"]))
@@ -202,4 +204,4 @@ for (scope in names(SCOPES)) {
   run_scope(scope, s$spec, s$inat, s$subfn)
 }
 message("\nWrote {journal,report} Venns: yield_by_method_{journal,report}.png (+ taxa/resolution CSVs)")
-message("Done. Outputs in: ", normalizePath(OUT_DIR))
+message("Done. Venn split written to journal_paper_2026/ + nps_report_2026/ under ", YIELD_SUB)

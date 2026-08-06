@@ -27,7 +27,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_DIR <- "data/analysis/coverage/footprint"
+OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
                                                    scope, method, rank)

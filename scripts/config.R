@@ -62,6 +62,18 @@ PLACE_CABR_MONUMENT <- 4715L
 FAIR_MONTHS <- 3:10          # Mar-Oct: the standardized survey protocol season (interns netted Mar through Oct)
 FAIR_YEARS  <- 2021:2023     # the only years the lethal-netting surveys ran (so non-lethal gets no extra years)
 
+# ---- Paper output roots ------------------------------------------------------
+# Each analysis script writes its figures + tables STRAIGHT into the paper folder it
+# belongs to (no neutral theme folder, no separate collector step). A concept sub-path
+# is kept under each root (e.g. .../richness/rarefaction/by_transect) so files stay
+# organised and never collide.
+#   * REPORT  (all records)  -- the NPS Cabrillo park report.
+#   * JOURNAL (fair window)  -- the lethal-vs-non-lethal method paper.
+# SPLIT scripts (same concept, two datasets) write their all-records version under
+# DIR_REPORT and their fair-window version under DIR_JOURNAL.
+DIR_REPORT  <- "data/analysis/nps_report_2026"
+DIR_JOURNAL <- "data/analysis/journal_paper_2026"
+
 # ---- DuckDB cache ------------------------------------------------------------
 # One on-disk DuckDB file acts as the cache for BOTH observation objects
 # (with a spatial geometry column) and taxon request objects. This replaces
