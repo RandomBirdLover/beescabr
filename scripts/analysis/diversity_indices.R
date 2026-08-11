@@ -50,9 +50,8 @@ dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 
-# consistent scope caption stamped on every figure
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# consistent scope caption stamped on every figure -- the SHARED helper from theme_beescabr.R
+# (adds Source + data-as-of and one canonical order; no local override).
 
 # ---- 1. SURVEY-ONLY bee records (both methods), with keys + grouping ----------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -119,11 +118,11 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
               vjust = -0.35, size = 3, colour = BEE_INK$secondary) +
     scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
     scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.08))) +
-    labs(title = title, subtitle = cap,
-         caption = str_wrap(paste("Only evenness shown: comparing richness / Shannon / Simpson across groups of",
+    labs(title = title,
+         caption = paste0(cap, "\n", str_wrap(paste("Only evenness shown: comparing richness / Shannon / Simpson across groups of",
            "unequal sampling effort is biased (more effort finds more species), so those are given",
            "effort-standardized in the rarefaction (iNEXT) figures. Pielou evenness is a ratio, so it",
-           "is effort-robust and kept here."), 110),
+           "is effort-robust and kept here."), 110)),
          x = group_lab, y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5),
@@ -153,8 +152,8 @@ WHY_EVEN <- paste("Only evenness shown: comparing richness / Shannon / Simpson a
     geom_text(aes(label = sprintf("%.2f", pielou_evenness)), vjust = -0.9, size = 3, colour = BEE_INK$secondary) +
     scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0.02, 0.1))) +
     labs(title = "Bee Evenness by Year",
-         subtitle = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
-         caption = str_wrap(WHY_EVEN, 110),
+         caption = paste0(scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species-level"),
+                          "\n", str_wrap(WHY_EVEN, 110)),
          x = "year", y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.caption = element_text(hjust = 0, size = 7.5))
@@ -182,7 +181,7 @@ gJ <- ggplot(radJ, aes(rank, rel_abund, color = grp)) +
                                 "lethal" = unname(BEE_METHOD_COL["lethal"]),
                                 "non-lethal" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
   labs(title = "Rank-Abundance of Bee Species",
-       subtitle = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal vs pooled", "species-level"),
+       caption = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal vs pooled", "species-level"),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_JOURNAL, "diversity_rank_abundance_journal.png"), gJ, width = 9, height = 6, dpi = 200, bg = "white")
@@ -209,8 +208,8 @@ gR <- ggplot(comb, aes(rank, rel_abund, color = grp, linewidth = grp)) +
   scale_color_manual(values = rad_cols, name = NULL) +
   scale_linewidth_manual(values = rad_lwd, guide = "none") +
   labs(title = "Rank-Abundance of Cabrillo's Bee Species",
-       subtitle = paste0("bold = whole park pooled; thin = per transect  |  ",
-                         scope_cap("all records", "lethal + non-lethal", "species-level")),
+       caption = paste0("bold = whole park pooled; thin = per transect  |  ",
+                        scope_cap("all records", "lethal + non-lethal", "species-level")),
        x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
 ggsave(file.path(OUT_REPORT, "diversity_rank_abundance_report.png"), gR, width = 9, height = 6, dpi = 200, bg = "white")
@@ -240,9 +239,9 @@ if (!is.null(mds)) {
     geom_point(size = 3) + geom_text(vjust = -0.8, size = 2.6, show.legend = FALSE) +
     scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
     labs(title = "Bee Community Composition by Transect",
-         subtitle = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
-                           sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
-                           sprintf("  (stress %.2f)", mds$stress)),
+         caption = paste0(scope_cap("survey records only", "lethal + non-lethal pooled", "species-level"),
+                          sprintf("\nsites = transect x year, >=%d records each; ", MIN_SITE_REC), ptr,
+                          sprintf("  (stress %.2f)", mds$stress)),
          x = "NMDS1", y = "NMDS2") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5))

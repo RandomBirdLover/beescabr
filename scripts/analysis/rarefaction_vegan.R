@@ -33,19 +33,26 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction")  # by_method + by_observer (fair-window method comparison)
-OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # by_transect + by_year (park coverage)
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/accumulation")  # consolidated with accumulation (richness-by-effort family);
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/accumulation")  # the dimension is baked into each filename, no by_<dim>/ subfolders
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
 # which paper each rarefaction dimension belongs to
 JOURNAL_DIMS  <- c("by_method", "by_observer")
-rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL else OUT_REPORT
+# No "rarefaction" folder -- each output sits with the FINDING it supports:
+#   by_transect -> richness/accumulation (per-transect richness, next to the accumulation curves + Chao2)
+#   by_year     -> richness/diversity    (next to the other by-year community analyses)
+#   by_method / by_observer (journal)    -> richness/accumulation (journal side)
+rare_base <- function(dimdir) {
+  if (dimdir %in% JOURNAL_DIMS)      OUT_JOURNAL
+  else if (dimdir == "by_year")      file.path(DIR_REPORT, "richness/diversity")
+  else                               OUT_REPORT   # by_transect
+}
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 
 # ---- 1. survey-only bee records with keys + grouping vars --------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -100,12 +107,14 @@ draw <- function(M, key, title, rank, cols = NULL) {
   M <- M[rowSums(M) > 0, , drop = FALSE]
   if (nrow(M) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
   unit <- UNIT(rank)
-  # nest each comparison in its own by_<dimension>/ sub-folder; strip the redundant
-  # "by_<dim>_" prefix from filenames so they read e.g. by_transect/species_vegan.csv
+  # write straight into the accumulation folder; the dimension (+ method label, journal only)
+  # is baked into the filename, e.g. rarefaction_by_transect_species_curves.png. The report has
+  # only vegan so it drops the "_vegan" tag; the journal keeps it (it also carries iNEXT files).
   dimdir <- sub(paste0("_", rank, "$"), "", key)   # "by_transect_species" -> "by_transect"
-  stub   <- rank                                   # "species" / "genus"
-  outsub <- file.path(rare_base(dimdir), dimdir); dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
-  tab <- rarefy_table(M); write.csv(tab, file.path(outsub, paste0(stub, "_vegan.csv")), row.names = FALSE)
+  outdir <- rare_base(dimdir); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+  vlab   <- if (dimdir %in% JOURNAL_DIMS) "_vegan" else ""
+  pre    <- paste0("rarefaction_", dimdir, "_", rank)   # e.g. rarefaction_by_transect_species
+  tab <- rarefy_table(M); write.csv(tab, file.path(outdir, paste0(pre, vlab, ".csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
   cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
   cols <- if (is.null(cols)) setNames(grDevices::colorRampPalette(BEE_SEQ)(nrow(M)), rownames(M)) else cols  # ordinal groups (years) -> blue sequential
@@ -115,11 +124,15 @@ draw <- function(M, key, title, rank, cols = NULL) {
              hjust = 0, vjust = 0, size = 3, color = "grey40") +
     geom_line(linewidth = 0.9) +
     scale_color_manual(values = cols, name = NULL) +
-    labs(title = title, subtitle = paste0(sprintf("%s-level, rarefaction curve  |  ", rank), cap),
+    labs(title = title, caption = paste0(sprintf("%s-level, rarefaction curve  |  ", rank), cap),
          x = "records sampled", y = paste0("expected ", unit)) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-  ggsave(file.path(outsub, paste0(stub, "_vegan_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
+  # curves: JOURNAL only. The REPORT dropped its rarefaction curves -- the bars (observed vs
+  # rarefied) are the report's rarefaction figure (Taro's call). Journal keeps both for review.
+  if (dimdir %in% JOURNAL_DIMS) {
+    ggsave(file.path(outdir, paste0(pre, vlab, "_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
+  }
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
               data.frame(group = tab$group, kind = sprintf("rarefied to %d", minN), S = tab$rarefied_richness))
   bd$group <- factor(bd$group, levels = tab$group)
@@ -128,12 +141,12 @@ draw <- function(M, key, title, rank, cols = NULL) {
     geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3) +
     scale_fill_manual(values = setNames(c("#C0BBB0", "#3C3B36"),   # stone (observed) / ink (rarefied)
                                         c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
-    labs(title = title, subtitle = paste0(sprintf("%s-level, rarefied richness  |  ", rank), cap),
+    labs(title = title, caption = paste0(sprintf("%s-level, rarefied richness  |  ", rank), cap),
          x = NULL, y = unit) +
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-  ggsave(file.path(outsub, paste0(stub, "_vegan_bars.png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
+  ggsave(file.path(outdir, paste0(pre, vlab, "_bars.png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
 }
@@ -165,5 +178,5 @@ for (rk in names(RANKS)) {
        c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
 }
 
-message("Wrote {species,genus}_vegan.{csv,curves.png,bars.png}: by_{transect,year}/ in ", OUT_REPORT,
-        " | by_{observer,method}/ in ", OUT_JOURNAL)
+message("Wrote rarefaction_by_{transect,year}_* (report) + rarefaction_by_{method,observer}_*_vegan_* (journal)\n",
+        "  into richness/accumulation/ of each paper.")

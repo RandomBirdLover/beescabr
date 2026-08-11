@@ -101,8 +101,12 @@ eff_fig <- function(key_col, rank_lab, file) {
     scale_fill_manual(values = setNames(c("#C0BBB0", BEE_INK$primary), c(aslab, eqlab)), name = NULL) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
     labs(title = sprintf("Efficiency by Method at %s Level", rank_lab),
-         subtitle = "As recorded vs at equal sampling effort (rarefaction) -- as a count and as a rate",
-         caption = str_wrap(sprintf("The per-100-records rate favours the smaller-record method (a sampling-depth artifact): 'as recorded' non-lethal looks low only because its many records dilute the rate. 'At equal effort' rarefies both methods to the smaller total (%s records) -- the fair comparison, in either counts or rates. Fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos); non-lethal = beeple survey photos.", format(minN, big.mark = ",")), 108),
+         caption = paste0(
+           scope_cap(scope  = "fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos)",
+                     method = "lethal (net) vs non-lethal (beeple survey photos), rarefied to equal effort",
+                     rank   = rank_lab),
+           "\n",
+           str_wrap(sprintf("As recorded vs at equal sampling effort (rarefaction), as a count and as a rate. The per-100-records rate favours the smaller-record method (a sampling-depth artifact): 'as recorded' non-lethal looks low only because its many records dilute the rate. 'At equal effort' rarefies both methods to the smaller total (%s records) -- the fair comparison, in either counts or rates.", format(minN, big.mark = ",")), 108)),
          x = NULL, y = NULL) +
     theme_beescabr(12) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

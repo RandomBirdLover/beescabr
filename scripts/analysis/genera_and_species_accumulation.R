@@ -167,7 +167,7 @@ plot_accumulation <- function(key_col, rank_label, file) {
 
   png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
   bee_base_par()                     # house-style fonts + muted axis/label colours
-  op <- par(mar = c(4.2, 4.4, 3.4, 1))
+  op <- par(mar = c(4.2, 4.4, 3.4, 1), oma = c(2.4, 0, 0, 0))
   plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
        xlab = "Number of surveys", ylab = paste("Number of", rank_label))
   for (tr in names(sacs))                                  # one curve per transect (methods pooled)
@@ -178,10 +178,12 @@ plot_accumulation <- function(key_col, rank_label, file) {
   legend("bottomright", title = "transect", legend = names(sacs),
          col = COLS[names(sacs)], lwd = 2.8, lty = 1, bty = "n", cex = 0.9,
          text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+  bee_caption_base(scope = "all survey records, per transect (x = number of survey trips)",
+                   method = "lethal + non-lethal pooled", rank = rank_label)
   par(op)
 }
-plot_accumulation("species_key", "species", file.path(OUT_REPORT, "accumulation_species_report.png"))
-plot_accumulation("genus_key",   "genera",  file.path(OUT_REPORT, "accumulation_genera_report.png"))
+plot_accumulation("species_key", "species", file.path(OUT_REPORT, "accumulation_by_effort_species_report.png"))
+plot_accumulation("genus_key",   "genera",  file.path(OUT_REPORT, "accumulation_by_effort_genera_report.png"))
 
 # ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
 # One panel PER TRANSECT (2x2), each showing lethal vs non-lethal accumulation in the
@@ -229,8 +231,8 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
         side = 3, outer = TRUE, line = 0.6, col = BEE_INK$secondary, cex = 0.68)
   par(op)
 }
-plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_species_journal.png"))
-plot_accumulation_method("genus_key",   "genera",  file.path(OUT_JOURNAL, "accumulation_genera_journal.png"))
+plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_by_effort_species_journal.png"))
+plot_accumulation_method("genus_key",   "genera",  file.path(OUT_JOURNAL, "accumulation_by_effort_genera_journal.png"))
 
 # ---- 5. summary table + incidence-based richness estimates -------------------
 # richness_est(): observed richness plus the Chao2 incidence estimate of TRUE

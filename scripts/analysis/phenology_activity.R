@@ -76,9 +76,8 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     scale_x_continuous(breaks = MONTH_STARTS, labels = month.abb,
                        limits = c(1, 366), expand = c(0.01, 0)) +
     labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
-         subtitle = sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
-                            length(ord), min_records),
-         caption = scope, x = NULL, y = NULL) +
+         caption = paste0(sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
+                            length(ord), min_records), "\n", scope), x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6),
           plot.title  = element_text(face = "bold", hjust = 0.5),

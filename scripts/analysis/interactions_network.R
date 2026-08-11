@@ -96,8 +96,9 @@ heatmap_gg <- function(M, file, rank_label) {
                                   name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +   # magnitude = house blue ramp
     ggplot2::labs(
       title = "Plant and Bee Visitation Heatmap",
-      subtitle = sprintf("%d plant genera by %d bee %s, both methods pooled",
-                         nrow(M), ncol(M), rank_label),
+      caption = scope_cap(
+        scope  = sprintf("all records; %d plant genera by %d bee %s", nrow(M), ncol(M), rank_label),
+        method = "lethal + non-lethal pooled", rank = rank_label),
       x = paste("bee", rank_label), y = "plant (common name)") +
     ggplot2::scale_y_discrete(labels = function(x) plant_label(x)) +   # common name (Latin) on the plant axis
     theme_beescabr(8) +
@@ -151,8 +152,8 @@ plot(beebee_plot,
      edge.width = pmin(0.25 * E(beebee_plot)$weight, 3),
      edge.color = adjustcolor("grey60", 0.5), layout = layout_with_fr,
      main = "Bee Genera Linked by Shared Plant Genera")
-mtext(sprintf(">= %d shared plant genera   |   node size = plant-genera breadth   |   rim = specialists", MIN_SHARED),
-      side = 3, line = 0.3, cex = 0.75, col = BEE_INK$secondary)
+mtext(sprintf(">= %d shared plant genera drawn   |   node size = plant-genera breadth (small node = specialist: visits <= %d plant genera)", MIN_SHARED, SPECIALIST_MAX_PLANTS),
+      side = 3, line = 0.3, cex = 0.72, col = BEE_INK$secondary)
 dev.off()
 
 # ---- 4. per-bee-species specialization / rarity table -----------------------

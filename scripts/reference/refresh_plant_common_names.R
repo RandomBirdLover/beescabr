@@ -1,6 +1,7 @@
 # =============================================================
-# scripts/refresh_plant_common_names.R
-# beescabr -- STANDALONE "force a full plant common-name refresh" tool.
+# scripts/reference/refresh_plant_common_names.R
+# beescabr -- "force a full plant common-name refresh" tool. Runs standalone, OR inside the
+# pipeline via BEESCABR_REFRESH=1 (run_pipeline.R sources it as an optional online pre-step).
 #
 # The genus-level common name for every plant a bee was recorded on is now baked into the
 # cleaned plant table AT DATA-CLEANING TIME (inat_plant_clean.R calls enrich_plant_common_column()
@@ -12,7 +13,8 @@
 # was missing before). It forces a full re-query and rewrites
 # data/checklists/plants/plant_genus_common.csv. Needs internet; NO token.
 #
-#   From the repo root:  Rscript scripts/refresh_plant_common_names.R
+#   From the repo root:  Rscript scripts/reference/refresh_plant_common_names.R
+#   Or inside the pipeline:  BEESCABR_REFRESH=1 Rscript scripts/run_pipeline.R
 #
 # Depends on: httr2, dplyr, stringr (+ config.R + reference/enrich_lookups.R).
 # =============================================================

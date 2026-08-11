@@ -1,6 +1,7 @@
 # =============================================================
-# scripts/refresh_iucn_status.R
-# beescabr -- STANDALONE "force a full IUCN refresh" tool.
+# scripts/reference/refresh_iucn_status.R
+# beescabr -- "force a full IUCN refresh" tool. Runs standalone, OR inside the pipeline
+# via BEESCABR_REFRESH=1 (run_pipeline.R sources it as an optional online pre-step).
 #
 # The IUCN Red List category for every bee species is now baked into the cleaned bee tables
 # AT DATA-CLEANING TIME (specimen_bee_clean.R + inat_bee_clean.R call enrich_iucn_columns()
@@ -13,7 +14,8 @@
 # rewrites data/checklists/iucn/iucn_status.csv. Needs internet + a free token (see
 # data/secrets/iucn_api.env or the IUCN_REDLIST_KEY env var; free at https://api.iucnredlist.org).
 #
-#   From the repo root:  Rscript scripts/refresh_iucn_status.R
+#   From the repo root:  Rscript scripts/reference/refresh_iucn_status.R
+#   Or inside the pipeline:  BEESCABR_REFRESH=1 Rscript scripts/run_pipeline.R
 #
 # Depends on: dplyr, stringr, rredlist (+ config.R + reference/enrich_lookups.R).
 # =============================================================

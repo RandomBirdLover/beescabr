@@ -23,6 +23,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label_species")) source("scripts/analysis/forage_selectivity.R")  # species-level forage preference
+if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")                            # shared scope-caption format
 OUT_DIR       <- file.path(DIR_REPORT, "reference/field_guide")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
@@ -121,11 +122,16 @@ tbl$iucn         <- iucn_code_of(tbl$bee)
 tbl$iucn_name    <- iucn_name_of(tbl$bee)
 tbl$conservation <- conservation_label(tbl$bee)
 # Forage preference -- availability-corrected (matched month/year/method test), SPECIES level.
-# Populated for species with >= 20 plant-visit records; "too few records to judge" below that.
+# Populated for species with >= SELECT_MIN_REC plant-visit records; "too few records to judge" below that.
 tbl$forage_pref  <- forage_preference_label_species(tbl$bee, plant_fmt = plant_label)
 write.csv(tbl, file.path(OUT_DIR, "bee_field_guide_species.csv"), row.names = FALSE)
 message(sprintf("Field guide: %d species (%d with >= %d records)",
                 nrow(tbl), sum(tbl$confidence == "ok"), MIN_CONF))
+
+# scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
+scope_str <- scope_cap(
+  scope  = "every bee pinned to species-level; all records (specimen net + iNaturalist), all years, whole park",
+  method = "lethal + non-lethal pooled", rank = "species", width = 10000)
 
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
@@ -154,13 +160,15 @@ note_txt <- if (HAVE_IUCN) {
 } else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
 # Records/Status caveat -- this guide pools ALL data (no survey-only filter), so those two
 # columns reflect detection/photo effort, not a survey-controlled abundance estimate.
-status_note <- "Records and Status count ALL data -- specimen nets plus every iNaturalist photo, including casual public sightings, across all years -- so they show how often a species is DETECTED/photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read 'common' on public photos alone; treat rare/uncommon/common as recording frequency, not true density."
+status_note <- sprintf("Records and Status count ALL data -- specimen nets plus every iNaturalist photo, including casual public sightings, across all years -- so they show how often a species is DETECTED/photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read 'common' on public photos alone; treat rare/uncommon/common as recording frequency, not true density. Cut-offs by record count (all data pooled): rare < %d, uncommon %d-%d, common >= %d; Diet is only stated at >= %d records (fewer reads 'not enough records').",
+                        RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN)
 note_txt <- paste(status_note, note_txt)
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>CABR Native Bee Field Guide - by species</title>',
 '<style>',
 'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb}',
 'h1{font-size:20px;margin:0 0 2px}p.sub{color:#6b6a66;margin:0 0 16px;font-size:13px}',
+'p.scope{color:#52514e;margin:0 0 8px;font-size:12px;font-weight:600;border-left:3px solid #d8d5cc;padding-left:8px}',
 'p.note{color:#6b6a66;margin:12px 0 0;font-size:12px}',
 'sup.cs{color:#8a1c1c;font-weight:700;margin-left:1px}',
 'table{border-collapse:collapse;width:100%;font-size:13px}',
@@ -182,8 +190,9 @@ html <- paste0(
 '.iucn.i-dd,.iucn.i-ne{background:#efefef;color:#98968f}',
 '</style></head><body>',
 '<h1>CABR native bee field guide - by species</h1>',
-'<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used; where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare/uncommon/common &mdash; counts all data incl. casual photos, so it is recording frequency, not true abundance). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
-'<p class="sub"><b>Most-recorded flowers = the plants this species was seen on most often</b>, which reflects how much each plant was blooming and sampled as much as any true preference &mdash; read it as &quot;where it was seen,&quot; not proof of what it likes best. <b>Forage preference</b> is the availability-corrected verdict (a matched month/year/method test vs the rest of the community, the same one the by-genus guide uses): &quot;Selective &rarr; plant (N&times;)&quot; = visits it well beyond availability; &quot;Generalist&quot; = visits ~ what&#39;s around; &quot;too few records to judge&quot; below 20 plant-visit records (most species &mdash; it fills in as sampling grows).</p>',
+'<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used (stated only at &ge;50 records &mdash; fewer read &quot;not enough records&quot;); where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; counts all data incl. casual photos, so it is recording frequency, not true abundance). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
+'<p class="sub"><b>Most-recorded flowers = the plants this species was seen on most often</b>, which reflects how much each plant was blooming and sampled as much as any true preference &mdash; read it as &quot;where it was seen,&quot; not proof of what it likes best. <b>Forage preference</b> is the availability-corrected verdict (a matched month/year/method test vs the rest of the community, the same one the by-genus guide uses): &quot;Selective &rarr; plant (N&times;)&quot; = visits it well beyond availability; &quot;Generalist&quot; = visits ~ what&#39;s around; &quot;too few records to judge&quot; below ', SELECT_MIN_REC, ' plant-visit records (most species &mdash; it fills in as sampling grows).</p>',
+sprintf('<p class="scope">%s</p>', esc(scope_str)),
 '<table id="t"><thead><tr>',
 '<th>Bee</th><th class="num">Records</th>', iucn_th, '<th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
@@ -216,13 +225,16 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
     core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
+  scap <- grid::textGrob(paste(strwrap(scope_str, width = 165), collapse = "\n"),   # scope caption ABOVE the table
+                        x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
   cap <- grid::textGrob(paste(strwrap(note_txt, width = 150), collapse = "\n"),
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
                         gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
-  g   <- gridExtra::arrangeGrob(g, cap, ncol = 1,
-                                heights = grid::unit.c(grid::unit(1, "null"), grid::unit(2.6, "lines")))
+  g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
+                                heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(2.6, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "bee_field_guide_species.png"), g,
-                  width = if (HAVE_IUCN) 18.5 else 17.5, height = 0.24 * nrow(disp) + 1.5, dpi = 200, limitsize = FALSE, bg = "white")
+                  width = if (HAVE_IUCN) 18.5 else 17.5, height = 0.24 * nrow(disp) + 2.0, dpi = 200, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote bee_field_guide_species.{csv,html,png} to ", OUT_DIR)

@@ -94,23 +94,23 @@ fw("genera_and_species_accumulation",
    c(method = "Chao2 asymptotic richness vs observed, per transect + park",
      per_transect_completeness = acc_line,
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
-   "transect_accumulation_summary.csv; REPORT: accumulation_{species,genera}_report.png (transect completeness); JOURNAL: accumulation_{species,genera}_journal.png (lethal vs non-lethal, fair window)")
+   "richness/accumulation/: transect_accumulation_summary.csv; REPORT accumulation_by_effort_{species,genera}_report.png (transect completeness); JOURNAL accumulation_by_effort_{species,genera}_journal.png (lethal vs non-lethal, fair window)")
 
 fw("rarefaction_inext",
-   "Coverage-based rarefaction/extrapolation (iNEXT)",
+   "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
    "estimator",
-   "Sample-coverage-standardized richness comparison (Hill numbers) across groups.",
-   c(method = "iNEXT size- and coverage-based rarefaction/extrapolation",
-     assumption = "standardizes by coverage but still sensitive to the uneven effort; read CIs as approximate"),
-   "*_inext_by_coverage.csv; *_inext_by_size.csv; *_inext_coverage.png; *_inext_size.png")
+   "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
+   c(method = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
+     assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
+   "journal richness/accumulation/: rarefaction_by_{method,observer}_{species,genus}_inext_{size,coverage}.png (+ _asymptotic/_by_size/_by_coverage.csv)")
 
 fw("rarefaction_vegan",
-   "Rarefaction (vegan)",
+   "Rarefaction (vegan) -- curves + rarefied-richness bars",
    "estimator",
-   "Classic individual-based rarefaction curves as a cross-check on iNEXT.",
-   c(method = "vegan rarefaction",
+   "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
+   c(method = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
-   "*_vegan.csv; *_vegan_curves.png; *_vegan_bars.png")
+   "richness/accumulation/: report rarefaction_by_{transect,year}_{species,genus}_{curves,bars}.png (+ .csv); journal same as *_vegan_*")
 
 fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",
@@ -147,9 +147,9 @@ fw("interactions_top_plants",
 fw("bee_field_guide",
    "Bee field guide -- by species",
    "descriptive (+ inferential Forage-preference column)",
-   "Per-species reference: peak day, active months, most-recorded flowers, diet breadth, status, IUCN, and an availability-corrected Forage-preference column (species-level, same matched month/year/method test as the genus guide; ~19 species selective, shown only where a species has >=20 plant-visit records, so it fills in as sampling grows).",
+   "Per-species reference: peak day, active months, most-recorded flowers, diet breadth, status, IUCN, and an availability-corrected Forage-preference column (species-level, same matched month/year/method test as the genus guide; ~19 species selective, shown only where a species has >=50 plant-visit records, so it fills in as sampling grows).",
    c(note = "'Most-recorded flowers' = where it was seen most; 'Forage preference' is the matched-test result (Selective -> plant / Generalist / too few records)",
-     threshold = "forage preference gated at >=20 plant-visit records -- most species read 'too few records to judge' today"),
+     threshold = "forage preference gated at >=50 plant-visit records -- most species read 'too few records to judge' today"),
    "bee_field_guide_species.html; bee_field_guide_species.csv; bee_field_guide_species.png")
 
 fw("bee_field_guide_genus",
@@ -269,10 +269,10 @@ fw("records_per_species_by_evidence",
 fw("least_sampled_bees",
    "Least-sampled bees -- go-find-it sheet",
    "descriptive",
-   sprintf("The %s bee species with <10 records TOTAL across both methods -- under-detected by netting AND iNaturalist -- each with its per-method split and when/where/on-what-flower context. Coverage split: %s.",
+   sprintf("The %s bee species with <50 records TOTAL across both methods -- under-detected by netting AND iNaturalist -- each with its per-method split and when/where/on-what-flower context. Coverage split: %s.",
            .chr(.n(lsb)),
            if (is.null(lsb)) "run to populate" else paste(sprintf("%d %s", as.integer(table(lsb$coverage)), names(table(lsb$coverage))), collapse = ", ")),
-   c(threshold   = "least sampled = < 10 records total (both methods pooled), the project's thin-evidence line",
+   c(threshold   = "least sampled = < 50 records total (both methods pooled), the report's low-record floor",
      coverage    = "both (thin) = a few of each method; photo-only = never netted (also a specimen bounty); specimen-only = never photographed (also an iNat bounty)",
      context     = "when (peak months + active span), where (top transect), flower (top plant genera) pooled across both methods, + an example iNat photo URL",
      vs_bounties = "bee_bounties lists taxa MISSING from one method; this keeps the under-sampled species and adds the find-it context in one sheet"),

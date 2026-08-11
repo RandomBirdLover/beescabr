@@ -47,8 +47,7 @@ MIN_REC     <- 25     # ... and at least this many species+plant records to draw
 TOP_PLANTS  <- 30     # cap plant genera shown per web for legibility
 dir.create(WEB_DIR, recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 
 # ---- H2' specialization + fixed-marginal null (self-contained) ---------------
 .shannon <- function(x) { p <- x / sum(x); p <- p[p > 0]; -sum(p * log(p)) }
@@ -238,10 +237,9 @@ g <- ggplot(ov, aes(x = x, y = bee_genus, fill = status)) +
                                "not enough records" = unname(BEE_INK$muted)), name = NULL) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
   labs(title = "Which Bee Genera Have Specialist Species?",
-       subtitle = str_wrap(paste0(
-         sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for flight season & method -- higher bar = stronger specialisation. Dark = the %d of %d tested genera whose species significantly specialise (p<0.05); GRAY = too few records (<%d) to test.",
-                 nrow(ov_sig), n_tested, MIN_REC), drop_note), 96),
-       caption = "Within-genus niche partitioning",
+       caption = paste0(str_wrap(paste0(
+         sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for flight season & method -- higher bar = stronger specialisation. Only multi-species genera (>= %d species) appear here. Dark = the %d of %d tested genera whose species significantly specialise (p<0.05); GRAY = has the >= %d species but too few records (< %d) to test.",
+                 MIN_SPECIES, nrow(ov_sig), n_tested, MIN_SPECIES, MIN_REC), drop_note), 96), "\nWithin-genus niche partitioning"),
        x = "within-genus H2'   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),

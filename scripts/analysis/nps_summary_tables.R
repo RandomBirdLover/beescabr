@@ -109,6 +109,113 @@ plant_checklist <- plants %>% mutate(plant_genus = pg, plant_species = ps) %>%
             .groups = "drop") %>% arrange(plant_genus)
 write.csv(plant_checklist, file.path(OUT_DIR, "nps_plant_genera_checklist.csv"), row.names = FALSE)
 
+# ============================================================================
+# 5. RENDERED TABLES (HTML + PNG) -- same styling family as the field guides, with a
+#    scope caption (Scope | Method | Rank | Source) ABOVE each table. The CSVs above
+#    stay the machine-readable source; these are the read-and-cite version.
+# ============================================================================
+if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")   # shared scope-caption format
+esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
+pretty_metric <- function(m) tools::toTitleCase(gsub("_", " ", m))       # metric_key -> "Metric Key"
+
+# one scope caption per table set
+cap_part   <- scope_cap(scope = "all survey trips logged; all years, whole park",
+                        method = "field surveys (interns) + iNaturalist (beeple)",
+                        rank = "people / trips / days / transects", width = 10000)
+cap_bees   <- scope_cap(scope = "every bee record; all years, whole park",
+                        method = "lethal (specimen) + non-lethal (iNaturalist), pooled and split",
+                        rank = "records / genera / species", width = 10000)
+cap_meth   <- scope_cap(scope = "every bee record, by method x surveyor type; all years, whole park",
+                        method = "lethal (specimen) vs non-lethal (iNaturalist)",
+                        rank = "records", width = 10000)
+cap_plants <- scope_cap(scope = "every plant record a bee was seen on; all years, whole park",
+                        method = "non-lethal iNaturalist plant associations",
+                        rank = "records / genera / species", width = 10000)
+cap_chk    <- scope_cap(scope = "species-resolved bee checklist; all years, whole park",
+                        method = "lethal (specimen) + non-lethal (iNaturalist)",
+                        rank = "species", width = 10000)
+cap_gchk   <- scope_cap(scope = "bee genera checklist (includes genus-only records); all years, whole park",
+                        method = "lethal (specimen) + non-lethal (iNaturalist)",
+                        rank = "genus", width = 10000)
+cap_pchk   <- scope_cap(scope = "plant genera bees were recorded on; all years, whole park",
+                        method = "non-lethal iNaturalist plant associations",
+                        rank = "plant genus", width = 10000)
+
+# ---- HTML ------------------------------------------------------------------
+df_to_html <- function(df, caption, heading, metric_col = FALSE) {
+  d <- df
+  if (metric_col) d[[1]] <- pretty_metric(d[[1]])
+  hd <- paste0("<th>", vapply(names(d), function(nm) esc(gsub("_", " ", nm)), ""), "</th>", collapse = "")
+  body <- vapply(seq_len(nrow(d)), function(i) {
+    cells <- vapply(seq_along(d), function(j) {
+      v <- d[[j]][i]; num <- is.numeric(d[[j]])
+      val <- if (num) format(v, big.mark = ",", trim = TRUE) else esc(as.character(v))
+      sprintf('<td%s>%s</td>', if (num) ' class="num"' else "", val)
+    }, "")
+    paste0("<tr>", paste(cells, collapse = ""), "</tr>")
+  }, "")
+  paste0('<h2>', esc(heading), '</h2>',
+         '<p class="scope">', esc(caption), '</p>',
+         '<table class="t"><thead><tr>', hd, '</tr></thead><tbody>',
+         paste(body, collapse = ""), '</tbody></table>')
+}
+
+html <- paste0(
+'<!doctype html><html><head><meta charset="utf-8"><title>CABR NPS Summary Tables</title><style>',
+'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb;max-width:900px}',
+'h1{font-size:20px;margin:0 0 2px}h2{font-size:15px;margin:24px 0 4px}',
+'p.sub{color:#6b6a66;margin:0 0 14px;font-size:13px}',
+'p.scope{color:#52514e;margin:0 0 8px;font-size:12px;font-weight:600;border-left:3px solid #d8d5cc;padding-left:8px}',
+'table.t{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:6px}',
+'table.t th,table.t td{text-align:left;padding:6px 10px;border-bottom:1px solid #eee}',
+'table.t th{background:#f3f1ec;font-weight:600;border-bottom:2px solid #ddd;white-space:nowrap}',
+'table.t td.num{text-align:right;font-variant-numeric:tabular-nums}',
+'</style></head><body>',
+'<h1>CABR native bees &mdash; NPS summary tables</h1>',
+'<p class="sub">Plain counts for the data-focused NPS report &mdash; deliberately no tests, rates, or interpretation. Every number here is a straight count a reader can cite.</p>',
+df_to_html(part,            cap_part,   "1. Participation", metric_col = TRUE),
+df_to_html(bees_summary,    cap_bees,   "2. Bees found",    metric_col = TRUE),
+df_to_html(methods_tbl,     cap_meth,   "3. Records by method x surveyor type"),
+df_to_html(plants_summary,  cap_plants, "4. Plants found",  metric_col = TRUE),
+df_to_html(checklist,       cap_chk,    "Bee species checklist"),
+df_to_html(gen_checklist,   cap_gchk,   "Bee genera checklist"),
+df_to_html(plant_checklist, cap_pchk,   "Plant genera checklist"),
+'</body></html>')
+writeLines(html, file.path(OUT_DIR, "nps_summary_tables.html"))
+
+# ---- PNG (the four compact summary tables; long checklists stay CSV/HTML) ----
+if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
+  cap_all <- scope_cap(scope = "whole dataset: every record, all years, whole park (plain counts, no test or interpretation)",
+                       method = "lethal (specimen) + non-lethal (iNaturalist)",
+                       rank = "records, genera & species", width = 10000)
+  th <- gridExtra::ttheme_minimal(base_size = 8,
+    core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
+  mk  <- function(df, metric_col = FALSE) {
+    d <- df; if (metric_col) d[[1]] <- pretty_metric(d[[1]])
+    names(d) <- gsub("_", " ", names(d)); gridExtra::tableGrob(d, rows = NULL, theme = th)
+  }
+  ttl <- function(txt) grid::textGrob(txt, x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
+                        gp = grid::gpar(fontsize = 9, fontface = "bold", col = "#1a1a1a"))
+  scp <- grid::textGrob(paste(strwrap(cap_all, width = 130), collapse = "\n"),   # scope caption ABOVE the tables
+                        x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
+  nr    <- c(nrow(part), nrow(bees_summary), nrow(methods_tbl), nrow(plants_summary))
+  grobs <- list(scp,
+                ttl("1. Participation"),                      mk(part, TRUE),
+                ttl("2. Bees found"),                         mk(bees_summary, TRUE),
+                ttl("3. Records by method x surveyor type"),  mk(methods_tbl),
+                ttl("4. Plants found"),                       mk(plants_summary, TRUE))
+  heights <- grid::unit.c(grid::unit(2.4, "lines"),
+                          grid::unit(1.3, "lines"), grid::unit(nr[1], "null"),
+                          grid::unit(1.3, "lines"), grid::unit(nr[2], "null"),
+                          grid::unit(1.3, "lines"), grid::unit(nr[3], "null"),
+                          grid::unit(1.3, "lines"), grid::unit(nr[4], "null"))
+  G <- gridExtra::arrangeGrob(grobs = grobs, ncol = 1, heights = heights)
+  ggplot2::ggsave(file.path(OUT_DIR, "nps_summary_tables.png"), G,
+                  width = 8.5, height = 0.30 * sum(nr) + 0.34 * 4 + 1.5, dpi = 200, limitsize = FALSE, bg = "white")
+} else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
+
 message("NPS summary tables written to ", OUT_DIR, ":")
 message(sprintf("  participation: %s trips, %s field surveyors, %s iNat users, %s",
                 part$value[part$metric=="survey_trips"], part$value[part$metric=="unique_field_surveyors"],

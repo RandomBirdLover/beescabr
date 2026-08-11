@@ -76,8 +76,9 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
     scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
     scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
     labs(title = "Total Records of Bee Genera",
-         subtitle = sprintf("%s -- genera with >= %d records (%d of %d shown; full list in the CSV)",
-                            scope_lab, min_shown, nrow(wf), nrow(wide)),
+         caption = scope_cap(
+           scope  = sprintf("%s; genera with >= %d records (%d of %d shown; full list in the CSV)", scope_lab, min_shown, nrow(wf), nrow(wide)),
+           method = "lethal specimen vs non-lethal photo (evidence type)", rank = "genus"),
          x = "Number of records", y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

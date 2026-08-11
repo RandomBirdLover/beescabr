@@ -50,8 +50,8 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
   scale_fill_manual(values = fill_cols, guide = "none") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
   labs(title = "Effort by Method",
-       subtitle = "Survey trips per method (fair window: Mar-Oct 2021-2023)",
        caption = paste0(
+         "Survey trips per method (fair window: Mar-Oct 2021-2023)\n",
          "Effort = survey trips (one row per trip), restricted to the fair window (Mar-Oct 2021-2023) so\n",
          "non-lethal isn't credited with trips outside the lethal-netting years. Non-lethal logged far more\n",
          "trips than lethal -- the effort context for reading the yield (Venn) and rarefaction comparisons fairly.\n",

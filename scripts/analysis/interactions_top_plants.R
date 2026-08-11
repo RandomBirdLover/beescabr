@@ -67,7 +67,7 @@ print(top[, c("plant_genus", "whole_park", "survey_only", "lethal", "nonlethal")
 png(file.path(OUT_DIR, "interactions_top_plants.png"),
     width = 2050, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis colours
-op <- par(mar = c(5.5, 16, 3.5, 1))               # wide left margin for "Common Name (Genus)" labels
+op <- par(mar = c(5.5, 16, 3.5, 1), oma = c(3.6, 0, 0, 0))  # wide left margin for labels; bottom oma fits the 3-line scope caption
 M <- rbind(nonlethal = top$nonlethal, lethal = top$lethal)   # stacked
 colnames(M) <- paste0(plant_label(top$plant_genus), bee_low_n_mark(top$whole_park))   # common name (Latin); '*' on thinly-sampled plants
 M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
@@ -80,6 +80,8 @@ legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col =
        legend = c("non-lethal", "lethal"))
 if (any(bee_low_n(top$whole_park)))
   mtext(BEE_LOW_N_NOTE, side = 1, line = 4.2, cex = 0.7, adj = 0, col = BEE_INK$secondary)
+bee_caption_base(scope = "all records, whole park; counts = bee-visit records (reflect sampling effort, not preference)",
+                 method = "lethal + non-lethal pooled", rank = "plant genus")
 par(op); dev.off()
 
 # ---- 4. per-month breakdown of the top plants -------------------------------
@@ -104,7 +106,7 @@ rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), plant_label(top_m)
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
     width = 2300, height = 1050, res = 200)
 bee_base_par()
-op <- par(mar = c(4, 19, 4, 7))                   # wide left margin for labels; right margin for the colour legend
+op <- par(mar = c(4, 19, 4, 7), oma = c(3.6, 0, 0, 0))     # wide left margin for labels; right margin for legend; bottom oma fits the 3-line caption
 Mplot  <- Mmon[nrow(Mmon):1, , drop = FALSE]
 ramp_m <- grDevices::colorRampPalette(BEE_SEQ)(24)   # house red ramp (magnitude)
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
@@ -125,6 +127,8 @@ rect(lx0, ly0, lx1, ly1, border = BEE_INK$secondary, lwd = 0.8, xpd = NA)
 text(lx1, ly1, sprintf(" %s", format(max(Mmon), big.mark = ",")), pos = 4, offset = 0.15, xpd = NA, cex = 0.64, col = BEE_INK$secondary)
 text(lx1, ly0, " 0",                                              pos = 4, offset = 0.15, xpd = NA, cex = 0.64, col = BEE_INK$secondary)
 text((lx0 + lx1) / 2, ly1, "records/month", pos = 3, offset = 0.5, xpd = NA, cex = 0.64, col = BEE_INK$secondary)
+bee_caption_base(scope = "all records, whole park; per-month bee-visit records (log-scaled)",
+                 method = "lethal + non-lethal pooled", rank = "plant genus")
 par(op); dev.off()
 
 message("\nWrote interactions_top_plants.csv (+_by_month.csv) and two figures to ",

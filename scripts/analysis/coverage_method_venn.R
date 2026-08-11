@@ -165,6 +165,8 @@ run_scope <- function(scope, spec, inat, subfn) {
   mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.4,
         cex = 1.2, font = 2, col = BEE_INK$primary)
   mtext(subfn(n_leth, n_nonleth), outer = TRUE, line = 0.2, cex = 0.85, col = BEE_INK$secondary)
+  bee_caption_base(scope = if (scope == "journal") "fair window: survey-only, Mar-Oct 2021-2023, attributed" else "all records",
+                   method = "lethal (net) vs non-lethal (photo) -- taxa detected by each", rank = "species + genus panels")
   par(op); dev.off()
 
   rc   <- rbind(res_cat(spec, "lethal"), res_cat(inat, "nonlethal"))

@@ -26,8 +26,9 @@ source("scripts/analysis/forage_selectivity.R")    # shared bee-genus forage sel
 # here -- they are now BAKED INTO THE CLEANED TABLES + CHECKLISTS at data-cleaning time
 # (scripts/reference/enrich_lookups.R, called by the *_clean.R scripts + cabr_bee_checklist.R,
 # fetched once and cached). This run stays fully OFFLINE and just reads those columns/caches.
-# To force-refresh existing IUCN assessments or common names, run the standalone tools:
-#   Rscript scripts/refresh_iucn_status.R   |   Rscript scripts/refresh_plant_common_names.R
+# To force-refresh existing IUCN assessments or common names, run the pipeline with the refresh
+# flag (BEESCABR_REFRESH=1 Rscript scripts/run_pipeline.R) -- or the two tools directly:
+#   Rscript scripts/reference/refresh_iucn_status.R  |  Rscript scripts/reference/refresh_plant_common_names.R
 RUNNING_ALL <- TRUE
 
 .modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",

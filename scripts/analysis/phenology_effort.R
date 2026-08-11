@@ -34,7 +34,7 @@ OUT_REPORT  <- file.path(DIR_REPORT,  "phenology")   # all-records effort calend
 MONTH_ABB <- month.abb
 MCOL      <- c("lethal" = unname(BEE_METHOD_COL["lethal"]), "non-lethal" = unname(BEE_METHOD_COL["nonlethal"]))
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s", scope, method, rank)
+# scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 
 # ---- 1. read the per-survey log ---------------------------------------------
 psf_path <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else
@@ -71,8 +71,8 @@ calendar_fig <- function(dat, months_shown, file, subtitle, scope_txt) {
     facet_wrap(~ metric, scales = "free_y", ncol = 1) +
     scale_x_discrete(drop = FALSE) +
     scale_fill_manual(values = MCOL, name = NULL) +
-    labs(title = "Survey Effort Calendar", subtitle = subtitle,
-         caption = str_wrap(scope_cap(scope_txt, "lethal + non-lethal (by colour)", "n/a (effort)"), 84),
+    labs(title = "Survey Effort Calendar",
+         caption = paste0(subtitle, "\n", str_wrap(scope_cap(scope_txt, "lethal + non-lethal (by colour)", "n/a (effort)"), 84)),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(legend.position = "top", panel.grid.major.x = element_blank(),
@@ -93,8 +93,8 @@ grid_fig <- function(dat, months_shown, file, subtitle) {
     geom_text(aes(label = ifelse(trips > 0, trips, ""), colour = dark), size = 3, show.legend = FALSE) +
     scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
     scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +
-    labs(title = "Survey Trips by Year and Month", subtitle = subtitle,
-         caption = scope_cap("per-survey log", "lethal + non-lethal pooled", "n/a (effort)"),
+    labs(title = "Survey Trips by Year and Month",
+         caption = paste0(subtitle, "\n", scope_cap("per-survey log", "lethal + non-lethal pooled", "n/a (effort)")),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(panel.grid = element_blank(), plot.title = element_text(hjust = 0.5),

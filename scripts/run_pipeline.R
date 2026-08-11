@@ -66,6 +66,14 @@
 #   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table (see NOTE below).
 #   BEESCABR_NONINTERACTIVE=1      auto-skip ambiguous Holway names (no prompts).
 #
+#   BEESCABR_REFRESH=1      -> ONLINE. Force a full re-check of IUCN Red List status + plant
+#                              common names against the live APIs (needs internet + an IUCN
+#                              token), rewriting their caches, then the run re-bakes the fresh
+#                              values into the cleaned tables. Default OFF: a normal run stays
+#                              OFFLINE and keeps both current for NEW taxa incrementally -- turn
+#                              this ON only to re-check taxa already cached (IUCN edits a few/yr).
+#                              Runs the two reference/refresh_*.R tools as a pre-step.
+#
 # NOTE: step 1b builds the Holway reference table ONCE (resolving 700+ names to
 # iNat taxa is slow + interactive). The result is saved to a versioned file and
 # REUSED every run thereafter -- no re-resolution, no prompts. Rebuild only when
@@ -75,6 +83,9 @@
 # Prevent the stage scripts' own standalone entrypoints from firing when we
 # source them -- this runner owns the ingest and the connection.
 BEESCABR_SOURCED_BY_RUNNER <- TRUE
+# We are a runner: the optional refresh tools (below) should NOT trigger their own
+# standalone field-guide rebuild -- the analysis run handles that.
+RUNNING_ALL <- TRUE
 
 source("scripts/config.R")
 source("scripts/utils/utils.R")
@@ -131,6 +142,22 @@ main <- function() {
   on.exit(store_disconnect(con), add = TRUE)
 
   bx_need_reset()
+
+  # ---- 0. OPTIONAL REFRESH (flag-gated, ONLINE) ----
+  # Force a full re-check of IUCN status + plant common names against the live APIs and rewrite
+  # their caches, so the CLEAN TABLES phase below re-bakes the fresh values. OFF by default (a
+  # normal run stays offline). Reads the species/genus universe from the existing cleaned tables,
+  # so on a first-ever run it is a harmless no-op. Wrapped so an API/network failure never kills
+  # the run. See scripts/reference/refresh_{iucn_status,plant_common_names}.R.
+  if (Sys.getenv("BEESCABR_REFRESH", "0") == "1") {
+    bx_phase(0, "REFRESH IUCN + PLANT NAMES (online)")
+    bx_kv("Refresh", "forcing a full re-check against the live APIs (BEESCABR_REFRESH=1)…")
+    tryCatch(source("scripts/reference/refresh_iucn_status.R"),
+             error = function(e) bx_note("IUCN refresh failed (", conditionMessage(e), ") — kept the existing cache."))
+    tryCatch(source("scripts/reference/refresh_plant_common_names.R"),
+             error = function(e) bx_note("plant-name refresh failed (", conditionMessage(e), ") — kept the existing cache."))
+  }
+
   bx_phase(1, "SETUP & FETCH")
 
   # ---- 1. INGEST (once) ----

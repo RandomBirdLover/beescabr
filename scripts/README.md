@@ -11,6 +11,18 @@ Rscript scripts/run_pipeline.R      # or Source in RStudio
 path. Each folder below **mirrors a domain in `data/`** and owns the scripts that
 produce that domain's outputs.
 
+A normal run stays **fully offline** (IUCN status + plant common names are baked into the
+cleaned tables from a cache). To force a live re-check of both against their APIs, run with
+the refresh flag:
+
+```r
+BEESCABR_REFRESH=1 Rscript scripts/run_pipeline.R   # ONLINE: re-checks IUCN + plant names, then re-bakes
+```
+
+This runs `reference/refresh_iucn_status.R` + `reference/refresh_plant_common_names.R` as an
+optional online pre-step (needs internet + an IUCN token); off by default. They can also be run
+on their own from `scripts/reference/`.
+
 ## Folder map
 
 | `scripts/` folder | mirrors `data/` | what lives here |
@@ -19,7 +31,7 @@ produce that domain's outputs.
 | `observations/engine/` | `data/observations/cache/` | shared machine: `api/` (HTTP, flatten, cache), `db/` (DuckDB stores), `pipelines/` (ingest + export) |
 | `project_info/` | `data/project_info/` | the "brain" (survey membership), survey record, calendar parsing, interactive review |
 | `specimens/` | `data/specimens/` | specimen-record cleaning |
-| `reference/` | `data/reference/` | **restored (2026-07-20)**: `holway.R`, `holway_reference_build.R` (interactive Holway→iNat resolver, now with the parent **roll-up** — complex→subgenus→genus), `taxonomy_reference.R`, `verify.R`, `taxonomy_lookup_build.R` (builds `sd_bee_taxonomy_lookup.csv`) |
+| `reference/` | `data/reference/` | `holway.R`, `holway_reference_build.R` (interactive Holway→iNat resolver, with parent **roll-up** — complex→subgenus→genus), `taxonomy_reference.R`, `verify.R`, `taxonomy_lookup_build.R` (builds `sd_bee_taxonomy_lookup.csv`), `enrich_lookups.R`, plant/taxonomy lookup builders, **plus the online refresh tools `refresh_iucn_status.R` + `refresh_plant_common_names.R`** (run via `BEESCABR_REFRESH=1`, or standalone) |
 | `checklists/` | `data/checklists/` | shared helper `checklist_build.R`, plus **rough-draft** region builders `cabr_bee_checklist.R`, `pl_bee_checklist.R`, `sd_bee_checklist.R` (not sourced until built) |
 | `spatial/` | `data/spatial/` | `spatial_utils.R` — loads/reprojects boundary + transect layers and applies buffers (in-memory; never written) |
 | `analysis/` | — | `native_bee_data_analysis.Rmd` — downstream analysis/report notebook (run by hand) |

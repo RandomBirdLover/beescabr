@@ -41,7 +41,8 @@ suppressPackageStartupMessages({
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity")  # fair-window per-transect effort
-OUT_REPORT    <- file.path(DIR_REPORT,  "richness/diversity")  # grid + per-transect richness/effort (all records)
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/diversity")  # (other report diversity outputs)
+COV_EFFORT    <- file.path(DIR_REPORT,  "coverage/transect_effort")  # sampling effort is a COVERAGE concept, not diversity
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 CRS_LATLON    <- 4326
@@ -52,9 +53,9 @@ RAREFY_N      <- 50             # REPORT floor: rarefy grid cells with >= this m
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")   # for the per-transect richness summary
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
+dir.create(COV_EFFORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 
 # ---- 1. ALL bee records with coordinates + taxonomy keys ---------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -126,7 +127,10 @@ out_csv <- st_drop_geometry(cells) %>%
   select(cell_id, centroid_lon, centroid_lat, n_records,
          genus_richness, species_richness, rarefied_richness) %>%
   arrange(desc(species_richness), desc(n_records))
-write.csv(out_csv, file.path(OUT_REPORT, "spatial_richness_grid.csv"), row.names = FALSE)
+# spatial_richness_grid.csv is NO LONGER WRITTEN -- it was orphaned data (the grid maps that
+# consumed it were retired; nothing else reads it). Re-enable this write only if you bring the
+# basemap map back (see draw_map above). out_csv stays computed in-memory for that option.
+# write.csv(out_csv, file.path(OUT_REPORT, "spatial_richness_grid.csv"), row.names = FALSE)
 message(sprintf("Occupied cells: %d (cell size %dm). Rarefied to %d: %d cells.",
                 nrow(cells), CELL_M, RAREFY_N, sum(!is.na(cells$rarefied_richness))))
 
@@ -143,7 +147,7 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
   g <- ggplot(dat) +
     geom_sf(aes(fill = .data[[fill_col]]), color = "white", linewidth = 0.15) +
     scale_fill_gradientn(colours = BEE_SEQ, name = legend_lab, trans = trans) +   # magnitude = house blue ramp (palette arg now unused)
-    labs(title = title, subtitle = cap, x = NULL, y = NULL) +
+    labs(title = title, caption = cap, x = NULL, y = NULL) +
     coord_sf(datum = CRS_UTM) +
     base_theme
   ggsave(file, g, width = 7.4, height = 8.2, dpi = 200, bg = "white")
@@ -184,7 +188,7 @@ tr_tbl <- summ(recs2)                                    # REPORT: all records, 
 # non-lethal = beeple photos. OT drops out naturally (no 2021-2023 surveys).
 tr_tbl_fair <- summ(recs2 %>% filter(is_survey, month %in% FAIR_MONTHS, year %in% FAIR_YEARS,
                                      method == "lethal" | (method == "nonlethal" & surveyor == "beeple")))
-write.csv(tr_tbl,      file.path(OUT_REPORT,  "transect_richness.csv"),       row.names = FALSE)
+write.csv(tr_tbl,      file.path(COV_EFFORT,  "transect_richness.csv"),       row.names = FALSE)
 write.csv(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.csv"), row.names = FALSE)
 message("Per-transect richness (report, all records): ",
         paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
@@ -209,17 +213,18 @@ effort_chart <- function(tbl, file, scope_lab) {
     scale_fill_manual(values = setNames(unname(BEE_METHOD_COL[c("nonlethal", "lethal")]),
                                         c("non-lethal", "lethal")), name = NULL) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
-    labs(title = "Bee Sampling Effort by Transect", subtitle = str_wrap(scope_lab, 74),
-         caption = str_wrap("Note: TP shows about double the effort of the other transects because it was surveyed as two separate transects each survey.", 90),
+    labs(title = "Bee Sampling Effort by Transect",
+         caption = paste0(str_wrap(scope_lab, 74), "\n",
+                          str_wrap("Note: TP shows about double the effort of the other transects because it was surveyed as two separate transects each survey.", 90)),
          x = NULL, y = "records") +
     base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
                        plot.title = element_text(hjust = 0.5))
   ggsave(file, g, width = 6.4, height = 5, dpi = 200, bg = "white")
 }
-effort_chart(tr_tbl, file.path(OUT_REPORT, "transect_effort_report.png"),
+effort_chart(tr_tbl, file.path(COV_EFFORT, "transect_effort_report.png"),
              scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"))
 effort_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.png"),
              "Fair window: survey-only, Mar-Oct 2021-2023 (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)")
 
-message("Wrote transect_effort_report.png + spatial_richness_grid.csv + transect_richness.csv to ", OUT_REPORT,
+message("Wrote transect_effort_report.png + transect_richness.csv to ", COV_EFFORT,
         " | transect_effort_journal.png/.csv to ", OUT_JOURNAL)

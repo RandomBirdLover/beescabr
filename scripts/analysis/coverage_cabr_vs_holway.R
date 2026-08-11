@@ -175,7 +175,7 @@ colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
 png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
     width = 1900, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colours
-op <- par(mar = c(4.5, 12, 3.5, 1))
+op <- par(mar = c(4.5, 12, 3.5, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption without clipping
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA, width = 0.8, space = 0.35,
               xlab = "Number of CABR records",
               main = "Bees New to the San Diego County Checklist\n(bar = records; colour = evidence type)",
@@ -197,6 +197,8 @@ present <- rowSums(M) > 0
 legend("bottomright", bty = "n", fill = pal[present], legend = ev_lab[present])
 legend("topright", bty = "n", legend = "hatched = not yet ID'd to species (needs keying)",
        fill = unname(BEE_EVIDENCE["specimen"]), density = 20, angle = 45, border = BEE_INK$muted)
+bee_caption_base(scope = "all records; CABR taxa absent from the Holway San Diego County checklist",
+                 method = "lethal specimen vs non-lethal iNaturalist", rank = "any (species + coarser)")
 par(op); dev.off()
 
 # ---- 6. console summary -----------------------------------------------------

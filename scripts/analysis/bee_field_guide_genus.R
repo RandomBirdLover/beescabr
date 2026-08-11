@@ -31,6 +31,7 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label")) source("scripts/analysis/forage_selectivity.R")  # shared selectivity (likes vs available)
+if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")                     # shared scope-caption format
 OUT_DIR       <- file.path(DIR_REPORT, "reference/field_guide")
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
@@ -132,6 +133,11 @@ message(sprintf("Genus field guide: %d genera (%d never yet ID'd to species; %d 
                 nrow(tbl), sum(tbl$n_species == 0),
                 sum(tbl$status == "rare"), sum(tbl$status == "uncommon"), sum(tbl$status == "common")))
 
+# scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
+scope_str <- scope_cap(
+  scope  = "every bee record rolled up to genus (all ID ranks); all records (specimen net + iNaturalist), all years, whole park",
+  method = "lethal + non-lethal pooled", rank = "genus", width = 10000)
+
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
@@ -153,6 +159,7 @@ html <- paste0(
 '<style>',
 'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb}',
 'h1{font-size:20px;margin:0 0 2px}p.sub{color:#6b6a66;margin:0 0 16px;font-size:13px;max-width:1100px}',
+'p.scope{color:#52514e;margin:0 0 8px;font-size:12px;font-weight:600;border-left:3px solid #d8d5cc;padding-left:8px;max-width:1100px}',
 'p.note{color:#6b6a66;margin:12px 0 0;font-size:12px;max-width:1100px}',
 'sup.cs{color:#8a1c1c;font-weight:700;margin-left:1px}',
 'table{border-collapse:collapse;width:100%;font-size:13px}',
@@ -170,8 +177,9 @@ html <- paste0(
 '.pill.st-common{background:#dcebe0;color:#2f6b46}',
 '</style></head><body>',
 '<h1>CABR native bee field guide - by genus</h1>',
-'<p class="sub">Companion to the species guide: one row per GENUS, pooling every record of that genus (specimen net + iNaturalist, all ID ranks) so the hard-to-ID diverse genera keep their flower associations for planting. &quot;Species ID&#39;d&quot; = distinct species we have pinned in the genus (0 = none yet). Peak day = circular mean of record dates; active months = 5th-95th percentile; flower breadth = how many plant genera the genus uses (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+); most-used plant = its single most-recorded plant and that plant&#39;s share of the genus&#39;s flower visits (a raw count, not a preference &mdash; see Forage preference); where = favoured transect(s) or an off-transect centre + buffer; status = how often the genus is recorded here (rare/uncommon/common &mdash; Records and Status count ALL data incl. casual iNaturalist photos across all years, so they are recording frequency, not survey-controlled abundance). Rows in grey are rarely recorded (peak/season are rough). Click a column header to sort.</p>',
-'<p class="sub"><b>Most-recorded flowers and Most-used plant are exactly that &mdash; the plants seen most often</b>, which blends how much the plant was blooming and sampled with genuine preference, so neither is proof the genus &quot;likes&quot; it best. <b>Forage preference</b> corrects for that, matching on bloom timing, year AND survey method: a matched Monte-Carlo chi-square compares the genus&#39;s visits to what the rest of the community recorded <i>in the same month, year and method (net vs photo)</i> &mdash; so a one-good-year bloom (drought/rain) or a photo-vs-net sampling quirk can&#39;t masquerade as a preference. &quot;Selective &rarr; plant (N&times; vs available)&quot; = visits that plant N times more than its same-year-month availability would predict; &quot;Generalist&quot; = visits roughly in proportion to what&#39;s around then (no real preference); &quot;not enough records&quot; = too few to judge. Caveat: &quot;availability&quot; is the community&#39;s realized plant use per year-month (a strong proxy, not an independent bloom census), and genera whose p sits near 0.05 are borderline.</p>',
+'<p class="sub">Companion to the species guide: one row per GENUS, pooling every record of that genus (specimen net + iNaturalist, all ID ranks) so the hard-to-ID diverse genera keep their flower associations for planting. &quot;Species ID&#39;d&quot; = distinct species we have pinned in the genus (0 = none yet). Peak day = circular mean of record dates; active months = 5th-95th percentile; flower breadth = how many plant genera the genus uses (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+; stated only at &ge;50 records &mdash; fewer read &quot;not enough records&quot;); most-used plant = its single most-recorded plant and that plant&#39;s share of the genus&#39;s flower visits (a raw count, not a preference &mdash; see Forage preference); where = favoured transect(s) or an off-transect centre + buffer; status = how often the genus is recorded here (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; Records and Status count ALL data incl. casual iNaturalist photos across all years, so they are recording frequency, not survey-controlled abundance). Rows in grey are rarely recorded (peak/season are rough). Click a column header to sort.</p>',
+'<p class="sub"><b>Most-recorded flowers and Most-used plant are exactly that &mdash; the plants seen most often</b>, which blends how much the plant was blooming and sampled with genuine preference, so neither is proof the genus &quot;likes&quot; it best. <b>Forage preference</b> corrects for that, matching on bloom timing, year AND survey method: a matched Monte-Carlo chi-square compares the genus&#39;s visits to what the rest of the community recorded <i>in the same month, year and method (net vs photo)</i> &mdash; so a one-good-year bloom (drought/rain) or a photo-vs-net sampling quirk can&#39;t masquerade as a preference. &quot;Selective &rarr; plant (N&times; vs available)&quot; = visits that plant N times more than its same-year-month availability would predict; &quot;Generalist&quot; = visits roughly in proportion to what&#39;s around then (no real preference); &quot;not enough records&quot; = fewer than ', SELECT_MIN_REC, ' plant-visit records (too few to judge). Caveat: &quot;availability&quot; is the community&#39;s realized plant use per year-month (a strong proxy, not an independent bloom census), and genera whose p sits near 0.05 are borderline.</p>',
+sprintf('<p class="scope">%s</p>', esc(scope_str)),
 '<table id="t"><thead><tr>',
 '<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Flower breadth</th><th>Most-used plant</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
@@ -204,13 +212,18 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
     core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
-  cap <- grid::textGrob(paste(strwrap(CONSERV_LEGEND, width = 170), collapse = "\n"),
+  scap <- grid::textGrob(paste(strwrap(scope_str, width = 160), collapse = "\n"),   # scope caption ABOVE the table
+                        x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
+  gen_note <- sprintf("Status cut-offs (all-data record counts): rare < %d, uncommon %d-%d, common >= %d. Flower breadth stated only at >= %d records; Forage preference only at >= %d plant-visit records (fewer read 'not enough records'). %s",
+                      RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN, SELECT_MIN_REC, CONSERV_LEGEND)
+  cap <- grid::textGrob(paste(strwrap(gen_note, width = 170), collapse = "\n"),
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
                         gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
-  g   <- gridExtra::arrangeGrob(g, cap, ncol = 1,
-                                heights = grid::unit.c(grid::unit(1, "null"), grid::unit(2.2, "lines")))
+  g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
+                                heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(3.4, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "bee_field_guide_genus.png"), g,
-                  width = 17, height = 0.26 * nrow(disp) + 1.4, dpi = 200, limitsize = FALSE, bg = "white")
+                  width = 17, height = 0.26 * nrow(disp) + 2.3, dpi = 200, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote bee_field_guide_genus.{csv,html,png} to ", OUT_DIR)

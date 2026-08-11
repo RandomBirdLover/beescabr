@@ -6,7 +6,7 @@
 # photos -- and when / where / on what flower should a surveyor go look for them?
 #
 # "Least sampled" = fewer than THIN_TOTAL records TOTAL across BOTH methods (the
-# project's <10 thin-evidence rule). Because the total is small, each method is small
+# report's 50-record low-sample floor). Because the total is small, each method is small
 # too, so every species here is under-detected by netting AND by iNaturalist. The
 # per-method split is shown so you can see the shape of the gap:
 #   * both (thin)   -- a few of each method (seen a little either way)
@@ -34,6 +34,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table"))  try(source("scripts/analysis/conservation_status.R"), silent = TRUE)  # IUCN (optional)
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")                                # plant common names
+if (!exists("scope_cap"))   source("scripts/analysis/theme_beescabr.R")                              # shared scope-caption format
 
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/least_sampled")
 SPECIES_RANKS <- c("species", "subspecies")
@@ -112,6 +113,11 @@ message(sprintf("  coverage: %d both(thin), %d photo-only, %d specimen-only",
                 sum(tbl$coverage == "both (thin)"), sum(tbl$coverage == "photo-only"),
                 sum(tbl$coverage == "specimen-only")))
 
+# scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
+scope_str <- scope_cap(
+  scope  = sprintf("least-sampled species only: < %d records total across both methods; all years, whole park", THIN_TOTAL),
+  method = "lethal + non-lethal pooled", rank = "species", width = 10000)
+
 # ---- 4. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 cov_class <- function(s) ifelse(grepl("^both", s), "cb", ifelse(grepl("^photo", s), "cp", "cs"))
@@ -134,6 +140,7 @@ html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>CABR Least-Sampled Bees</title><style>',
 'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb}',
 'h1{font-size:20px;margin:0 0 2px}p.sub{color:#6b6a66;margin:0 0 14px;font-size:13px}',
+'p.scope{color:#52514e;margin:0 0 8px;font-size:12px;font-weight:600;border-left:3px solid #d8d5cc;padding-left:8px}',
 'table{border-collapse:collapse;width:100%;font-size:13px}',
 'th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}',
 'th{position:sticky;top:0;background:#f3f1ec;cursor:pointer;font-weight:600;white-space:nowrap;border-bottom:2px solid #ddd}',
@@ -150,6 +157,7 @@ html <- paste0(
 '<h1>CABR least-sampled native bees &mdash; go-find-it sheet</h1>',
 sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND by iNaturalist. <b>Coverage</b> shows the split: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. When / where / flower are pooled across both methods (peak months by record count; active window = month span seen; where = top transect(s); flower = most-recorded plant genera). &#128247; links an example iNaturalist photo. Click a header to sort.</p>',
         nrow(tbl), THIN_TOTAL),
+sprintf('<p class="scope">%s</p>', esc(scope_str)),
 '<table id="t"><thead><tr><th>Bee</th><th class="num">Net</th><th class="num">Photo</th><th class="num">Total</th>',
 '<th>Coverage</th><th>Peak months</th><th>Active window</th><th>Where (transect)</th><th>Top flowers</th>', iucn_th,
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
@@ -176,14 +184,17 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
     core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
+  scap <- grid::textGrob(paste(strwrap(scope_str, width = 150), collapse = "\n"),   # scope caption ABOVE the table
+                        x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
   cap <- grid::textGrob(sprintf("The %d least-sampled bees (< %d records total, both methods pooled). Coverage: both(thin)/photo-only/specimen-only. When/where/flower pooled across methods. * = IUCN threatened/near-threatened.  Source: iNaturalist + specimen vouchers, Cabrillo NM.",
                                 nrow(disp), THIN_TOTAL),
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
                         gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
-  g   <- gridExtra::arrangeGrob(g, cap, ncol = 1,
-                                heights = grid::unit.c(grid::unit(1, "null"), grid::unit(2.2, "lines")))
+  g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
+                                heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(2.2, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "least_sampled_bees.png"), g,
-                  width = if (HAVE_IUCN) 15 else 14, height = 0.24 * nrow(disp) + 1.4, dpi = 200, limitsize = FALSE, bg = "white")
+                  width = if (HAVE_IUCN) 15 else 14, height = 0.24 * nrow(disp) + 1.9, dpi = 200, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote least_sampled_bees.{csv,html,png} to ", OUT_DIR)

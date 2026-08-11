@@ -43,8 +43,7 @@ OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/id_resolution")   # all-record
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 is_true   <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 # method colours (net = rose-red / photo = periwinkle) + lighter tints for the "still to do" side
 COL_L  <- unname(BEE_METHOD_COL["lethal"]);    COL_NL <- unname(BEE_METHOD_COL["nonlethal"])
 COL_L_LT <- "#F2B8C0";                         COL_NL_LT <- "#BEC0EA"
@@ -147,10 +146,10 @@ draw_targets <- function(dat, scope, file, split_done) {
               hjust = -0.12, size = 2.8, color = "grey25", inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
     scale_fill_manual(values = fill, name = NULL) +
-    labs(title = "Latest Progress of ID Resolution by Genus", subtitle = subttl,
-         caption = str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
+    labs(title = "Latest Progress of ID Resolution by Genus",
+         caption = paste0(subttl, "\n", str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
                               format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
-                              scope_cap(scope, "resolved vs keyable vs stuck", "genus / coarse rank")), 90),
+                              scope_cap(scope, "resolved vs keyable vs stuck", "genus / coarse rank")), 90)),
          x = "records", y = NULL) +
     theme_beescabr(11) +
     theme(legend.position = "top", panel.grid.major.y = element_blank(),
