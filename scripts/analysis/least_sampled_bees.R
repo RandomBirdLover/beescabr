@@ -85,13 +85,15 @@ ctx <- lapply(split_tbl$species, function(k) {
   d  <- rec[rec$species == k, ]
   fl <- d$plant_genus[has(d$plant_genus)]
   u  <- d$url[has(d$url)]
+  fl_top <- if (length(fl)) names(sort(table(fl), decreasing = TRUE))[seq_len(min(3, length(unique(fl))))] else character(0)
   data.frame(
     species       = k,
     common_name   = mode_chr(d$common),
     peak_months   = peak_mo(d$month),
     active_window = span_mo(d$month),
     top_transects = top2(d$transect),
-    top_flowers   = if (length(fl)) paste(plant_label(names(sort(table(fl), decreasing = TRUE))[seq_len(min(3, length(unique(fl))))]), collapse = ", ") else "- (no flower records)",
+    top_flowers      = if (length(fl_top)) paste(plant_label(fl_top), collapse = ", ") else "- (no flower records)",
+    top_flowers_html = if (length(fl_top)) paste(plant_label(fl_top, sci_wrap = "<i>%s</i>"), collapse = ", ") else "- (no flower records)",  # HTML: Latin italic
     example_url   = if (length(u)) u[1] else "",
     stringsAsFactors = FALSE)
 })
@@ -106,9 +108,9 @@ tbl$conservation <- if (exists("conservation_label")) conservation_label(tbl$spe
 HAVE_IUCN <- exists("iucn_cache_exists") && isTRUE(try(iucn_cache_exists(), silent = TRUE))
 
 tbl <- tbl %>% select(species, common_name, net_records, photo_records, total_records,
-                      coverage, peak_months, active_window, top_transects, top_flowers,
+                      coverage, peak_months, active_window, top_transects, top_flowers, top_flowers_html,
                       iucn, conservation, example_url)
-write.csv(tbl, file.path(OUT_DIR, "least_sampled_bees.csv"), row.names = FALSE)
+write.csv(tbl %>% select(-top_flowers_html), file.path(OUT_DIR, "least_sampled_bees.csv"), row.names = FALSE)   # CSV keeps the plain flower list
 message(sprintf("  coverage: %d both(thin), %d photo-only, %d specimen-only",
                 sum(tbl$coverage == "both (thin)"), sum(tbl$coverage == "photo-only"),
                 sum(tbl$coverage == "specimen-only")))
@@ -120,6 +122,8 @@ scope_str <- scope_cap(
 
 # ---- 4. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
+# iNaturalist-style mark (flying bird on the iNat green badge) for the "example observation" link
+INAT_ICON <- '<img src="data:image/png;base64,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" width="16" height="14" alt="iNaturalist observation" style="vertical-align:-3px">'
 cov_class <- function(s) ifelse(grepl("^both", s), "cb", ifelse(grepl("^photo", s), "cp", "cs"))
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]
@@ -128,11 +132,14 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
                                     tolower(ifelse(has(r$iucn), r$iucn, "ne")), esc(ifelse(has(r$iucn), r$iucn, "NE"))) else ""
   bee_td <- sprintf('<td class="bee"><i>%s</i>%s%s</td>', esc(r$species), cs,
                     if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "")
-  fl <- if (has(r$example_url)) sprintf('%s <a href="%s" title="example photo">&#128247;</a>', esc(r$top_flowers), esc(r$example_url)) else esc(r$top_flowers)
+  fl <- if (has(r$example_url)) sprintf('%s <a href="%s" title="example iNaturalist observation">%s</a>', r$top_flowers_html, esc(r$example_url), INAT_ICON) else r$top_flowers_html
+  cov_icon <- if (grepl("^photo", r$coverage))    ' <span class="vneed" title="specimen voucher needed -- photographed but never netted; go net one">&#128300;</span>'       # microscope = collect a voucher
+         else if (grepl("^specimen", r$coverage)) ' <span class="vneed" title="photographs needed -- collected but never photographed; go photograph one">&#128247;</span>'  # camera = take more photos
+         else ""
   sprintf(paste0('<tr>%s<td class="num">%d</td><td class="num">%d</td><td class="num">%d</td>',
-                 '<td><span class="pill %s">%s</span></td><td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td>%s</tr>'),
+                 '<td><span class="pill %s">%s</span>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td>%s</tr>'),
           bee_td, r$net_records, r$photo_records, r$total_records,
-          cov_class(r$coverage), esc(r$coverage), esc(r$peak_months), esc(r$active_window),
+          cov_class(r$coverage), esc(r$coverage), cov_icon, esc(r$peak_months), esc(r$active_window),
           esc(r$top_transects), fl, iucn_td)
 }, character(1))
 iucn_th <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
@@ -149,14 +156,15 @@ html <- paste0(
 'td.num{text-align:right;font-variant-numeric:tabular-nums}td.loc{color:#52514e;font-size:12px}',
 '.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
 '.pill.cb{background:#e9e7e0;color:#5a5850}.pill.cp{background:#e5dcef;color:#5b3b8a}.pill.cs{background:#f0dcc8;color:#7a4a1e}',
+'.vneed{font-size:12px;vertical-align:middle}',
 '.iucn{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}',
 '.iucn.i-en,.iucn.i-cr{background:#f3d2cc;color:#8a1c1c}.iucn.i-vu{background:#f6dcc6;color:#8a4a12}',
 '.iucn.i-nt{background:#efe7cf;color:#6b5a20}.iucn.i-lc{background:#dfeae0;color:#2f6b46}',
 '.iucn.i-dd,.iucn.i-ne{background:#efefef;color:#98968f}a{color:#3a6b8a;text-decoration:none}',
 '</style></head><body>',
 '<h1>CABR least-sampled native bees &mdash; go-find-it sheet</h1>',
-sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND by iNaturalist. <b>Coverage</b> shows the split: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. When / where / flower are pooled across both methods (peak months by record count; active window = month span seen; where = top transect(s); flower = most-recorded plant genera). &#128247; links an example iNaturalist photo. Click a header to sort.</p>',
-        nrow(tbl), THIN_TOTAL),
+sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND by iNaturalist. <b>Coverage</b> shows the split: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. A &#128247; marks specimen-only species that need photographs (go photograph one); a &#128300; marks photo-only species that need a specimen voucher (go net one). When / where / flower are pooled across both methods (peak months by record count; active window = month span seen; where = top transect(s); flower = most-recorded plant genera). %s links an example iNaturalist observation. Click a header to sort.</p>',
+        nrow(tbl), THIN_TOTAL, INAT_ICON),
 sprintf('<p class="scope">%s</p>', esc(scope_str)),
 '<table id="t"><thead><tr><th>Bee</th><th class="num">Net</th><th class="num">Photo</th><th class="num">Total</th>',
 '<th>Coverage</th><th>Peak months</th><th>Active window</th><th>Where (transect)</th><th>Top flowers</th>', iucn_th,
@@ -179,9 +187,10 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
     `Peak months` = peak_months, `Active` = active_window,
     `Where` = top_transects, `Top flowers` = top_flowers)
   if (HAVE_IUCN) disp$IUCN <- ifelse(has(tbl$iucn), tbl$iucn, "NE")
+  ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,
-    core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
   scap <- grid::textGrob(paste(strwrap(scope_str, width = 150), collapse = "\n"),   # scope caption ABOVE the table

@@ -162,7 +162,15 @@ plot_report <- function(rank, file) {
     scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
     scale_fill_manual(values = GRP_COL, guide = "none") +
     labs(title = ttl,
-         caption = "All records (no window). Top: who found them (general public / beeple / interns). Bottom: by method (all records pooled).\nREPORT scope: every specimen + every iNaturalist photo, survey or not. Interns' bar = their specimens + 2024 photos, so the two views reconcile to the same total. Group-exclusive = a taxon recorded by ONLY that group within its view.",
+         caption = paste0(
+           scope_cap(scope  = "all records, no window; every specimen + every iNaturalist photo (survey or not)",
+                     method = "by contributor (public / beeple / interns) and by method (all records pooled)",
+                     rank   = rank),
+           "\n",
+           str_wrap(paste0(
+             "Top: who found them (general public / beeple / interns). Bottom: by method. Interns' bar = their ",
+             "specimens + 2024 photos, so the two views reconcile to the same total. Group-exclusive = a taxon ",
+             "recorded by ONLY that group within its view."), 108)),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.x = element_text(size = 8.5),

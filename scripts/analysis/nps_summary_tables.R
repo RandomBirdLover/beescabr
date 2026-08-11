@@ -76,14 +76,14 @@ checklist <- bees %>% filter(!is.na(species_key)) %>%
             in_specimens = any(method == "lethal (specimen)"),
             in_inaturalist = any(method == "non-lethal (iNaturalist)"), .groups = "drop") %>%
   arrange(genus, species)
-write.csv(checklist, file.path(OUT_DIR, "nps_bee_species_checklist.csv"), row.names = FALSE)
+write.csv(checklist, file.path(OUT_DIR, "nps_bee_checklist_species.csv"), row.names = FALSE)
 
 # genera checklist (includes genus-only records)
 gen_checklist <- bees %>% filter(!is.na(genus), genus != "") %>%
   group_by(genus) %>% summarise(n_records = n(),
             n_species_resolved = n_distinct(species_key[!is.na(species_key)]), .groups = "drop") %>%
   arrange(genus)
-write.csv(gen_checklist, file.path(OUT_DIR, "nps_bee_genera_checklist.csv"), row.names = FALSE)
+write.csv(gen_checklist, file.path(OUT_DIR, "nps_bee_checklist_genus.csv"), row.names = FALSE)
 
 # ---- 3. methods x surveyor type ---------------------------------------------
 styp <- function(df, method) data.frame(method = method,
@@ -107,7 +107,7 @@ plant_checklist <- plants %>% mutate(plant_genus = pg, plant_species = ps) %>%
   group_by(plant_genus) %>% summarise(n_records = n(),
             n_species = n_distinct(plant_species[plant_species != "" & !is.na(plant_species)]),
             .groups = "drop") %>% arrange(plant_genus)
-write.csv(plant_checklist, file.path(OUT_DIR, "nps_plant_genera_checklist.csv"), row.names = FALSE)
+write.csv(plant_checklist, file.path(OUT_DIR, "nps_plant_checklist_genus.csv"), row.names = FALSE)
 
 # ============================================================================
 # 5. RENDERED TABLES (HTML + PNG) -- same styling family as the field guides, with a
@@ -142,7 +142,7 @@ cap_pchk   <- scope_cap(scope = "plant genera bees were recorded on; all years, 
                         rank = "plant genus", width = 10000)
 
 # ---- HTML ------------------------------------------------------------------
-df_to_html <- function(df, caption, heading, metric_col = FALSE) {
+df_to_html <- function(df, caption, heading, metric_col = FALSE, italic_cols = character(0)) {
   d <- df
   if (metric_col) d[[1]] <- pretty_metric(d[[1]])
   hd <- paste0("<th>", vapply(names(d), function(nm) esc(gsub("_", " ", nm)), ""), "</th>", collapse = "")
@@ -150,6 +150,7 @@ df_to_html <- function(df, caption, heading, metric_col = FALSE) {
     cells <- vapply(seq_along(d), function(j) {
       v <- d[[j]][i]; num <- is.numeric(d[[j]])
       val <- if (num) format(v, big.mark = ",", trim = TRUE) else esc(as.character(v))
+      if (names(d)[j] %in% italic_cols) val <- sprintf('<i>%s</i>', val)   # scientific taxon column -> italic
       sprintf('<td%s>%s</td>', if (num) ' class="num"' else "", val)
     }, "")
     paste0("<tr>", paste(cells, collapse = ""), "</tr>")
@@ -177,9 +178,9 @@ df_to_html(part,            cap_part,   "1. Participation", metric_col = TRUE),
 df_to_html(bees_summary,    cap_bees,   "2. Bees found",    metric_col = TRUE),
 df_to_html(methods_tbl,     cap_meth,   "3. Records by method x surveyor type"),
 df_to_html(plants_summary,  cap_plants, "4. Plants found",  metric_col = TRUE),
-df_to_html(checklist,       cap_chk,    "Bee species checklist"),
-df_to_html(gen_checklist,   cap_gchk,   "Bee genera checklist"),
-df_to_html(plant_checklist, cap_pchk,   "Plant genera checklist"),
+df_to_html(checklist,       cap_chk,    "Bee species checklist", italic_cols = c("species", "genus")),
+df_to_html(gen_checklist,   cap_gchk,   "Bee genera checklist",   italic_cols = "genus"),
+df_to_html(plant_checklist, cap_pchk,   "Plant genera checklist", italic_cols = "plant_genus"),
 '</body></html>')
 writeLines(html, file.path(OUT_DIR, "nps_summary_tables.html"))
 

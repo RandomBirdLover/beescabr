@@ -100,29 +100,29 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
   # filename, e.g. rarefaction_by_method_species_inext_size.png. No by_<dim>/ subfolders.
   dimdir <- sub(paste0("_", rank, "$"), "", key)   # "by_method_species" -> "by_method"
   outsub <- OUT_JOURNAL; dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
-  pre    <- paste0("rarefaction_", dimdir, "_", rank, "_inext")   # rarefaction_by_method_species_inext
+  pre    <- paste0("rarefaction_", dimdir, "_inext")   # rank appended LAST, e.g. rarefaction_by_method_inext_size_species
   sub <- scope_cap(scope = "survey records only", method = "lethal + non-lethal pooled", rank = rank)
   th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary, hjust = 0.5),  # house ink, centred
                plot.subtitle = element_text(colour = BEE_INK$note, hjust = 0.5))
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q
   g1 <- add_cols(iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
     labs(title = title, caption = paste0(sub, "\niNEXT size-based rarefaction/extrapolation (Hill q0/q1/q2)")) + th, cols)
-  ggsave(file.path(outsub, paste0(pre, "_size.png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
+  ggsave(file.path(outsub, paste0(pre, "_size_", rank, ".png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
   g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
     labs(title = title, caption = paste0(sub, "\niNEXT coverage-based rarefaction/extrapolation (Hill q0/q1/q2)")) + th, cols)
-  ggsave(file.path(outsub, paste0(pre, "_coverage.png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
+  ggsave(file.path(outsub, paste0(pre, "_coverage_", rank, ".png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
-  write.csv(out$AsyEst, file.path(outsub, paste0(pre, "_asymptotic.csv")), row.names = FALSE)
+  write.csv(out$AsyEst, file.path(outsub, paste0(pre, "_asymptotic_", rank, ".csv")), row.names = FALSE)
   # standardized to a common COVERAGE (default: the lowest coverage among groups) --
   # this is the fairest apples-to-apples comparison
   estC <- iNEXT::estimateD(gl, q = QVALS, datatype = "abundance", base = "coverage")
-  write.csv(estC, file.path(outsub, paste0(pre, "_by_coverage.csv")), row.names = FALSE)
+  write.csv(estC, file.path(outsub, paste0(pre, "_by_coverage_", rank, ".csv")), row.names = FALSE)
   # ...and standardized to a common SAMPLE SIZE (the lowest group's n), the direct
   # analogue of the vegan "rarefy to lowest" number
   minN <- min(vapply(gl, sum, numeric(1)))
   estS <- iNEXT::estimateD(gl, q = QVALS, datatype = "abundance", base = "size", level = minN)
-  write.csv(estS, file.path(outsub, paste0(pre, "_by_size.csv")), row.names = FALSE)
+  write.csv(estS, file.path(outsub, paste0(pre, "_by_size_", rank, ".csv")), row.names = FALSE)
   message(sprintf("  %-11s: iNEXT done (min n = %d). q0 by coverage:\n%s", key, minN,
                   paste(utils::capture.output(print(estC[estC$Order.q == 0,
                         c("Assemblage", "m", "SC", "qD")])), collapse = "\n")))
@@ -148,4 +148,4 @@ for (rk in names(RANKS)) {
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours
 }
 
-message("Wrote rarefaction_by_{method,observer}_{species,genus}_inext_* into journal richness/accumulation/ (iNEXT is journal-only)")
+message("Wrote rarefaction_by_{method,observer}_inext_*_{species,genus} into journal richness/accumulation/ (iNEXT is journal-only)")

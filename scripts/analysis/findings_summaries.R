@@ -16,7 +16,7 @@
 # =============================================================
 
 if (!exists("DIR_REPORT")) source("scripts/config.R")   # DIR_REPORT / DIR_JOURNAL paper roots
-FIND_DIR <- file.path(DIR_REPORT, "findings")            # pipeline meta lives with the comprehensive (report) paper
+FIND_DIR <- file.path(dirname(DIR_REPORT), "findings")   # cross-cutting index -> sits ABOVE both papers, in data/analysis/
 dir.create(FIND_DIR, recursive = TRUE, showWarnings = FALSE)
 .today <- as.character(Sys.Date())
 
@@ -94,7 +94,7 @@ fw("genera_and_species_accumulation",
    c(method = "Chao2 asymptotic richness vs observed, per transect + park",
      per_transect_completeness = acc_line,
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
-   "richness/accumulation/: transect_accumulation_summary.csv; REPORT accumulation_by_effort_{species,genera}_report.png (transect completeness); JOURNAL accumulation_by_effort_{species,genera}_journal.png (lethal vs non-lethal, fair window)")
+   "richness/accumulation/: transect_accumulation_summary.csv; REPORT accumulation_by_effort_report_{species,genus}.png (transect completeness); JOURNAL accumulation_by_effort_journal_{species,genus}.png (lethal vs non-lethal, fair window)")
 
 fw("rarefaction_inext",
    "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
@@ -102,7 +102,7 @@ fw("rarefaction_inext",
    "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
    c(method = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
-   "journal richness/accumulation/: rarefaction_by_{method,observer}_{species,genus}_inext_{size,coverage}.png (+ _asymptotic/_by_size/_by_coverage.csv)")
+   "journal richness/accumulation/: rarefaction_by_{method,observer}_inext_{size,coverage}_{species,genus}.png (+ _asymptotic/_by_size/_by_coverage _{species,genus}.csv)")
 
 fw("rarefaction_vegan",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
@@ -110,7 +110,7 @@ fw("rarefaction_vegan",
    "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
    c(method = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
-   "richness/accumulation/: report rarefaction_by_{transect,year}_{species,genus}_{curves,bars}.png (+ .csv); journal same as *_vegan_*")
+   "richness/accumulation/: report rarefaction_by_{transect,year}_{curves,bars}_{species,genus}.png (+ .csv); journal same as *_vegan_*")
 
 fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",
@@ -257,14 +257,14 @@ fw("records_per_genus_by_evidence",
    "descriptive",
    "How much (and what kind of) evidence backs each bee genus -- lethal specimen vs non-lethal iNat photo, per genus.",
    character(0),
-   "records_per_genus_by_evidence.csv; records_per_genus_by_evidence.png")
+   "coverage/records_by_evidence/: records_by_evidence_{report,journal}_genus.{csv,png}")
 
 fw("records_per_species_by_evidence",
    "Evidence backing each species",
    "descriptive",
    "How much (and what kind of) evidence backs each bee SPECIES -- lethal specimen vs non-lethal iNat photo, one row per species (genus-only records excluded); species with <10 records flagged as thin.",
    character(0),
-   "records_per_species_by_evidence.csv; records_per_species_by_evidence.png")
+   "coverage/records_by_evidence/: records_by_evidence_{report,journal}_species.{csv,png}")
 
 fw("least_sampled_bees",
    "Least-sampled bees -- go-find-it sheet",
@@ -299,7 +299,7 @@ fw("nps_summary_tables",
    c(scope    = "ALL records (not survey-only); the report's factual backbone that every other analysis interprets",
      contents = "participation (field surveyors + iNat users + trips + year span), bee + plant genus/species counts, method breakdown, and bee/plant checklists",
      no_stats = "descriptive by design -- no p-values or estimators here; the inferential findings live in the other summaries"),
-   "nps_participation.csv; nps_bees_summary.csv; nps_bee_species_checklist.csv; nps_bee_genera_checklist.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_genera_checklist.csv")
+   "nps_participation.csv; nps_bees_summary.csv; nps_bee_checklist_species.csv; nps_bee_checklist_genus.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_checklist_genus.csv; nps_summary_tables.{html,png}")
 
 # ---- master index -----------------------------------------------------------
 idx <- do.call(rbind, .index)

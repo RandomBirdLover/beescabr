@@ -18,6 +18,17 @@
 #   * MAGNITUDE (richness / counts) -- one crimson sequential ramp (pale -> deep wine).
 #   * TEXT always wears ink tokens, never a series colour.
 # Base-R helpers need no packages; the ggplot theme needs ggplot2 (lazy).
+#
+# TAXON-NAME ITALICS (house rule, applied in every figure that prints a taxon):
+#   * Scientific names are ALWAYS italic; common names stay upright.
+#   * A BEE label (genus "Bombus" or binomial "Bombus vosnesenskii") is entirely
+#     scientific -> italicise the WHOLE label: ggplot `element_text(face="italic")`,
+#     base-R `font = 3`, HTML `<i>...</i>`.
+#   * A PLANT label is usually MIXED, e.g. "Wild Buckwheats (Eriogonum)" -> italicise
+#     ONLY the Latin in parentheses, common name upright. Use the shared helpers in
+#     plant_names.R: `plant_label_expr()` (base-R plotmath / ggplot discrete-axis labels
+#     via `scale_*_discrete(labels=function(x) setNames(plant_label_expr(x),x)[x])`) and
+#     `plant_label(sci_wrap="<i>%s</i>")` for HTML. Never blanket-italicise a mixed label.
 # =============================================================
 
 # ---- categorical: TRANSECT is the colour identity -------------------------

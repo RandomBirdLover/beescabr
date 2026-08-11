@@ -82,14 +82,15 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
          x = "Number of records", y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
+          axis.text.y = element_text(face = "italic"),   # bee genus names = scientific -> italic
           panel.grid.major.y = element_blank())
   ggsave(out_png, g, width = 9, height = max(5, 0.34 * nrow(wf) + 1.7), dpi = 200, bg = "white")
   message(sprintf("  %-32s %d of %d genera >= %d records", scope_lab, nrow(wf), nrow(wide), min_shown))
 }
 make_fig(rec_all,  MIN_REPORT,  "All records (report)",
-         file.path(OUT_REPORT, "records_per_genus_by_evidence_report.png"),
-         file.path(OUT_REPORT, "records_per_genus_by_evidence_report.csv"))
+         file.path(OUT_REPORT, "records_by_evidence_report_genus.png"),
+         file.path(OUT_REPORT, "records_by_evidence_report_genus.csv"))
 make_fig(rec_fair, MIN_JOURNAL, "Fair window: Mar-Oct 2021-2023 (journal)",
-         file.path(OUT_JOURNAL, "records_per_genus_by_evidence_journal.png"),
-         file.path(OUT_JOURNAL, "records_per_genus_by_evidence_journal.csv"))
-message("\nWrote records_per_genus_by_evidence_{report,journal}.{csv,png} to journal_paper_2026/ + nps_report_2026/")
+         file.path(OUT_JOURNAL, "records_by_evidence_journal_genus.png"),
+         file.path(OUT_JOURNAL, "records_by_evidence_journal_genus.csv"))
+message("\nWrote records_by_evidence_{report,journal}_genus.{csv,png} to journal_paper_2026/ + nps_report_2026/")

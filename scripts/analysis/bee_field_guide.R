@@ -106,7 +106,8 @@ rows <- lapply(sp_keys, function(k) {
     peak_day       = md_of(peak),
     peak_doy       = if (is.na(peak)) 999L else as.integer(round(peak)),   # hidden chronological sort key
     active_months  = active_months(d$doy),
-    top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
+    top_flowers      = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
+    top_flowers_html = if (length(fl)) paste(plant_label(head(names(fl), 5), sci_wrap = "<i>%s</i>"), collapse = ", ") else "- (no flower records)",  # HTML: Latin italic
     n_plant_genera = length(fl),
     diet           = if (nrow(d) < CLAIM_MIN) "not enough records" else diet_call(length(fl), nrow(pv)),
     where_to_find  = where_call(d),
@@ -123,8 +124,9 @@ tbl$iucn_name    <- iucn_name_of(tbl$bee)
 tbl$conservation <- conservation_label(tbl$bee)
 # Forage preference -- availability-corrected (matched month/year/method test), SPECIES level.
 # Populated for species with >= SELECT_MIN_REC plant-visit records; "too few records to judge" below that.
-tbl$forage_pref  <- forage_preference_label_species(tbl$bee, plant_fmt = plant_label)
-write.csv(tbl, file.path(OUT_DIR, "bee_field_guide_species.csv"), row.names = FALSE)
+tbl$forage_pref      <- forage_preference_label_species(tbl$bee, plant_fmt = plant_label)
+tbl$forage_pref_html <- forage_preference_label_species(tbl$bee, plant_fmt = function(g) plant_label(g, sci_wrap = "<i>%s</i>"))  # HTML: Latin italic
+write.csv(tbl %>% dplyr::select(-top_flowers_html, -forage_pref_html), file.path(OUT_DIR, "bee_field_guide_species.csv"), row.names = FALSE)   # CSV keeps plain labels
 message(sprintf("Field guide: %d species (%d with >= %d records)",
                 nrow(tbl), sum(tbl$confidence == "ok"), MIN_CONF))
 
@@ -150,8 +152,8 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
                  '<td data-sort="%d"><span class="pill st-%s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$bee), cs,
           if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "",
-          r$n_records, iucn_td, r$peak_doy, esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
-          diet_class(r$diet), esc(r$diet), pref_class(r$forage_pref), esc(r$forage_pref),
+          r$n_records, iucn_td, r$peak_doy, esc(r$peak_day), esc(r$active_months), r$top_flowers_html,
+          diet_class(r$diet), esc(r$diet), pref_class(r$forage_pref), r$forage_pref_html,
           esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
@@ -220,9 +222,10 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                             Diet = diet, `Forage preference` = pref_short,
                             `Where to find` = where_to_find, Status = status)
   if (HAVE_IUCN) disp <- dplyr::relocate(dplyr::mutate(disp, IUCN = tbl$iucn), IUCN, .after = N)
+  ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,
-    core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
   scap <- grid::textGrob(paste(strwrap(scope_str, width = 165), collapse = "\n"),   # scope caption ABOVE the table

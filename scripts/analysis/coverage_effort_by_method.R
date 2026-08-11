@@ -51,12 +51,16 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
   labs(title = "Effort by Method",
        caption = paste0(
-         "Survey trips per method (fair window: Mar-Oct 2021-2023)\n",
-         "Effort = survey trips (one row per trip), restricted to the fair window (Mar-Oct 2021-2023) so\n",
-         "non-lethal isn't credited with trips outside the lethal-netting years. Non-lethal logged far more\n",
-         "trips than lethal -- the effort context for reading the yield (Venn) and rarefaction comparisons fairly.\n",
-         "NOTE: a lethal (net) trip covers all 3 transects, while a non-lethal (photo) trip covers one transect --\n",
-         "so raw trip counts understate lethal's per-trip coverage."),
+         scope_cap(scope  = "fair window: survey trips only, Mar-Oct 2021-2023 (excludes trips outside the lethal-netting years)",
+                   method = "lethal (net) vs non-lethal (photo) survey trips",
+                   rank   = "trips (survey effort)"),
+         "\n",
+         str_wrap(paste0(
+           "Effort = survey trips (one row per trip), restricted to the fair window so non-lethal isn't credited ",
+           "with trips outside the lethal-netting years. Non-lethal logged far more trips than lethal -- the effort ",
+           "context for reading the yield (Venn) and rarefaction comparisons fairly. NOTE: a lethal (net) trip covers ",
+           "all 3 transects, while a non-lethal (photo) trip covers one transect -- so raw trip counts understate ",
+           "lethal's per-trip coverage."), 108)),
        x = NULL, y = "survey trips") +
   theme_beescabr(12) +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

@@ -34,8 +34,7 @@ SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
-scope_cap <- function(scope, method, rank) sprintf("Scope: %s  |  Method: %s  |  Rank: %s",
-                                                   scope, method, rank)
+# scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 
 # ---- 1. pool records, flag on/off-transect + taxonomy keys ------------------
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
@@ -96,6 +95,8 @@ g <- ggplot(plot_df, aes(x = rank, y = n, fill = region)) +
                                "both"     = BOTH_BLEND,
                                "off-only" = unname(BEE_SET["b_only"])), name = NULL) +
   labs(title = "On-Transect vs. Off-Transect Bee Coverage",
+       caption = scope_cap(scope = "all records; on-transect (standardized survey effort) vs off-transect (casual park-wide records)",
+                           method = "lethal + non-lethal pooled", rank = "species + genus"),
        x = NULL, y = "distinct taxa") +
   theme_beescabr(11) +
   theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))

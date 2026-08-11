@@ -182,8 +182,8 @@ plot_accumulation <- function(key_col, rank_label, file) {
                    method = "lethal + non-lethal pooled", rank = rank_label)
   par(op)
 }
-plot_accumulation("species_key", "species", file.path(OUT_REPORT, "accumulation_by_effort_species_report.png"))
-plot_accumulation("genus_key",   "genera",  file.path(OUT_REPORT, "accumulation_by_effort_genera_report.png"))
+plot_accumulation("species_key", "species", file.path(OUT_REPORT, "accumulation_by_effort_report_species.png"))
+plot_accumulation("genus_key",   "genera",  file.path(OUT_REPORT, "accumulation_by_effort_report_genus.png"))
 
 # ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
 # One panel PER TRANSECT (2x2), each showing lethal vs non-lethal accumulation in the
@@ -211,7 +211,7 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
   nc <- min(2, ncell); nr <- ceiling(ncell / nc)
   png(file, width = 850 * nc, height = 650 * nr, res = 200); on.exit(dev.off())
   bee_base_par()
-  op <- par(mfrow = c(nr, nc), oma = c(3, 3, 5, 1), mar = c(2.6, 2.8, 2.2, 0.8), mgp = c(2, 0.6, 0))
+  op <- par(mfrow = c(nr, nc), oma = c(5, 3, 5, 1), mar = c(2.6, 2.8, 2.2, 0.8), mgp = c(2, 0.6, 0))  # bottom oma leaves room for the scope caption below the x-label
   for (tr in present) {
     plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "", ylab = "")
     title(main = tr, col.main = COLS[tr], font.main = 2, line = 0.5)
@@ -229,10 +229,12 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
         side = 3, outer = TRUE, line = 2.2, col = BEE_INK$primary, font = 2, cex = 1.05)
   mtext("Fair window: survey-only, Mar-Oct 2021-2023  (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)",
         side = 3, outer = TRUE, line = 0.6, col = BEE_INK$secondary, cex = 0.68)
+  bee_caption_base(scope = "fair window: survey-only records, per transect (BST/TP/UPMON; OT excluded -- added 2024)",
+                   method = "lethal (intern nets) vs non-lethal (beeple photos)", rank = rank_label, line0 = 2.0)
   par(op)
 }
-plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_by_effort_species_journal.png"))
-plot_accumulation_method("genus_key",   "genera",  file.path(OUT_JOURNAL, "accumulation_by_effort_genera_journal.png"))
+plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_by_effort_journal_species.png"))
+plot_accumulation_method("genus_key",   "genera",  file.path(OUT_JOURNAL, "accumulation_by_effort_journal_genus.png"))
 
 # ---- 5. summary table + incidence-based richness estimates -------------------
 # richness_est(): observed richness plus the Chao2 incidence estimate of TRUE

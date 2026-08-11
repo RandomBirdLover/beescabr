@@ -145,6 +145,9 @@ draw_targets <- function(dat, scope, file, split_done) {
     geom_text(data = lab, aes(x = total, y = target, label = sprintf("%.0f%% ID'd", pct_id)),
               hjust = -0.12, size = 2.8, color = "grey25", inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    # bee genera italic; the coarse-rank buckets like "(tribe)" stay upright
+    scale_y_discrete(labels = function(x) as.expression(lapply(x, function(s)
+      if (grepl("^\\(", s)) s else bquote(italic(.(s)))))) +
     scale_fill_manual(values = fill, name = NULL) +
     labs(title = "Latest Progress of ID Resolution by Genus",
          caption = paste0(subttl, "\n", str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
@@ -193,7 +196,8 @@ method_genus_fig <- function(m, file, method_label) {
                               scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", method_label, "genus")), 90),
          x = "records", y = NULL) +
     theme_beescabr(11) +
-    theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
+    theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5),
+          axis.text.y = element_text(face = "italic"))   # bee genus names = scientific -> italic
   ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), dpi = 200, bg = "white")
 }
 method_genus_fig("specimen", file.path(OUT_JOURNAL, "coverage_id_targets_specimen.png"), "Lethal")

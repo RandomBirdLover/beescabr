@@ -52,7 +52,7 @@ MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---- ridgeline phenology: one density curve per taxon, peak-ordered ----------
-phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL, title = NULL) {
+phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = NULL, method = "lethal + non-lethal pooled", title = NULL, sci = "bee") {
   df <- df[!is.na(df$taxon) & df$taxon != "" & !is.na(df$doy), ]
   keep <- names(which(table(df$taxon) >= min_records))
   df <- df[df$taxon %in% keep, ]
@@ -75,14 +75,25 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
     scale_fill_gradientn(colors = SPRING_FALL, guide = "none") +
     scale_x_continuous(breaks = MONTH_STARTS, labels = month.abb,
                        limits = c(1, 366), expand = c(0.01, 0)) +
+    # taxon-name italics: bee names whole-italic (via axis.text.y face below); plant names
+    # keep the common name upright and italicise ONLY the Latin in parentheses (plotmath labels)
+    { if (identical(sci, "plant")) scale_y_discrete(labels = function(x) as.expression(lapply(x, function(s) {
+        m <- regmatches(s, regexec("^(.*) \\(([^)]*)\\)$", s))[[1]]
+        if (length(m) == 3) bquote(.(m[2]) ~ "(" * italic(.(m[3])) * ")") else bquote(italic(.(s)))
+      }))) else NULL } +
     labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
-         caption = paste0(sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
-                            length(ord), min_records), "\n", scope), x = NULL, y = NULL) +
+         caption = paste0(
+           scope_cap(scope  = if (!is.null(scope)) scope else sprintf("all records, whole park; %s activity over the year", tolower(label)),
+                     method = method, rank = label, width = 300),
+           "\n",
+           sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
+                   length(ord), min_records)),
+         x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
-    theme(axis.text.y = element_text(size = 6),
+    theme(axis.text.y = element_text(size = 6, face = if (identical(sci, "bee")) "italic" else "plain"),  # bee names whole-italic; plant labels italicised per-part above
           plot.title  = element_text(face = "bold", hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5),
-          plot.caption = element_text(color = BEE_INK$note, hjust = 0, size = 8, face = "bold"))
+          plot.caption = element_text(color = BEE_INK$secondary, hjust = 0, size = 8))
   ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 
@@ -106,7 +117,9 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
                rayleigh_p = signif(exp(-Z), 3), seasonal = exp(-Z) < 0.05)
   }))
   ray <- data.frame(taxon = rownames(ray), ray, row.names = NULL)
-  write.csv(ray[order(ray$mean_day), ], sub("\\.png$", "_rayleigh.csv", file), row.names = FALSE)
+  ray_csv <- sub("\\.png$", "_rayleigh.csv", file)
+  ray_csv <- sub("_(genus|species)_rayleigh\\.csv$", "_rayleigh_\\1.csv", ray_csv)   # keep taxon rank as the final token
+  write.csv(ray[order(ray$mean_day), ], ray_csv, row.names = FALSE)
   message(sprintf("  %-14s: %d taxa (>= %d records); %d significantly seasonal (Rayleigh p<0.05)",
                   label, length(ord), min_records, sum(ray$seasonal)))
 }
@@ -163,10 +176,9 @@ message(sprintf("  Bloom evidence (combined): %d points  [survey plant obs %d, i
                 sum(bloom$src == "bee-on-flower (iNat field)"), sum(bloom$src == "bee-on-flower (specimen tag)")))
 phenology_ridge(data.frame(taxon = plant_label(bloom$plant_genus), doy = doy_of(bloom$observed_on)),
                 file.path(OUT_DIR, "phenology_plant_genus_bloom_evidence.png"), "Plant bloom (all evidence)",
-                scope = paste0("All bloom evidence: survey in-flower plant records + every plant a bee was recorded on\n",
-                               "(iNat flower_visited obs-field + specimen tags). A bee on a plant = it was in bloom then.\n",
-                               "Broader coverage than survey plant records alone, but blends sources & their differing effort."),
-                title = "Seasonal Plant Bloom by Genus")
+                scope = "all bloom evidence, whole park; survey in-flower plant records + every plant a bee was recorded on (a bee on a plant = it was in bloom then); broader than survey plant records alone but blends sources with differing effort",
+                method = "survey plant obs + bee-on-flower (iNat field + specimen tags)",
+                title = "Seasonal Plant Bloom by Genus", sci = "plant")
 
 # ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 bees <- bind_rows(spec[c("observed_on", "taxon_rank", "genus", "species")],

@@ -83,6 +83,11 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_s
             hjust = -0.08, size = 3.0, colour = BEE_INK$secondary) +
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(breaks = scales::breaks_width(2), expand = expansion(mult = c(0, 0.32))) +
+  # plant y-axis: common name upright, Latin in parentheses italic (plotmath)
+  scale_y_discrete(labels = function(x) as.expression(lapply(x, function(s) {
+    m <- regmatches(s, regexec("^(.*) \\(([^)]*)\\)$", s))[[1]]
+    if (length(m) == 3) bquote(.(m[2]) ~ "(" * italic(.(m[3])) * ")") else bquote(italic(.(s)))
+  }))) +
   labs(title = "Plant Hubs for the Park's Rare Bees",
        caption = paste0(str_wrap(sprintf("Bar = how many different rare bee species (< %d records each) were RECORDED on each plant (a conservation hub) -- NOT a preference. Rare bees have too few records to correct for availability, so this is where their sightings fall, not what they favour.", RARE_CUT), 100), "\n",
                         str_wrap(paste0(scope_cap(sprintf("%d bee species with < %d records; records with a plant recorded",
@@ -181,7 +186,7 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   geom_col(width = 0.72) +
   geom_text(aes(label = visits), hjust = -0.5, size = 3.1, colour = BEE_INK$secondary) +
   facet_wrap(~ panel, ncol = 1, scales = "free") +
-  scale_y_discrete(labels = function(x) plant_label(sub("^.*@@", "", x))) +
+  scale_y_discrete(labels = function(x) as.expression(plant_label_expr(sub("^.*@@", "", x)))) +   # plant: common upright, Latin italic
   scale_fill_gradientn(colors = BEE_SEQ, guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.20))) +
   labs(title = "Plant Hubs for the Park's IUCN-Threatened Bees",

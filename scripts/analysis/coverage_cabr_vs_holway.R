@@ -194,9 +194,12 @@ ev_lab  <- c(specimen      = "specimen (voucher)",
              inat_research = "iNat research-grade (community-vetted)",
              inat_needsid  = "iNat needs-ID (not yet community-vetted)")
 present <- rowSums(M) > 0
-legend("bottomright", bty = "n", fill = pal[present], legend = ev_lab[present])
-legend("topright", bty = "n", legend = "hatched = not yet ID'd to species (needs keying)",
-       fill = unname(BEE_EVIDENCE["specimen"]), density = 20, angle = 45, border = BEE_INK$muted)
+# ONE combined legend: the evidence tiers (solid) + the hatched "needs keying" flag, in a single box
+leg_lab  <- c(ev_lab[present], "hatched = not yet ID'd to species (needs keying)")
+leg_fill <- c(unname(pal[present]), unname(BEE_EVIDENCE["specimen"]))
+leg_dens <- c(rep(NA, sum(present)), 20)          # NA = solid box; 20 = hatched box
+legend("bottomright", bty = "n", legend = leg_lab, fill = leg_fill,
+       density = leg_dens, angle = 45, border = BEE_INK$muted)
 bee_caption_base(scope = "all records; CABR taxa absent from the Holway San Diego County checklist",
                  method = "lethal specimen vs non-lethal iNaturalist", rank = "any (species + coarser)")
 par(op); dev.off()

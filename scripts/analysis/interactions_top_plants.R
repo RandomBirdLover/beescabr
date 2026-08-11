@@ -69,12 +69,18 @@ png(file.path(OUT_DIR, "interactions_top_plants.png"),
 bee_base_par()                                    # house-style fonts + muted axis colours
 op <- par(mar = c(5.5, 16, 3.5, 1), oma = c(3.6, 0, 0, 0))  # wide left margin for labels; bottom oma fits the 3-line scope caption
 M <- rbind(nonlethal = top$nonlethal, lethal = top$lethal)   # stacked
-colnames(M) <- paste0(plant_label(top$plant_genus), bee_low_n_mark(top$whole_park))   # common name (Latin); '*' on thinly-sampled plants
+colnames(M) <- top$plant_genus                               # keep raw genus (indexing/order); labels drawn as plotmath below
 M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
-barplot(M, horiz = TRUE, las = 1, border = NA, cex.names = 0.82,
+.stars <- setNames(bee_low_n_mark(top$whole_park), top$plant_genus)   # '*' on thinly-sampled plants
+.plab  <- as.expression(lapply(colnames(M), function(g) {    # common name upright, Latin italic, '*' appended
+  cn <- plant_common_name(g); s <- .stars[[g]]
+  if (is.na(cn)) bquote(italic(.(g)) * .(s)) else bquote(.(cn) ~ "(" * italic(.(g)) * ")" * .(s))
+}))
+bp <- barplot(M, horiz = TRUE, names.arg = rep("", ncol(M)), border = NA,
         col = c(nonlethal = COL_NONLETHAL, lethal = COL_LETHAL),
         xlab = "Bee-visit records (whole park)",
         main = sprintf("Top %d Plant Genera Visited by Bees", TOP_N))
+axis(2, at = bp, labels = .plab, las = 1, tick = FALSE, cex.axis = 0.82, col.axis = BEE_INK$muted)
 mtext("bar split by survey method", side = 3, line = 0.3, cex = 0.8, col = BEE_INK$secondary)
 legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col = BEE_INK$primary,
        legend = c("non-lethal", "lethal"))
@@ -100,8 +106,12 @@ write.csv(data.frame(favourite_rank = seq_along(top_m), plant_genus = rownames(M
 # y-axis numbered by the bees' FAVOURITE: rank 1 = most total visit records. Labels carry rank + count.
 # plant genus shown as its common name (Latin) via the shared label helper; names() stay the raw
 # genus so the matrix-rowname indexing below still lines up.
-rank_lab <- setNames(sprintf("%d. %s (%s)", seq_along(top_m), plant_label(top_m),
-                             format(top_tot, big.mark = ",")), top_m)
+# rank + common name upright, Latin italic, + total count -- as plotmath so only the Latin is italicised
+rank_lab <- setNames(lapply(seq_along(top_m), function(i) {
+  g <- top_m[i]; cn <- plant_common_name(g)
+  rk <- paste0(i, ". "); ct <- paste0(" (", format(top_tot[i], big.mark = ","), ")")
+  if (is.na(cn)) bquote(.(rk) * italic(.(g)) * .(ct)) else bquote(.(rk) * .(cn) ~ "(" * italic(.(g)) * ")" * .(ct))
+}), top_m)
 
 png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
     width = 2300, height = 1050, res = 200)
@@ -115,7 +125,7 @@ image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
 mtext("log records/month; y-axis ranked by the bees' favourite (1 = most visit records)",
       side = 3, line = 0.4, cex = 0.75, col = BEE_INK$secondary)
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
-axis(2, seq_len(nrow(Mplot)), rank_lab[rownames(Mplot)], las = 1, cex.axis = 0.66)
+axis(2, seq_len(nrow(Mplot)), labels = as.expression(rank_lab[rownames(Mplot)]), las = 1, cex.axis = 0.66)
 mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
       side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
 # colour-scale legend (right margin): pale = few / no records, dark = many that month

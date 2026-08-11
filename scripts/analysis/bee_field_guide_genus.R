@@ -106,6 +106,8 @@ rows <- lapply(gen_keys, function(k) {
   peak <- circ_mean_doy(d$doy)
   top_plant <- if (length(fl) && nrow(pv) >= 5)
     sprintf("%s, %d%%", plant_label(names(fl)[1]), round(100 * as.integer(fl[1]) / nrow(pv))) else "-"
+  top_plant_html <- if (length(fl) && nrow(pv) >= 5)
+    sprintf("%s, %d%%", plant_label(names(fl)[1], sci_wrap = "<i>%s</i>"), round(100 * as.integer(fl[1]) / nrow(pv))) else "-"
   data.frame(
     genus          = k,
     n_records      = nrow(d),
@@ -115,10 +117,12 @@ rows <- lapply(gen_keys, function(k) {
     peak_day       = md_of(peak),
     peak_doy       = if (is.na(peak)) 999L else as.integer(round(peak)),   # hidden chronological sort key
     active_months  = active_months(d$doy),
-    top_flowers    = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
+    top_flowers      = if (length(fl)) paste(plant_label(head(names(fl), 5)), collapse = ", ") else "- (no flower records)",
+    top_flowers_html = if (length(fl)) paste(plant_label(head(names(fl), 5), sci_wrap = "<i>%s</i>"), collapse = ", ") else "- (no flower records)",  # HTML: Latin italic
     n_plant_genera = length(fl),
     flower_breadth = if (nrow(d) < CLAIM_MIN) "not enough records" else breadth_call(length(fl), nrow(pv)),
     top_plant      = top_plant,
+    top_plant_html = top_plant_html,
     where_to_find  = where_call(d),
     stringsAsFactors = FALSE)
 })
@@ -126,9 +130,11 @@ tbl <- do.call(rbind, rows) %>% arrange(desc(n_records))
 # Forage preference: does the genus FAVOUR certain plants beyond what's available, or just
 # visit whatever's blooming? From the shared selectivity module (same test as the web colours).
 # The preferred plant reads as a common name (fall back to the Latin genus if none known).
-.pref_fmt <- function(g) { cn <- plant_common_name(g); ifelse(is.na(cn), g, cn) }
-tbl$forage_pref <- forage_preference_label(tbl$genus, plant_fmt = .pref_fmt)
-write.csv(tbl, file.path(OUT_DIR, "bee_field_guide_genus.csv"), row.names = FALSE)
+.pref_fmt      <- function(g) { cn <- plant_common_name(g); ifelse(is.na(cn), g, cn) }
+.pref_fmt_html <- function(g) { cn <- plant_common_name(g); ifelse(is.na(cn), sprintf("<i>%s</i>", g), cn) }   # HTML: italicise the Latin fallback
+tbl$forage_pref      <- forage_preference_label(tbl$genus, plant_fmt = .pref_fmt)
+tbl$forage_pref_html <- forage_preference_label(tbl$genus, plant_fmt = .pref_fmt_html)
+write.csv(tbl %>% dplyr::select(-top_flowers_html, -top_plant_html, -forage_pref_html), file.path(OUT_DIR, "bee_field_guide_genus.csv"), row.names = FALSE)   # CSV keeps plain labels
 message(sprintf("Genus field guide: %d genera (%d never yet ID'd to species; %d rare, %d uncommon, %d common)",
                 nrow(tbl), sum(tbl$n_species == 0),
                 sum(tbl$status == "rare"), sum(tbl$status == "uncommon"), sum(tbl$status == "common")))
@@ -150,8 +156,8 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
                  '<td data-sort="%d">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="%s">%s</td><td class="loc">%s</td>',
                  '<td data-sort="%d"><span class="pill st-%s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$genus), cs, tag, r$n_records, r$n_species,
-          r$peak_doy, esc(r$peak_day), esc(r$active_months), esc(r$top_flowers),
-          esc(r$flower_breadth), esc(r$top_plant), pref_cls, esc(r$forage_pref),
+          r$peak_doy, esc(r$peak_day), esc(r$active_months), r$top_flowers_html,
+          esc(r$flower_breadth), r$top_plant_html, pref_cls, r$forage_pref_html,
           esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
 html <- paste0(
@@ -207,9 +213,10 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                             `Most-recorded flowers` = top_flowers, `Flower breadth` = flower_breadth,
                             `Most-used plant` = top_plant, `Forage preference` = pref_short,
                             `Where to find` = where_to_find, Status = status)
+  ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Genus")] <- "italic"   # bee genus column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,
-    core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
   scap <- grid::textGrob(paste(strwrap(scope_str, width = 160), collapse = "\n"),   # scope caption ABOVE the table

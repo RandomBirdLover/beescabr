@@ -224,7 +224,9 @@ effort_chart <- function(tbl, file, scope_lab) {
 effort_chart(tr_tbl, file.path(COV_EFFORT, "transect_effort_report.png"),
              scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"))
 effort_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.png"),
-             "Fair window: survey-only, Mar-Oct 2021-2023 (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)")
+             scope_cap(scope  = "fair window: survey-only, Mar-Oct 2021-2023 (OT excluded -- added 2024)",
+                       method = "lethal (intern nets) vs non-lethal (beeple photos)",
+                       rank   = "records (by transect)"))
 
 message("Wrote transect_effort_report.png + transect_richness.csv to ", COV_EFFORT,
         " | transect_effort_journal.png/.csv to ", OUT_JOURNAL)

@@ -113,8 +113,8 @@ draw <- function(M, key, title, rank, cols = NULL) {
   dimdir <- sub(paste0("_", rank, "$"), "", key)   # "by_transect_species" -> "by_transect"
   outdir <- rare_base(dimdir); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
   vlab   <- if (dimdir %in% JOURNAL_DIMS) "_vegan" else ""
-  pre    <- paste0("rarefaction_", dimdir, "_", rank)   # e.g. rarefaction_by_transect_species
-  tab <- rarefy_table(M); write.csv(tab, file.path(outdir, paste0(pre, vlab, ".csv")), row.names = FALSE)
+  pre    <- paste0("rarefaction_", dimdir)   # rank appended LAST, e.g. rarefaction_by_transect_bars_species
+  tab <- rarefy_table(M); write.csv(tab, file.path(outdir, paste0(pre, vlab, "_", rank, ".csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
   cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
   cols <- if (is.null(cols)) setNames(grDevices::colorRampPalette(BEE_SEQ)(nrow(M)), rownames(M)) else cols  # ordinal groups (years) -> blue sequential
@@ -131,7 +131,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
   # curves: JOURNAL only. The REPORT dropped its rarefaction curves -- the bars (observed vs
   # rarefied) are the report's rarefaction figure (Taro's call). Journal keeps both for review.
   if (dimdir %in% JOURNAL_DIMS) {
-    ggsave(file.path(outdir, paste0(pre, vlab, "_curves.png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
+    ggsave(file.path(outdir, paste0(pre, vlab, "_curves_", rank, ".png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
   }
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
               data.frame(group = tab$group, kind = sprintf("rarefied to %d", minN), S = tab$rarefied_richness))
@@ -146,7 +146,7 @@ draw <- function(M, key, title, rank, cols = NULL) {
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-  ggsave(file.path(outdir, paste0(pre, vlab, "_bars.png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
+  ggsave(file.path(outdir, paste0(pre, vlab, "_bars_", rank, ".png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
 }
@@ -178,5 +178,5 @@ for (rk in names(RANKS)) {
        c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
 }
 
-message("Wrote rarefaction_by_{transect,year}_* (report) + rarefaction_by_{method,observer}_*_vegan_* (journal)\n",
+message("Wrote rarefaction_by_{transect,year}_*_{species,genus} (report) + rarefaction_by_{method,observer}_vegan_*_{species,genus} (journal)\n",
         "  into richness/accumulation/ of each paper.")
