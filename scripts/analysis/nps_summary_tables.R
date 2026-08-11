@@ -190,17 +190,17 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                        method = "lethal (specimen) + non-lethal (iNaturalist)",
                        rank = "records, genera & species", width = 10000)
   th <- gridExtra::ttheme_minimal(base_size = 8,
-    core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c(BEE_TABLE[["row_odd"]], BEE_TABLE[["row_even"]]))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   mk  <- function(df, metric_col = FALSE) {
     d <- df; if (metric_col) d[[1]] <- pretty_metric(d[[1]])
     names(d) <- gsub("_", " ", names(d)); gridExtra::tableGrob(d, rows = NULL, theme = th)
   }
   ttl <- function(txt) grid::textGrob(txt, x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 9, fontface = "bold", col = "#1a1a1a"))
+                        gp = grid::gpar(fontsize = 9, fontface = "bold", col = BEE_TABLE[["head"]]))
   scp <- grid::textGrob(paste(strwrap(cap_all, width = 130), collapse = "\n"),   # scope caption ABOVE the tables
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = BEE_INK$secondary, lineheight = 1.15))
   nr    <- c(nrow(part), nrow(bees_summary), nrow(methods_tbl), nrow(plants_summary))
   grobs <- list(scp,
                 ttl("1. Participation"),                      mk(part, TRUE),

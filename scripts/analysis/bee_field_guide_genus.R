@@ -177,10 +177,8 @@ html <- paste0(
 'tr.low{color:#a09e98}tr.low td.bee i{color:#a09e98}',
 'td.pref-sel{color:#0e5a52;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',
 '.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
-'.pill.sp{background:#f0dcc8;color:#7a4a1e}.pill.ge{background:#cfe6e2;color:#0e5a52}',
-'.pill.mo{background:#e9e7e0;color:#5a5850}.pill.na{background:#f1f1f1;color:#999}',
-'.pill.st-rare{background:#efdcd2;color:#8a3d1e}.pill.st-uncommon{background:#efe9dc;color:#6b5a2e}',
-'.pill.st-common{background:#dcebe0;color:#2f6b46}',
+bee_badge_css(BEE_DIET_BG,  BEE_DIET_FG,  function(k) paste0(".pill.", k)),      # diet pills (sp/ge/mo/na)
+bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),   # abundance-status pills
 '</style></head><body>',
 '<h1>CABR native bee field guide - by genus</h1>',
 '<p class="sub">Companion to the species guide: one row per GENUS, pooling every record of that genus (specimen net + iNaturalist, all ID ranks) so the hard-to-ID diverse genera keep their flower associations for planting. &quot;Species ID&#39;d&quot; = distinct species we have pinned in the genus (0 = none yet). Peak day = circular mean of record dates; active months = 5th-95th percentile; flower breadth = how many plant genera the genus uses (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+; stated only at &ge;50 records &mdash; fewer read &quot;not enough records&quot;); most-used plant = its single most-recorded plant and that plant&#39;s share of the genus&#39;s flower visits (a raw count, not a preference &mdash; see Forage preference); where = favoured transect(s) or an off-transect centre + buffer; status = how often the genus is recorded here (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; Records and Status count ALL data incl. casual iNaturalist photos across all years, so they are recording frequency, not survey-controlled abundance). Rows in grey are rarely recorded (peak/season are rough). Click a column header to sort.</p>',
@@ -216,17 +214,17 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Genus")] <- "italic"   # bee genus column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,
-    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c(BEE_TABLE[["row_odd"]], BEE_TABLE[["row_even"]]))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
   scap <- grid::textGrob(paste(strwrap(scope_str, width = 160), collapse = "\n"),   # scope caption ABOVE the table
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = BEE_INK$secondary, lineheight = 1.15))
   gen_note <- sprintf("Status cut-offs (all-data record counts): rare < %d, uncommon %d-%d, common >= %d. Flower breadth stated only at >= %d records; Forage preference only at >= %d plant-visit records (fewer read 'not enough records'). %s",
                       RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN, SELECT_MIN_REC, CONSERV_LEGEND)
   cap <- grid::textGrob(paste(strwrap(gen_note, width = 170), collapse = "\n"),
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7, col = BEE_TABLE[["subtext"]], lineheight = 1.15))
   g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
                                 heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(3.4, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "bee_field_guide_genus.png"), g,

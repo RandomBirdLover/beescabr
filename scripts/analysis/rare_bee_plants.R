@@ -25,7 +25,7 @@
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
-for (pkg in c("ggplot2")) {
+for (pkg in c("ggplot2", "ggtext")) {   # ggtext: rich-text facet strips (italicise the Latin in panel headers)
   if (!requireNamespace(pkg, quietly = TRUE))
     try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
 }
@@ -151,7 +151,13 @@ NAMED <- data.frame(
     base <- if (!is.na(cn_map[k]) && nzchar(cn_map[k])) sprintf("%s  (%s)", cn_map[k], k) else k
     sprintf("%s  --  IUCN %s", base, unname(threat_status[k]))
   }, character(1)),
+  # markdown variant for the ggtext facet strip: bee Latin italic, common name upright
+  label_md = vapply(threat_keys, function(k) {
+    base <- if (!is.na(cn_map[k]) && nzchar(cn_map[k])) sprintf("%s  (<i>%s</i>)", cn_map[k], k) else sprintf("<i>%s</i>", k)
+    sprintf("%s  --  IUCN %s", base, unname(threat_status[k]))
+  }, character(1)),
   stringsAsFactors = FALSE)
+md_of_label <- setNames(NAMED$label_md, NAMED$label)   # plain label -> markdown label
 message(sprintf("IUCN-threatened bees with records: %d (%s)", nrow(NAMED),
                 if (nrow(NAMED)) paste(threat_keys, collapse = ", ") else "none"))
 
@@ -171,11 +177,12 @@ write.csv(named_tbl, file.path(OUT_DIR, "rare_named_bee_plants.csv"), row.names 
 pref_of <- setNames(lapply(NAMED$species_key, preferred_plant_sp), NAMED$label)
 # strip = what the bee was RECORDED on (bars) + its availability-corrected PREFERRED plant
 # where records allow, else an explicit "too few to judge" note.
+# strip text as markdown (ggtext): bee Latin + preferred-plant Latin italic; <br> = line break
 panel_of <- setNames(vapply(tot$label, function(L) {
   pf <- pref_of[[L]]
-  l3 <- if (!is.na(pf$pref)) sprintf("PREFERS %s -- %.1fx vs available (recorded-most may differ)", plant_label(pf$pref), pf$ratio)
+  l3 <- if (!is.na(pf$pref)) sprintf("PREFERS %s -- %.1fx vs available (recorded-most may differ)", plant_label(pf$pref, sci_wrap = "<i>%s</i>"), pf$ratio)
         else "too few records to judge a preference (bars = where sightings fall)"
-  sprintf("%s\n%d records  -  %d plant visits\n%s", L, tot$n_records[tot$label == L], tot$n_visits[tot$label == L], l3)
+  sprintf("%s<br>%d records  -  %d plant visits<br>%s", md_of_label[L], tot$n_records[tot$label == L], tot$n_visits[tot$label == L], l3)
 }, character(1)), tot$label)
 # The availability-corrected PREFERRED plant is called out in each panel's strip ("PREFERS X -- Nx
 # vs available") rather than marked on the bar -- the strip wording carries it cleanly.
@@ -199,7 +206,7 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = "none", panel.grid.major.y = element_blank(),
         plot.subtitle = element_text(size = 8.5),
-        strip.text = element_text(face = "bold", hjust = 0, size = 9, lineheight = 1.15))
+        strip.text = ggtext::element_markdown(face = "bold", hjust = 0, size = 9, lineheight = 1.3))  # rich text: italic Latin in the panel header
 ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,
        width = 11, height = 2.2 + 3.1 * length(unique(plot_df$panel)), dpi = 200, bg = "white")
 

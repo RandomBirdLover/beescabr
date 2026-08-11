@@ -113,14 +113,16 @@ message(sprintf("iNAT BOUNTY (get a photo): %d species + %d genera in specimens 
 
 # ---- 4. figures: top species targets, most 'findable' first ------------------
 # EVERY gap species (no cap) -- a bounty must be the complete list of taxa missing from the other method.
-bar <- function(df, ncol_records, title, sub, fill, file) {
+bar <- function(df, ncol_records, title, sub, fill, emoji, file) {
   d <- df %>% filter(rank == "species") %>% arrange(desc(.data[[ncol_records]]))
   d$taxon <- factor(d$taxon, levels = rev(d$taxon))
+  # bar length + colour = the evidence the taxon ALREADY has (records + which method they came from);
+  # the emoji in the TITLE is that bounty's single call-to-action = the method it still NEEDS.
   g <- ggplot(d, aes(x = .data[[ncol_records]], y = taxon)) +
     geom_col(fill = fill, width = 0.72) +
     geom_text(aes(label = .data[[ncol_records]]), hjust = -0.25, size = 3) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-    labs(title = title, caption = str_wrap(sprintf("%s  (all %d species)", sub, nrow(d)), 95),
+    labs(title = paste0(title, "  ", emoji), caption = str_wrap(sprintf("%s  (all %d species)", sub, nrow(d)), 95),
          x = "records in the source method (more = easier to target)", y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5),
@@ -131,12 +133,12 @@ bar(specimen_bounty, "n_photo_records",
     "Specimen Bee Bounty: Species to Collect",
     paste0("In iNaturalist photos but no specimen - net a voucher.  ",
            scope_cap(scope = "all records, whole park", method = "lethal (net) vs non-lethal (iNaturalist) -- gap = present in one method, missing from the other", rank = "species")),
-    unname(BEE_METHOD_COL["lethal"]), file.path(OUT_DIR, "specimen_bee_bounty.png"))   # collect = net = purple
+    unname(BEE_METHOD_COL["nonlethal"]), "\U0001F52C", file.path(OUT_DIR, "specimen_bee_bounty.png"))   # colour = the records it HAS (iNat photos = non-lethal periwinkle); \U0001F52C = the method it NEEDS (a specimen voucher)
 bar(inat_bounty, "n_specimen_records",
     "iNaturalist Bee Bounty: Species to Photograph",
     paste0("In specimens but not on iNaturalist - get a community photo.  ",
            scope_cap(scope = "all records, whole park", method = "lethal (net) vs non-lethal (iNaturalist) -- gap = present in one method, missing from the other", rank = "species")),
-    unname(BEE_METHOD_COL["nonlethal"]), file.path(OUT_DIR, "inaturalist_bee_bounty.png"))   # photograph = vermillion
+    unname(BEE_METHOD_COL["lethal"]), "\U0001F4F7", file.path(OUT_DIR, "inaturalist_bee_bounty.png"))   # colour = the records it HAS (specimens = lethal rose-red); \U0001F4F7 = the method it NEEDS (an iNaturalist photo)
 
 message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} to ", OUT_DIR)
 
@@ -148,7 +150,7 @@ message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} 
 TR <- c("BST", "UPMON", "TP", "OT")
 HALF_WIDTH_M <- 5                                    # corridor half-width (~10 m band, tight to the trail)
 inat_geo <- inat %>% filter(!is.na(lat), !is.na(lon), transect %in% TR)
-base_pts <- geom_point(data = inat_geo, aes(lon, lat), color = "grey70", size = 0.4, alpha = 0.2)
+base_pts <- geom_point(data = inat_geo, aes(lon, lat), color = BEE_INK$muted, size = 0.4, alpha = 0.2)   # background iNat effort = muted ink
 map_theme <- theme_beescabr(10) +
   theme(legend.position = "top")
 
@@ -157,7 +159,7 @@ sb_sp <- specimen_bounty$taxon[specimen_bounty$rank == "species"]
 sb_gn <- specimen_bounty$taxon[specimen_bounty$rank == "genus"]
 sb_tgt <- inat_geo %>% filter(species_key %in% sb_sp | genus_key %in% sb_gn)
 g1 <- ggplot() + base_pts +
-  geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 1.3, alpha = 0.6) +   # net-targets = purple
+  geom_point(data = sb_tgt, aes(lon, lat), color = unname(BEE_METHOD_COL["nonlethal"]), size = 1.3, alpha = 0.6) +   # these ARE iNat sightings (the records we have) -> non-lethal blue, matching the specimen-bounty bar
   coord_quickmap() +
   labs(title = "Specimen Bee Bounty: Where to Net a Voucher",
        caption = paste0(
@@ -186,7 +188,7 @@ corr <- do.call(rbind, lapply(split(inat_geo[inat_geo$transect %in% tr_involved,
 sp_dots <- ib_spec %>% distinct(transect, lat, lon)
 g2 <- ggplot() + base_pts +
   geom_sf(data = corr, aes(fill = transect), color = NA, alpha = 0.35) +
-  geom_point(data = sp_dots, aes(lon, lat), color = BEE_INK$note, size = 2.2) +   # photograph-here attention marker
+  geom_point(data = sp_dots, aes(lon, lat), color = unname(BEE_METHOD_COL["lethal"]), size = 2.2) +   # these ARE specimen locations (the records we have) -> lethal red, matching the iNat-bounty bar (and the "red dots" caption)
   scale_fill_manual(values = BEE_TRANSECT, name = "transect corridor") +
   coord_sf(expand = TRUE) +
   labs(title = "iNaturalist Bee Bounty: Where to Photograph",

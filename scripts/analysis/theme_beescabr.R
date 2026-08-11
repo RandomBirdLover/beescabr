@@ -38,6 +38,10 @@
 # ONLY as transects. OT orange is still sub-3:1 on white, so transect figures always ship
 # with a legend + labels.
 BEE_TRANSECT <- c(BST = "#009E73", UPMON = "#CC79A7", TP = "#0072B2", OT = "#E69F00")
+# lighter tints of each transect hue (blend toward white, same 0.38 formula as the method tints) --
+# used where a transect carries TWO bars (e.g. observed vs rarefied): light = the "raw / lower" bar,
+# full = the "standardized / focal" bar, so hue = transect identity and shade = the within-transect split.
+BEE_TRANSECT_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(BEE_TRANSECT)) * 0.38), maxColorValue = 255), names(BEE_TRANSECT))
 
 # ---- METHOD: its own two colours (kept OFF the transect palette) -------------
 # rose-red (lethal net) / periwinkle (non-lethal photo) -- softer jewel tones that sit with the purple &
@@ -48,6 +52,11 @@ BEE_METHOD_LTY   <- c(lethal = 1, nonlethal = 2)                 # solid = letha
 BEE_METHOD_PCH   <- c(lethal = 16, nonlethal = 17)              # filled circle = net, triangle = photo
 BEE_METHOD_COL   <- c(lethal = "#D8455F", nonlethal = "#6B6FCE") # rose-red = net (lethal), periwinkle = photo (non-lethal)
 BEE_METHOD_LABEL <- c(lethal = "lethal", nonlethal = "non-lethal")
+# "both methods / resolved-by-either" = the perceptual blend of the two method colours (red + blue -> purple).
+# Computed from the tokens so it always tracks them; used by coverage_id_targets.R for the "resolved" bar.
+BEE_METHOD_BOTH  <- grDevices::rgb(t(rowMeans(grDevices::col2rgb(BEE_METHOD_COL[c("lethal", "nonlethal")]))), maxColorValue = 255)
+# lighter tints of each method colour (blend toward white) -- the "still unresolved" side of a method bar.
+BEE_METHOD_COL_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(BEE_METHOD_COL)) * 0.38), maxColorValue = 255), names(BEE_METHOD_COL))
 
 # ---- EVIDENCE / ID-confidence: LAVENDER ordinal ramp (strong -> faint) ------
 # TEAL ordinal ramp (deep teal voucher -> pale teal needs-ID). Moved OFF purple so evidence no longer
@@ -81,9 +90,49 @@ BEE_IDSTATUS <- c(resolved = BEE_NEUTRAL[["dark"]], keyable = BEE_ACCENT, stuck 
 # blue = photo, purple = the red/blue blend for "resolved", i.e. a mix of both methods), derived
 # straight from BEE_METHOD_COL. No separate ID-status palette needed.
 
+# ---- HTML TABLE BADGES: the pill / chip palettes for the report's HTML tables --------------
+# Single source for every coloured badge in the HTML tables (field guides, least-sampled, checklists),
+# each a soft tinted background + a darker matching text colour. bee_badge_css() below turns a
+# background+foreground pair into the CSS rules, so a colour lives ONCE here, never in a <style> string.
+BEE_IUCN_BG     <- c(en = "#f3d2cc", cr = "#f3d2cc", vu = "#f6dcc6", nt = "#efe7cf", lc = "#dfeae0", dd = "#efefef", ne = "#efefef")
+BEE_IUCN_FG     <- c(en = "#8a1c1c", cr = "#8a1c1c", vu = "#8a4a12", nt = "#6b5a20", lc = "#2f6b46", dd = "#98968f", ne = "#98968f")
+# coverage pills carry the METHOD identity (has-method rule): photo-only = the bee HAS only iNaturalist
+# photos (non-lethal), specimen-only = HAS only specimens (lethal), both(thin) = a few of each (blend).
+# So the pills are derived straight from BEE_METHOD_COL -- pale tint for the BG, darker shade for the text.
+.pill_bg <- function(col) grDevices::rgb(t(255 - (255 - grDevices::col2rgb(col)) * 0.18), maxColorValue = 255)  # ~toward white
+.pill_fg <- function(col) grDevices::rgb(t(grDevices::col2rgb(col) * 0.58), maxColorValue = 255)                # ~toward black
+BEE_COVERAGE_BG <- c(cb = .pill_bg(BEE_METHOD_BOTH), cp = .pill_bg(BEE_METHOD_COL[["nonlethal"]]), cs = .pill_bg(BEE_METHOD_COL[["lethal"]]))   # both(thin) / photo-only(non-lethal) / specimen-only(lethal)
+BEE_COVERAGE_FG <- c(cb = .pill_fg(BEE_METHOD_BOTH), cp = .pill_fg(BEE_METHOD_COL[["nonlethal"]]), cs = .pill_fg(BEE_METHOD_COL[["lethal"]]))
+BEE_ABUND_BG    <- c(rare = "#efdcd2", uncommon = "#efe9dc", common = "#dcebe0")   # abundance status pills
+BEE_ABUND_FG    <- c(rare = "#8a3d1e", uncommon = "#6b5a2e", common = "#2f6b46")
+BEE_DIET_BG     <- c(sp = "#f0dcc8", ge = "#cfe6e2", mo = "#e9e7e0", na = "#f1f1f1")   # specialist / generalist / moderate / n-a
+BEE_DIET_FG     <- c(sp = "#7a4a1e", ge = "#0e5a52", mo = "#5a5850", na = "#999999")
+BEE_FORAGE_BG   <- c(sel = "#dceee0", gen = "#e9e7e0", na = "#f1f1f1")   # forage preference pills
+BEE_FORAGE_FG   <- c(sel = "#1f6b46", gen = "#5a5850", na = "#999999")
+
+# turn a background + foreground pair into CSS rules; `sel` maps each key to its full selector.
+# e.g. bee_badge_css(BEE_COVERAGE_BG, BEE_COVERAGE_FG, function(k) paste0(".pill.", k))
+bee_badge_css <- function(bg, fg, sel)
+  paste0(sprintf("%s{background:%s;color:%s}", vapply(names(bg), sel, ""), unname(bg), unname(fg[names(bg)])), collapse = "")
+
 # ---- ink + chrome tokens (text never wears a series colour) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
                 grid = "#e1e0d9", axis = "#c3c2b7", note = "#b2182b")   # note = scope-caption accent
+
+# ---- MAP + TABLE chrome: non-data backgrounds / borders / stripes -----------
+# Basemap and grid.table styling live here too, so no figure hardcodes a colour (single source rule).
+BEE_MAP   <- c(land = "#ECEAE4", land_inset = "#F1EFEA", boundary = "#AEAAA0",
+               boundary_inset = "#A7A399", frame = "#CBC7BE")   # basemap fills / boundaries / panel frame
+BEE_TABLE <- c(row_odd = "#ffffff", row_even = "#f6f5f2", head = "#1a1a1a", subtext = "#666666")  # grid.table row-stripes + text
+
+# ---- NPS FOOTPRINT theme: the CABR "punches above its weight" figures get their OWN
+# National Park Service look (arrowhead sandstone + forest green). Kept deliberately OFF the
+# crimson magnitude ramp so the footprint figures read as a DIFFERENT family from the rare /
+# least-sampled-bee figures. Used ONLY by the two coverage/footprint scripts
+# (coverage_cabr_county_map.R + coverage_cabr_share_of_county.R) via theme_nps().
+BEE_NPS <- c(green = "#1E5631", green_md = "#3E8B57", brown = "#8A5A2B",
+             sand = "#E7DAC0", sand_dk = "#B9A981", ink = "#2B2117")   # arrowhead palette
+NPS_SEQ <- c("#CFE3D2", "#8FC0A0", "#4E9E6E", "#2C7A4B", "#12592B")     # pale sage -> deep forest (NPS magnitude ramp)
 
 # ---- sequential (magnitude): one crimson ramp (pale -> deep wine) -----------
 BEE_SEQ <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")
@@ -94,6 +143,17 @@ BEE_SEQ <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")
 BEE_WEB <- c(plant = "#3E7D43", bee = "#C8952A",
              plant_label = BEE_INK$primary, bee_label = BEE_INK$primary, link = "#a29e94")
 
+# ---- BEE FAMILY palette: colours the interaction webs' family brackets + selective nodes -------
+# One colour per bee family (Paul Tol bright set), CVD-safe; selective genera/species inherit their
+# family's colour, the family brackets use it, and species webs group by it. Single source for both
+# interactions_network.R and interactions_genus_species_webs.R.
+BEE_FAMILY <- c(Apidae = "#4477AA", Halictidae = "#228833", Megachilidae = "#AA3377",
+                Andrenidae = "#CCBB44", Colletidae = "#66CCEE", Other = "#9C9A93")
+BEE_FAMILY_ORDER <- c("Apidae", "Halictidae", "Megachilidae", "Andrenidae", "Colletidae", "Other")
+
+# ---- FORAGE FAVOURITE: the red heart marking a selective taxon's availability-corrected best plant ----
+BEE_FAVORITE <- "#E8000B"   # pure red, reserved for the favourite-plant heart on the interaction webs
+
 # ---- BEE-GENUS categorical palette: colours the overview webs' SELECTIVE genera ----
 # A bee genus earns a colour only if it has enough records AND forages selectively (chi-square of its
 # plant distribution vs plant availability, p<0.05) -- i.e. it concentrates its visits beyond what mere
@@ -101,8 +161,16 @@ BEE_WEB <- c(plant = "#3E7D43", bee = "#C8952A",
 # so this is a large qualitative set (as tell-apart as 15+ hues allow); the coloured top-node bars double
 # as the legend, and species inherit their genus's colour. Assigned to genera in descending-record order.
 BEE_GENUS_GREY <- "#B7B4AC"   # non-selective / too-few-records: nodes + links go neutral grey
-BEE_GENUS <- c("#E69F00", "#0072B2", "#009E73", "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
-               "#882255", "#44AA99", "#999933", "#AA4499", "#D55E00", "#661100", "#DC267F", "#785EF0")
+# BEE_GENUS = overview genus web (selective genera); BEE_SPECIES = per-genus species webs (one hue/species).
+# Single source for interactions_network.R + interactions_genus_species_webs.R (were the local
+# BEE_GENUS_PALETTE / SPECIES_PAL). Assigned in descending-record order; non-selective -> BEE_GENUS_GREY.
+BEE_GENUS <- c("#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7",
+               "#B03A2E", "#7D3C98", "#117A65", "#8B4513", "#2C3E50", "#E7298A",
+               "#66A61E", "#A6761D", "#1F78B4", "#F0A202", "#0AA6A6", "#5E35B1",
+               "#7E6E00", "#8D6E63")
+BEE_SPECIES <- c("#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7",
+                 "#7D3C98", "#117A65", "#8B4513", "#2C3E50", "#66A61E", "#A6761D",
+                 "#B03A2E", "#1F78B4", "#E7298A", "#F0A202")
 
 # ---- PHENOLOGY SEASON: spring -> fall diverging ramp (green -> yellow -> orange-red) ----
 # RdYlGn-style 6-step for month / day-of-year density in phenology_activity.R.
@@ -160,6 +228,20 @@ theme_beescabr <- function(base_size = 12) {
       legend.title     = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2),
       legend.text      = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2),
       plot.title.position = "plot", plot.caption.position = "plot"
+    )
+}
+
+# ---- NPS FOOTPRINT ggplot theme (the two coverage/footprint figures only) ---
+# theme_beescabr with National Park Service accents: forest-green bold title, arrowhead-brown
+# axis titles, warm sandstone gridlines, NPS ink text. Gives the CABR "footprint" figures their
+# own identity, visually separate from the crimson rare / least-sampled-bee family.
+theme_nps <- function(base_size = 12) {
+  theme_beescabr(base_size) +
+    ggplot2::theme(
+      text             = ggplot2::element_text(colour = unname(BEE_NPS[["ink"]])),
+      plot.title       = ggplot2::element_text(face = "bold", size = base_size + 2, colour = unname(BEE_NPS[["green"]])),
+      axis.title       = ggplot2::element_text(colour = unname(BEE_NPS[["brown"]])),
+      panel.grid.major = ggplot2::element_line(colour = unname(BEE_NPS[["sand"]]), linewidth = 0.35)
     )
 }
 

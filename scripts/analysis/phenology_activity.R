@@ -46,8 +46,8 @@ GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 MIN_RECORDS   <- 25   # REPORT floor for phenology: a taxon needs >=25 records to draw a seasonal curve
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
 # figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
-# reinforced by peak-day ordering. Never a categorical transect, so it stays local, not a house concept.
-SPRING_FALL   <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
+# reinforced by peak-day ordering. Uses the shared BEE_SEASON ramp from theme_beescabr.R (single source).
+SPRING_FALL   <- BEE_SEASON
 MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 

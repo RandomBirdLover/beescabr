@@ -155,12 +155,11 @@ html <- paste0(
 'td.bee i{color:#111}td .cn{display:block;color:#8a8880;font-size:11px}sup.cs{color:#8a1c1c;font-weight:700}',
 'td.num{text-align:right;font-variant-numeric:tabular-nums}td.loc{color:#52514e;font-size:12px}',
 '.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
-'.pill.cb{background:#e9e7e0;color:#5a5850}.pill.cp{background:#e5dcef;color:#5b3b8a}.pill.cs{background:#f0dcc8;color:#7a4a1e}',
+bee_badge_css(BEE_COVERAGE_BG, BEE_COVERAGE_FG, function(k) paste0(".pill.", k)),   # coverage pills from theme tokens
 '.vneed{font-size:12px;vertical-align:middle}',
 '.iucn{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}',
-'.iucn.i-en,.iucn.i-cr{background:#f3d2cc;color:#8a1c1c}.iucn.i-vu{background:#f6dcc6;color:#8a4a12}',
-'.iucn.i-nt{background:#efe7cf;color:#6b5a20}.iucn.i-lc{background:#dfeae0;color:#2f6b46}',
-'.iucn.i-dd,.iucn.i-ne{background:#efefef;color:#98968f}a{color:#3a6b8a;text-decoration:none}',
+bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),   # IUCN chips from theme tokens
+'a{color:#3a6b8a;text-decoration:none}',
 '</style></head><body>',
 '<h1>CABR least-sampled native bees &mdash; go-find-it sheet</h1>',
 sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND by iNaturalist. <b>Coverage</b> shows the split: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. A &#128247; marks specimen-only species that need photographs (go photograph one); a &#128300; marks photo-only species that need a specimen voucher (go net one). When / where / flower are pooled across both methods (peak months by record count; active window = month span seen; where = top transect(s); flower = most-recorded plant genera). %s links an example iNaturalist observation. Click a header to sort.</p>',
@@ -190,16 +189,16 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,
-    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c(BEE_TABLE[["row_odd"]], BEE_TABLE[["row_even"]]))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
   scap <- grid::textGrob(paste(strwrap(scope_str, width = 150), collapse = "\n"),   # scope caption ABOVE the table
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = BEE_INK$secondary, lineheight = 1.15))
   cap <- grid::textGrob(sprintf("The %d least-sampled bees (< %d records total, both methods pooled). Coverage: both(thin)/photo-only/specimen-only. When/where/flower pooled across methods. * = IUCN threatened/near-threatened.  Source: iNaturalist + specimen vouchers, Cabrillo NM.",
                                 nrow(disp), THIN_TOTAL),
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7, col = BEE_TABLE[["subtext"]], lineheight = 1.15))
   g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
                                 heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(2.2, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "least_sampled_bees.png"), g,

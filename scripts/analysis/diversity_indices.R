@@ -112,21 +112,43 @@ tidyr_pivot <- function(df, cols) {
 # index table (all four measures) is still written to diversity_by_transect.csv as backing data.
 plot_evenness <- function(dfin, file, title, cap, group_lab) {
   d <- dfin[!is.na(dfin$pielou_evenness), ]
-  g <- ggplot(d, aes(x = group, y = pielou_evenness, fill = rank)) +
-    geom_col(position = position_dodge(0.8), width = 0.7) +
-    geom_text(aes(label = sprintf("%.2f", pielou_evenness)), position = position_dodge(0.8),
-              vjust = -0.35, size = 3, colour = BEE_INK$secondary) +
-    scale_fill_manual(values = c(species = "#3C3B36", genus = "#C0BBB0"), name = "rank") +
-    scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.08))) +
+  d$group <- factor(d$group, levels = sort(unique(as.character(d$group))))   # transects alphabetical (BST/OT/TP/UPMON), consistent across figures
+  d$rank  <- factor(d$rank, levels = c("species", "genus"))
+  has_pat <- requireNamespace("ggpattern", quietly = TRUE)
+  # transect bars: hue = transect identity (BEE_TRANSECT), so the colour is "free" for the transect.
+  # The species-vs-genus split is carried by PATTERN instead: species = solid, genus = hatched
+  # (house rule for genus-vs-species comparisons). Fill legend is dropped (hue is named on the x-axis).
+  base <- list(
+    geom_text(data = d, aes(x = group, y = pielou_evenness, label = sprintf("%.2f", pielou_evenness),
+              group = rank), position = position_dodge(0.8), vjust = -0.35, size = 3,
+              colour = BEE_INK$secondary, inherit.aes = FALSE),
+    scale_fill_manual(values = BEE_TRANSECT, guide = "none"),
+    scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.08))),
     labs(title = title,
          caption = paste0(cap, "\n", str_wrap(paste("Only evenness shown: comparing richness / Shannon / Simpson across groups of",
            "unequal sampling effort is biased (more effort finds more species), so those are given",
            "effort-standardized in the rarefaction (iNEXT) figures. Pielou evenness is a ratio, so it",
            "is effort-robust and kept here."), 110)),
-         x = group_lab, y = "Pielou evenness (J)  ( 0 = one species dominates -> 1 = perfectly even )") +
-    theme_beescabr(11) +
+         x = group_lab, y = "Pielou evenness (J)  (0 = uneven -> 1 = even)"),
+    theme_beescabr(11),
     theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5),
-          plot.caption = element_text(hjust = 0, size = 7.5))
+          plot.caption = element_text(hjust = 0, size = 7.5)))
+  if (has_pat) {
+    g <- ggplot(d, aes(x = group, y = pielou_evenness, fill = group, pattern = rank)) +
+      ggpattern::geom_col_pattern(position = position_dodge(0.8), width = 0.7, colour = NA,
+        pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
+        pattern_density = 0.10, pattern_spacing = 0.028, pattern_key_scale_factor = 0.5) +
+      ggpattern::scale_pattern_manual(values = c(species = "none", genus = "stripe"), name = "rank",
+        guide = guide_legend(override.aes = list(fill = "grey75", pattern_fill = "white"))) +
+      base
+  } else {
+    # fallback (ggpattern absent): keep the transect hue, split rank by shade instead of hatch.
+    g <- ggplot(d, aes(x = group, y = pielou_evenness, fill = group, alpha = rank)) +
+      geom_col(position = position_dodge(0.8), width = 0.7) +
+      scale_alpha_manual(values = c(species = 1, genus = 0.45), name = "rank",
+        guide = guide_legend(override.aes = list(fill = BEE_INK$secondary))) +
+      base
+  }
   ggsave(file, g, width = 7.5, height = 5.4, dpi = 200, bg = "white")
 }
 plot_evenness(div_tr, file.path(OUT_REPORT, "diversity_evenness_by_transect.png"),
@@ -148,7 +170,7 @@ WHY_EVEN <- paste("Only evenness shown: comparing richness / Shannon / Simpson a
 {
   d <- div_yr[!is.na(div_yr$pielou_evenness), ]
   g <- ggplot(d, aes(x = factor(group), y = pielou_evenness, group = 1)) +
-    geom_line(color = "#3C3B36") + geom_point(color = "#3C3B36", size = 2.4) +
+    geom_line(color = BEE_NEUTRAL[["dark"]]) + geom_point(color = BEE_NEUTRAL[["dark"]], size = 2.4) +
     geom_text(aes(label = sprintf("%.2f", pielou_evenness)), vjust = -0.9, size = 3, colour = BEE_INK$secondary) +
     scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0.02, 0.1))) +
     labs(title = "Bee Evenness by Year",

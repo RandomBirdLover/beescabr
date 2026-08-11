@@ -181,15 +181,11 @@ html <- paste0(
 'td.num{text-align:right;font-variant-numeric:tabular-nums}td.loc{color:#52514e;font-size:12px}',
 'tr.low{color:#a09e98}tr.low td.bee i{color:#a09e98}',
 '.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
-'.pill.sp{background:#f0dcc8;color:#7a4a1e}.pill.ge{background:#cfe6e2;color:#0e5a52}',
-'.pill.mo{background:#e9e7e0;color:#5a5850}.pill.na{background:#f1f1f1;color:#999}',
-'.pill.st-rare{background:#efdcd2;color:#8a3d1e}.pill.st-uncommon{background:#efe9dc;color:#6b5a2e}',
-'.pill.st-common{background:#dcebe0;color:#2f6b46}',
-'.pill.pref-sel{background:#dceee0;color:#1f6b46}.pill.pref-gen{background:#e9e7e0;color:#5a5850}.pill.pref-na{background:#f1f1f1;color:#999}',
+bee_badge_css(BEE_DIET_BG,   BEE_DIET_FG,   function(k) paste0(".pill.", k)),        # diet pills (sp/ge/mo/na)
+bee_badge_css(BEE_ABUND_BG,  BEE_ABUND_FG,  function(k) paste0(".pill.st-", k)),     # abundance-status pills
+bee_badge_css(BEE_FORAGE_BG, BEE_FORAGE_FG, function(k) paste0(".pill.pref-", k)),   # forage-preference pills
 '.iucn{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}',
-'.iucn.i-en,.iucn.i-cr{background:#f3d2cc;color:#8a1c1c}.iucn.i-vu{background:#f6dcc6;color:#8a4a12}',
-'.iucn.i-nt{background:#efe7cf;color:#6b5a20}.iucn.i-lc{background:#dfeae0;color:#2f6b46}',
-'.iucn.i-dd,.iucn.i-ne{background:#efefef;color:#98968f}',
+bee_badge_css(BEE_IUCN_BG,   BEE_IUCN_FG,   function(k) paste0(".iucn.i-", k)),      # IUCN chips
 '</style></head><body>',
 '<h1>CABR native bee field guide - by species</h1>',
 '<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used (stated only at &ge;50 records &mdash; fewer read &quot;not enough records&quot;); where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; counts all data incl. casual photos, so it is recording frequency, not true abundance). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
@@ -225,15 +221,15 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,
-    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c("#ffffff", "#f6f5f2"))),
+    core = list(fg_params = list(hjust = 0, x = 0.02, fontface = ff), bg_params = list(fill = c(BEE_TABLE[["row_odd"]], BEE_TABLE[["row_even"]]))),
     colhead = list(fg_params = list(hjust = 0, x = 0.02, fontface = "bold")))
   g   <- gridExtra::tableGrob(disp, rows = NULL, theme = th)
   scap <- grid::textGrob(paste(strwrap(scope_str, width = 165), collapse = "\n"),   # scope caption ABOVE the table
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = "#52514e", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7.5, fontface = "bold", col = BEE_INK$secondary, lineheight = 1.15))
   cap <- grid::textGrob(paste(strwrap(note_txt, width = 150), collapse = "\n"),
                         x = grid::unit(0.004, "npc"), hjust = 0, just = "left",
-                        gp = grid::gpar(fontsize = 7, col = "#666666", lineheight = 1.15))
+                        gp = grid::gpar(fontsize = 7, col = BEE_TABLE[["subtext"]], lineheight = 1.15))
   g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
                                 heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(2.6, "lines")))
   ggplot2::ggsave(file.path(OUT_DIR, "bee_field_guide_species.png"), g,

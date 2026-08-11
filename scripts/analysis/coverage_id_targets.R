@@ -45,8 +45,8 @@ dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_
 is_true   <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 # scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 # method colours (net = rose-red / photo = periwinkle) + lighter tints for the "still to do" side
-COL_L  <- unname(BEE_METHOD_COL["lethal"]);    COL_NL <- unname(BEE_METHOD_COL["nonlethal"])
-COL_L_LT <- "#F2B8C0";                         COL_NL_LT <- "#BEC0EA"
+COL_L  <- unname(BEE_METHOD_COL["lethal"]);       COL_NL    <- unname(BEE_METHOD_COL["nonlethal"])
+COL_L_LT <- unname(BEE_METHOD_COL_LT["lethal"]);  COL_NL_LT <- unname(BEE_METHOD_COL_LT["nonlethal"])   # lighter tints straight from the theme
 
 ## NOTE (#7 -- method scope is intentional): the REPORT view POOLS lethal + non-lethal;
 ## the JOURNAL views restrict to the fair window (survey-only, FAIR_MONTHS/FAIR_YEARS,
@@ -127,9 +127,9 @@ draw_targets <- function(dat, scope, file, split_done) {
       data.frame(target = tt$target, cat = "keyable (lethal)",      n = tt$specimen_unresolved),
       data.frame(target = tt$target, cat = "stuck (non-lethal)",    n = tt$photo_unresolved)) %>% filter(n > 0)
     lv   <- c("resolved (to species)", "keyable (lethal)", "stuck (non-lethal)")
-    fill <- c("resolved (to species)" = unname(BEE_IDSTATUS["resolved"]),
-              "keyable (lethal)"       = unname(BEE_IDSTATUS["keyable"]),
-              "stuck (non-lethal)"     = unname(BEE_IDSTATUS["stuck"]))
+    fill <- c("resolved (to species)" = BEE_METHOD_BOTH,   # both methods, DONE -> red+blue blend (purple)
+              "keyable (lethal)"       = COL_L_LT,          # unresolved lethal specimen -> LIGHT red (matches panels)
+              "stuck (non-lethal)"     = COL_NL_LT)         # unresolved non-lethal photo -> LIGHT blue (matches panels)
     subttl <- "Dark = already identified to species (both methods); light = still unresolved. All records."
   }
   long$cat <- factor(long$cat, levels = lv)
@@ -187,8 +187,10 @@ method_genus_fig <- function(m, file, method_label) {
               hjust = -0.15, size = 2.7, color = "grey25", inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
     scale_y_discrete(drop = FALSE) +
-    scale_fill_manual(values = c("identified to species"   = unname(BEE_IDSTATUS["resolved"]),
-                                 "genus-only (unresolved)" = unname(BEE_IDSTATUS["stuck"])), name = NULL) +
+    scale_fill_manual(values = if (m == "specimen")   # colour by METHOD: lethal = red, non-lethal = blue; light tint = unresolved
+        c("identified to species" = COL_L,  "genus-only (unresolved)" = COL_L_LT)
+      else
+        c("identified to species" = COL_NL, "genus-only (unresolved)" = COL_NL_LT), name = NULL) +
     labs(title = sprintf("%s Method: Progress of ID by Genus", method_label),
          caption = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
                               method_label, format(sum(d$species), big.mark = ","),

@@ -43,7 +43,7 @@ pref_of_species <- setNames(.sel_sp$preferred_plant, .sel_sp$taxon)
 pref_of_species[!(.sel_sp$selective %in% TRUE) | is.na(.sel_sp$preferred_plant)] <- NA_character_
 
 # red heart glyph (same as the main species web): parametric heart, x squashed by the device aspect
-FAVORITE_COL <- "#E8000B"
+FAVORITE_COL <- BEE_FAVORITE   # single source from theme_beescabr.R
 .draw_heart <- function(cx, cy, s = 0.013, col = FAVORITE_COL) {
   t   <- seq(0, 2 * pi, length.out = 60)
   asp <- { p <- par("pin"); if (length(p) == 2 && p[1] > 0) p[2] / p[1] else 0.6 }
@@ -52,10 +52,7 @@ FAVORITE_COL <- "#E8000B"
   polygon(cx + s * hx, cy + s * hy, col = col, border = NA, xpd = NA)
 }
 
-# one distinct colour per bee species within a genus web (few species each -> legible)
-SPECIES_PAL <- c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7",
-                 "#7D3C98","#117A65","#8B4513","#2C3E50","#66A61E","#A6761D",
-                 "#B03A2E","#1F78B4","#E7298A","#F0A202")
+# one distinct colour per bee species within a genus web -> BEE_SPECIES from the theme (single source)
 OUT_DIR   <- file.path(DIR_REPORT, "interactions/networks")
 WEB_DIR   <- file.path(OUT_DIR, "genus_species_webs")
 SPECIES_RANKS <- c("species", "subspecies")
@@ -135,7 +132,7 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   bx <- if (nb > 1) seq(0.10, 0.90, length.out = nb) else 0.5
   yP <- 0.05; yB <- 0.95; wmax <- max(M)
   epithet   <- sub("^\\S+\\s+", "", colnames(M))            # drop the genus, show species epithet
-  scol      <- SPECIES_PAL[((seq_len(nb) - 1) %% length(SPECIES_PAL)) + 1]   # one colour per species
+  scol      <- BEE_SPECIES[((seq_len(nb) - 1) %% length(BEE_SPECIES)) + 1]   # one colour per species (theme token)
   png(file, width = max(1500, 150 * nb), height = 1700, res = 200)
   bee_base_par()                                    # house-style sans font
   op <- par(mar = c(15, 1, 10, 1), xpd = NA)        # tall bottom margin (plant labels + H2' note) and tall top (title block + wrapped caption)
@@ -146,10 +143,10 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
              col = adjustcolor(scol[j], 0.55))
   pw <- 0.010 + 0.022 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.012 + 0.030 * sqrt(colSums(M) / max(colSums(M)))
-  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = "#3E7D43", border = "white")   # plants = superbloom green (forage)
+  rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = BEE_WEB["plant"], border = "white")   # plants = forage green (theme token)
   rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = scol, border = "white")        # bee species each its own colour
-  text(px, yP - 0.022, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = "#2C2A26")   # plant labels: common name upright, Latin italic in parentheses
-  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.74, col = "#2C2A26", font = 3)               # bee species epithet (italic)
+  text(px, yP - 0.022, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = BEE_INK$primary)   # plant labels: common name upright, Latin italic in parentheses
+  text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.74, col = BEE_INK$primary, font = 3)               # bee species epithet (italic)
   # red heart line: each SELECTIVE species' availability-corrected favourite plant (matched chi-square, p<0.05)
   if (!is.null(favorite_of)) for (j in seq_len(nb)) {
     f <- favorite_of[colnames(M)[j]]; if (is.na(f)) next
@@ -265,7 +262,7 @@ untest_note <- if (nrow(dropped))
     sprintf("  Untestable (>= %d species but < %d records, too few to test; not shown): %s.",
             MIN_SPECIES, MIN_REC, paste(sort(dropped$bee_genus), collapse = ", ")) else ""
 g <- ggplot(ov, aes(x = x, y = bee_genus)) +
-  geom_col(width = 0.72, fill = "#3C3B36") +
+  geom_col(width = 0.72, fill = BEE_NEUTRAL[["dark"]]) +
   geom_text(aes(label = lab), hjust = -0.12, size = 3.0, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
   labs(title = "Which Bee Genera Have Specialist Species?",

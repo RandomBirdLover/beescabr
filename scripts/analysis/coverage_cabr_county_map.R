@@ -60,8 +60,8 @@ ay <- cc[2] + (bb["ymax"] - bb["ymin"]) * 0.42
 
 # ---- map ---------------------------------------------------------------------
 g <- ggplot() +
-  geom_sf(data = county, fill = "#ECEAE4", color = "#AEAAA0", linewidth = 0.35) +
-  geom_sf(data = cabr_pt, color = unname(BEE_SEQ[5]), fill = unname(BEE_SEQ[5]),
+  geom_sf(data = county, fill = BEE_MAP[["land"]], color = BEE_MAP[["boundary"]], linewidth = 0.35) +
+  geom_sf(data = cabr_pt, color = unname(BEE_NPS[["green_md"]]), fill = unname(BEE_NPS[["green_md"]]),
           shape = 21, size = 5.5, stroke = 0) +
   geom_sf(data = cabr_pt, color = "white", shape = 21, size = 5.5, stroke = 1.1, fill = NA) +
   annotate("curve", x = ax, y = ay, xend = cc[1] + 2500, yend = cc[2] + 1500,
@@ -84,14 +84,14 @@ g <- ggplot() +
 # ---- inset: CABR's real footprint on the Point Loma peninsula ---------------
 plbb <- st_bbox(pl)
 g_inset <- ggplot() +
-  geom_sf(data = pl,   fill = "#F1EFEA", color = "#A7A399", linewidth = 0.3) +
-  geom_sf(data = cabr, fill = unname(BEE_SEQ[5]), color = unname(BEE_SEQ[5]), linewidth = 0.15) +
+  geom_sf(data = pl,   fill = BEE_MAP[["land_inset"]], color = BEE_MAP[["boundary_inset"]], linewidth = 0.3) +
+  geom_sf(data = cabr, fill = unname(BEE_NPS[["green_md"]]), color = unname(BEE_NPS[["green_md"]]), linewidth = 0.15) +
   coord_sf(xlim = c(plbb["xmin"], plbb["xmax"]), ylim = c(plbb["ymin"], plbb["ymax"]), expand = FALSE) +
   labs(title = "Cabrillo National Monument on Point Loma") +
   theme_void(base_size = 9) +
   theme(plot.title = element_text(size = 9, face = "bold", hjust = 0.5, colour = BEE_INK$secondary,
                                   margin = margin(t = 3, b = 2)),
-        plot.background = element_rect(fill = "white", colour = "#CBC7BE", linewidth = 0.5),
+        plot.background = element_rect(fill = "white", colour = BEE_MAP[["frame"]], linewidth = 0.5),
         plot.margin = margin(2, 5, 5, 5))
 if (requireNamespace("cowplot", quietly = TRUE)) {
   final <- cowplot::ggdraw(g) + cowplot::draw_plot(g_inset, x = 0.71, y = 0.15, width = 0.26, height = 0.32)

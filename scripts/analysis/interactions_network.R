@@ -154,7 +154,7 @@ png(file.path(OUT_DIR, "interactions_bee_genus_network.png"),
 set.seed(1)
 op <- par(mar = c(7, 1, 3, 1), xpd = NA)
 plot(beebee_plot,
-     vertex.color = "#A63D95", vertex.frame.color = "white",
+     vertex.color = BEE_WEB[["bee"]], vertex.frame.color = "white",
      vertex.label.color = "black", vertex.label.cex = 0.6, vertex.label.dist = 0.5,
      edge.width = pmin(0.25 * E(beebee_plot)$weight, 3),
      edge.color = adjustcolor("grey60", 0.5), layout = layout_with_fr,
@@ -281,16 +281,12 @@ print(net_stats, row.names = FALSE)
 # module also drives the genus field guide's preference column, so figures + guide agree.
 if (!exists("selective_genera")) source("scripts/analysis/forage_selectivity.R")
 MIN_COLOR_REC <- SELECT_MIN_REC
-GREY_LINK     <- "#B8B4AC"
+GREY_LINK     <- BEE_GENUS_GREY   # non-selective/sparse grey -- single source from theme_beescabr.R
 sig_genera <- intersect(selective_genera(), colnames(Mg))         # module orders most-recorded first
-# maximally-distinct, dependency-free qualitative palette (Okabe-Ito + Kelly-style extras)
-BEE_GENUS_PALETTE <- c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7",
-                       "#B03A2E","#7D3C98","#117A65","#8B4513","#2C3E50","#E7298A",
-                       "#66A61E","#A6761D","#1F78B4","#F0A202","#0AA6A6","#5E35B1",
-                       "#7E6E00","#8D6E63")
+# genus palette comes from the theme (single source) -- was a local BEE_GENUS_PALETTE
 bee_col <- setNames(rep(GREY_LINK, ncol(Mg)), colnames(Mg))
 if (length(sig_genera))
-  bee_col[sig_genera] <- BEE_GENUS_PALETTE[((seq_along(sig_genera) - 1) %% length(BEE_GENUS_PALETTE)) + 1]
+  bee_col[sig_genera] <- BEE_GENUS[((seq_along(sig_genera) - 1) %% length(BEE_GENUS)) + 1]
 GENUS_COLOR <- function(g) { v <- unname(bee_col[g]); v[is.na(v)] <- GREY_LINK; v }
 message(sprintf("Selective (coloured) bee genera [n>=%d & p<0.05]: %d -- %s",
                 MIN_COLOR_REC, length(sig_genera), paste(sig_genera, collapse = ", ")))
@@ -330,7 +326,7 @@ message(sprintf("Wrote forage_selectivity_summary.csv (%d genera: %d selective, 
 # plant it FAVOURS MOST beyond availability in its flight window (same test that drives the colours)
 # -- often NOT its thickest line. Hearts are drawn on the SPECIES web ONLY (James: a favourite is a
 # species-level read; a genus is an aggregate), from the SPECIES-level selectivity test.
-FAVORITE_COL <- "#E8000B"   # PLACEHOLDER heart-line colour (pure red) -- parallel session owns colours: fold into a theme_beescabr.R BEE_WEB token
+FAVORITE_COL <- BEE_FAVORITE   # favourite-plant heart colour -- single source from theme_beescabr.R
 pref_of <- setNames(.sel$preferred_plant, .sel$genus)          # genus favourite (kept for the summary CSV; no longer drawn on the genus web)
 pref_of[!(names(pref_of) %in% sig_genera)] <- NA_character_
 # SPECIES-level favourite -> the heart on the species web. A species earns a heart only if IT is
@@ -403,10 +399,10 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
 
   pw <- 0.008 + 0.02 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.008 + 0.02 * sqrt(csum / max(csum))
-  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = "#3E7D43", border = "white")   # plants = superbloom green (forage side)
+  rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = BEE_WEB["plant"], border = "white")   # plants = forage green (theme token)
   rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = bcol, border = "white")        # bees coloured by selectivity (grey = not selective)
-  text(px, yP - 0.02, plant_label(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = "#2C2A26")   # plant labels = common name (Latin), black (matches bee labels)
-  bee_lab_col <- ifelse(is_grey, "#8a867d", "#2C2A26")
+  text(px, yP - 0.02, plant_label(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = BEE_INK$primary)   # plant labels = common name (Latin), black (matches bee labels)
+  bee_lab_col <- ifelse(is_grey, BEE_INK$muted, BEE_INK$primary)
   text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = bee_lab_col, font = 3)
 
   # RED HEART LINE: each selective genus's availability-corrected FAVOURITE plant (may differ
@@ -455,9 +451,8 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
 # the too-sparse genera AND the generalists (enough data but no favourite, e.g. Megachile /
 # Nomada). Fully automatic: a genus appears the moment it shows a significant preference.
 # ---- family helpers (shared by the genus web + the family-species web below) -----------------
-FAMILY_COL   <- c(Apidae = "#4477AA", Halictidae = "#228833", Megachilidae = "#AA3377",
-                  Andrenidae = "#CCBB44", Colletidae = "#66CCEE", Other = "#9C9A93")
-FAMILY_ORDER <- c("Apidae", "Halictidae", "Megachilidae", "Andrenidae", "Colletidae", "Other")
+FAMILY_COL   <- BEE_FAMILY          # single source from theme_beescabr.R
+FAMILY_ORDER <- BEE_FAMILY_ORDER
 .gf     <- inter %>% distinct(genus, family) %>% filter(!is.na(family), family != "")
 gen2fam <- setNames(.gf$family, .gf$genus)
 
@@ -496,8 +491,8 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
   bw <- 0.006 + 0.011 * sqrt(csum / max(csum))
   rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = BEE_WEB["plant"], border = "white")   # plants = forage green
   rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = bcol, border = "white")         # selective genera coloured; rest grey
-  text(px, yP - 0.02, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.58, col = "#2C2A26")
-  text(bx, yB + 0.02, gen, srt = 90, adj = 0, cex = 0.6, col = ifelse(is_grey, "#8a867d", "#2C2A26"), font = 3)
+  text(px, yP - 0.02, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.58, col = BEE_INK$primary)
+  text(bx, yB + 0.02, gen, srt = 90, adj = 0, cex = 0.6, col = ifelse(is_grey, BEE_INK$muted, BEE_INK$primary), font = 3)
   yfb <- yB + 0.175                                 # labelled family brackets, each with a down-tick over its genera and an ALWAYS-drawn stem up to the label (consistent with the species web)
   for (ff in famL) {
     idx <- which(fam == ff); x0 <- bx[min(idx)] - bw[min(idx)]; x1 <- bx[max(idx)] + bw[max(idx)]; xc <- (x0 + x1) / 2
@@ -564,8 +559,8 @@ web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
   bw <- 0.006 + 0.012 * sqrt(csum / max(csum))
   rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = BEE_WEB["plant"], border = "white")   # plants = forage green
   rect(bx - bw, yB - 0.010, bx + bw, yB + 0.010, col = bcol, border = "white")         # species coloured by family
-  text(px, yP - 0.02, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.6, col = "#2C2A26")
-  text(bx, yB + 0.015, sp, srt = 90, adj = 0, cex = 0.44, col = "#2C2A26", font = 3)
+  text(px, yP - 0.02, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.6, col = BEE_INK$primary)
+  text(bx, yB + 0.015, sp, srt = 90, adj = 0, cex = 0.44, col = BEE_INK$primary, font = 3)
   # red heart line: each selective species' availability-corrected favourite plant
   if (!is.null(favorite_of)) for (j in seq_len(nb)) {
     f <- favorite_of[sp[j]]; if (is.na(f)) next

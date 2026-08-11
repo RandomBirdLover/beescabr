@@ -98,7 +98,7 @@ eff_fig <- function(key_col, rank_lab, file) {
     geom_col(position = position_dodge(0.7), width = 0.62) +
     geom_text(aes(label = lab), position = position_dodge(0.7), vjust = -0.35, size = 3.2, colour = BEE_INK$secondary) +
     facet_wrap(~ panel, scales = "free_y", nrow = 1) +
-    scale_fill_manual(values = setNames(c("#C0BBB0", BEE_INK$primary), c(aslab, eqlab)), name = NULL) +
+    scale_fill_manual(values = setNames(c(BEE_NEUTRAL[["light"]], BEE_NEUTRAL[["dark"]]), c(aslab, eqlab)), name = NULL) +   # background (as recorded) vs focus (at equal effort)
     scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
     labs(title = sprintf("Efficiency by Method at %s Level", rank_lab),
          caption = paste0(

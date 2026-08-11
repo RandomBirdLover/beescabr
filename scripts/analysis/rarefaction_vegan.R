@@ -103,7 +103,7 @@ curve_df <- function(M) {
     data.frame(group = g, n = ns, S = sapply(ns, function(n) as.numeric(vegan::rarefy(v, n))))
   }))
 }
-draw <- function(M, key, title, rank, cols = NULL) {
+draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
   M <- M[rowSums(M) > 0, , drop = FALSE]
   if (nrow(M) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
   unit <- UNIT(rank)
@@ -133,20 +133,58 @@ draw <- function(M, key, title, rank, cols = NULL) {
   if (dimdir %in% JOURNAL_DIMS) {
     ggsave(file.path(outdir, paste0(pre, vlab, "_curves_", rank, ".png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
   }
+  rlab <- sprintf("rarefied to %d", minN)
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
-              data.frame(group = tab$group, kind = sprintf("rarefied to %d", minN), S = tab$rarefied_richness))
-  bd$group <- factor(bd$group, levels = tab$group)
-  g2 <- ggplot(bd, aes(group, S, fill = kind)) +
-    geom_col(position = position_dodge(0.8), width = 0.7) +
-    geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3) +
-    scale_fill_manual(values = setNames(c("#C0BBB0", "#3C3B36"),   # stone (observed) / ink (rarefied)
-                                        c("observed (raw)", sprintf("rarefied to %d", minN))), name = NULL) +
+              data.frame(group = tab$group, kind = rlab, S = tab$rarefied_richness))
+  # transect bars sort ALPHABETICALLY (consistent BST/OT/TP/UPMON across every transect figure);
+  # other dimensions keep the rarefy_table order (descending rarefied richness).
+  lev <- if (group_fill) sort(unique(as.character(bd$group))) else tab$group
+  bd$group <- factor(bd$group, levels = lev)
+  # components shared by both bar variants (text labels on top, caption, house theme)
+  base_g2 <- list(
+    geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3, show.legend = FALSE),
     labs(title = title, caption = paste0(sprintf("%s-level, rarefied richness  |  ", rank), cap),
-         x = NULL, y = unit) +
-    theme_beescabr(11) +
+         x = NULL, y = unit),
+    theme_beescabr(11),
     theme(panel.grid.major.x = element_blank(),
-          plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+          plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)))
+  if (group_fill) {
+    # transect bars: hue = transect identity (cols), shade = the within-transect split --
+    # light tint = observed (raw), full colour = rarefied. The hue is already named on the
+    # x-axis, so the legend carries only the shade meaning (neutral light/dark swatches).
+    gk <- as.character(tab$group)
+    fillvec <- c(setNames(unname(BEE_TRANSECT_LT[gk]), paste(gk, "observed (raw)")),
+                 setNames(unname(cols[gk]),            paste(gk, rlab)))
+    bd$fillkey <- paste(as.character(bd$group), bd$kind)
+    g2 <- ggplot(bd, aes(group, S, fill = fillkey, alpha = kind)) +
+      geom_col(position = position_dodge(0.8), width = 0.7) +
+      scale_fill_manual(values = fillvec, guide = "none") +
+      scale_alpha_manual(values = c(1, 1), breaks = c("observed (raw)", rlab), name = NULL,   # phantom aes: no transparency, just to build the shade legend
+                         guide = guide_legend(override.aes = list(fill = c(BEE_INK$axis, BEE_INK$secondary), alpha = 1))) +
+      base_g2
+  } else {
+    g2 <- ggplot(bd, aes(group, S, fill = kind)) +
+      geom_col(position = position_dodge(0.8), width = 0.7) +
+      scale_fill_manual(values = setNames(c(BEE_NEUTRAL[["light"]], BEE_NEUTRAL[["dark"]]),   # stone (observed) / ink (rarefied)
+                                          c("observed (raw)", rlab)), name = NULL) +
+      base_g2
+  }
   ggsave(file.path(outdir, paste0(pre, vlab, "_bars_", rank, ".png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
+  if (group_fill) {
+    # companion figure: rarefied bars ONLY (raw counts removed) -- one full-colour bar per transect,
+    # so no shade split and no legend (the transect hue is named on the x-axis).
+    bdr <- bd[bd$kind == rlab, ]
+    g3 <- ggplot(bdr, aes(group, S, fill = group)) +
+      geom_col(width = 0.62) +
+      geom_text(aes(label = round(S)), vjust = -0.35, size = 3) +
+      scale_fill_manual(values = cols, guide = "none") +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+      labs(title = title, x = NULL, y = unit,
+           caption = paste0(sprintf("%s-level, %s (raw counts omitted)  |  ", rank, rlab), cap)) +
+      theme_beescabr(11) +
+      theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
+    ggsave(file.path(outdir, paste0(pre, vlab, "_bars_rarefied_", rank, ".png")), g3, width = 8, height = 5, dpi = 200, bg = "white")
+  }
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
 }
@@ -165,13 +203,13 @@ for (rk in names(RANKS)) {
   # 1. transect
   Mt <- comm(filter(rec, transect %in% TRANSECTS), "transect", kc)
   Mt <- Mt[intersect(TRANSECTS, rownames(Mt)), , drop = FALSE]
-  draw(Mt, paste0("by_transect_", rk), "Bees by Transect", rk, TCOLS)
+  draw(Mt, paste0("by_transect_", rk), "Bees by Transect", rk, TCOLS, group_fill = TRUE)
   # 2. year (Mar-Sep)
   draw(comm(rec_win, "year", kc), paste0("by_year_", rk), "Bees by Year", rk)
   # 3. observer: beeple vs intern (fair window -- lethal vs non-lethal comparison)
   draw(comm(filter(rec_fair, surveyor %in% c("beeple", "intern")), "surveyor", kc),
        paste0("by_observer_", rk), "Bees by Observer: Beeple vs Intern", rk,
-       c(intern = "#3C3B36", beeple = "#C0BBB0"))   # intern = house ink (focus), beeple = stone (background)
+       c(intern = BEE_NEUTRAL[["dark"]], beeple = BEE_NEUTRAL[["light"]]))   # intern = house ink (focus), beeple = stone (background)
   # 4. method: observations (iNaturalist) vs specimens (fair window)
   draw(comm(rec_fair, "obs_type", kc), paste0("by_method_", rk),
        "Bees: Observations vs Specimens", rk,
