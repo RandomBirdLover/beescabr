@@ -111,12 +111,14 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
                plot.subtitle = element_text(colour = BEE_INK$note, hjust = 0.5))
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q
   g1 <- add_cols(iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
-    labs(title = title, caption = paste0(sub, "\niNEXT size-based rarefaction/extrapolation (Hill q0/q1/q2)")) + th, cols)
-  ggsave(file.path(outsub, paste0(pre, "_size_", rank, ".png")), g1, width = 10, height = 4.2, dpi = 200, bg = "white")
+    labs(title = title, subtitle = "Effort-standardized richness (Hill numbers) -- a fair diversity comparison across methods/observers.",
+         caption = paste0("iNEXT size-based rarefaction/extrapolation (Hill q0/q1/q2)", "\n", sub)) + th, cols)
+  bee_ggsave(file.path(outsub, paste0(pre, "_size_", rank, ".png")), g1, width = 10, height = 4.2, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
   g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
-    labs(title = title, caption = paste0(sub, "\niNEXT coverage-based rarefaction/extrapolation (Hill q0/q1/q2)")) + th, cols)
-  ggsave(file.path(outsub, paste0(pre, "_coverage_", rank, ".png")), g3, width = 10, height = 4.2, dpi = 200, bg = "white")
+    labs(title = title, subtitle = "Effort-standardized richness (Hill numbers) -- a fair diversity comparison across methods/observers.",
+         caption = paste0("iNEXT coverage-based rarefaction/extrapolation (Hill q0/q1/q2)", "\n", sub)) + th, cols)
+  bee_ggsave(file.path(outsub, paste0(pre, "_coverage_", rank, ".png")), g3, width = 10, height = 4.2, bg = "white")
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
   write.csv(out$AsyEst, file.path(outsub, paste0(pre, "_asymptotic_", rank, ".csv")), row.names = FALSE)
   # standardized to a common COVERAGE (default: the lowest coverage among groups) --

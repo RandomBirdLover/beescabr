@@ -172,14 +172,16 @@ M <- rbind(specimen = spec_n, inat_research = res_n, inat_needsid = needs_n)
 colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
                       pdat$scientific_name, paste0("(unnamed ", pdat$taxon_id, ")"))
 
-png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
+bee_png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
     width = 1900, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colours
-op <- par(mar = c(4.5, 12, 3.5, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption without clipping
+op <- par(mar = c(4.5, 12, 4.4, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption; top fits title + takeaway
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA, width = 0.8, space = 0.35,
-              xlab = "Number of CABR records",
-              main = "Bees New to the San Diego County Checklist\n(bar = records; colour = evidence type)",
+              xlab = "Number of Cabrillo National Monument Records",
               cex.names = 0.8)
+mtext("Bees New to the San Diego County Checklist", side = 3, line = 2.4, font = 2, cex = 1.05, col = BEE_INK$primary)
+mtext(sprintf("%d Cabrillo taxa aren't on the county checklist -- candidate county additions, or IDs to verify.", ncol(M)),
+      side = 3, line = 1.0, cex = 0.78, col = BEE_INK$secondary)   # takeaway
 # hatch any taxon NOT resolved to species -- a to-do flag: these still need keying to species
 not_species <- pdat$taxon_rank != "species"
 if (any(not_species)) {
@@ -190,18 +192,18 @@ if (any(not_species)) {
 }
 # evidence legend: show ONLY the tiers actually present in the plotted data (today = specimen
 # only; a research-grade or needs-ID candidate auto-adds its row in a future run)
-ev_lab  <- c(specimen      = "specimen (voucher)",
+ev_lab  <- c(specimen      = "specimen, identified to species",
              inat_research = "iNat research-grade (community-vetted)",
              inat_needsid  = "iNat needs-ID (not yet community-vetted)")
 present <- rowSums(M) > 0
 # ONE combined legend: the evidence tiers (solid) + the hatched "needs keying" flag, in a single box
-leg_lab  <- c(ev_lab[present], "hatched = not yet ID'd to species (needs keying)")
+leg_lab  <- c(ev_lab[present], "specimen, not yet identified to species")
 leg_fill <- c(unname(pal[present]), unname(BEE_EVIDENCE["specimen"]))
 leg_dens <- c(rep(NA, sum(present)), 20)          # NA = solid box; 20 = hatched box
 legend("bottomright", bty = "n", legend = leg_lab, fill = leg_fill,
        density = leg_dens, angle = 45, border = BEE_INK$muted)
 bee_caption_base(scope = "all records; CABR taxa absent from the Holway San Diego County checklist",
-                 method = "lethal specimen vs non-lethal iNaturalist", rank = "any (species + coarser)")
+                 method = "lethal vs non-lethal", rank = "any (species + coarser)")
 par(op); dev.off()
 
 # ---- 6. console summary -----------------------------------------------------

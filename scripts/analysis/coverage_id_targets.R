@@ -100,7 +100,8 @@ draw_targets <- function(dat, scope, file, split_done) {
   un <- dat %>% filter(!resolved) %>% group_by(target) %>%
     summarise(specimen_unresolved = sum(method == "specimen"),
               photo_unresolved    = sum(method == "photo"),
-              unresolved_total = n(), .groups = "drop")
+              unresolved_total = n(), .groups = "drop") %>%
+    filter(!grepl("^\\(", target))   # drop the coarse-rank buckets (epifamily..tribe): genus-level rows only
   rs_all <- dat %>% filter(resolved, !is.na(genus), genus != "") %>% count(genus, name = "resolved_species")
   rs_l   <- dat %>% filter(resolved, method == "specimen", !is.na(genus), genus != "") %>% count(genus, name = "resolved_lethal")
   rs_n   <- dat %>% filter(resolved, method == "photo",    !is.na(genus), genus != "") %>% count(genus, name = "resolved_nonlethal")
@@ -123,13 +124,13 @@ draw_targets <- function(dat, scope, file, split_done) {
     subttl <- "Dark = already identified to species (split by method); light = still unresolved. Fair window."
   } else {
     long <- bind_rows(
-      data.frame(target = tt$target, cat = "resolved (to species)", n = tt$resolved_species),
-      data.frame(target = tt$target, cat = "keyable (lethal)",      n = tt$specimen_unresolved),
-      data.frame(target = tt$target, cat = "stuck (non-lethal)",    n = tt$photo_unresolved)) %>% filter(n > 0)
-    lv   <- c("resolved (to species)", "keyable (lethal)", "stuck (non-lethal)")
-    fill <- c("resolved (to species)" = BEE_METHOD_BOTH,   # both methods, DONE -> red+blue blend (purple)
-              "keyable (lethal)"       = COL_L_LT,          # unresolved lethal specimen -> LIGHT red (matches panels)
-              "stuck (non-lethal)"     = COL_NL_LT)         # unresolved non-lethal photo -> LIGHT blue (matches panels)
+      data.frame(target = tt$target, cat = "resolved to species",       n = tt$resolved_species),
+      data.frame(target = tt$target, cat = "lethal stuck at genus",      n = tt$specimen_unresolved),
+      data.frame(target = tt$target, cat = "non-lethal stuck at genus",  n = tt$photo_unresolved)) %>% filter(n > 0)
+    lv   <- c("resolved to species", "lethal stuck at genus", "non-lethal stuck at genus")
+    fill <- c("resolved to species"        = BEE_METHOD_BOTH,   # both methods, DONE -> red+blue blend (purple)
+              "lethal stuck at genus"       = COL_L_LT,          # unresolved lethal specimen -> LIGHT red (matches panels)
+              "non-lethal stuck at genus"   = COL_NL_LT)         # unresolved non-lethal photo -> LIGHT blue (matches panels)
     subttl <- "Dark = already identified to species (both methods); light = still unresolved. All records."
   }
   long$cat <- factor(long$cat, levels = lv)
@@ -150,14 +151,13 @@ draw_targets <- function(dat, scope, file, split_done) {
       if (grepl("^\\(", s)) s else bquote(italic(.(s)))))) +
     scale_fill_manual(values = fill, name = NULL) +
     labs(title = "Latest Progress of ID Resolution by Genus",
-         caption = paste0(subttl, "\n", str_wrap(sprintf("%s of %s bee records (%.0f%%) already identified to species.  %s",
-                              format(n_resolved, big.mark = ","), format(n_total, big.mark = ","), pct_resolved,
-                              scope_cap(scope, "resolved vs keyable vs stuck", "genus / coarse rank")), 90)),
+         subtitle = sprintf("%.0f%% of records are identified to species; the light bars are the genera with the most left to key.", pct_resolved),
+         caption = scope_cap(scope, "lethal + non-lethal pooled", "genus / coarse rank"),
          x = "records", y = NULL) +
     theme_beescabr(11) +
     theme(legend.position = "top", panel.grid.major.y = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5, size = 9))
-  ggsave(file, g, width = 9.5, height = max(7, 0.30 * nrow(tt) + 2), dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 9.5, height = max(7, 0.30 * nrow(tt) + 2), bg = "white")
 }
 draw_targets(rec,      "all records",                                  file.path(OUT_REPORT, "coverage_id_targets_report.png"),  split_done = FALSE)
 draw_targets(rec_fair, "fair window (survey-only, Mar-Oct 2021-2023)", file.path(OUT_JOURNAL, "coverage_id_targets_journal.png"), split_done = TRUE)
@@ -192,15 +192,13 @@ method_genus_fig <- function(m, file, method_label) {
       else
         c("identified to species" = COL_NL, "genus-only (unresolved)" = COL_NL_LT), name = NULL) +
     labs(title = sprintf("%s Method: Progress of ID by Genus", method_label),
-         caption = str_wrap(sprintf("%s: %s of %s records (%.0f%%) identified to species in these genera.  %s",
-                              method_label, format(sum(d$species), big.mark = ","),
-                              format(sum(d$total), big.mark = ","), pct,
-                              scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", method_label, "genus")), 90),
+         subtitle = sprintf("%s: %.0f%% of records reach species; the rest are ID targets, by genus.", method_label, pct),
+         caption = scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", tolower(method_label), "genus"),
          x = "records", y = NULL) +
     theme_beescabr(11) +
     theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5),
           axis.text.y = element_text(face = "italic"))   # bee genus names = scientific -> italic
-  ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), dpi = 200, bg = "white")
+  bee_ggsave(file, g2, width = 9.5, height = max(7, 0.30 * length(method_genera) + 2), bg = "white")
 }
 method_genus_fig("specimen", file.path(OUT_JOURNAL, "coverage_id_targets_specimen.png"), "Lethal")
 method_genus_fig("photo",    file.path(OUT_JOURNAL, "coverage_id_targets_photo.png"),    "Non-Lethal")
@@ -220,12 +218,11 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
                     labels = c(specimen = "lethal", photo = "non-lethal")) +
   scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +
   labs(title = "Counts of ID Resolution between Methods",
-       caption = str_wrap(sprintf("%s of %s records (%.0f%%) identified to species.  %s",
-                            format(n_res_f, big.mark = ","), format(n_total_f, big.mark = ","), pct_res_f,
-                            scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", "lethal vs non-lethal", "resolution level")), 90),
+       subtitle = sprintf("Specimens key to species; photos often stall at genus -- %.0f%% of records reach species overall.", pct_res_f),
+       caption = scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", "lethal vs non-lethal", "resolution level"),
        x = NULL, y = "records") +
   theme_beescabr(11) +
   theme(legend.position = "top", panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_JOURNAL, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, dpi = 200, bg = "white")
+bee_ggsave(file.path(OUT_JOURNAL, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, bg = "white")
 
 message("Wrote coverage_id_targets.csv + _report.png/_journal.png + _specimen.png/_photo.png + coverage_id_completeness.png to journal_paper_2026/ + nps_report_2026/")

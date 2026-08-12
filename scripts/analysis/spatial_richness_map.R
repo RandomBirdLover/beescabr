@@ -146,11 +146,11 @@ draw_map <- function(fill_col, title, legend_lab, file, palette = "viridis", tra
                             "non-lethal; specimens summarised by transect", rank_lab), width = 62)
   g <- ggplot(dat) +
     geom_sf(aes(fill = .data[[fill_col]]), color = "white", linewidth = 0.15) +
-    scale_fill_gradientn(colours = BEE_SEQ, name = legend_lab, trans = trans) +   # magnitude = house blue ramp (palette arg now unused)
+    scale_fill_gradientn(colours = BEE_SEQ, name = legend_lab, trans = trans) +   # non-urgent magnitude = teal ramp
     labs(title = title, caption = cap, x = NULL, y = NULL) +
     coord_sf(datum = CRS_UTM) +
     base_theme
-  ggsave(file, g, width = 7.4, height = 8.2, dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 7.4, height = 8.2, bg = "white")
 }
 
 # Grid-cell maps intentionally NOT drawn -- they were hard to read (no basemap, UTM axes) and are
@@ -209,24 +209,48 @@ effort_chart <- function(tbl, file, scope_lab) {
   eff_long$method <- factor(eff_long$method, levels = c("non-lethal", "lethal"))
   g <- ggplot(eff_long, aes(transect, value, fill = method)) +
     geom_col(width = 0.66) +
+    geom_text(aes(label = ifelse(value > 0, value, "")), position = position_stack(vjust = 0.5),   # per-method count inside its segment
+              colour = "white", fontface = "bold", size = 2.9, show.legend = FALSE) +
     geom_text(data = tbl, aes(transect, n_records, label = n_records), vjust = -0.35, size = 3, colour = lab_col, inherit.aes = FALSE) +
     scale_fill_manual(values = setNames(unname(BEE_METHOD_COL[c("nonlethal", "lethal")]),
                                         c("non-lethal", "lethal")), name = NULL) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
     labs(title = "Bee Sampling Effort by Transect",
-         caption = paste0(str_wrap(scope_lab, 74), "\n",
-                          str_wrap("Note: TP shows about double the effort of the other transects because it was surveyed as two separate transects each survey.", 90)),
+         subtitle = "TP carries the most records (surveyed as two transects); OT the fewest -- effort is uneven across transects.",
+         caption = str_wrap(scope_lab, 74),
          x = NULL, y = "records") +
     base_theme + theme(legend.position = "top", plot.subtitle = element_text(size = 8.5),
                        plot.title = element_text(hjust = 0.5))
-  ggsave(file, g, width = 6.4, height = 5, dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 6.4, height = 5, bg = "white")
 }
 effort_chart(tr_tbl, file.path(COV_EFFORT, "transect_effort_report.png"),
              scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"))
 effort_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.png"),
              scope_cap(scope  = "fair window: survey-only, Mar-Oct 2021-2023 (OT excluded -- added 2024)",
-                       method = "lethal (intern nets) vs non-lethal (beeple photos)",
+                       method = "lethal vs non-lethal",
                        rank   = "records (by transect)"))
+
+# ---- transect_effort TOTAL -- companion slide: total records per transect, coloured by TRANSECT,
+# no lethal/non-lethal split (same transect order as the split version, so the two slides line up). ----
+effort_total_chart <- function(tbl, file, scope_lab) {
+  tbl$transect <- factor(tbl$transect, levels = as.character(tbl$transect[order(-tbl$n_records)]))
+  g <- ggplot(tbl, aes(transect, n_records, fill = transect)) +
+    geom_col(width = 0.66) +
+    geom_text(aes(label = n_records), vjust = -0.35, size = 3, colour = lab_col) +
+    scale_fill_manual(values = BEE_TRANSECT, name = NULL) +   # transect legend occupies the same top space as the split slide's method legend, so the two slides line up
+    scale_y_continuous(expand = expansion(mult = c(0, 0.13))) +
+    labs(title = "Bee Sampling Effort by Transect",
+         subtitle = "TP carries the most records (surveyed as two transects); OT the fewest -- effort is uneven across transects.",
+         caption = str_wrap(scope_lab, 74),
+         x = NULL, y = "records") +
+    base_theme + theme(legend.position = "top", plot.title = element_text(hjust = 0.5))
+  bee_ggsave(file, g, width = 6.4, height = 5, bg = "white")
+}
+effort_total_chart(tr_tbl, file.path(COV_EFFORT, "transect_effort_total_report.png"),
+                   scope_cap("all records, by transect (OT = off-transect)", "lethal + non-lethal pooled", "records"))
+effort_total_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_total_journal.png"),
+                   scope_cap(scope  = "fair window: survey-only, Mar-Oct 2021-2023 (OT excluded -- added 2024)",
+                             method = "lethal + non-lethal pooled", rank = "records (by transect)"))
 
 message("Wrote transect_effort_report.png + transect_richness.csv to ", COV_EFFORT,
         " | transect_effort_journal.png/.csv to ", OUT_JOURNAL)

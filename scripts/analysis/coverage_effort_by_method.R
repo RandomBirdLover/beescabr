@@ -50,20 +50,19 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
   scale_fill_manual(values = fill_cols, guide = "none") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
   labs(title = "Effort by Method",
+       subtitle = sprintf("Non-lethal photos logged far more survey trips than lethal netting (%d vs %d) -- the effort behind the catch.",
+                          tr$trips[tr$method == "non-lethal"], tr$trips[tr$method == "lethal"]),
        caption = paste0(
-         scope_cap(scope  = "fair window: survey trips only, Mar-Oct 2021-2023 (excludes trips outside the lethal-netting years)",
-                   method = "lethal (net) vs non-lethal (photo) survey trips",
-                   rank   = "trips (survey effort)"),
-         "\n",
          str_wrap(paste0(
-           "Effort = survey trips (one row per trip), restricted to the fair window so non-lethal isn't credited ",
-           "with trips outside the lethal-netting years. Non-lethal logged far more trips than lethal -- the effort ",
-           "context for reading the yield (Venn) and rarefaction comparisons fairly. NOTE: a lethal (net) trip covers ",
-           "all 3 transects, while a non-lethal (photo) trip covers one transect -- so raw trip counts understate ",
-           "lethal's per-trip coverage."), 108)),
+           "Note: a lethal (net) trip covers all 3 transects, while a non-lethal (photo) trip covers one -- ",
+           "so raw trip counts understate lethal's per-trip coverage."), 108),
+         "\n",
+         scope_cap(scope  = "fair window: survey trips only, Mar-Oct 2021-2023 (excludes trips outside the lethal-netting years)",
+                   method = "lethal vs non-lethal",
+                   rank   = "trips (survey effort)")),
        x = NULL, y = "survey trips") +
   theme_beescabr(12) +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
         panel.grid.major.x = element_blank())
-ggsave(file.path(OUT_DIR, "coverage_effort_by_method.png"), g, width = 6.5, height = 5, dpi = 200, bg = "white")
+bee_ggsave(file.path(OUT_DIR, "coverage_effort_by_method.png"), g, width = 6.5, height = 5, bg = "white")
 message("Wrote coverage_effort_by_method.{csv,png} to ", OUT_DIR)

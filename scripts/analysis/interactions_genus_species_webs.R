@@ -133,9 +133,9 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   yP <- 0.05; yB <- 0.95; wmax <- max(M)
   epithet   <- sub("^\\S+\\s+", "", colnames(M))            # drop the genus, show species epithet
   scol      <- BEE_SPECIES[((seq_len(nb) - 1) %% length(BEE_SPECIES)) + 1]   # one colour per species (theme token)
-  png(file, width = max(1500, 150 * nb), height = 1700, res = 200)
+  bee_png(file, width = max(1500, 150 * nb), height = 1700, res = 200)
   bee_base_par()                                    # house-style sans font
-  op <- par(mar = c(15, 1, 10, 1), xpd = NA)        # tall bottom margin (plant labels + H2' note) and tall top (title block + wrapped caption)
+  op <- par(mar = c(17.5, 1, 10, 1), xpd = NA)      # tall bottom margin (plant labels + scope caption at the bottom) and tall top (title + takeaway + legend lines)
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
   # links coloured by BEE SPECIES; thickness = raw visit records (per-genus view uses counts)
   for (j in seq_len(nb)) for (i in seq_len(np)) if (M[i, j] > 0)
@@ -159,13 +159,15 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   fam_txt <- if (!is.na(family) && nzchar(family)) sprintf("family %s", family) else "family unresolved"
   mtext(sprintf("Which Plants Each %s Species Uses", genus),
         side = 3, line = 8.2, font = 2, cex = 1.1, col = BEE_INK$primary)
+  mtext(sprintf("%s's species carve up the flora -- each favours its own plants, not the same few.", genus),
+        side = 3, line = 7.1, cex = 0.72, col = BEE_INK$secondary)   # takeaway
   mtext(sprintf("%s   |   %s   |   %d species, %d plant genera",
                 fam_txt, "species (top), plant genus (bottom)", nb, np),
-        side = 3, line = 7.5, cex = 0.66, col = BEE_INK$secondary)
+        side = 3, line = 6.2, cex = 0.66, col = BEE_INK$secondary)
   mtext("Thickness = visit records (thicker = more).  Red heart = a selective species' favourite plant (matched chi-square, p<0.05).",
-        side = 3, line = 6.8, cex = 0.62, col = BEE_INK$secondary)
-  # ONE standardized scope caption (same helper + look as the main webs), with the within-genus H2'
-  # test folded in as the Test component -- no separate red note. Wrapped to fit this canvas's width.
+        side = 3, line = 5.5, cex = 0.62, col = BEE_INK$secondary)
+  # ONE standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure.
+  # The within-genus H2' test is folded in as the Analysis: component (no separate red note).
   cap <- scope_cap(scope = sprintf("all records, whole park; %s species vs plant genera", genus),
                    method = "lethal + non-lethal pooled",
                    rank = "species (within-genus partitioning; favourite = species-level test)",
@@ -173,7 +175,7 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   maxchars  <- max(60, floor(par("pin")[1] / strwidth("n", cex = 0.56, units = "inches") * 0.97))
   cap_lines <- strsplit(str_wrap(cap, maxchars), "\n")[[1]]
   for (k in seq_along(cap_lines))
-    mtext(cap_lines[k], side = 3, line = 6.2 - 0.62 * (k - 1), cex = 0.56, col = BEE_INK$secondary)
+    mtext(cap_lines[k], side = 1, line = 13.8 + 0.9 * (k - 1), cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
 
@@ -266,8 +268,9 @@ g <- ggplot(ov, aes(x = x, y = bee_genus)) +
   geom_text(aes(label = lab), hjust = -0.12, size = 3.0, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
   labs(title = "Which Bee Genera Have Specialist Species?",
+       subtitle = sprintf("%d bee genera have species that carve up different plants -- true niche specialists, not chance.", nrow(ov)),
        caption = paste0(str_wrap(paste0(
-         sprintf("SPECIALIST genera = their species divide up different plant genera (each on its own flowers); GENERALISTS = their species pile onto the same plants. H2' measures this, controlled for flight season & method -- higher bar = stronger specialisation. Shown = the %d of %d testable (>= %d species) genera whose species significantly specialise (p<0.05); everything non-significant or untestable is named below, not drawn.",
+         sprintf("Higher bar = species partition plants more (H2', controlled for flight season & method). Only the %d of %d testable (>= %d species) genera whose species significantly specialise (p<0.05) are drawn.",
                  nrow(ov), n_tested, MIN_SPECIES), gen_note, untest_note), 96), "\n",
          scope_cap(scope = "all records, whole park; within-genus niche partitioning across bee genera",
                    method = "lethal + non-lethal pooled",
@@ -276,6 +279,6 @@ g <- ggplot(ov, aes(x = x, y = bee_genus)) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
         panel.grid.major.y = element_blank())
-ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
-       width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 2.0), dpi = 200, bg = "white")
+bee_ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
+       width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 2.0), bg = "white")
 message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")

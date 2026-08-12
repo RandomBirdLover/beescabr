@@ -64,7 +64,7 @@ print(top[, c("plant_genus", "whole_park", "survey_only", "lethal", "nonlethal")
       row.names = FALSE)
 
 # ---- 3. figure A: top-N plants, method-split bars ---------------------------
-png(file.path(OUT_DIR, "interactions_top_plants.png"),
+bee_png(file.path(OUT_DIR, "interactions_top_plants.png"),
     width = 2050, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis colours
 op <- par(mar = c(5.5, 16, 3.5, 1), oma = c(3.6, 0, 0, 0))  # wide left margin for labels; bottom oma fits the 3-line scope caption
@@ -81,7 +81,7 @@ bp <- barplot(M, horiz = TRUE, names.arg = rep("", ncol(M)), border = NA,
         xlab = "Bee-visit records (whole park)",
         main = sprintf("Top %d Plant Genera Visited by Bees", TOP_N))
 axis(2, at = bp, labels = .plab, las = 1, tick = FALSE, cex.axis = 0.82, col.axis = BEE_INK$muted)
-mtext("bar split by survey method", side = 3, line = 0.3, cex = 0.8, col = BEE_INK$secondary)
+mtext("A few plant genera pull most of the bee visits -- the park's keystone forage.", side = 3, line = 0.3, cex = 0.8, col = BEE_INK$secondary)   # takeaway
 legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col = BEE_INK$primary,
        legend = c("non-lethal", "lethal"))
 if (any(bee_low_n(top$whole_park)))
@@ -113,15 +113,17 @@ rank_lab <- setNames(lapply(seq_along(top_m), function(i) {
   if (is.na(cn)) bquote(.(rk) * italic(.(g)) * .(ct)) else bquote(.(rk) * .(cn) ~ "(" * italic(.(g)) * ")" * .(ct))
 }), top_m)
 
-png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
+bee_png(file.path(OUT_DIR, "interactions_top_plants_by_month.png"),
     width = 2300, height = 1050, res = 200)
 bee_base_par()
-op <- par(mar = c(4, 19, 4, 7), oma = c(3.6, 0, 0, 0))     # wide left margin for labels; right margin for legend; bottom oma fits the 3-line caption
+op <- par(mar = c(4, 19, 4.8, 7), oma = c(3.6, 0, 0, 0))     # wide left margin for labels; right margin for legend; bottom oma fits the 3-line caption; top fits title + takeaway
 Mplot  <- Mmon[nrow(Mmon):1, , drop = FALSE]
-ramp_m <- grDevices::colorRampPalette(BEE_SEQ)(24)   # house red ramp (magnitude)
+ramp_m <- grDevices::colorRampPalette(BEE_SEQ)(24)   # non-urgent magnitude = teal ramp
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = ramp_m, axes = FALSE, xlab = "", ylab = "",
-      main = sprintf("When Top %d Plant Genera are Visited by Bees", TOP_MONTH))
+      main = "")
+mtext(sprintf("When Top %d Plant Genera are Visited by Bees", TOP_MONTH), side = 3, line = 2.6, font = 2, cex = 1.05, col = BEE_INK$primary)
+mtext("The top plants bloom into use at different times -- forage shifts across the season.", side = 3, line = 1.4, cex = 0.78, col = BEE_INK$secondary)   # takeaway
 mtext("log records/month; y-axis ranked by the bees' favourite (1 = most visit records)",
       side = 3, line = 0.4, cex = 0.75, col = BEE_INK$secondary)
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)

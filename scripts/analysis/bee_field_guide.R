@@ -232,8 +232,8 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                         gp = grid::gpar(fontsize = 7, col = BEE_TABLE[["subtext"]], lineheight = 1.15))
   g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
                                 heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(2.6, "lines")))
-  ggplot2::ggsave(file.path(OUT_DIR, "bee_field_guide_species.png"), g,
-                  width = if (HAVE_IUCN) 18.5 else 17.5, height = 0.24 * nrow(disp) + 2.0, dpi = 200, limitsize = FALSE, bg = "white")
+  bee_ggsave(file.path(OUT_DIR, "bee_field_guide_species.png"), g,
+                  width = if (HAVE_IUCN) 18.5 else 17.5, height = 0.24 * nrow(disp) + 2.0, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote bee_field_guide_species.{csv,html,png} to ", OUT_DIR)

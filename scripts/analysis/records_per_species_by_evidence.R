@@ -78,15 +78,16 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
     scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
     scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
     labs(title = "Total Records of Bee Species",
+         subtitle = "Many species rest on just a handful of records; specimen vs photo backing varies species to species.",
          caption = scope_cap(
            scope  = sprintf("%s; species with >= %d records (%d of %d shown; full list in the CSV)", scope_lab, min_shown, nrow(wf), nrow(wide)),
-           method = "lethal specimen vs non-lethal photo (evidence type)", rank = "species"),
+           method = "lethal vs non-lethal", rank = "species"),
          x = "Number of records", y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           panel.grid.major.y = element_blank(),
           axis.text.y = element_text(size = 8, face = "italic"))
-  ggsave(out_png, g, width = 9.5, height = max(5, 0.26 * nrow(wf) + 1.7), dpi = 200, bg = "white", limitsize = FALSE)
+  bee_ggsave(out_png, g, width = 9.5, height = max(5, 0.26 * nrow(wf) + 1.7), bg = "white", limitsize = FALSE)
   message(sprintf("  %-32s %d of %d species >= %d records", scope_lab, nrow(wf), nrow(wide), min_shown))
 }
 make_fig(rec_all,  MIN_REPORT,  "All records (report)",

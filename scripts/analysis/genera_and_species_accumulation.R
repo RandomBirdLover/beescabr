@@ -165,18 +165,21 @@ plot_accumulation <- function(key_col, rank_label, file) {
   xmax <- max(vapply(sacs, function(s) max(s$sites),    numeric(1)))
   ymax <- max(vapply(sacs, function(s) max(s$richness), numeric(1)))
 
-  png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
+  bee_png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
   bee_base_par()                     # house-style fonts + muted axis/label colours
-  op <- par(mar = c(4.2, 4.4, 3.4, 1), oma = c(2.4, 0, 0, 0))
+  op <- par(mar = c(4.2, 4.4, 4.6, 1), oma = c(2.4, 0, 0, 0))
   plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
        xlab = "Number of surveys", ylab = paste("Number of", rank_label))
+  LTY <- if (startsWith(rank_label, "gen")) 2 else 1       # house rule: GENUS figure = dashed lines, species = solid
   for (tr in names(sacs))                                  # one curve per transect (methods pooled)
-    lines(sacs[[tr]]$sites, sacs[[tr]]$richness, col = COLS[tr], lwd = 2.8)
-  title(main = sprintf("Native Bee %s Accumulation by Survey Effort",
-                       paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
-        col.main = BEE_INK$primary, font.main = 2)
+    lines(sacs[[tr]]$sites, sacs[[tr]]$richness, col = COLS[tr], lwd = 2.8, lty = LTY)
+  mtext(sprintf("Native Bee %s Accumulation by Survey Effort",
+                paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
+        side = 3, line = 2.6, font = 2, cex = 1.05, col = BEE_INK$primary)
+  mtext("Curves still climbing on the least-sampled transects -- more surveys would keep adding new bees.",
+        side = 3, line = 1.3, cex = 0.8, col = BEE_INK$secondary)   # takeaway
   legend("bottomright", title = "transect", legend = names(sacs),
-         col = COLS[names(sacs)], lwd = 2.8, lty = 1, bty = "n", cex = 0.9,
+         col = COLS[names(sacs)], lwd = 2.8, lty = LTY, bty = "n", cex = 0.9,
          text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
   bee_caption_base(scope = "all survey records, per transect (x = number of survey trips)",
                    method = "lethal + non-lethal pooled", rank = rank_label)
@@ -209,7 +212,7 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
 
   ncell <- length(present) + 1                       # +1 cell for the shared legend
   nc <- min(2, ncell); nr <- ceiling(ncell / nc)
-  png(file, width = 850 * nc, height = 650 * nr, res = 200); on.exit(dev.off())
+  bee_png(file, width = 850 * nc, height = 650 * nr, res = 200); on.exit(dev.off())
   bee_base_par()
   op <- par(mfrow = c(nr, nc), oma = c(5, 3, 5, 1), mar = c(2.6, 2.8, 2.2, 0.8), mgp = c(2, 0.6, 0))  # bottom oma leaves room for the scope caption below the x-label
   for (tr in present) {
@@ -226,11 +229,11 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
   mtext(paste("Number of", rank_label), side = 2, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
   mtext(sprintf("Native Bee %s Accumulation: Lethal vs Non-Lethal by Transect",
                 paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
-        side = 3, outer = TRUE, line = 2.2, col = BEE_INK$primary, font = 2, cex = 1.05)
-  mtext("Fair window: survey-only, Mar-Oct 2021-2023  (lethal = intern nets, non-lethal = beeple photos; OT excluded -- added 2024)",
-        side = 3, outer = TRUE, line = 0.6, col = BEE_INK$secondary, cex = 0.68)
+        side = 3, outer = TRUE, line = 2.4, col = BEE_INK$primary, font = 2, cex = 1.05)
+  mtext("Curves flatten where sampling is near-complete and keep climbing where it isn't -- so more surveys would still add taxa.",
+        side = 3, outer = TRUE, line = 1.2, col = BEE_INK$secondary, cex = 0.8)   # takeaway
   bee_caption_base(scope = "fair window: survey-only records, per transect (BST/TP/UPMON; OT excluded -- added 2024)",
-                   method = "lethal (intern nets) vs non-lethal (beeple photos)", rank = rank_label, line0 = 2.0)
+                   method = "lethal vs non-lethal", rank = rank_label, line0 = 2.0)
   par(op)
 }
 plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_by_effort_journal_species.png"))

@@ -20,7 +20,7 @@
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
-for (pkg in c("ggplot2")) {
+for (pkg in c("ggplot2", "ggpattern")) {
   if (!requireNamespace(pkg, quietly = TRUE))
     try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
 }
@@ -70,21 +70,25 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
   long$method <- factor(long$method, levels = c("lethal", "nonlethal"))
   long$genus  <- factor(long$genus, levels = rev(lab))
   g <- ggplot(long, aes(x = n, y = genus, fill = method)) +
-    geom_col(width = 0.74, position = position_stack(reverse = TRUE)) +
+    # house rule: GENUS-rank figures are hatched (species figures stay solid) -- this one is per-genus
+    ggpattern::geom_col_pattern(width = 0.74, position = position_stack(reverse = TRUE),
+      pattern = "stripe", pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
+      pattern_density = 0.08, pattern_spacing = 0.02, pattern_key_scale_factor = 0.4) +
     geom_text(data = wf, aes(x = total, y = factor(genus, levels = rev(lab)), label = total),
               hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
     scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
     labs(title = "Total Records of Bee Genera",
+         subtitle = "Evidence depth varies widely -- some genera are specimen-backed, others rest on iNaturalist photos alone.",
          caption = scope_cap(
            scope  = sprintf("%s; genera with >= %d records (%d of %d shown; full list in the CSV)", scope_lab, min_shown, nrow(wf), nrow(wide)),
-           method = "lethal specimen vs non-lethal photo (evidence type)", rank = "genus"),
+           method = "lethal vs non-lethal", rank = "genus"),
          x = "Number of records", y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           axis.text.y = element_text(face = "italic"),   # bee genus names = scientific -> italic
           panel.grid.major.y = element_blank())
-  ggsave(out_png, g, width = 9, height = max(5, 0.34 * nrow(wf) + 1.7), dpi = 200, bg = "white")
+  bee_ggsave(out_png, g, width = 9, height = max(5, 0.34 * nrow(wf) + 1.7), bg = "white")
   message(sprintf("  %-32s %d of %d genera >= %d records", scope_lab, nrow(wf), nrow(wide), min_shown))
 }
 make_fig(rec_all,  MIN_REPORT,  "All records (report)",

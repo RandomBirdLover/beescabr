@@ -52,7 +52,7 @@ cc <- as.numeric(st_coordinates(cabr_pt))
 bb <- st_bbox(county)
 
 # ---- callout text -----------------------------------------------------------
-call_txt <- sprintf("Cabrillo National Monument\n%.0f acres  =  %.3f%% of the county's land\n\n%.0f%%  of the county's native bee SPECIES\n%.0f%%  of its bee GENERA",
+call_txt <- sprintf("Cabrillo National Monument\n%.0f acres = %.3f%% of the county\n%.0f%% of its bee species, %.0f%% of its bee genera",
                     cabr_acres, area_pct, sp_pct, gen_pct)
 # anchor the callout in open space NE of CABR (inland), leader curves down to the dot
 ax <- cc[1] + (bb["xmax"] - bb["xmin"]) * 0.34
@@ -69,15 +69,21 @@ g <- ggplot() +
            arrow = arrow(length = unit(0.14, "cm"), type = "closed")) +
   annotate("label", x = ax, y = ay, label = call_txt, hjust = 0, vjust = 0.5,
            size = 3.7, lineheight = 1.05, color = BEE_INK$primary, fill = "white") +
-  annotate("text", x = cc[1] - 1500, y = cc[2] - 3500, label = "Point Loma", hjust = 1,
-           size = 3, fontface = "italic", color = BEE_INK$muted) +
-  coord_sf(xlim = c(bb["xmin"], bb["xmax"] + (bb["xmax"] - bb["xmin"]) * 0.30),
+  annotate("text", x = cc[1] - 3300, y = cc[2] - 2200, label = "Cabrillo on\nPoint Loma", hjust = 1, vjust = 1,
+           size = 3, fontface = "italic", lineheight = 1.0, color = BEE_INK$muted) +
+  coord_sf(xlim = c(bb["xmin"] - (bb["xmax"] - bb["xmin"]) * 0.52, bb["xmax"] + (bb["xmax"] - bb["xmin"]) * 0.30),
            ylim = c(bb["ymin"], bb["ymax"]), expand = TRUE) +
-  labs(title = sprintf("Cabrillo Holds %.0f%% of San Diego County's Native Bee Species", sp_pct),
-       caption = str_wrap(sprintf("Cabrillo National Monument (%.0f acres) shown on the San Diego County boundary. It holds %.0f%% of the county's native bee species (%d of %d) and %.0f%% of its genera (%d of %d) on ~%.3f%% of its land -- roughly %sx its share by area. CABR official checklist vs Holway SD County checklist (v3).",
-                    cabr_acres, sp_pct, n_cabr_sp, n_hol_sp, gen_pct, n_cabr_gn, n_hol_gn, area_pct, format(round(overrep, -2), big.mark = ",")), 78)) +
+  labs(title = "Cabrillo National Monument in San Diego County",
+       subtitle = sprintf("A speck of San Diego County by area (~%.3f%% of the land), yet home to %.0f%% of its native bee species and %.0f%% of its bee genera.",
+                          area_pct, sp_pct, gen_pct),
+       caption = scope_cap(scope = "CABR footprint on San Diego County; area + native-bee-diversity share",
+                   method = "lethal + non-lethal pooled",
+                   rank = "species + genus",
+                   source = "official CABR checklist vs Holway SD County checklist (v3)",
+                   width = 78)) +
   theme_void(base_size = 12) +
-  theme(plot.title = element_text(face = "bold", size = 15, hjust = 0.5, colour = BEE_INK$primary, margin = margin(b = 6)),
+  theme(plot.title = element_text(face = "bold", size = 15, hjust = 0.5, colour = BEE_INK$primary, margin = margin(b = 2)),
+        plot.subtitle = element_text(hjust = 0.5, colour = BEE_INK$secondary, size = 10.5, margin = margin(b = 6)),
         plot.caption = element_text(colour = BEE_INK$secondary, size = 9, hjust = 0, margin = margin(t = 8)),
         plot.caption.position = "plot", plot.title.position = "plot",
         plot.margin = margin(12, 12, 10, 12))
@@ -86,18 +92,20 @@ plbb <- st_bbox(pl)
 g_inset <- ggplot() +
   geom_sf(data = pl,   fill = BEE_MAP[["land_inset"]], color = BEE_MAP[["boundary_inset"]], linewidth = 0.3) +
   geom_sf(data = cabr, fill = unname(BEE_NPS[["green_md"]]), color = unname(BEE_NPS[["green_md"]]), linewidth = 0.15) +
-  coord_sf(xlim = c(plbb["xmin"], plbb["xmax"]), ylim = c(plbb["ymin"], plbb["ymax"]), expand = FALSE) +
-  labs(title = "Cabrillo National Monument on Point Loma") +
+  # headroom above the peninsula so the title sits in its own white space, not on the map
+  coord_sf(xlim = c(plbb["xmin"], plbb["xmax"]),
+           ylim = c(plbb["ymin"], plbb["ymax"] + (plbb["ymax"] - plbb["ymin"]) * 0.14), expand = FALSE) +
+  labs(title = "Cabrillo on Point Loma") +
   theme_void(base_size = 9) +
-  theme(plot.title = element_text(size = 9, face = "bold", hjust = 0.5, colour = BEE_INK$secondary,
-                                  margin = margin(t = 3, b = 2)),
+  theme(plot.title = element_text(size = 7, face = "bold", hjust = 0.5, colour = BEE_INK$secondary,
+                                  margin = margin(t = 4, b = 7)),
         plot.background = element_rect(fill = "white", colour = BEE_MAP[["frame"]], linewidth = 0.5),
-        plot.margin = margin(2, 5, 5, 5))
+        plot.margin = margin(4, 9, 8, 9))
 if (requireNamespace("cowplot", quietly = TRUE)) {
-  final <- cowplot::ggdraw(g) + cowplot::draw_plot(g_inset, x = 0.71, y = 0.15, width = 0.26, height = 0.32)
+  final <- cowplot::ggdraw(g) + cowplot::draw_plot(g_inset, x = 0.06, y = 0.27, width = 0.27, height = 0.42)
 } else {
   message("  (cowplot not installed -- saving the county map without the Point Loma inset)"); final <- g
 }
-ggsave(file.path(OUT_DIR, "cabr_county_map.png"), final, width = 9, height = 8.2, dpi = 200, bg = "white")
+bee_ggsave(file.path(OUT_DIR, "cabr_county_map.png"), final, width = 9, height = 6.2, bg = "white")
 message(sprintf("Wrote cabr_county_map.png | CABR %.0f ac = %.3f%% of county (%.0f sq mi); %.0f%% species, %.0f%% genera; ~%.0fx",
                 cabr_acres, area_pct, county_sqmi, sp_pct, gen_pct, overrep))

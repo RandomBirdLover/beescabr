@@ -58,32 +58,38 @@ BEE_METHOD_BOTH  <- grDevices::rgb(t(rowMeans(grDevices::col2rgb(BEE_METHOD_COL[
 # lighter tints of each method colour (blend toward white) -- the "still unresolved" side of a method bar.
 BEE_METHOD_COL_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(BEE_METHOD_COL)) * 0.38), maxColorValue = 255), names(BEE_METHOD_COL))
 
-# ---- EVIDENCE / ID-confidence: LAVENDER ordinal ramp (strong -> faint) ------
-# TEAL ordinal ramp (deep teal voucher -> pale teal needs-ID). Moved OFF purple so evidence no longer
-# reads like the purple neutrals; CVD-safe and kept clear of transect green/blue (they never co-occur).
-BEE_EVIDENCE       <- c(specimen = "#08544B", research = "#4C9E90", needs_id = "#C3E3DC")  # deep-teal voucher -> pale-teal needs-ID, ordinal
+# ---- NON-URGENT TEAL: ONE canonical ramp -> evidence + neutrals + magnitude all derive from it --------
+# The whole NON-URGENT family is a SINGLE teal ramp (pale -> deep). Evidence, the neutral focus/background
+# two-tone, and the magnitude ramp (BEE_SEQ, below) are all just stops of BEE_TEAL -- so "non-urgent" is
+# ONE colour idea, not three. They never share a figure, so the single ramp is unambiguous. CVD-safe, kept
+# clear of transect green/blue. The ONLY other family is RED (BEE_RARE / BEE_ACCENT) = rare / urgent.
+BEE_TEAL <- c("#D6ECE6", "#A2D4CA", "#63B3A3", "#2E9584", "#0D6E60", "#08463D")   # pale -> deep teal (non-urgent)
+
+# EVIDENCE / ID-confidence: 3 ordinal stops of BEE_TEAL (deep voucher -> pale needs-ID)
+BEE_EVIDENCE       <- c(specimen = BEE_TEAL[[6]], research = BEE_TEAL[[4]], needs_id = BEE_TEAL[[1]])
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
-# ---- NEUTRALS + ACCENT: ONE definition of the shared jewel greys + orchid ------
-# Every neutral figure references THESE tokens (never a raw hex), so a tweak here updates the whole
-# portfolio. Cool indigo-violet neutrals + an orchid accent -- kept clear of the teal evidence ramp and
-# the crimson magnitude ramp (dE 43+ from both), so the three read as distinct families.
-BEE_NEUTRAL <- c(dark = "#473C8C", light = "#C8C4EE")   # focus (indigo-violet) / background (cool lavender)
-BEE_ACCENT  <- "#A857A0"                                # orchid -- the "third / other / actionable" pop
+# ---- NEUTRALS + ACCENT: focus/background = two stops of BEE_TEAL; accent = the urgent-red pop ------
+# TWO-FAMILY house rule: TEAL = everything non-urgent (evidence, neutrals, magnitude -- ALL derived from
+# BEE_TEAL above); RED = rare/urgent. Neutrals are the deep + pale ends of BEE_TEAL; the "act here" accent
+# is RED (same family as BEE_RARE). Every neutral figure references THESE tokens (never a raw hex), so a
+# tweak to BEE_TEAL updates the whole non-urgent portfolio at once.
+BEE_NEUTRAL <- c(dark = BEE_TEAL[[5]], light = BEE_TEAL[[2]])   # focus (deep teal) / background (pale teal)
+BEE_ACCENT  <- "#B2404E"                                        # crimson -- the "rare / urgent / act here" pop (red family)
 
 # ---- SCOPE: focus vs background --------------------------------------------
 BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRAL[["light"]])
 
 # ---- LOCATION / SET OVERLAP: A-only / shared / B-only (on vs off-transect) ----
-# dark = focal set (on-transect), light = shared core (background), orchid = the other set (off-transect).
-# orchid (BEE_ACCENT) stays in the jewel/purple family and pops against the plum greys. It reads near the
-# evidence-purple ramp + transect-rose, but never shares a chart with them. The method-overlap venn uses
-# BEE_METHOD_COL, NOT this -- method has its own colours.
-BEE_SET <- c(a_only = BEE_NEUTRAL[["dark"]], shared = BEE_NEUTRAL[["light"]], b_only = BEE_ACCENT)
+# Three stepped teals, ALL non-urgent: both = DEEP (the shared, best-documented core -- the anchor), on-only
+# = pale, off-only = mid. RED is reserved for the genuinely rare / at-risk figures (BEE_RARE) only -- an
+# off-transect coverage gap is actionable but not a conservation alarm, so it stays in the teal family.
+# Method-overlap venn uses BEE_METHOD_COL, not this.
+BEE_SET <- c(a_only = BEE_TEAL[[2]], shared = BEE_TEAL[[6]], b_only = BEE_TEAL[[4]])
 
 # ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# resolved (done) = indigo focus; keyable (specimen, ACT here) = orchid accent; stuck (photo) = lavender background.
+# resolved (done) = teal focus; keyable (specimen, ACT here) = red accent; stuck (photo) = pale teal background.
 BEE_IDSTATUS <- c(resolved = BEE_NEUTRAL[["dark"]], keyable = BEE_ACCENT, stuck = BEE_NEUTRAL[["light"]])
 
 # ---- ID PROGRESS (Q7): removed -- coverage_id_targets.R now colours by METHOD (red = specimen,
@@ -126,16 +132,20 @@ BEE_MAP   <- c(land = "#ECEAE4", land_inset = "#F1EFEA", boundary = "#AEAAA0",
 BEE_TABLE <- c(row_odd = "#ffffff", row_even = "#f6f5f2", head = "#1a1a1a", subtext = "#666666")  # grid.table row-stripes + text
 
 # ---- NPS FOOTPRINT theme: the CABR "punches above its weight" figures get their OWN
-# National Park Service look (arrowhead sandstone + forest green). Kept deliberately OFF the
-# crimson magnitude ramp so the footprint figures read as a DIFFERENT family from the rare /
-# least-sampled-bee figures. Used ONLY by the two coverage/footprint scripts
-# (coverage_cabr_county_map.R + coverage_cabr_share_of_county.R) via theme_nps().
+# National Park Service look (arrowhead sandstone + forest green). Its GREEN keeps the footprint
+# figures a DIFFERENT family from both the teal magnitude ramp and the red rare/urgent ramp. Used ONLY
+# by the two coverage/footprint scripts (coverage_cabr_county_map.R + coverage_cabr_share_of_county.R).
 BEE_NPS <- c(green = "#1E5631", green_md = "#3E8B57", brown = "#8A5A2B",
              sand = "#E7DAC0", sand_dk = "#B9A981", ink = "#2B2117")   # arrowhead palette
 NPS_SEQ <- c("#CFE3D2", "#8FC0A0", "#4E9E6E", "#2C7A4B", "#12592B")     # pale sage -> deep forest (NPS magnitude ramp)
 
-# ---- sequential (magnitude): one crimson ramp (pale -> deep wine) -----------
-BEE_SEQ <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")
+# ---- sequential ramps (magnitude): two families -----------------------------
+# BEE_SEQ = NON-URGENT magnitude = the canonical teal ramp BEE_TEAL itself (visits, richness, trips,
+#   top-plants, rarefaction) -- same colour idea as evidence + neutrals, so "more" never reads as "alarming".
+# BEE_RARE = the RARE / URGENT ramp -> RED (pale rose -> deep wine). The ONLY red ramp: reserved for figures
+#   where the magnitude IS the warning (rare bees' host plants). RED = "look here"; teal = ordinary quantity.
+BEE_SEQ  <- BEE_TEAL                                                   # non-urgent magnitude = the canonical teal ramp
+BEE_RARE <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")   # rare/urgent magnitude: pale rose -> deep wine
 
 # ---- INTERACTION WEBS: plant vs bee node colours (bipartite visitation figures) --------
 # plants = forage green, bees = goldenrod (warm vs the cool green -- the two trophic sides). node fills
@@ -147,8 +157,10 @@ BEE_WEB <- c(plant = "#3E7D43", bee = "#C8952A",
 # One colour per bee family (Paul Tol bright set), CVD-safe; selective genera/species inherit their
 # family's colour, the family brackets use it, and species webs group by it. Single source for both
 # interactions_network.R and interactions_genus_species_webs.R.
-BEE_FAMILY <- c(Apidae = "#4477AA", Halictidae = "#228833", Megachilidae = "#AA3377",
-                Andrenidae = "#CCBB44", Colletidae = "#66CCEE", Other = "#9C9A93")
+# hues spread wide around the wheel (yellow / green / blue / pink / purple / grey) so families read
+# as clearly distinct -- this also anchors the genus colouring: a genus takes a shade of its family hue.
+BEE_FAMILY <- c(Apidae = "#E5B80B", Halictidae = "#2CA05A", Megachilidae = "#3F6FB5",
+                Andrenidae = "#C43C8E", Colletidae = "#8256B4", Other = "#9C9A93")
 BEE_FAMILY_ORDER <- c("Apidae", "Halictidae", "Megachilidae", "Andrenidae", "Colletidae", "Other")
 
 # ---- FORAGE FAVOURITE: the red heart marking a selective taxon's availability-corrected best plant ----
@@ -159,7 +171,9 @@ BEE_FAVORITE <- "#E8000B"   # pure red, reserved for the favourite-plant heart o
 # plant distribution vs plant availability, p<0.05) -- i.e. it concentrates its visits beyond what mere
 # availability/phenology would give. Non-selective or sparse genera stay grey. ~15 genera clear the bar,
 # so this is a large qualitative set (as tell-apart as 15+ hues allow); the coloured top-node bars double
-# as the legend, and species inherit their genus's colour. Assigned to genera in descending-record order.
+# as the legend. Assigned to genera in descending-record order. NOTE: in the per-genus species webs the
+# species do NOT inherit a tint of their genus's colour -- BEE_SPECIES gives each species its own distinct
+# hue (assigned by position within that one web) so the species can be told apart, which is that view's job.
 BEE_GENUS_GREY <- "#B7B4AC"   # non-selective / too-few-records: nodes + links go neutral grey
 # BEE_GENUS = overview genus web (selective genera); BEE_SPECIES = per-genus species webs (one hue/species).
 # Single source for interactions_network.R + interactions_genus_species_webs.R (were the local
@@ -172,9 +186,12 @@ BEE_SPECIES <- c("#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7
                  "#7D3C98", "#117A65", "#8B4513", "#2C3E50", "#66A61E", "#A6761D",
                  "#B03A2E", "#1F78B4", "#E7298A", "#F0A202")
 
-# ---- PHENOLOGY SEASON: spring -> fall diverging ramp (green -> yellow -> orange-red) ----
-# RdYlGn-style 6-step for month / day-of-year density in phenology_activity.R.
-BEE_SEASON <- c("#1a9850", "#66bd63", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43")
+# ---- PHENOLOGY SEASON: winter BLUE held across Nov-Feb (near-empty bee months), greening from the END
+# OF FEBRUARY through spring (more green), soft-orange SUMMER peak, then a WARM tan/gold fall that fades
+# back to blue by November. Colours are POSITIONED by day-of-year in phenology_activity.R (via `values`);
+# the only "plateau" is the winter blue, which sits in low-activity months so it never reads as a sharp
+# edge (unlike the summer orange plateau the user rejected). Fall stays warm (tan), no green on the way down.
+BEE_SEASON <- c("#2C7BB6", "#2C7BB6", "#7DC35E", "#EEDB6E", "#F4972A", "#EBD98C", "#D8C288", "#2C7BB6", "#2C7BB6")
 
 # ---- #12 record-confidence: flag taxa too sparse to claim a preference ------
 BEE_MIN_RECORDS <- 10L    # under this many records -> "too few to claim" (matches phenology >=10)
@@ -194,8 +211,8 @@ bee_data_asof <- function(path = "data/observations/cache/last_ingest.txt") {
 }
 # Significance clause that always NAMES the test, so a caption says WHICH test ran, not just the numbers.
 # e.g. bee_test("PERMANOVA (Bray-Curtis)", sprintf("R2=%.2f, p=%.3f", r2, p))
-#      -> "Test: PERMANOVA (Bray-Curtis) -- R2=0.73, p=0.001"  (pass as the `sig` arg of scope_cap()).
-bee_test <- function(name, stats) paste0("Test: ", name, " -- ", stats)
+#      -> "Analysis: PERMANOVA (Bray-Curtis) -- R2=0.73, p=0.001"  (pass as the `sig` arg of scope_cap()).
+bee_test <- function(name, stats) paste0("Analysis: ", name, " -- ", stats)
 
 # Build the caption string. scope_cap() keeps its old 3-arg shape so existing calls still work,
 # but now also stamps source + data date (and n / sig when given). `sig` should be a bee_test(...) clause
@@ -213,13 +230,32 @@ scope_cap <- function(scope = NULL, method = NULL, rank = NULL, n = NULL, sig = 
 }
 bee_caption <- scope_cap   # descriptive alias for new call sites
 
+# ---- crisp PNG output -------------------------------------------------------
+# The base quartz/png device renders small labels with rough ("shaky") anti-aliasing;
+# ragg's agg_png draws smooth text. Route ALL figure saves through these two helpers so
+# every figure gets the same crisp output from one place.
+#   - bee_ggsave(): ggplot figures. Inches + dpi, so we can safely lift dpi to 300 (more
+#     pixels, same layout) for sharp small text. Falls back to the default device if ragg
+#     is missing. Do NOT pass `device=`/`dpi=` at call sites -- the helper owns them.
+#   - bee_png(): base-graphics figures. Their canvases are sized in PIXELS, so we keep the
+#     caller's width/height/res (changing res would rescale text against a fixed canvas) and
+#     only swap in ragg's smoother anti-aliasing.
+bee_ggsave <- function(filename, plot = ggplot2::last_plot(), ..., dpi = 300) {
+  dev <- if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png else NULL
+  ggplot2::ggsave(filename, plot = plot, dpi = dpi, device = dev, ...)
+}
+bee_png <- function(filename, ...) {
+  if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png(filename, ...)
+  else grDevices::png(filename, ...)
+}
+
 # ---- ggplot house theme ----------------------------------------------------
 theme_beescabr <- function(base_size = 12) {
   ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(
       text             = ggplot2::element_text(colour = BEE_INK$primary),
       plot.title       = ggplot2::element_text(face = "bold", size = base_size + 2),
-      plot.subtitle    = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2),
+      plot.subtitle    = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2, hjust = 0.5),   # takeaway line sits centred under the (centred) title
       plot.caption     = ggplot2::element_text(colour = BEE_INK$secondary, size = base_size - 2, hjust = 0, margin = ggplot2::margin(t = 8)),
       axis.title       = ggplot2::element_text(colour = BEE_INK$secondary),
       axis.text        = ggplot2::element_text(colour = BEE_INK$muted),

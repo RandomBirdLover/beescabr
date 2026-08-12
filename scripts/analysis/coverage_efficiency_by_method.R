@@ -16,6 +16,7 @@
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 has_vegan <- requireNamespace("vegan", quietly = TRUE)
+if (!requireNamespace("ggpattern", quietly = TRUE)) try(install.packages("ggpattern", repos = "https://cloud.r-project.org"), silent = TRUE)
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
@@ -94,24 +95,41 @@ eff_fig <- function(key_col, rank_lab, file) {
                   paste(sprintf("%s %.1f", rownames(M), naive_rate), collapse = "/"),
                   paste(sprintf("%s %.1f", rownames(M), fair_rate), collapse = "/"),
                   minN, paste(sprintf("%s %.0f", rownames(M), rare), collapse = "/")))
-  g <- ggplot(df, aes(x = method, y = value, fill = kind)) +
-    geom_col(position = position_dodge(0.7), width = 0.62) +
-    geom_text(aes(label = lab), position = position_dodge(0.7), vjust = -0.35, size = 3.2, colour = BEE_INK$secondary) +
+  # colour by METHOD (lethal = rose-red, non-lethal = periwinkle); the within-method split is a SHADE:
+  # light tint = as recorded, full colour = at equal effort. Method is named on the x-axis, so the legend
+  # carries only the shade meaning (neutral light/dark swatches). Genus figure is additionally hatched.
+  df$fillkey <- paste(as.character(df$method), as.character(df$kind))
+  fillvec <- c(setNames(unname(BEE_METHOD_COL_LT[["lethal"]]),    paste("lethal", aslab)),
+               setNames(unname(BEE_METHOD_COL[["lethal"]]),       paste("lethal", eqlab)),
+               setNames(unname(BEE_METHOD_COL_LT[["nonlethal"]]), paste("non-lethal", aslab)),
+               setNames(unname(BEE_METHOD_COL[["nonlethal"]]),    paste("non-lethal", eqlab)))
+  .rl <- round(rare[match("lethal", rownames(M))]); .rn <- round(rare[match("non-lethal", rownames(M))])   # rarefied richness per method
+  take <- if (.rl > .rn) sprintf("At equal sampling effort, lethal netting finds more %s than non-lethal photos (%d vs %d).", tolower(rank_pl), .rl, .rn)
+          else if (.rl < .rn) sprintf("At equal sampling effort, non-lethal photos find more %s than lethal netting (%d vs %d).", tolower(rank_pl), .rn, .rl)
+          else sprintf("At equal sampling effort, both methods find the same number of %s (%d each).", tolower(rank_pl), .rl)
+  g <- ggplot(df, aes(x = method, y = value, fill = fillkey, alpha = kind)) +
+    ggpattern::geom_col_pattern(position = position_dodge(0.7), width = 0.62,   # house rule: genus figure hatched, species solid
+      pattern = if (rank_lab == "Genus") "stripe" else "none", pattern_fill = "white", pattern_colour = NA,
+      pattern_angle = 45, pattern_density = 0.09, pattern_spacing = 0.03, pattern_key_scale_factor = 0.4) +
+    scale_fill_manual(values = fillvec, guide = "none") +
+    scale_alpha_manual(values = c(1, 1), breaks = c(aslab, eqlab), name = NULL,   # phantom aes -> builds the shade legend
+      guide = guide_legend(override.aes = list(fill = c(BEE_INK$axis, BEE_INK$secondary), alpha = 1, pattern = "none"))) +
+    geom_text(aes(label = lab), position = position_dodge(0.7), vjust = -0.35, size = 3.2, colour = BEE_INK$secondary, show.legend = FALSE) +
     facet_wrap(~ panel, scales = "free_y", nrow = 1) +
-    scale_fill_manual(values = setNames(c(BEE_NEUTRAL[["light"]], BEE_NEUTRAL[["dark"]]), c(aslab, eqlab)), name = NULL) +   # background (as recorded) vs focus (at equal effort)
     scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
     labs(title = sprintf("Efficiency by Method at %s Level", rank_lab),
+         subtitle = take,
          caption = paste0(
-           scope_cap(scope  = "fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos)",
-                     method = "lethal (net) vs non-lethal (beeple survey photos), rarefied to equal effort",
-                     rank   = rank_lab),
+           str_wrap(sprintf("The per-100-records rate favours the smaller-record method (dilution); 'at equal effort' rarefies both to the smaller total (%s records) -- the fair comparison.", format(minN, big.mark = ",")), 108),
            "\n",
-           str_wrap(sprintf("As recorded vs at equal sampling effort (rarefaction), as a count and as a rate. The per-100-records rate favours the smaller-record method (a sampling-depth artifact): 'as recorded' non-lethal looks low only because its many records dilute the rate. 'At equal effort' rarefies both methods to the smaller total (%s records) -- the fair comparison, in either counts or rates.", format(minN, big.mark = ",")), 108)),
+           scope_cap(scope  = "fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos)",
+                     method = "lethal vs non-lethal",
+                     rank   = rank_lab)),
          x = NULL, y = NULL) +
     theme_beescabr(12) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           legend.position = "top", panel.grid.major.x = element_blank())
-  ggsave(file, g, width = 8.4, height = 5.4, dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 8.4, height = 5.4, bg = "white")
 }
 message("Efficiency by method (recorded / per-100 / rarefied):")
 eff_fig("species_key", "Species", file.path(OUT_DIR, "efficiency_by_method_species.png"))

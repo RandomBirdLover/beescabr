@@ -30,7 +30,7 @@ dir.create(FIND_DIR, recursive = TRUE, showWarnings = FALSE)
 # fw(): write one analysis's findings table + register a master-index row.
 fw <- function(name, title, type, key_finding, details = character(0), outputs = "") {
   df <- data.frame(
-    field = c("analysis", "type", "key_finding", names(details), "outputs", "data_as_of"),
+    field = c("analysis name", "type", "key_finding", names(details), "outputs", "data_as_of"),
     value = c(title, type, key_finding, unname(details), outputs, .today),
     stringsAsFactors = FALSE)
   write.csv(df, file.path(FIND_DIR, paste0(name, "_findings.csv")), row.names = FALSE)
@@ -65,7 +65,7 @@ fw("forage_selectivity",
    sprintf("%s of %s bee genera show a real plant preference; the set is stable across abundance/month/year/method controls.",
            .chr(fs_sel), .chr(fs_tot)),
    c(question    = "For each bee genus, does it visit plants differently from what was actually available to it?",
-     method      = "Matched Monte-Carlo chi-square; availability matched to each genus's own (month, year, survey-method) cells, leave-one-out",
+     "analysis"      = "Matched Monte-Carlo chi-square; availability matched to each genus's own (month, year, survey-method) cells, leave-one-out",
      controls_for   = "overall abundance; month (phenology); year (climate); survey method (net vs photo)",
      not_controlled = "observer (averages out over 10-48 observers/genus); plant detectability (no independent bloom census)",
      top_specialists = fs_top,
@@ -79,7 +79,7 @@ fw("interactions_genus_species_webs",
    sprintf("%s bee genera' species partition plant genera more than their flight-season/method differences explain (Melissodes, Habropoda drop once controlled).",
            .chr(h2_sig)),
    c(question    = "Within a genus, do the species divide up plant genera (niche partitioning) beyond chance?",
-     method      = "H2' specialization vs a null that permutes species labels within (month x method) strata",
+     "analysis"      = "H2' specialization vs a null that permutes species labels within (month x method) strata",
      controls_for = "flight season (month) and survey method; NOT year (species overlap in years -> would kill power)",
      effect_of_control = "Melissodes and Habropoda drop to non-significant -- their apparent partitioning was seasonal/method timing",
      caveats     = "borderline p-values can jitter; only significant genera are shown in the figures"),
@@ -91,7 +91,7 @@ fw("genera_and_species_accumulation",
    "Species / genera accumulation & completeness (Chao2)",
    "estimator",
    sprintf("Per-transect sampling completeness (Chao2). %s.", if (is.null(acc)) "run to populate" else "TP/UPMON near-complete; OT least sampled"),
-   c(method = "Chao2 asymptotic richness vs observed, per transect + park",
+   c("analysis" = "Chao2 asymptotic richness vs observed, per transect + park",
      per_transect_completeness = acc_line,
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
    "richness/accumulation/: transect_accumulation_summary.csv; REPORT accumulation_by_effort_report_{species,genus}.png (transect completeness); JOURNAL accumulation_by_effort_journal_{species,genus}.png (lethal vs non-lethal, fair window)")
@@ -100,7 +100,7 @@ fw("rarefaction_inext",
    "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
    "estimator",
    "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
-   c(method = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
+   c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
    "journal richness/accumulation/: rarefaction_by_{method,observer}_inext_{size,coverage}_{species,genus}.png (+ _asymptotic/_by_size/_by_coverage _{species,genus}.csv)")
 
@@ -108,7 +108,7 @@ fw("rarefaction_vegan",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
    "estimator",
    "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
-   c(method = "vegan rarefaction to the lowest group's record total",
+   c("analysis" = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
    "richness/accumulation/: report rarefaction_by_{transect,year}_{curves,bars}_{species,genus}.png (+ .csv); journal same as *_vegan_*")
 
@@ -116,7 +116,7 @@ fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",
    "estimator",
    "Diversity indices and community composition (NMDS) by transect and year.",
-   c(method = "Shannon/Simpson/evenness + rank-abundance + NMDS ordination",
+   c("analysis" = "Shannon/Simpson/evenness + rank-abundance + NMDS ordination",
      assumption = "diversity indices are effort-sensitive; the 2024-heavy skew inflates apparent year differences"),
    "diversity_by_transect.csv; diversity_by_year.csv; REPORT: diversity_nmds_composition.png, diversity_rank_abundance_report.png (pooled + per-transect combined); JOURNAL: diversity_rank_abundance_journal.png")
 
@@ -124,7 +124,7 @@ fw("phenology_activity",
    "Seasonal activity phenology (+ Rayleigh test)",
    "estimator",
    "When bees (per genus/species) and flowering plants are active across the year; Rayleigh tests seasonal concentration.",
-   c(method = "circular-mean activity ridgelines + Rayleigh test of seasonal concentration",
+   c("analysis" = "circular-mean activity ridgelines + Rayleigh test of seasonal concentration",
      confound = "seasonal survey effort (interns ~Mar-Oct) can drive apparent bee seasonality -- read timing, not intensity"),
    "phenology_bee_genus.png; phenology_bee_species.png; phenology_plant_genus_bloom_evidence.png; *_rayleigh.csv")
 
@@ -204,7 +204,7 @@ fw("efficiency_by_method",
    "descriptive",
    "Richness at EQUAL sampling effort (rarefaction): both methods sub-sampled to the smaller method's record total, at species and genus rank. At species level lethal stays ahead (47 vs 33); at genus level the two are even (23 vs 23) -- non-lethal's raw genus lead was an effort artifact.",
    c(tier   = "EFFICIENCY -- third tier; removes the effort imbalance that makes raw yield unfair to compare",
-     method = "Hurlbert rarefaction to the smaller method's total records, survey records only"),
+     "analysis" = "Hurlbert rarefaction to the smaller method's total records, survey records only"),
    "method_comparison/efficiency/efficiency_by_method_species.png; method_comparison/efficiency/efficiency_by_method_genus.png")
 
 fw("coverage_offtransect",

@@ -9,7 +9,7 @@
 # question and need inputs we don't have. Here we bin observations by day-of-year.
 #
 # RIDGELINE plots (one smooth activity curve per taxon, stacked and indexed by
-# peak day, filled on a spring->fall gradient), three views:
+# peak day, filled on a full-year seasonal x-gradient), three views:
 #   * FLOWERING-PLANT phenology -- per plant GENUS, restricted to FLOWERING records
 #     (survey plant records; by protocol a plant is only logged when in flower, so
 #     this is bloom timing, not year-round presence). See section 1.
@@ -18,7 +18,8 @@
 #
 # READ IT: each ridge is a kernel density of that taxon's records across the year.
 # Taxa are ordered by peak day (earliest at top -> latest at bottom); fill colour
-# also tracks the peak (green = spring, peach = autumn). A month-share CSV is
+# tracks the CALENDAR under each curve (blue winter -> green spring -> yellow summer
+# -> orange fall), so colour = season. A month-share CSV is
 # written alongside each figure.
 #
 # CAVEAT: interns survey ~Mar-Sep and beeple (non-lethal) run year-round, so the
@@ -45,9 +46,9 @@ SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 MIN_RECORDS   <- 25   # REPORT floor for phenology: a taxon needs >=25 records to draw a seasonal curve
 BW_DAYS       <- 15       # kernel bandwidth (days) -- smooths sparse taxa
-# figure-specific SEASONAL ramp (spring green -> fall peach): a continuous by-season gradient,
-# reinforced by peak-day ordering. Uses the shared BEE_SEASON ramp from theme_beescabr.R (single source).
-SPRING_FALL   <- BEE_SEASON
+# FULL-YEAR seasonal ramp (blue winter -> green spring -> yellow summer -> orange fall), mapped across
+# day-of-year so each curve's fill reads as the time of year. Shared BEE_SEASON token (single source).
+SEASON_RAMP   <- BEE_SEASON
 MONTH_STARTS  <- c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -69,10 +70,12 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
   df$taxon    <- factor(df$taxon, levels = rev(ord))       # earliest peak at top
   df$peak_doy <- as.numeric(peak[as.character(df$taxon)])
 
-  g <- ggplot(df, aes(x = doy, y = taxon, fill = peak_doy)) +
-    ggridges::geom_density_ridges(bandwidth = BW_DAYS, scale = 2.4, rel_min_height = 0.01,
-                                  color = "grey35", linewidth = 0.2, alpha = 0.95) +
-    scale_fill_gradientn(colors = SPRING_FALL, guide = "none") +
+  g <- ggplot(df, aes(x = doy, y = taxon, fill = after_stat(x))) +
+    ggridges::geom_density_ridges_gradient(bandwidth = BW_DAYS, scale = 2.4, rel_min_height = 0.01,
+                                  color = "grey35", linewidth = 0.2) +
+    scale_fill_gradientn(colors = SEASON_RAMP,
+                         values = (c(1, 40, 70, 150, 210, 255, 288, 312, 366) - 1) / 365,
+                         guide = "none", limits = c(1, 366)) +   # blue Nov-mid-Feb; green mid-Feb/Mar through spring; orange summer; warm tan fall
     scale_x_continuous(breaks = MONTH_STARTS, labels = month.abb,
                        limits = c(1, 366), expand = c(0.01, 0)) +
     # taxon-name italics: bee names whole-italic (via axis.text.y face below); plant names
@@ -82,19 +85,19 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
         if (length(m) == 3) bquote(.(m[2]) ~ "(" * italic(.(m[3])) * ")") else bquote(italic(.(s)))
       }))) else NULL } +
     labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
+         subtitle = "Ordered by peak day -- each taxon concentrates its activity in a different part of the year.",
          caption = paste0(
-           scope_cap(scope  = if (!is.null(scope)) scope else sprintf("all records, whole park; %s activity over the year", tolower(label)),
-                     method = method, rank = label, width = 300),
+           sprintf("%d taxa with >= %d records.", length(ord), min_records),
            "\n",
-           sprintf("%d taxa with >= %d records; each curve = record density over the year, ordered by peak day",
-                   length(ord), min_records)),
+           scope_cap(scope  = if (!is.null(scope)) scope else sprintf("all records, whole park; %s activity over the year", tolower(label)),
+                     method = method, rank = tolower(label))),   # lowercase: Rank field values are lowercase like the rest
          x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6, face = if (identical(sci, "bee")) "italic" else "plain"),  # bee names whole-italic; plant labels italicised per-part above
           plot.title  = element_text(face = "bold", hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5),
           plot.caption = element_text(color = BEE_INK$secondary, hjust = 0, size = 8))
-  ggsave(file, g, dpi = 200, limitsize = FALSE, bg = "white",
+  bee_ggsave(file, g, limitsize = FALSE, bg = "white",
          width = 8.5, height = max(5, 0.20 * length(ord) + 2))
 
   # month-share CSV alongside (each taxon's % of records per month)
@@ -177,7 +180,7 @@ message(sprintf("  Bloom evidence (combined): %d points  [survey plant obs %d, i
 phenology_ridge(data.frame(taxon = plant_label(bloom$plant_genus), doy = doy_of(bloom$observed_on)),
                 file.path(OUT_DIR, "phenology_plant_genus_bloom_evidence.png"), "Plant bloom (all evidence)",
                 scope = "all bloom evidence, whole park; survey in-flower plant records + every plant a bee was recorded on (a bee on a plant = it was in bloom then); broader than survey plant records alone but blends sources with differing effort",
-                method = "survey plant obs + bee-on-flower (iNat field + specimen tags)",
+                method = "survey plant obs + bee-on-flower (bee records: observation field + specimen tags)",
                 title = "Seasonal Plant Bloom by Genus", sci = "plant")
 
 # ---- 2. BEE phenology (per genus + per species; both methods) ----------------

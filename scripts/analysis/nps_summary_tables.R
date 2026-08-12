@@ -120,25 +120,25 @@ pretty_metric <- function(m) tools::toTitleCase(gsub("_", " ", m))       # metri
 
 # one scope caption per table set
 cap_part   <- scope_cap(scope = "all survey trips logged; all years, whole park",
-                        method = "field surveys (interns) + iNaturalist (beeple)",
+                        method = "lethal + non-lethal pooled",
                         rank = "people / trips / days / transects", width = 10000)
 cap_bees   <- scope_cap(scope = "every bee record; all years, whole park",
-                        method = "lethal (specimen) + non-lethal (iNaturalist), pooled and split",
+                        method = "lethal + non-lethal pooled",
                         rank = "records / genera / species", width = 10000)
 cap_meth   <- scope_cap(scope = "every bee record, by method x surveyor type; all years, whole park",
-                        method = "lethal (specimen) vs non-lethal (iNaturalist)",
+                        method = "lethal vs non-lethal",
                         rank = "records", width = 10000)
 cap_plants <- scope_cap(scope = "every plant record a bee was seen on; all years, whole park",
-                        method = "non-lethal iNaturalist plant associations",
+                        method = "non-lethal",
                         rank = "records / genera / species", width = 10000)
 cap_chk    <- scope_cap(scope = "species-resolved bee checklist; all years, whole park",
-                        method = "lethal (specimen) + non-lethal (iNaturalist)",
+                        method = "lethal + non-lethal pooled",
                         rank = "species", width = 10000)
 cap_gchk   <- scope_cap(scope = "bee genera checklist (includes genus-only records); all years, whole park",
-                        method = "lethal (specimen) + non-lethal (iNaturalist)",
+                        method = "lethal + non-lethal pooled",
                         rank = "genus", width = 10000)
 cap_pchk   <- scope_cap(scope = "plant genera bees were recorded on; all years, whole park",
-                        method = "non-lethal iNaturalist plant associations",
+                        method = "non-lethal",
                         rank = "plant genus", width = 10000)
 
 # ---- HTML ------------------------------------------------------------------
@@ -187,7 +187,7 @@ writeLines(html, file.path(OUT_DIR, "nps_summary_tables.html"))
 # ---- PNG (the four compact summary tables; long checklists stay CSV/HTML) ----
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
   cap_all <- scope_cap(scope = "whole dataset: every record, all years, whole park (plain counts, no test or interpretation)",
-                       method = "lethal (specimen) + non-lethal (iNaturalist)",
+                       method = "lethal + non-lethal pooled",
                        rank = "records, genera & species", width = 10000)
   th <- gridExtra::ttheme_minimal(base_size = 8,
     core = list(fg_params = list(hjust = 0, x = 0.02), bg_params = list(fill = c(BEE_TABLE[["row_odd"]], BEE_TABLE[["row_even"]]))),
@@ -213,8 +213,8 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                           grid::unit(1.3, "lines"), grid::unit(nr[3], "null"),
                           grid::unit(1.3, "lines"), grid::unit(nr[4], "null"))
   G <- gridExtra::arrangeGrob(grobs = grobs, ncol = 1, heights = heights)
-  ggplot2::ggsave(file.path(OUT_DIR, "nps_summary_tables.png"), G,
-                  width = 8.5, height = 0.30 * sum(nr) + 0.34 * 4 + 1.5, dpi = 200, limitsize = FALSE, bg = "white")
+  bee_ggsave(file.path(OUT_DIR, "nps_summary_tables.png"), G,
+                  width = 8.5, height = 0.30 * sum(nr) + 0.34 * 4 + 1.5, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("NPS summary tables written to ", OUT_DIR, ":")

@@ -25,7 +25,7 @@
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 
-for (pkg in c("vegan", "ggplot2")) {
+for (pkg in c("vegan", "ggplot2", "ggpattern")) {
   if (!requireNamespace(pkg, quietly = TRUE))
     try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
 }
@@ -107,6 +107,12 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
   M <- M[rowSums(M) > 0, , drop = FALSE]
   if (nrow(M) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
   unit <- UNIT(rank)
+  # HOUSE RULE: genus-rank figures are hatched, species-rank solid (so a genus chart reads distinct from
+  # its species twin). col_geom() draws bars either way -- hatched stripes for genus, plain for species.
+  col_geom <- function(...) ggpattern::geom_col_pattern(...,
+    pattern = if (rank == "genus") "stripe" else "none",
+    pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
+    pattern_density = 0.10, pattern_spacing = 0.028, pattern_key_scale_factor = 0.5)
   # write straight into the accumulation folder; the dimension (+ method label, journal only)
   # is baked into the filename, e.g. rarefaction_by_transect_species_curves.png. The report has
   # only vegan so it drops the "_vegan" tag; the journal keeps it (it also carries iNEXT files).
@@ -124,26 +130,30 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
              hjust = 0, vjust = 0, size = 3, color = "grey40") +
     geom_line(linewidth = 0.9) +
     scale_color_manual(values = cols, name = NULL) +
-    labs(title = title, caption = paste0(sprintf("%s-level, rarefaction curve  |  ", rank), cap),
+    labs(title = title, subtitle = "Richness rarefied to a common sampling effort -- differences between groups are real, not just who-was-sampled-more.",
+         caption = cap,
          x = "records sampled", y = paste0("expected ", unit)) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
   # curves: JOURNAL only. The REPORT dropped its rarefaction curves -- the bars (observed vs
   # rarefied) are the report's rarefaction figure (Taro's call). Journal keeps both for review.
   if (dimdir %in% JOURNAL_DIMS) {
-    ggsave(file.path(outdir, paste0(pre, vlab, "_curves_", rank, ".png")), g1, width = 8, height = 5.4, dpi = 200, bg = "white")
+    bee_ggsave(file.path(outdir, paste0(pre, vlab, "_curves_", rank, ".png")), g1, width = 8, height = 5.4, bg = "white")
   }
   rlab <- sprintf("rarefied to %d", minN)
   bd <- rbind(data.frame(group = tab$group, kind = "observed (raw)", S = tab$observed_richness),
               data.frame(group = tab$group, kind = rlab, S = tab$rarefied_richness))
-  # transect bars sort ALPHABETICALLY (consistent BST/OT/TP/UPMON across every transect figure);
-  # other dimensions keep the rarefy_table order (descending rarefied richness).
-  lev <- if (group_fill) sort(unique(as.character(bd$group))) else tab$group
+  # transect bars sort ALPHABETICALLY (consistent BST/OT/TP/UPMON across every transect figure); YEAR bars
+  # sort CHRONOLOGICALLY; other dimensions keep the rarefy_table order (descending rarefied richness).
+  lev <- if (group_fill)               sort(unique(as.character(bd$group)))
+         else if (dimdir == "by_year") as.character(sort(as.numeric(unique(as.character(bd$group)))))
+         else                          tab$group
   bd$group <- factor(bd$group, levels = lev)
   # components shared by both bar variants (text labels on top, caption, house theme)
   base_g2 <- list(
     geom_text(aes(label = round(S)), position = position_dodge(0.8), vjust = -0.3, size = 3, show.legend = FALSE),
-    labs(title = title, caption = paste0(sprintf("%s-level, rarefied richness  |  ", rank), cap),
+    labs(title = title, subtitle = "Richness rarefied to a common sampling effort -- taller bar = genuinely richer, not just more-sampled.",
+         caption = cap,
          x = NULL, y = unit),
     theme_beescabr(11),
     theme(panel.grid.major.x = element_blank(),
@@ -157,33 +167,36 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
                  setNames(unname(cols[gk]),            paste(gk, rlab)))
     bd$fillkey <- paste(as.character(bd$group), bd$kind)
     g2 <- ggplot(bd, aes(group, S, fill = fillkey, alpha = kind)) +
-      geom_col(position = position_dodge(0.8), width = 0.7) +
+      col_geom(position = position_dodge(0.8), width = 0.7) +
       scale_fill_manual(values = fillvec, guide = "none") +
       scale_alpha_manual(values = c(1, 1), breaks = c("observed (raw)", rlab), name = NULL,   # phantom aes: no transparency, just to build the shade legend
                          guide = guide_legend(override.aes = list(fill = c(BEE_INK$axis, BEE_INK$secondary), alpha = 1))) +
       base_g2
   } else {
     g2 <- ggplot(bd, aes(group, S, fill = kind)) +
-      geom_col(position = position_dodge(0.8), width = 0.7) +
+      col_geom(position = position_dodge(0.8), width = 0.7) +
       scale_fill_manual(values = setNames(c(BEE_NEUTRAL[["light"]], BEE_NEUTRAL[["dark"]]),   # stone (observed) / ink (rarefied)
                                           c("observed (raw)", rlab)), name = NULL) +
       base_g2
   }
-  ggsave(file.path(outdir, paste0(pre, vlab, "_bars_", rank, ".png")), g2, width = 8, height = 5, dpi = 200, bg = "white")
-  if (group_fill) {
-    # companion figure: rarefied bars ONLY (raw counts removed) -- one full-colour bar per transect,
-    # so no shade split and no legend (the transect hue is named on the x-axis).
+  bee_ggsave(file.path(outdir, paste0(pre, vlab, "_bars_", rank, ".png")), g2, width = 8, height = 5, bg = "white")
+  if (group_fill || dimdir == "by_year") {
+    # companion figure: rarefied bars ONLY (raw counts removed). Transect version colours each bar by its
+    # transect hue; the by-year version uses a single neutral ink (matching its neutral observed/rarefied bars).
     bdr <- bd[bd$kind == rlab, ]
-    g3 <- ggplot(bdr, aes(group, S, fill = group)) +
-      geom_col(width = 0.62) +
+    g3 <- if (group_fill)
+      ggplot(bdr, aes(group, S, fill = group)) + col_geom(width = 0.62) +
+        scale_fill_manual(values = cols, guide = "none")
+    else
+      ggplot(bdr, aes(group, S)) + col_geom(width = 0.62, fill = BEE_NEUTRAL[["dark"]])
+    g3 <- g3 +
       geom_text(aes(label = round(S)), vjust = -0.35, size = 3) +
-      scale_fill_manual(values = cols, guide = "none") +
       scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
-      labs(title = title, x = NULL, y = unit,
-           caption = paste0(sprintf("%s-level, %s (raw counts omitted)  |  ", rank, rlab), cap)) +
+      labs(title = title, subtitle = "Rarefied to a common sampling effort -- taller bar = genuinely richer, not just more-sampled.", x = NULL, y = unit,
+           caption = paste0(sprintf("%s -- raw observed counts omitted.", rlab), "\n", cap)) +
       theme_beescabr(11) +
       theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
-    ggsave(file.path(outdir, paste0(pre, vlab, "_bars_rarefied_", rank, ".png")), g3, width = 8, height = 5, dpi = 200, bg = "white")
+    bee_ggsave(file.path(outdir, paste0(pre, vlab, "_bars_rarefied_", rank, ".png")), g3, width = 8, height = 5, bg = "white")
   }
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))

@@ -44,16 +44,20 @@ p <- p %>% mutate(
   date  = as.Date(date),
   month = as.integer(format(date, "%m")),
   year  = suppressWarnings(as.integer(year)),
-  n_obs = suppressWarnings(as.numeric(n_obs)),
+  n_obs   = suppressWarnings(as.numeric(n_obs)),
+  n_speci = suppressWarnings(as.numeric(n_speci)),
   role   = str_squish(tolower(role)),
-  method = str_squish(tolower(method))) %>%
+  method = str_squish(tolower(method)),
+  # each method logs its yield in a DIFFERENT column: lethal netting -> n_speci (specimens),
+  # non-lethal -> n_obs (iNaturalist observations). Unify so Records counts BOTH methods.
+  rec_ct = ifelse(method == "lethal", n_speci, n_obs)) %>%
   filter(!is.na(month), method %in% c("lethal", "non-lethal"))
 message(sprintf("Survey trips: %d across %d-%d", nrow(p), min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
 
 # ---- 2. effort calendar (trips + records by month, split by method) ----------
 calendar_fig <- function(dat, months_shown, file, subtitle, scope_txt) {
   mm <- dat %>% group_by(month, method) %>%
-    summarise(trips = n(), records = sum(n_obs, na.rm = TRUE), .groups = "drop")
+    summarise(trips = n(), records = sum(rec_ct, na.rm = TRUE), .groups = "drop")
   long <- bind_rows(
     data.frame(month = mm$month, method = mm$method, metric = "Survey trips", value = mm$trips),
     data.frame(month = mm$month, method = mm$method, metric = "Records",      value = mm$records))
@@ -72,12 +76,13 @@ calendar_fig <- function(dat, months_shown, file, subtitle, scope_txt) {
     scale_x_discrete(drop = FALSE) +
     scale_fill_manual(values = MCOL, name = NULL) +
     labs(title = "Survey Effort Calendar",
-         caption = paste0(subtitle, "\n", str_wrap(scope_cap(scope_txt, "lethal + non-lethal (by colour)", "n/a (effort)"), 84)),
+         subtitle = "Effort peaks in spring-summer and thins in winter -- the backdrop for every seasonal pattern.",
+         caption = str_wrap(scope_cap(scope_txt, "lethal vs non-lethal", "n/a (effort)"), 84),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(legend.position = "top", panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-  ggsave(file, g, width = 8.5, height = 6.5, dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 8.5, height = 6.5, bg = "white")
 }
 
 # ---- 3. year x month trip-count grid ----------------------------------------
@@ -94,12 +99,13 @@ grid_fig <- function(dat, months_shown, file, subtitle) {
     scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
     scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +
     labs(title = "Survey Trips by Year and Month",
-         caption = paste0(subtitle, "\n", scope_cap("per-survey log", "lethal + non-lethal pooled", "n/a (effort)")),
+         subtitle = "Effort is uneven across years and months -- context the seasonal and annual analyses control for.",
+         caption = scope_cap("per-survey log", "lethal + non-lethal pooled", "n/a (effort)"),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(panel.grid = element_blank(), plot.title = element_text(hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5))
-  ggsave(file, g, width = 9, height = 4.6, dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 9, height = 4.6, bg = "white")
 }
 
 # ---- 4. run both scopes -----------------------------------------------------

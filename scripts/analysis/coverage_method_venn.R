@@ -154,19 +154,20 @@ run_scope <- function(scope, spec, inat, subfn) {
   write.csv(taxa_tbl, file.path(od, paste0("yield_by_method_taxa", sfx, ".csv")), row.names = FALSE)
   cn <- list(species = counts(sets$species), genus = counts(sets$genus))
 
-  png(file.path(od, paste0("yield_by_method", sfx, ".png")),
+  bee_png(file.path(od, paste0("yield_by_method", sfx, ".png")),
       width = 2000, height = 1120, res = 200)
   bee_base_par()                                  # house-style fonts + muted axis/title colours
-  op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(3.4, 1.6, 3.6, 1.6))  # left/right + bottom padding so the caption isn't flush/clipped at the edges
+  op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(3.4, 1.6, 3.8, 1.6))  # left/right + bottom padding so the caption isn't flush/clipped at the edges
   venn2(cn$species, sprintf("Species (%d total)",
         cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
   venn2(cn$genus, sprintf("Genera (%d total)",
         cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
-  mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.4,
+  mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.7,
         cex = 1.2, font = 2, col = BEE_INK$primary)
-  mtext(subfn(n_leth, n_nonleth), outer = TRUE, line = 0.2, cex = 0.85, col = BEE_INK$secondary)
+  mtext("Each method turns up taxa the other misses -- the shared core plus each method's own wedge.",
+        outer = TRUE, line = 0.5, cex = 0.82, col = BEE_INK$secondary)   # takeaway
   bee_caption_base(scope = if (scope == "journal") "fair window: survey-only, Mar-Oct 2021-2023, attributed" else "all records",
-                   method = "lethal (net) vs non-lethal (photo) -- taxa detected by each", rank = "species + genus panels")
+                   method = "lethal vs non-lethal", rank = "species + genus panels")
   par(op); dev.off()
 
   rc   <- rbind(res_cat(spec, "lethal"), res_cat(inat, "nonlethal"))

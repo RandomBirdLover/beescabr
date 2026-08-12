@@ -94,13 +94,15 @@ g <- ggplot(plot_df, aes(x = pct, y = measure, colour = pct)) +
   scale_x_continuous(limits = c(0, max(gen_pct) * 1.7), expand = expansion(mult = c(0.02, 0))) +
   labs(title = sprintf("Cabrillo Carries ~%.0f%% of San Diego County's Native Bees on ~%.3f%% of Its Land",
                        sp_pct, area_pct),
-       caption = str_wrap(paste0(scope_cap("CABR official checklist vs Holway San Diego County checklist (v3)",
-                            "specimen + iNaturalist", "distinct species & genera"),
-                            sprintf("  |  CABR = %.0f acres of ~%s sq mi. It holds ~1 in 9 of the county's bee species and %.0f%% of its genera -- roughly %sx its share by area.",
-                                    CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ","), gen_pct, format(round(overrep, -2), big.mark = ","))), 104),
-       x = "CABR's share of San Diego County (%)", y = NULL) +
+       subtitle = sprintf("Roughly %sx the native-bee diversity you'd expect from its area -- and %.0f%% of the county's bee genera.",
+                          format(round(overrep, -2), big.mark = ","), gen_pct),
+       caption = scope_cap(scope = "CABR's share of San Diego County; area vs native-bee diversity",
+                           method = "lethal + non-lethal pooled",
+                           rank = "species + genus",
+                           source = "official CABR checklist vs Holway SD County checklist (v3)"),
+       x = "Cabrillo National Monument's share of San Diego County (%)", y = NULL) +
   theme_beescabr(12) +
   theme(legend.position = "none", panel.grid.major.y = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave(file.path(OUT_DIR, "cabr_share_of_county.png"), g, width = 9.5, height = 4.8, dpi = 200, bg = "white")
+bee_ggsave(file.path(OUT_DIR, "cabr_share_of_county.png"), g, width = 9.5, height = 4.8, bg = "white")
 message("Wrote cabr_share_of_county.{png,csv} to ", OUT_DIR)

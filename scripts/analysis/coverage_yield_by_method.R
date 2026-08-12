@@ -25,7 +25,7 @@
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
-for (pkg in c("ggplot2")) {
+for (pkg in c("ggplot2", "ggpattern")) {
   if (!requireNamespace(pkg, quietly = TRUE))
     try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
 }
@@ -156,28 +156,30 @@ plot_report <- function(rank, file) {
                                   paste0("By Method: ",      metrics)))
   ttl <- sprintf("Bee Yield of Records at %s Level", tools::toTitleCase(rank))
   g <- ggplot(long, aes(x = group, y = value, fill = group)) +
-    geom_col(width = 0.66) +
+    ggpattern::geom_col_pattern(width = 0.66,   # house rule: genus figure hatched, species solid
+      pattern = if (rank == "genus") "stripe" else "none", pattern_fill = "white", pattern_colour = NA,
+      pattern_angle = 45, pattern_density = 0.08, pattern_spacing = 0.03, pattern_key_scale_factor = 0.4) +
     geom_text(aes(label = value), vjust = -0.35, size = 2.7, colour = BEE_INK$secondary) +
     facet_wrap(~ panel, scales = "free", ncol = 3) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
     scale_fill_manual(values = GRP_COL, guide = "none") +
     labs(title = ttl,
+         subtitle = "Interns, beeple, and the public each turn up taxa the others miss -- no single group or method sees it all.",
          caption = paste0(
-           scope_cap(scope  = "all records, no window; every specimen + every iNaturalist photo (survey or not)",
-                     method = "by contributor (public / beeple / interns) and by method (all records pooled)",
-                     rank   = rank),
-           "\n",
            str_wrap(paste0(
-             "Top: who found them (general public / beeple / interns). Bottom: by method. Interns' bar = their ",
-             "specimens + 2024 photos, so the two views reconcile to the same total. Group-exclusive = a taxon ",
-             "recorded by ONLY that group within its view."), 108)),
+             "Interns' bar = their specimens + 2024 photos, so the contributor and method views reconcile to the ",
+             "same total. Group-exclusive = a taxon only that group recorded."), 108),
+           "\n",
+           scope_cap(scope  = "all records, no window; every specimen + every iNaturalist photo (survey or not)",
+                     method = "lethal vs non-lethal",
+                     rank   = rank)),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.x = element_text(size = 8.5),
           panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5),
           plot.subtitle = element_text(size = 8.7, hjust = 0.5))
-  ggsave(file, g, width = 9.5, height = 6.4, dpi = 200, bg = "white")
+  bee_ggsave(file, g, width = 9.5, height = 6.4, bg = "white")
 }
 plot_report("species", file.path(OUT_REPORT, "coverage_yield_by_method_report_species.png"))
 plot_report("genus",   file.path(OUT_REPORT, "coverage_yield_by_method_report_genus.png"))
