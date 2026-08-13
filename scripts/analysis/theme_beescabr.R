@@ -158,9 +158,19 @@ bee_table_css <- function() paste0(
   ".byline{font-size:13px;color:", BEE_HTML[["sub"]], ";margin:7px 0 0;font-style:italic}",   # author credit under the title bar
   "h2{font-size:15px;font-weight:700;margin:30px 0 6px;color:", BEE_TEAL[[6]], "}",
   "p.sub{color:", BEE_HTML[["sub"]], ";margin:13px 0 4px;font-size:13.5px;max-width:980px}",
-  "p.scope{color:", BEE_HTML[["scope"]], ";margin:14px 0 6px;font-size:12px;font-weight:600;background:", BEE_HTML[["head_bg"]], ";border-left:3px solid ", BEE_TEAL[[4]], ";padding:9px 13px;border-radius:0 7px 7px 0;max-width:1100px}",
+  # .scope is a box (works as <p> for single-line provenance, or <div> holding a bold lead
+  # line + secondary notes when the caveats are folded into the same bar).
+  ".scope{color:", BEE_HTML[["sub"]], ";margin:14px 0 6px;font-size:12px;background:", BEE_HTML[["head_bg"]], ";border-left:3px solid ", BEE_TEAL[[4]], ";padding:10px 13px;border-radius:0 7px 7px 0;max-width:1100px}",
+  ".scope>p{margin:9px 0 0}.scope>p:first-child{margin-top:0}",
+  ".scope .lead{font-weight:600;color:", BEE_HTML[["scope"]], "}",   # provenance line stays prominent
   "p.note{color:", BEE_HTML[["sub"]], ";margin:14px 0 0;font-size:12px}",
   "sup.cs{color:", BEE_HTML[["cs"]], ";font-weight:700;margin-left:1px}",
+  # A wide guide (10+ columns) is wider than a laptop viewport. Wrapping the table in a
+  # scroll panel keeps the horizontal scroll INSIDE the table so the whole PAGE never
+  # scrolls sideways; the max-height also gives the sticky header/def-row a scroll
+  # container so they still freeze while you scroll the long list.
+  ".tbl-wrap{overflow:auto;max-height:84vh;margin-top:14px;border:1px solid ", BEE_HTML[["border_lt"]], ";border-radius:8px}",
+  ".tbl-wrap table{margin-top:0}",
   "table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;margin-top:14px}",
   "th,td{text-align:left;padding:9px 12px;border-bottom:1px solid ", BEE_HTML[["border_lt"]], ";vertical-align:top}",
   "thead th{position:sticky;top:0;z-index:3;background:", BEE_HTML[["head_bg"]], ";cursor:pointer;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:", BEE_TEAL[[6]], ";border-bottom:1px solid ", BEE_HTML[["border_lt"]], "}",

@@ -39,6 +39,7 @@ if (!exists("scope_cap"))   source("scripts/analysis/theme_beescabr.R")         
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/least_sampled")
 SPECIES_RANKS <- c("species", "subspecies")
 THIN_TOTAL    <- 50          # < this many records TOTAL (both methods) -> "least sampled" (matches the report's 50-record floor)
+RARE_CUT      <- 15          # < this many records -> "rare"; RARE_CUT..THIN_TOTAL -> "uncommon" (same cut-offs as the field guide's Status)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 has <- function(x) !is.na(x) & x != ""
 
@@ -113,7 +114,11 @@ ctx <- lapply(split_tbl$species, function(k) {
 ctx <- do.call(rbind, ctx)
 
 tbl <- split_tbl %>% left_join(ctx, by = "species") %>%
-  mutate(coverage = coverage_of(net_records, photo_records))
+  mutate(coverage = coverage_of(net_records, photo_records),
+         # Status uses the same cut-offs as the field guide. Every taxon here is < THIN_TOTAL
+         # by definition, so Status reads "rare" or "uncommon" only, never "common".
+         status   = ifelse(total_records < RARE_CUT, "rare",
+                    ifelse(total_records < THIN_TOTAL, "uncommon", "common")))
 # genus-only rows: mark them in the Bee column so a reader knows it isn't a species
 tbl$is_genus <- tbl$species %in% genus_only
 tbl$common_name[tbl$is_genus] <- "genus only, not yet identified to species"
@@ -124,7 +129,7 @@ tbl$conservation <- if (exists("conservation_label")) conservation_label(tbl$spe
 HAVE_IUCN <- exists("iucn_cache_exists") && isTRUE(try(iucn_cache_exists(), silent = TRUE))
 
 tbl <- tbl %>% select(species, common_name, net_records, photo_records, total_records,
-                      coverage, peak_months, active_window, top_transects, top_flowers, top_flowers_html,
+                      status, coverage, peak_months, active_window, top_transects, top_flowers, top_flowers_html,
                       iucn, conservation, example_url)
 write.csv(tbl %>% select(-top_flowers_html), file.path(OUT_DIR, "least_sampled_bees.csv"), row.names = FALSE)   # CSV keeps the plain flower list
 message(sprintf("  coverage: %d both(thin), %d photo-only, %d specimen-only",
@@ -134,12 +139,17 @@ message(sprintf("  coverage: %d both(thin), %d photo-only, %d specimen-only",
 # scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
 scope_str <- sprintf("These counts pool netted specimens and every iNaturalist photo, not just formal survey records, across all years and the whole park. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of %s).",
                      bee_data_asof())
+# Records/Status caveat -- same wording as the field guides (no Diet line; this page has no diet
+# column). These columns pool ALL data, so they reflect detection/photo effort, not abundance.
+status_note <- sprintf("Total and Status count all data. That means netted specimens plus every iNaturalist photo, including casual public sightings, across all years. So they show how often a species is detected or photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more.",
+                       RARE_CUT, RARE_CUT, THIN_TOTAL - 1, THIN_TOTAL)
 
 # ---- 4. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 # iNaturalist-style mark (flying bird on the iNat green badge) for the "example observation" link
 INAT_ICON <- '<img src="data:image/png;base64,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" width="16" height="14" alt="iNaturalist observation" style="vertical-align:-3px">'
 cov_class <- function(s) ifelse(grepl("^both", s), "cb", ifelse(grepl("^photo", s), "cp", "cs"))
+st_rank   <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]
   cs   <- if (has(r$conservation)) sprintf('<sup class="cs" title="%s">*</sup>', esc(r$conservation)) else ""
@@ -152,23 +162,28 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
          else if (grepl("^specimen", r$coverage)) ' <span class="vneed" title="Collected as a specimen but never photographed. Go photograph one.">&#128247;</span>'  # camera = take more photos
          else ' <span class="vneed" title="Only a few of each method. More netting or more photos both help.">&#128247;&#128300;</span>'   # both (thin): camera + microscope
   sprintf(paste0('<tr>%s%s<td class="num">%d</td><td class="num">%d</td><td class="num">%d</td>',
-                 '<td style="white-space:nowrap"><span class="pill %s">%s</span>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td></tr>'),
+                 '<td data-sort="%d"><span class="pill st-%s">%s</span></td>',
+                 '<td style="white-space:nowrap"><span class="pill %s">%s</span>%s</td>',
+                 '<td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td></tr>'),
           bee_td, iucn_td, r$net_records, r$photo_records, r$total_records,
-          cov_class(r$coverage), esc(r$coverage), cov_icon, esc(r$active_window), esc(r$peak_months),
-          esc(r$top_transects), fl)
+          unname(st_rank[r$status]), r$status, r$status,
+          cov_class(r$coverage), esc(r$coverage), cov_icon,
+          esc(r$peak_months), esc(r$active_window), esc(r$top_transects), fl)
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 iucn_def <- if (HAVE_IUCN) '<td class="num def">Red List</td>' else ""
-iucn_par <- if (HAVE_IUCN) '<p class="note">The IUCN column shows each bee&rsquo;s Red List status. Nearly all read NE (Not Evaluated), which is normal for solitary bees. Other codes: DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4.</p>' else ""
+iucn_par <- if (HAVE_IUCN) '<p>The IUCN column shows each bee&rsquo;s Red List status. Codes: NE (Not Evaluated), DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4.</p>' else ""
 # frozen definition sub-row: one short "what this column means" per column, pinned under the headers
 def_row <- paste0('<tr class="def"><td class="def"></td>', iucn_def,
   '<td class="num def">netted</td><td class="num def">on iNat</td><td class="num def">specimen + photo</td>',
-  '<td class="def">which method(s) it&rsquo;s in</td><td class="def">months it&rsquo;s been seen</td>',
-  '<td class="def">month seen most</td><td class="def">transect seen most on</td><td class="def">plants recorded on most</td></tr>')
+  '<td class="def">how often recorded</td><td class="def">which method(s) it&rsquo;s in</td>',
+  '<td class="def">month seen most</td><td class="def">months it&rsquo;s been seen</td>',
+  '<td class="def">transect seen most on</td><td class="def">plants recorded on most</td></tr>')
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Least-Sampled Native Bees</title><style>',
 bee_table_css(),                                                                   # shared base table chrome (single source -- theme_beescabr.R)
 bee_badge_css(BEE_COVERAGE_BG, BEE_COVERAGE_FG, function(k) paste0(".pill.", k)),   # coverage pills from theme tokens
+bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),      # abundance-status pills (rare/uncommon), shared with the field guide
 '.vneed{font-size:12px;vertical-align:middle}',
 bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),         # IUCN chips from theme tokens
 'a{color:#3a6b8a;text-decoration:none}',
@@ -176,16 +191,18 @@ bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),     
 '<div class="org">Cabrillo National Monument</div>',
 '<h1>Least-Sampled Native Bees &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-sprintf('<p class="sub">These %d native bees each have fewer than %d records, making them the park&rsquo;s least-sampled and the best targets for more survey effort.</p>',
-        nrow(tbl), THIN_TOTAL),
+sprintf('<p class="sub">These %d native bees each have fewer than %d records, making them the park&rsquo;s least-sampled and the best targets for more survey effort. Because each has under %d records, the Status column reads rare or uncommon, never common.</p>',
+        nrow(tbl), THIN_TOTAL, THIN_TOTAL),
 sprintf('<p class="sub">The <b style="color:%s">Coverage</b> column tells you what each one needs. <span class="pill cb">both (thin)</span> means only a few of each method. <span class="pill cp">photo-only</span> means it has been photographed but never netted, so go net a voucher &#128300;. <span class="pill cs">specimen-only</span> means the opposite, so go photograph one &#128247;. The %s icon opens an example observation. Every column&rsquo;s meaning is noted right under its header, and you can click any header to sort.</p>',
         BEE_TEAL[[6]], INAT_ICON),
-sprintf('<p class="scope">%s</p>', esc(scope_str)),
+'<div class="scope"><p class="lead">', esc(scope_str), '</p>',
+sprintf('<p>%s</p>', esc(status_note)),
 iucn_par,
-'<table id="t"><thead><tr><th>Bee</th>', iucn_th, '<th class="num">Specimen</th><th class="num">Photo</th><th class="num">Total</th>',
-'<th>Coverage</th><th>Active window</th><th>Peak month</th><th>Where (transect)</th><th>Top flowers</th></tr>',
+'</div>',
+'<div class="tbl-wrap"><table id="t"><thead><tr><th>Bee</th>', iucn_th, '<th class="num">Specimen</th><th class="num">Photo</th><th class="num">Total</th>',
+'<th>Status</th><th>Coverage</th><th>Peak month</th><th>Active window</th><th>Where (transect)</th><th>Top flowers</th></tr>',
 def_row,
-'</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
+'</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
 '<script>',
 'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
 'var t=h.closest("table"),b=t.tBodies[0],rows=[].slice.call(b.rows);h._d=!h._d;var d=h._d?1:-1;',
@@ -200,8 +217,9 @@ writeLines(html, file.path(OUT_DIR, "least_sampled_bees.html"))
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
   disp <- tbl %>% transmute(
     Bee = ifelse(has(conservation), paste0(species, " *"), species),
-    Specimen = net_records, Photo = photo_records, Total = total_records, Coverage = coverage,
-    `Active` = active_window, `Peak month` = peak_months,
+    Specimen = net_records, Photo = photo_records, Total = total_records,
+    Status = status, Coverage = coverage,
+    `Peak month` = peak_months, `Active` = active_window,
     `Where` = top_transects, `Top flowers` = top_flowers)
   if (HAVE_IUCN) { disp$IUCN <- ifelse(has(tbl$iucn), tbl$iucn, "NE"); disp <- dplyr::relocate(disp, IUCN, .after = Bee) }
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic

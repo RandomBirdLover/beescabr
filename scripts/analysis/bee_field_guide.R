@@ -173,25 +173,27 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   iucn_td <- if (HAVE_IUCN) sprintf('<td class="num"><span class="iucn i-%s" title="%s">%s</span></td>',
                                     tolower(r$iucn), esc(r$iucn_name), esc(r$iucn)) else ""
   sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td>%s<td class="num">%d</td>',
-                 '<td data-sort="%d">%s</td><td>%s</td><td>%s</td><td><span class="pill %s">%s</span></td>',
-                 '<td><span class="pill %s">%s</span></td><td class="loc">%s</td>',
-                 '<td data-sort="%d"><span class="pill st-%s">%s</span></td></tr>'),
+                 '<td data-sort="%d"><span class="pill st-%s">%s</span></td>',
+                 '<td data-sort="%d">%s</td><td>%s</td><td class="loc">%s</td>',
+                 '<td><span class="pill %s">%s</span></td><td>%s</td><td><span class="pill %s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$bee), cs,
           if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "",
-          iucn_td, r$n_records, r$peak_doy, esc(r$peak_day), esc(r$active_months), r$top_flowers_html,
-          diet_class(r$diet), esc(r$diet), pref_class(r$forage_pref), r$forage_pref_html,
-          esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
+          iucn_td, r$n_records,
+          unname(st_rank[r$status]), r$status, r$status,
+          r$peak_doy, esc(r$peak_day), esc(r$active_months), esc(r$where_to_find),
+          diet_class(r$diet), esc(r$diet), r$top_flowers_html,
+          pref_class(r$forage_pref), r$forage_pref_html)
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 iucn_def <- if (HAVE_IUCN) '<td class="num def">Red List status</td>' else ""
 # frozen definition sub-row: one short "what this column means" per column, pinned under the headers
 def_row <- paste0('<tr class="def"><td class="def"></td>', iucn_def,
-  '<td class="num def">times recorded</td><td class="def">average date seen</td>',
-  '<td class="def">months it&rsquo;s active</td><td class="def">seen on most</td>',
-  '<td class="def">how many plants it uses</td><td class="def">favorite, availability-corrected</td>',
-  '<td class="def">favored transect(s)</td><td class="def">how often recorded</td></tr>')
+  '<td class="num def">times recorded</td><td class="def">how often recorded</td>',
+  '<td class="def">average date seen</td><td class="def">months it&rsquo;s active</td>',
+  '<td class="def">favored transect(s)</td><td class="def">how many plants it uses</td>',
+  '<td class="def">seen on most</td><td class="def">favorite, availability-corrected</td></tr>')
 note_txt <- if (HAVE_IUCN) {
-  "The IUCN column shows each bee's Red List status. Nearly all read NE (Not Evaluated), which is normal for solitary bees. Other codes: DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4."
+  "The IUCN column shows each bee's Red List status. Codes: NE (Not Evaluated), DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4."
 } else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
 # Records/Status caveat -- this guide pools ALL data (no survey-only filter), so those two
 # columns reflect detection/photo effort, not a survey-controlled abundance estimate.
@@ -211,11 +213,11 @@ bee_badge_css(BEE_IUCN_BG,   BEE_IUCN_FG,   function(k) paste0(".iucn.i-", k)), 
 '<h1>A Native Bee Species Field Guide &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
 '<p class="sub">One row per bee species, with any named subspecies on its own row, sorted under its parent. Each column&rsquo;s meaning is noted right under its header. Two columns are easy to mix up. <b style="color:#08463D">Most-recorded flowers</b> is simply where a bee was seen most, which reflects what was blooming and how much people looked, not just the bee&rsquo;s choice. <b style="color:#08463D">Forage preference</b> is the stronger signal, because it compares a bee&rsquo;s flower visits to the rest of the community in the same month, year, and sampling method, so a good bloom year or a photo-versus-net quirk cannot masquerade as a real preference. Grey rows have fewer than 10 records, so their peak day and season are rough. Click a header to sort.</p>',
-sprintf('<p class="scope">%s</p>', esc(scope_str)),
-'<p class="note">', esc(note_txt), '</p>',
-'<table id="t"><thead><tr>',
-'<th>Bee</th>', iucn_th, '<th class="num">Records</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
-'</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
+'<div class="scope"><p class="lead">', esc(scope_str), '</p>',
+'<p>', esc(note_txt), '</p></div>',
+'<div class="tbl-wrap"><table id="t"><thead><tr>',
+'<th>Bee</th>', iucn_th, '<th class="num">Records</th><th>Status</th><th>Peak day</th><th>Active months</th><th>Where to find</th><th>Diet</th><th>Most-recorded flowers</th><th>Forage preference</th>',
+'</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
 '<script>',
 '(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
 'function pv(r,c){var x=r.cells[c];if(!x)return"";var s=x.getAttribute("data-sort");return s!==null?s:x.innerText.trim();}',
@@ -234,10 +236,10 @@ writeLines(html, file.path(OUT_DIR, "bee_field_guide_species.html"))
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
   pref_short <- sub(" \\(.*$", "", tbl$forage_pref)   # drop the "(Nx vs available)" tail for the compact image
   disp <- tbl %>% transmute(Bee = ifelse(conservation != "", paste0(bee, " *"), bee),
-                            N = n_records, `Peak day` = peak_day,
-                            `Active months` = active_months, `Most-recorded flowers` = top_flowers,
-                            Diet = diet, `Forage preference` = pref_short,
-                            `Where to find` = where_to_find, Status = status)
+                            N = n_records, Status = status, `Peak day` = peak_day,
+                            `Active months` = active_months, `Where to find` = where_to_find,
+                            Diet = diet, `Most-recorded flowers` = top_flowers,
+                            `Forage preference` = pref_short)
   if (HAVE_IUCN) disp <- dplyr::relocate(dplyr::mutate(disp, IUCN = tbl$iucn), IUCN, .after = Bee)
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
