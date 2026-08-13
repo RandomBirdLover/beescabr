@@ -56,9 +56,19 @@ grab <- function(df, method) data.frame(
   stringsAsFactors = FALSE)
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
-rec  <- bind_rows(grab(spec, "specimen (net)"), grab(inat, "photo (iNat)")) %>%
-  filter(taxon_rank %in% SPECIES_RANKS, has(genus), has(epithet)) %>%
-  mutate(species = paste(genus, epithet))
+rec_all <- bind_rows(grab(spec, "specimen (net)"), grab(inat, "photo (iNat)")) %>% filter(has(genus))
+# Genera never yet identified to species (only genus-level records) get ONE genus row each: a bee too
+# rarely seen to even name is exactly what "least-sampled" means. Genera that DO have species keep their
+# species-level rows (their genus-only stray records are still dropped, as before).
+genus_only <- rec_all %>% group_by(genus) %>%
+  summarise(has_sp = any(taxon_rank %in% SPECIES_RANKS & has(epithet)), .groups = "drop") %>%
+  filter(!has_sp) %>% pull(genus)
+rec <- rec_all %>%
+  mutate(species = dplyr::case_when(
+    genus %in% genus_only                        ~ genus,                   # genus-only bee -> keyed by genus
+    taxon_rank %in% SPECIES_RANKS & has(epithet) ~ paste(genus, epithet),   # species-level
+    TRUE                                         ~ NA_character_)) %>%
+  filter(!is.na(species))
 
 # ---- 2. per-species method split, keep the under-sampled -------------------
 split_tbl <- rec %>% group_by(species) %>%
@@ -67,7 +77,8 @@ split_tbl <- rec %>% group_by(species) %>%
             total_records  = n(), .groups = "drop") %>%
   filter(total_records < THIN_TOTAL) %>%
   arrange(total_records, desc(pmin(net_records, photo_records)), species)
-message(sprintf("Least-sampled bees (< %d records total): %d species", THIN_TOTAL, nrow(split_tbl)))
+message(sprintf("Least-sampled bees (< %d records total): %d taxa (%d genus-only)", THIN_TOTAL,
+                nrow(split_tbl), sum(split_tbl$species %in% genus_only)))
 
 coverage_of <- function(net, photo)
   ifelse(net > 0 & photo > 0, "both (thin)", ifelse(photo > 0, "photo-only", "specimen-only"))
@@ -103,6 +114,9 @@ ctx <- do.call(rbind, ctx)
 
 tbl <- split_tbl %>% left_join(ctx, by = "species") %>%
   mutate(coverage = coverage_of(net_records, photo_records))
+# genus-only rows: mark them in the Bee column so a reader knows it isn't a species
+tbl$is_genus <- tbl$species %in% genus_only
+tbl$common_name[tbl$is_genus] <- "genus only, not yet identified to species"
 
 # IUCN status (optional -- only if the conservation module + cache loaded)
 tbl$iucn <- if (exists("iucn_code_of")) iucn_code_of(tbl$species) else NA_character_
@@ -118,9 +132,8 @@ message(sprintf("  coverage: %d both(thin), %d photo-only, %d specimen-only",
                 sum(tbl$coverage == "specimen-only")))
 
 # scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
-scope_str <- scope_cap(
-  scope  = sprintf("least-sampled species only: < %d records total across both methods; all years, whole park", THIN_TOTAL),
-  method = "lethal + non-lethal pooled", rank = "species", width = 10000)
+scope_str <- sprintf("These counts pool netted specimens and every iNaturalist photo, not just formal survey records, across all years and the whole park. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of %s).",
+                     bee_data_asof())
 
 # ---- 4. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
@@ -135,16 +148,23 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   bee_td <- sprintf('<td class="bee"><i>%s</i>%s%s</td>', esc(r$species), cs,
                     if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "")
   fl <- if (has(r$example_url)) sprintf('%s <a href="%s" title="example iNaturalist observation">%s</a>', r$top_flowers_html, esc(r$example_url), INAT_ICON) else r$top_flowers_html
-  cov_icon <- if (grepl("^photo", r$coverage))    ' <span class="vneed" title="specimen voucher needed -- photographed but never netted; go net one">&#128300;</span>'       # microscope = collect a voucher
-         else if (grepl("^specimen", r$coverage)) ' <span class="vneed" title="photographs needed -- collected but never photographed; go photograph one">&#128247;</span>'  # camera = take more photos
-         else ""
+  cov_icon <- if (grepl("^photo", r$coverage))    ' <span class="vneed" title="Photographed but never netted, so a specimen voucher is needed. Go net one.">&#128300;</span>'       # microscope = collect a voucher
+         else if (grepl("^specimen", r$coverage)) ' <span class="vneed" title="Collected as a specimen but never photographed. Go photograph one.">&#128247;</span>'  # camera = take more photos
+         else ' <span class="vneed" title="Only a few of each method. More netting or more photos both help.">&#128247;&#128300;</span>'   # both (thin): camera + microscope
   sprintf(paste0('<tr>%s%s<td class="num">%d</td><td class="num">%d</td><td class="num">%d</td>',
                  '<td style="white-space:nowrap"><span class="pill %s">%s</span>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td></tr>'),
           bee_td, iucn_td, r$net_records, r$photo_records, r$total_records,
           cov_class(r$coverage), esc(r$coverage), cov_icon, esc(r$active_window), esc(r$peak_months),
           esc(r$top_transects), fl)
 }, character(1))
-iucn_th <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
+iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
+iucn_def <- if (HAVE_IUCN) '<td class="num def">Red List</td>' else ""
+iucn_par <- if (HAVE_IUCN) '<p class="note">The IUCN column shows each bee&rsquo;s Red List status. Nearly all read NE (Not Evaluated), which is normal for solitary bees. Other codes: DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4.</p>' else ""
+# frozen definition sub-row: one short "what this column means" per column, pinned under the headers
+def_row <- paste0('<tr class="def"><td class="def"></td>', iucn_def,
+  '<td class="num def">netted</td><td class="num def">on iNat</td><td class="num def">specimen + photo</td>',
+  '<td class="def">which method(s) it&rsquo;s in</td><td class="def">months it&rsquo;s been seen</td>',
+  '<td class="def">month seen most</td><td class="def">transect seen most on</td><td class="def">plants recorded on most</td></tr>')
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Least-Sampled Native Bees</title><style>',
 bee_table_css(),                                                                   # shared base table chrome (single source -- theme_beescabr.R)
@@ -154,14 +174,18 @@ bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),     
 'a{color:#3a6b8a;text-decoration:none}',
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
-'<h1>Least-Sampled Native Bees</h1>',
+'<h1>Least-Sampled Native Bees &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND iNaturalist. <b>Coverage</b>: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. &#128247; = specimen-only, go photograph one; &#128300; = photo-only, go net one. When/where/flower are pooled across methods. %s links an example iNaturalist observation. Click a header to sort.</p>',
-        nrow(tbl), THIN_TOTAL, INAT_ICON),
+sprintf('<p class="sub">These %d native bees each have fewer than %d records, making them the park&rsquo;s least-sampled and the best targets for more survey effort.</p>',
+        nrow(tbl), THIN_TOTAL),
+sprintf('<p class="sub">The <b style="color:%s">Coverage</b> column tells you what each one needs. <span class="pill cb">both (thin)</span> means only a few of each method. <span class="pill cp">photo-only</span> means it has been photographed but never netted, so go net a voucher &#128300;. <span class="pill cs">specimen-only</span> means the opposite, so go photograph one &#128247;. The %s icon opens an example observation. Every column&rsquo;s meaning is noted right under its header, and you can click any header to sort.</p>',
+        BEE_TEAL[[6]], INAT_ICON),
 sprintf('<p class="scope">%s</p>', esc(scope_str)),
-'<table id="t"><thead><tr><th>Bee</th>', iucn_th, '<th class="num">Net</th><th class="num">Photo</th><th class="num">Total</th>',
-'<th>Coverage</th><th>Active window</th><th>Peak month</th><th>Where (transect)</th><th>Top flowers</th>',
-'</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
+iucn_par,
+'<table id="t"><thead><tr><th>Bee</th>', iucn_th, '<th class="num">Specimen</th><th class="num">Photo</th><th class="num">Total</th>',
+'<th>Coverage</th><th>Active window</th><th>Peak month</th><th>Where (transect)</th><th>Top flowers</th></tr>',
+def_row,
+'</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<script>',
 'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
 'var t=h.closest("table"),b=t.tBodies[0],rows=[].slice.call(b.rows);h._d=!h._d;var d=h._d?1:-1;',
@@ -176,7 +200,7 @@ writeLines(html, file.path(OUT_DIR, "least_sampled_bees.html"))
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
   disp <- tbl %>% transmute(
     Bee = ifelse(has(conservation), paste0(species, " *"), species),
-    Net = net_records, Photo = photo_records, Total = total_records, Coverage = coverage,
+    Specimen = net_records, Photo = photo_records, Total = total_records, Coverage = coverage,
     `Active` = active_window, `Peak month` = peak_months,
     `Where` = top_transects, `Top flowers` = top_flowers)
   if (HAVE_IUCN) { disp$IUCN <- ifelse(has(tbl$iucn), tbl$iucn, "NE"); disp <- dplyr::relocate(disp, IUCN, .after = Bee) }

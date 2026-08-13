@@ -158,9 +158,8 @@ message(sprintf("Field guide: %d species%s (%d with >= %d records)",
                 sum(tbl$confidence == "ok"), MIN_CONF))
 
 # scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
-scope_str <- scope_cap(
-  scope  = "every bee pinned to species-level; all records (specimen net + iNaturalist), all years, whole park",
-  method = "lethal + non-lethal pooled", rank = "species", width = 10000)
+scope_str <- sprintf("These counts pool netted specimens and every iNaturalist photo, not just formal survey records, across all years and the whole park. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of %s).",
+                     bee_data_asof())
 
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
@@ -184,12 +183,19 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
           esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
+iucn_def <- if (HAVE_IUCN) '<td class="num def">Red List status</td>' else ""
+# frozen definition sub-row: one short "what this column means" per column, pinned under the headers
+def_row <- paste0('<tr class="def"><td class="def"></td>', iucn_def,
+  '<td class="num def">times recorded</td><td class="def">average date seen</td>',
+  '<td class="def">months it&rsquo;s active</td><td class="def">seen on most</td>',
+  '<td class="def">how many plants it uses</td><td class="def">favorite, availability-corrected</td>',
+  '<td class="def">favored transect(s)</td><td class="def">how often recorded</td></tr>')
 note_txt <- if (HAVE_IUCN) {
-  "IUCN = current IUCN Red List category: CR/EN/VU = threatened, NT = near threatened, LC = least concern, DD = data deficient, NE = not evaluated (most solitary bees). * marks threatened/near-threatened species. Source: IUCN Red List API v4."
+  "The IUCN column shows each bee's Red List status. Nearly all read NE (Not Evaluated), which is normal for solitary bees. Other codes: DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4."
 } else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
 # Records/Status caveat -- this guide pools ALL data (no survey-only filter), so those two
 # columns reflect detection/photo effort, not a survey-controlled abundance estimate.
-status_note <- sprintf("Records and Status count ALL data -- specimen nets plus every iNaturalist photo, including casual public sightings, across all years -- so they show how often a species is DETECTED/photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read 'common' on public photos alone; treat rare/uncommon/common as recording frequency, not true density. Cut-offs by record count (all data pooled): rare < %d, uncommon %d-%d, common >= %d; Diet is only stated at >= %d records (fewer reads 'not enough records').",
+status_note <- sprintf("Records and Status count all data. That means netted specimens plus every iNaturalist photo, including casual public sightings, across all years. So they show how often a species is detected or photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more. Diet is only stated at %d or more records.",
                         RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN)
 note_txt <- paste(status_note, note_txt)
 html <- paste0(
@@ -202,15 +208,14 @@ bee_badge_css(BEE_FORAGE_BG, BEE_FORAGE_FG, function(k) paste0(".pill.pref-", k)
 bee_badge_css(BEE_IUCN_BG,   BEE_IUCN_FG,   function(k) paste0(".iucn.i-", k)),      # IUCN chips
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
-'<h1>A Native Bee Species Field Guide</h1>',
+'<h1>A Native Bee Species Field Guide &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-'<p class="sub">One row per bee species (any named subspecies gets its own row too, sorted under its parent). Peak day = mean record date; active months = 5th&ndash;95th percentile of dates; diet = number of plant genera used (&ge;50 records, else &quot;not enough records&quot;); where = favoured transect(s); status = recording frequency (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; all data incl. casual photos, so frequency, not true abundance). Grey rows: &lt;10 records (peak/season rough). Click a header to sort.</p>',
-'<p class="sub"><b>Most-recorded flowers</b> = where the species was seen most (reflects bloom + sampling, not proof of preference). <b>Forage preference</b> is availability-corrected &mdash; a matched month/year/method chi-square vs the rest of the community: &quot;Selective &rarr; plant (N&times;)&quot; = visits it well beyond availability; &quot;Generalist&quot; = ~ what&#39;s around; &quot;too few records to judge&quot; below ', SELECT_MIN_REC, ' plant-visit records.</p>',
+'<p class="sub">One row per bee species, with any named subspecies on its own row, sorted under its parent. Each column&rsquo;s meaning is noted right under its header. Two columns are easy to mix up. <b style="color:#08463D">Most-recorded flowers</b> is simply where a bee was seen most, which reflects what was blooming and how much people looked, not just the bee&rsquo;s choice. <b style="color:#08463D">Forage preference</b> is the stronger signal, because it compares a bee&rsquo;s flower visits to the rest of the community in the same month, year, and sampling method, so a good bloom year or a photo-versus-net quirk cannot masquerade as a real preference. Grey rows have fewer than 10 records, so their peak day and season are rough. Click a header to sort.</p>',
 sprintf('<p class="scope">%s</p>', esc(scope_str)),
+'<p class="note">', esc(note_txt), '</p>',
 '<table id="t"><thead><tr>',
 '<th>Bee</th>', iucn_th, '<th class="num">Records</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
-'</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
-'<p class="note">', esc(note_txt), '</p>',
+'</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<script>',
 '(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
 'function pv(r,c){var x=r.cells[c];if(!x)return"";var s=x.getAttribute("data-sort");return s!==null?s:x.innerText.trim();}',

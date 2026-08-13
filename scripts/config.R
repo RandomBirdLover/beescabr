@@ -161,7 +161,15 @@ PATHS <- list(
   inat_unknown_tags = "data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
   inat_to_verify = "data/observations/inat_clean/qc/cabr_inat_to_verify.csv",
   specimen_clean = "data/specimens/specimens_clean/cabr_specimen_bee_clean.csv",
-  holway_combined = "data/reference/source/holway_2026/holway_v3_combined.csv"
+  holway_combined = "data/reference/source/holway_2026/holway_v3_combined.csv",
+  # Project effort + roster. per_survey is the trip-level log (one row per survey
+  # trip) -- use it for EFFORT metrics only (trip counts, days, method split), never
+  # for headcounts: it stores netters by first name and iNat folks by handle, so the
+  # same person appears many times and can't be deduped. surveyor_roster is the
+  # canonical people list (one row per person-year, full name + role + method) and is
+  # the SOLE authority for WHO surveyed -- count distinct people from here.
+  per_survey = "data/project_info/master_per_survey_info.csv",
+  surveyor_roster = "data/project_info/surveyor_roster.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the

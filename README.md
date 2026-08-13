@@ -154,6 +154,46 @@ beescabr/
 
 ---
 
+## Updating survey participation (people & effort)
+
+The NPS summary participation table counts **people** and **effort** from two
+different files. Keeping them straight matters: a past bug counted people from
+the effort log and inflated the totals, because that log stores netters by first
+name and iNat folks by handle, so one person recurs across trips and cannot be
+deduped. **The roster is the sole authority for *who*; the effort log is for
+*how much*.**
+
+| File | Path | Role | Edit by hand? |
+| --- | --- | --- | --- |
+| `surveyor_roster.csv` | `data/project_info/` | Canonical people list, one row per person-year (full name, role, method). **Authority for headcounts.** | ✅ Yes |
+| `master_intern_survey_log.csv` | `data/project_info/sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
+| `master_per_survey_info.csv` | `data/project_info/` | **Generated output** — rebuilt from the two files above by `finding_project_info.R`. Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
+
+**What to edit when**
+
+- **New beeple (community scientist):** add them to `surveyor_roster.csv` only.
+  Their survey dates flow in automatically from their tagged iNaturalist
+  observations.
+- **New intern:** add them to `surveyor_roster.csv` **and** add their net/photo
+  days to `sources/master_intern_survey_log.csv`. Intern days are not all
+  tag-derivable, so the log is their source of truth.
+- **More survey dates for existing interns:** add them to
+  `sources/master_intern_survey_log.csv`, then re-run the pipeline.
+- **Never** edit `master_per_survey_info.csv` directly. Re-run
+  `finding_project_info.R` (or the full pipeline) to rebuild it.
+
+**Gotcha:** the roster (people) and the intern log (dates) are two separate
+manual files that must stay in sync. If you add a new intern's dates to the log
+but forget to add the person to the roster, the effort counts update but the
+headcount does not. Rule of thumb: a new person means edit the roster; a new
+intern date means edit the log; a new intern means edit both.
+
+General public contributors (iNaturalist observers not on the roster) and the
+total-contributor count update automatically from the iNaturalist data. No
+manual entry is needed for those.
+
+---
+
 ## Naming conventions
 
 ### iNat and GBIF exports

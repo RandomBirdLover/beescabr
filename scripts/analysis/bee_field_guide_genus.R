@@ -83,7 +83,7 @@ status_call <- function(n) if (n < RARE_CUT) "rare" else if (n < UNCOMMON_CUT) "
 # genera that include an IUCN at-risk species come straight from the shared module (the cache)
 CONSERV_FLAGGED <- flagged_species()                                  # CR/EN/VU/NT, live from the cache
 CONSERV_GENERA  <- unique(word(CONSERV_FLAGGED$scientific_name, 1))
-CONSERV_LEGEND  <- "* genus includes an IUCN at-risk species (CR/EN/VU/NT), from the current IUCN Red List pull."
+CONSERV_LEGEND  <- "A star by a genus marks one that includes a species listed as threatened or near threatened on the IUCN Red List, based on the current Red List."
 where_call <- function(d) {
   tr <- d$transect[d$transect %in% TRANSECTS]
   if (length(tr) >= 0.5 * nrow(d) && length(tr) > 0) {           # transect genus
@@ -139,10 +139,9 @@ message(sprintf("Genus field guide: %d genera (%d never yet ID'd to species; %d 
                 nrow(tbl), sum(tbl$n_species == 0),
                 sum(tbl$status == "rare"), sum(tbl$status == "uncommon"), sum(tbl$status == "common")))
 
-# scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
-scope_str <- scope_cap(
-  scope  = "every bee record rolled up to genus (all ID ranks); all records (specimen net + iNaturalist), all years, whole park",
-  method = "lethal + non-lethal pooled", rank = "genus", width = 10000)
+# plain, public-facing provenance line (this page is public; column meanings live in the def sub-row)
+scope_str <- sprintf("These counts pool netted specimens and every iNaturalist photo, not just formal survey records, across all years and the whole park. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of %s).",
+                     bee_data_asof())
 
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
@@ -160,6 +159,13 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
           esc(r$flower_breadth), r$top_plant_html, pref_cls, r$forage_pref_html,
           esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
+# frozen definition sub-row: one short "what this column means" per column, pinned under the headers
+def_row <- paste0('<tr class="def"><td class="def"></td>',
+  '<td class="num def">times recorded</td><td class="num def">distinct species</td>',
+  '<td class="def">average date seen</td><td class="def">months it&rsquo;s active</td>',
+  '<td class="def">seen on most</td><td class="def">how many plants used</td>',
+  '<td class="def">top plant and its share</td><td class="def">favorite, availability-corrected</td>',
+  '<td class="def">favored transect(s)</td><td class="def">how often recorded</td></tr>')
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Field Guide (Genus)</title>',
 '<style>',
@@ -169,15 +175,14 @@ bee_badge_css(BEE_DIET_BG,  BEE_DIET_FG,  function(k) paste0(".pill.", k)),     
 bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),   # abundance-status pills
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
-'<h1>A Native Bee Genus Field Guide</h1>',
+'<h1>A Native Bee Genus Field Guide &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-'<p class="sub">Companion to the species guide: one row per GENUS (all records pooled, all ID ranks). &quot;Species ID&#39;d&quot; = distinct species pinned in the genus (0 = none yet). Peak day = mean record date; active months = 5th&ndash;95th percentile; flower breadth = plant genera used (Narrow 1-3 / Moderate 4-7 / Broad 8-24 / Very broad 25+; &ge;50 records, else &quot;not enough records&quot;); most-used plant = its top plant + that plant&#39;s share of visits (a raw count &mdash; see Forage preference); where = favoured transect(s); status = recording frequency (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; all data incl. casual photos, so frequency, not survey-controlled abundance). Grey rows are rarely recorded. Click a header to sort.</p>',
-'<p class="sub"><b>Most-recorded flowers / Most-used plant</b> = the plants seen most (blends bloom + sampling, not proof of preference). <b>Forage preference</b> corrects for that: a matched Monte-Carlo chi-square comparing the genus&#39;s visits to the rest of the community <i>in the same month, year and method (net vs photo)</i> &mdash; so a good-bloom year or a photo-vs-net quirk can&#39;t masquerade as preference. &quot;Selective &rarr; plant (N&times; vs available)&quot; = N&times; beyond same-month availability; &quot;Generalist&quot; = ~ what&#39;s around; &quot;not enough records&quot; = below ', SELECT_MIN_REC, ' plant-visit records. (Availability = the community&#39;s realized plant use per year-month, a proxy; p near 0.05 is borderline.)</p>',
+'<p class="sub">A companion to the species guide, with one row per bee genus, pooling all records at every identification level. <b style="color:#08463D">Species ID&rsquo;d</b> counts the distinct species pinned within the genus, and 0 means none yet. Each column&rsquo;s meaning is noted right under its header. As on the species guide, <b style="color:#08463D">most-recorded flowers</b> and <b style="color:#08463D">most-used plant</b> are simply where the genus was seen most, which reflects bloom and effort as much as choice, while <b style="color:#08463D">forage preference</b> corrects for what was available in the same month, year, and sampling method. Because these counts include casual photos too, <b style="color:#08463D">Status</b> reflects how often a genus is recorded here, not true abundance. Click a header to sort.</p>',
 sprintf('<p class="scope">%s</p>', esc(scope_str)),
+'<p class="note"><sup class="cs">*</sup> ', esc(CONSERV_LEGEND), '</p>',
 '<table id="t"><thead><tr>',
 '<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Flower breadth</th><th>Most-used plant</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
-'</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
-'<p class="note">', esc(CONSERV_LEGEND), '</p>',
+'</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<script>',
 '(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
 'function pv(r,c){var x=r.cells[c];if(!x)return"";var s=x.getAttribute("data-sort");return s!==null?s:x.innerText.trim();}',

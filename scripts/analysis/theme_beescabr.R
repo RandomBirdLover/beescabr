@@ -38,6 +38,8 @@
 # ONLY as transects. OT orange is still sub-3:1 on white, so transect figures always ship
 # with a legend + labels.
 BEE_TRANSECT <- c(BST = "#009E73", UPMON = "#CC79A7", TP = "#0072B2", OT = "#E69F00")
+# full trail name behind each transect code (from the survey map) -- for map legends/labels.
+BEE_TRANSECT_NAME <- c(BST = "Bayside Trail", UPMON = "Upper Monument", TP = "Tidepool", OT = "Oceanside Trail")
 # lighter tints of each transect hue (blend toward white, same 0.38 formula as the method tints) --
 # used where a transect carries TWO bars (e.g. observed vs rarefied): light = the "raw / lower" bar,
 # full = the "standardized / focal" bar, so hue = transect identity and shade = the within-transect split.
@@ -161,7 +163,9 @@ bee_table_css <- function() paste0(
   "sup.cs{color:", BEE_HTML[["cs"]], ";font-weight:700;margin-left:1px}",
   "table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;margin-top:14px}",
   "th,td{text-align:left;padding:9px 12px;border-bottom:1px solid ", BEE_HTML[["border_lt"]], ";vertical-align:top}",
-  "thead th{position:sticky;top:0;background:", BEE_HTML[["head_bg"]], ";cursor:pointer;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:", BEE_TEAL[[6]], ";border-bottom:2px solid ", BEE_TEAL[[3]], "}",
+  "thead th{position:sticky;top:0;z-index:3;background:", BEE_HTML[["head_bg"]], ";cursor:pointer;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:", BEE_TEAL[[6]], ";border-bottom:1px solid ", BEE_HTML[["border_lt"]], "}",
+  # optional frozen definition sub-row (<tr class="def">): short "what this column means", pinned under the labels
+  "thead tr.def td{position:sticky;top:36px;z-index:2;background:", BEE_HTML[["head_bg"]], ";font-weight:400;text-transform:none;letter-spacing:normal;font-size:10px;line-height:1.2;color:", BEE_HTML[["cn"]], ";padding:0 12px 7px;border-bottom:2px solid ", BEE_TEAL[[3]], ";white-space:normal;vertical-align:top}",
   "thead th:hover{background:", BEE_HTML[["head_hover"]], "}",
   "tbody tr:nth-child(even){background:", BEE_TABLE[["row_even"]], "}",
   "tbody tr:hover{background:", BEE_HTML[["row_hover"]], "}",

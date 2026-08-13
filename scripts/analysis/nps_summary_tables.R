@@ -20,6 +20,8 @@
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("iucn_code_of")) try(source("scripts/analysis/conservation_status.R"), silent = TRUE)   # IUCN status lookup (optional)
+.iucn_of <- function(sp) if (exists("iucn_code_of")) iucn_code_of(sp) else rep("NE", length(sp))
 OUT_DIR       <- file.path(DIR_REPORT, "reference/nps_summary")
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -32,18 +34,41 @@ psf  <- read.csv(if (!is.null(PATHS$per_survey)) PATHS$per_survey else
                  "data/project_info/master_per_survey_info.csv", stringsAsFactors = FALSE, check.names = FALSE)
 
 # ---- 1. participation --------------------------------------------------------
+# EFFORT (trips, days, method split) comes from the per-survey trip log; WHO surveyed
+# comes from the roster. The trip log CANNOT count people: it stores netters by first
+# name and iNat folks by handle, so one person recurs across trips/years and can't be
+# deduped (that produced the old inflated "39 field / 24 iNat" figures). The roster is
+# one row per person-year, so distinct people = unique full names. Role != method:
+# 2021-2023 interns netted (lethal), 2024 interns switched to photos (non-lethal), so a
+# person can count under both methods -- we report people by ROLE and surveys by METHOD.
+uniq_lc  <- function(v) { v <- str_squish(tolower(as.character(v))); unique(v[v != "" & !is.na(v)]) }
 psf$year_i <- suppressWarnings(as.integer(psf$year))
-role <- str_squish(tolower(psf$role))
+pmethod  <- str_squish(tolower(psf$method))                                    # trip method: lethal / non-lethal
+
+rost <- read.csv(if (!is.null(PATHS$surveyor_roster)) PATHS$surveyor_roster else
+                 "data/project_info/surveyor_roster.csv", stringsAsFactors = FALSE, check.names = FALSE)
+person   <- str_squish(tolower(paste(rost$first_name, rost$last_name)))        # canonical people key: full name, deduped across years
+rrole    <- str_squish(tolower(rost$role))
+ndistinct <- function(mask) length(unique(person[mask & person != "" & !is.na(person)]))
+
+# General public = iNat observers who are NOT on the roster (matched by handle); total
+# contributors = dedicated roster people + public, with no double count (roster handles
+# are removed from the public set first).
+public_n <- length(setdiff(uniq_lc(inat$observer), uniq_lc(rost$inaturalist_username)))
+dedic_n  <- ndistinct(TRUE)
+
 part <- kv(
-  survey_trips              = nrow(psf),
-  survey_days               = sum(suppressWarnings(as.numeric(psf$n_days)), na.rm = TRUE),
-  years_covered             = paste(range(psf$year_i, na.rm = TRUE), collapse = "-"),
-  n_years                   = length(unique(na.omit(psf$year_i))),
-  transects                 = length(tok(psf$transects)),
-  unique_field_surveyors    = length(tok(psf$surveyors)),
-  unique_inaturalist_users  = length(tok(psf$inat_username)),
-  intern_trips              = sum(role == "intern", na.rm = TRUE),
-  beeple_trips              = sum(role == "beeple", na.rm = TRUE))
+  years_covered              = paste(range(psf$year_i, na.rm = TRUE), collapse = "–"),
+  n_years                    = length(unique(na.omit(psf$year_i))),
+  transects                  = length(tok(psf$transects)),
+  total_surveys              = nrow(psf),
+  netting_surveys            = sum(pmethod == "lethal",     na.rm = TRUE),
+  inaturalist_surveys        = sum(pmethod == "non-lethal", na.rm = TRUE),
+  interns                    = ndistinct(rrole == "intern"),
+  beeple                     = ndistinct(rrole == "beeple"),
+  dedicated_surveyors        = dedic_n,
+  public_contributors        = public_n,
+  total_contributors         = dedic_n + public_n)
 write.csv(part, file.path(OUT_DIR, "nps_participation.csv"), row.names = FALSE)
 # (transect count is in nps_participation above; the transect NAMES list is reference/design
 #  info, not a summary output, so it lives in data/project_info/, not here.)
@@ -92,7 +117,9 @@ checklist <- bees %>% filter(!is.na(species_key)) %>%
   summarise(genus = genus[1], n_records = n(),
             in_specimens = any(method == "lethal (specimen)"),
             in_inaturalist = any(method == "non-lethal (iNaturalist)"), .groups = "drop") %>%
-  arrange(genus, species)
+  arrange(genus, species) %>%
+  mutate(iucn = .iucn_of(species)) %>%
+  select(species, genus, iucn, n_records, in_specimens, in_inaturalist)
 write.csv(checklist, file.path(OUT_DIR, "nps_bee_checklist_species.csv"), row.names = FALSE)
 
 # subspecies checklist (trinomials only), parallel columns to the species checklist
@@ -103,8 +130,9 @@ subsp_checklist <- if (nrow(subsp)) {
               in_specimens = any(method == "lethal (specimen)"),
               in_inaturalist = any(method == "non-lethal (iNaturalist)"), .groups = "drop") %>%
     arrange(genus, subspecies) %>%
-    select(subspecies, genus, n_records, in_specimens, in_inaturalist)
-} else data.frame(subspecies = character(), genus = character(), n_records = integer(),
+    mutate(iucn = .iucn_of(word(subspecies, 1, 2))) %>%   # subspecies inherit their species' IUCN status
+    select(subspecies, genus, iucn, n_records, in_specimens, in_inaturalist)
+} else data.frame(subspecies = character(), genus = character(), iucn = character(), n_records = integer(),
                   in_specimens = logical(), in_inaturalist = logical())
 write.csv(subsp_checklist, file.path(OUT_DIR, "nps_bee_checklist_subspecies.csv"), row.names = FALSE)
 
@@ -125,15 +153,22 @@ methods_tbl <- cbind(method = rownames(methods_tbl), methods_tbl, total = rowSum
 write.csv(methods_tbl, file.path(OUT_DIR, "nps_methods.csv"), row.names = FALSE)
 
 # ---- 4. plants found ---------------------------------------------------------
-plants <- read.csv(PATHS$inat_plant_clean, stringsAsFactors = FALSE, check.names = FALSE)
-pg <- str_squish(plants$plant_genus); ps <- str_squish(plants$plant_species)
+# PUBLIC page: only trustworthy plant IDs -> RESEARCH-GRADE iNaturalist observations, PLUS the plant
+# tags on the netted specimens. (The raw iNat plant file also holds needs-ID/casual records; we drop
+# those here so a reader can trust every plant on the list.)
+inat_pl <- read.csv(PATHS$inat_plant_clean, stringsAsFactors = FALSE, check.names = FALSE)
+inat_pl <- inat_pl[str_squish(tolower(inat_pl$quality_grade)) == "research", ]
+plant_src <- bind_rows(
+  data.frame(plant_genus = str_squish(inat_pl$plant_genus), plant_species = str_squish(inat_pl$plant_species), stringsAsFactors = FALSE),
+  data.frame(plant_genus = str_squish(spec$plant_genus),    plant_species = str_squish(spec$plant_species),    stringsAsFactors = FALSE))
+plant_src <- plant_src[!is.na(plant_src$plant_genus) & plant_src$plant_genus != "", ]
+pg <- plant_src$plant_genus; ps <- plant_src$plant_species
 plants_summary <- kv(
-  plant_records              = nrow(plants),
+  plant_records              = nrow(plant_src),
   plant_genera_recorded      = length(unique(pg[pg != "" & !is.na(pg)])),
   plant_species_recorded     = length(unique(ps[ps != "" & !is.na(ps)])))
 write.csv(plants_summary, file.path(OUT_DIR, "nps_plants_summary.csv"), row.names = FALSE)
-plant_checklist <- plants %>% mutate(plant_genus = pg, plant_species = ps) %>%
-  filter(plant_genus != "", !is.na(plant_genus)) %>%
+plant_checklist <- plant_src %>%
   group_by(plant_genus) %>% summarise(n_records = n(),
             n_species = n_distinct(plant_species[plant_species != "" & !is.na(plant_species)]),
             .groups = "drop") %>% arrange(plant_genus)
@@ -146,33 +181,34 @@ write.csv(plant_checklist, file.path(OUT_DIR, "nps_plant_checklist_genus.csv"), 
 # ============================================================================
 if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")   # shared scope-caption format
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
-pretty_metric <- function(m) tools::toTitleCase(gsub("_", " ", m))       # metric_key -> "Metric Key"
+# metric_key -> display label: title-case, iNaturalist re-cased, with a few hand-set overrides
+.metric_labels <- c(
+  n_years              = "Number of Years",
+  total_surveys        = "Total Surveys",
+  netting_surveys      = "Lethal Surveys",
+  inaturalist_surveys  = "Non-Lethal Surveys",
+  dedicated_surveyors  = "Total Dedicated Surveyors",
+  public_contributors  = "General Public Contributors",
+  total_contributors   = "Total Contributors")
+pretty_metric <- function(m) {
+  out <- gsub("Inaturalist", "iNaturalist", tools::toTitleCase(gsub("_", " ", m)))
+  hit <- m %in% names(.metric_labels); out[hit] <- unname(.metric_labels[m[hit]])
+  out
+}
 
-# one scope caption per table set
-cap_part   <- scope_cap(scope = "all survey trips logged; all years, whole park",
-                        method = "lethal + non-lethal pooled",
-                        rank = "people / trips / days / transects", width = 10000)
-cap_bees   <- scope_cap(scope = "every bee record; all years, whole park",
-                        method = "lethal + non-lethal pooled",
-                        rank = "records / genera / species", width = 10000)
-cap_meth   <- scope_cap(scope = "every bee record, by method x surveyor type; all years, whole park",
-                        method = "lethal vs non-lethal",
-                        rank = "records", width = 10000)
-cap_plants <- scope_cap(scope = "every plant record a bee was seen on; all years, whole park",
-                        method = "non-lethal",
-                        rank = "records / genera / species", width = 10000)
-cap_chk    <- scope_cap(scope = "species-resolved bee checklist; all years, whole park",
-                        method = "lethal + non-lethal pooled",
-                        rank = "species", width = 10000)
-cap_sschk  <- scope_cap(scope = "subspecies-resolved bee checklist (records identified below species); all years, whole park",
-                        method = "lethal + non-lethal pooled",
-                        rank = "subspecies", width = 10000)
-cap_gchk   <- scope_cap(scope = "bee genera checklist (includes genus-only records); all years, whole park",
-                        method = "lethal + non-lethal pooled",
-                        rank = "genus", width = 10000)
-cap_pchk   <- scope_cap(scope = "plant genera bees were recorded on; all years, whole park",
-                        method = "non-lethal",
-                        rank = "plant genus", width = 10000)
+# Plain-English caption per table (this page is public-facing, so we skip the technical
+# Scope|Method|Rank format used on the analysis figures). Each keeps a short, citable source line.
+SRC       <- paste0("Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of ", bee_data_asof(), ").")
+SRC_PLANT <- paste0("Source: research-grade iNaturalist observations and netted-specimen tags, Cabrillo National Monument (data as of ", bee_data_asof(), ").")
+pub_cap <- function(desc, src = SRC) paste0(desc, " ", src)
+cap_part   <- pub_cap("How much surveying went into this project across all years. The survey rows count effort: the trips and transects walked, split by how bees were recorded (netting versus iNaturalist photos). The people rows count individuals, not trips. Dedicated surveyors are the interns and beeple who ran the structured surveys, and general public contributors are everyone else who photographed a park bee on iNaturalist.")
+cap_bees   <- pub_cap("Every native bee recorded in the park, all years combined. Totals for how they were found (netted as a specimen, or photographed on iNaturalist) and how many genera and species.")
+cap_meth   <- pub_cap("How the bees were recorded, netted specimens versus iNaturalist photos, and by whom.")
+cap_plants <- pub_cap("The plants bees were seen visiting across the park, all years. Total visits, plus how many kinds of plant. Only trustworthy IDs are counted: research-grade iNaturalist records and specimen tags.", SRC_PLANT)
+cap_chk    <- pub_cap("Every bee identified to species, with how many times it was recorded and whether it turned up as a netted specimen, an iNaturalist photo, or both. IUCN is each bee's Red List status: nearly all read NE (Not Evaluated), plus DD (Data Deficient), LC (Least Concern), NT (Near Threatened), VU (Vulnerable), EN (Endangered), and CR (Critically Endangered).")
+cap_sschk  <- pub_cap("Bees identified all the way down to subspecies, a finer level than species.")
+cap_gchk   <- pub_cap("Every bee genus found, including bees that could only be identified to genus.")
+cap_pchk   <- pub_cap("Every plant genus bees were seen on, with how many bee visits and how many plant species. Only trustworthy IDs are counted: research-grade iNaturalist records and specimen tags.", SRC_PLANT)
 
 # ---- HTML ------------------------------------------------------------------
 df_to_html <- function(df, caption, heading, metric_col = FALSE, italic_cols = character(0)) {
@@ -184,12 +220,14 @@ df_to_html <- function(df, caption, heading, metric_col = FALSE, italic_cols = c
   num_align <- vapply(seq_along(d), function(j)
     is.numeric(d[[j]]) || (metric_col && j == 2L), logical(1))
   hd <- paste0(vapply(seq_along(d), function(j) {
-      cls <- if (is.logical(d[[j]])) ' class="chk"' else if (num_align[j]) ' class="num"' else ""   # header aligns with its column's values
+      cls <- if (is.logical(d[[j]]) || names(d)[j] == "iucn") ' class="chk"' else if (num_align[j]) ' class="num"' else ""   # header aligns with its column's values
       sprintf('<th%s>%s</th>', cls, esc(gsub("_", " ", names(d)[j])))
     }, ""), collapse = "")
   body <- vapply(seq_len(nrow(d)), function(i) {
     cells <- vapply(seq_along(d), function(j) {
       v <- d[[j]][i]
+      if (names(d)[j] == "iucn")   # IUCN code -> colour chip (all NE for these bees)
+        return(sprintf('<td class="chk"><span class="iucn i-%s">%s</span></td>', tolower(as.character(v)), esc(as.character(v))))
       if (is.logical(d[[j]]))   # boolean column -> teal checkmark (yes) / muted dash (no)
         return(sprintf('<td class="chk">%s</td>', if (isTRUE(v)) '<span class="yes">&#10003;</span>' else '<span class="no">&ndash;</span>'))
       val <- if (is.numeric(d[[j]])) format(v, big.mark = ",", trim = TRUE) else esc(as.character(v))
@@ -204,6 +242,10 @@ df_to_html <- function(df, caption, heading, metric_col = FALSE, italic_cols = c
          paste(body, collapse = ""), '</tbody></table>')
 }
 
+# headline totals for the intro bar
+.gv <- function(df, k) df$value[df$metric == k]
+n_bg <- .gv(bees_summary, "genera_total");    n_bs  <- .gv(bees_summary, "species_total")
+n_bss <- .gv(bees_summary, "subspecies_total"); n_pg <- .gv(plants_summary, "plant_genera_recorded")
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Summary Tables</title><style>',
 # static multi-table page -> shares the BEE_HTML colour tokens + polished card look of the interactive
@@ -215,12 +257,12 @@ paste0('.org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-sp
 paste0('h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap;color:', BEE_TEAL[[6]], '}'),
 paste0("h1:after{content:'';display:block;width:56px;height:3px;background:", BEE_TEAL[[4]], ";border-radius:2px;margin:11px 0 2px}"),
 paste0('.byline{font-size:13px;color:', BEE_HTML[["sub"]], ';margin:7px 0 0;font-style:italic}'),
-paste0('h2{font-size:15px;font-weight:700;margin:30px 0 6px;color:', BEE_TEAL[[6]], '}'),
+paste0('h2{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:30px 0 6px;color:', BEE_TEAL[[6]], '}'),
 paste0('p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px}'),
 paste0('p.scope{color:', BEE_HTML[["scope"]], ';margin:14px 0 6px;font-size:12px;font-weight:600;background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_TEAL[[4]], ';padding:9px 13px;border-radius:0 7px 7px 0}'),
 'table.t{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;margin:8px 0 6px}',
 paste0('table.t th,table.t td{text-align:left;padding:8px 12px;border-bottom:1px solid ', BEE_HTML[["border_lt"]], '}'),
-paste0('table.t th{background:', BEE_HTML[["head_bg"]], ';font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:', BEE_TEAL[[6]], ';border-bottom:2px solid ', BEE_TEAL[[3]], ';white-space:nowrap}'),
+paste0('table.t th{position:sticky;top:0;z-index:2;background:', BEE_HTML[["head_bg"]], ';font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:', BEE_TEAL[[6]], ';border-bottom:2px solid ', BEE_TEAL[[3]], ';white-space:nowrap}'),
 paste0('table.t tbody tr:nth-child(even){background:', BEE_TABLE[["row_even"]], '}'),
 paste0('table.t tbody tr:hover{background:', BEE_HTML[["row_hover"]], '}'),
 'table.t th.num{text-align:right}table.t td.num{text-align:right;font-variant-numeric:tabular-nums}',
@@ -231,11 +273,13 @@ paste0('table.t tbody tr:hover{background:', BEE_HTML[["row_hover"]], '}'),
 'table.t.compact td,table.t.compact th{padding-right:30px}',
 paste0('.yes{color:', BEE_TEAL[[5]], ';font-weight:700;font-size:15px}'),
 '.no{color:#c8c6c0}',
+'.iucn{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700}',
+bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),   # IUCN chips (all NE here)
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
-'<h1>Native Bee Summary Tables</h1>',
+'<h1>Native Bee Summary Tables &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-'<p class="sub">Plain counts for the data-focused NPS report &mdash; deliberately no tests, rates, or interpretation. Every number here is a straight count a reader can cite.</p>',
+sprintf('<p class="sub">A by-the-numbers look at the native bees of Cabrillo National Monument. How many native bees have been found, and the flowers they visit. So far: <b>%s bee genera</b>, <b>%s species</b>, and <b>%s subspecies</b>, recorded on <b>%s plant genera</b>. Everything here is a plain count you can look up and cite, with no statistics or interpretation, just what was recorded in the field.</p>', n_bg, n_bs, n_bss, n_pg),
 df_to_html(part,            cap_part,   "1. Participation", metric_col = TRUE),
 df_to_html(bees_summary,    cap_bees,   "2. Bees found",    metric_col = TRUE),
 df_to_html(methods_tbl,     cap_meth,   "3. Records by method x surveyor type"),
@@ -281,9 +325,9 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("NPS summary tables written to ", OUT_DIR, ":")
-message(sprintf("  participation: %s trips, %s field surveyors, %s iNat users, %s",
-                part$value[part$metric=="survey_trips"], part$value[part$metric=="unique_field_surveyors"],
-                part$value[part$metric=="unique_inaturalist_users"], part$value[part$metric=="years_covered"]))
+message(sprintf("  participation: %s surveys (%s), %s dedicated surveyors, %s public contributors",
+                part$value[part$metric=="total_surveys"], part$value[part$metric=="years_covered"],
+                part$value[part$metric=="dedicated_surveyors"], part$value[part$metric=="public_contributors"]))
 message(sprintf("  bees: %s genera, %s species, %s subspecies (%s records)",
                 bees_summary$value[bees_summary$metric=="genera_total"],
                 bees_summary$value[bees_summary$metric=="species_total"],
