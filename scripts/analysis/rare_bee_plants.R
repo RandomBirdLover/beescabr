@@ -87,10 +87,9 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_s
     if (length(m) == 3) bquote(.(m[2]) ~ "(" * italic(.(m[3])) * ")") else bquote(italic(.(s)))
   }))) +
   labs(title = "Plant Hubs for the Park's Rare Bees",
-       subtitle = "A few plants are shared hubs for many of the park's rare bees -- the priorities to protect.",
-       caption = paste0(str_wrap(sprintf("Bar = how many different rare bees (< %d records) were recorded on that plant -- where sightings fall, not a tested preference.", RARE_CUT), 104), "\n",
-                        str_wrap(scope_cap(sprintf("%d rare bee species (< %d records); hubs used by 2+", length(rare_keys), RARE_CUT),
-                            "lethal + non-lethal pooled", "plant genus"), 96)),
+       subtitle = "A few plants host many of the park's rare bees -- shared hubs worth prioritising (counts of where records fall, not a tested preference).",
+       caption = str_wrap(scope_cap(sprintf("%d rare bee species (< %d records); hubs used by 2+", length(rare_keys), RARE_CUT),
+                            "lethal + non-lethal pooled", "plant genus"), 96),
        x = "rare bee species recorded", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(hjust = 0.5),
@@ -187,17 +186,25 @@ panel_of <- setNames(vapply(tot$label, function(L) {
 plot_df  <- pg %>% mutate(panel = panel_of[label], row_key = paste(label, plant_genus, sep = "@@"))
 lev <- plot_df %>% arrange(visits, plant_genus) %>% pull(row_key)
 plot_df$row_key <- factor(plot_df$row_key, levels = unique(lev))
+# flag each bee's availability-corrected PREFERRED plant -> gold heart by its name + gold-outlined bar
+plot_df$is_pref <- mapply(function(L, g) { p <- pref_of[[as.character(L)]]$pref; isTRUE(!is.null(p) && !is.na(p) && g == p) },
+                          plot_df$label, plot_df$plant_genus)
 gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   geom_col(width = 0.72) +
+  geom_col(data = plot_df[plot_df$is_pref, , drop = FALSE], aes(x = visits, y = row_key),
+           inherit.aes = FALSE, fill = NA, colour = BEE_SELECT, linewidth = 1.7, width = 0.72) +   # gold-OUTLINED bar = the plant this bee selects FOR
+  geom_point(data = plot_df[plot_df$is_pref, , drop = FALSE], aes(x = visits, y = row_key),
+             inherit.aes = FALSE, fill = BEE_SELECT, colour = "white", stroke = 1.1, size = 5, shape = 23) +   # gold diamond at the selected bar's end
   facet_wrap(~ panel, ncol = 1, scales = "free") +
   scale_y_discrete(labels = function(x) as.expression(plant_label_expr(sub("^.*@@", "", x)))) +   # plant: common upright, Latin italic
   scale_fill_gradientn(colors = BEE_RARE, guide = "none") +   # RED rare/urgent ramp: gradient shades the count
   scale_x_continuous(expand = expansion(mult = c(0, 0.03))) +
   labs(title = "Plant Hubs for the Park's IUCN-Threatened Bees",
-       subtitle = "The park's threatened bees lean on a few key plants -- Deervetch and Milkvetches recur across them.",
-       caption = paste0(str_wrap("Bars = where each bee's records fall (what it was recorded on, not corrected for bloom). A preferred plant is named only for bees with >= 20 records.", 104), "\n",
-                        str_wrap(scope_cap("IUCN-threatened bees (CR/EN/VU); live from the IUCN Red List",
-                            "lethal + non-lethal pooled", "plant genus"), 92)),
+       subtitle = "Bars = where records fall (plant abundance x survey effort). The gold diamond marks the plant each bee selects FOR (availability-corrected) -- often not its tallest bar.",
+       caption = paste0(str_wrap(scope_cap("IUCN-threatened bees (CR/EN/VU); live from the IUCN Red List",
+                            "lethal + non-lethal pooled", "plant genus",
+                            control = "plant availability, matched to month x year x method"), 92), "\n",
+                        str_wrap("Favourite named only at >= 20 records; bars are raw records (not corrected for bloom).", 104)),
        x = "plant visits", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(hjust = 0.5),
@@ -213,62 +220,103 @@ bee_ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,
 #    availability-corrected favourite). One clean radial per bee, made for slides.
 # =============================================================================
 FLOWER_TOP <- 8                                                   # cap petals so the ring stays readable
-iucn_of    <- setNames(sprintf("IUCN %s", unname(threat_status[NAMED$species_key])), NAMED$label)
+sci_of     <- setNames(NAMED$species_key, NAMED$label)   # scientific name per bee (for the slide header)
 common_of  <- setNames(ifelse(!is.na(cn_map[NAMED$species_key]) & nzchar(cn_map[NAMED$species_key]),
                               cn_map[NAMED$species_key], NAMED$species_key), NAMED$label)
-petal_expr <- function(g) { lab <- plant_label(g)                 # petal label: common name (roman) or, if none, the genus (italic)
-  if (grepl("^\\(", lab)) bquote(italic(.(g))) else bquote(.(sub(" \\(.*$", "", lab))) }
+petal_expr <- function(g) { cn <- plant_common_name(g)            # petal label: common name (roman) or, if none, the bare genus (italic)
+  if (is.na(cn) || !nzchar(cn)) bquote(italic(.(g))) else bquote(.(cn)) }
 
 # a tiny bee drawn from shapes (the png device here won't render the emoji glyph) -- gold body,
 # dark stripes, pale wings; sits on the crimson centre node.
-draw_bee <- function(cx = 0, cy = 0) {
-  ell <- function(ox, oy, rx, ry) { t <- seq(0, 2*pi, length.out = 60); list(x = cx+ox+rx*cos(t), y = cy+oy+ry*sin(t)) }
+draw_bee <- function(cx = 0, cy = 0, s = 1) {   # s scales the whole bee (bigger centre node -> bigger bee)
+  ell <- function(ox, oy, rx, ry) { t <- seq(0, 2*pi, length.out = 60); list(x = cx+s*ox+s*rx*cos(t), y = cy+s*oy+s*ry*sin(t)) }
   w <- adjustcolor("#F5F3EE", 0.92)
   wl <- ell(-0.055, 0.11, 0.10, 0.066); polygon(wl$x, wl$y, col = w, border = adjustcolor("#7d7d7d", 0.5))
   wr <- ell( 0.055, 0.11, 0.10, 0.066); polygon(wr$x, wr$y, col = w, border = adjustcolor("#7d7d7d", 0.5))
   b  <- ell(0, 0, 0.17, 0.115); polygon(b$x, b$y, col = "#E8B93B", border = "#2a2208", lwd = 1.6)   # gold body
-  for (dx in c(-0.075, -0.005, 0.065)) segments(cx+dx, cy-0.093, cx+dx, cy+0.093, col = "#2a2208", lwd = 3.4)  # stripes
+  for (dx in c(-0.075, -0.005, 0.065)) segments(cx+s*dx, cy-s*0.093, cx+s*dx, cy+s*0.093, col = "#2a2208", lwd = 3.4)  # stripes
   h <- ell(0.185, 0, 0.055, 0.06); polygon(h$x, h$y, col = "#2a2208", border = NA)   # head
 }
 
-draw_flower <- function(lbl) {
+draw_flower <- function(lbl, big = FALSE) {   # big = standalone slide version: wider ring, larger photo-ready petals
   d <- pg[pg$label == lbl, ]; d <- d[order(-d$visits), ]
   if (nrow(d) > FLOWER_TOP) d <- d[seq_len(FLOWER_TOP), ]
   N <- nrow(d); v <- d$visits; wmax <- max(v)
   vr   <- if (wmax > min(v)) (v - min(v)) / (wmax - min(v)) else rep(0.7, N)   # crimson shade by visits (the gradient kept)
   pcol <- grDevices::colorRampPalette(BEE_RARE)(101)[round(vr * 100) + 1]
-  ang  <- pi/2 - 2*pi*(seq_len(N) - 1)/N; R <- 0.72                 # petals clockwise from the top, most-visited first
+  R    <- if (big) 1.18 else 0.72                                  # ring radius: wider when standalone
+  ang  <- pi/2 - 2*pi*(seq_len(N) - 1)/N                           # petals clockwise from the top, most-visited first
   px <- R*cos(ang); py <- R*sin(ang)
   pf <- pref_of[[lbl]]$pref
-  plot.new(); plot.window(xlim = c(-1.7, 1.7), ylim = c(-1.45, 1.6), asp = 1)
-  for (i in seq_len(N)) segments(0, 0, px[i], py[i], lwd = 1 + 8*v[i]/wmax, col = adjustcolor(pcol[i], 0.6))  # spoke width = visits
-  ns <- 0.05 + 0.11*sqrt(v/wmax)
-  symbols(px, py, circles = ns, inches = FALSE, add = TRUE, bg = pcol, fg = "white", lwd = 1.5)
+  wx <- if (big) c(-2.35, 2.35) else c(-1.7, 1.7)
+  wy <- if (big) c(-2.15, 2.35) else c(-1.45, 1.6)
+  plot.new(); plot.window(xlim = wx, ylim = wy, asp = 1)
+  for (i in seq_len(N)) segments(0, 0, px[i], py[i], lwd = 1 + (if (big) 12 else 8)*v[i]/wmax, col = adjustcolor(pcol[i], 0.6))  # spoke width = visits
+  ns <- (if (big) 0.17 else 0.05) + (if (big) 0.15 else 0.11)*sqrt(v/wmax)   # big: floor 0.17 so every circle is photo-sized
+  symbols(px, py, circles = ns, inches = FALSE, add = TRUE, bg = pcol, fg = "white", lwd = if (big) 2.5 else 1.5)
   if (!is.null(pf) && !is.na(pf) && pf %in% d$plant_genus) {        # gold ring = availability-corrected favourite
     j <- match(pf, d$plant_genus)
-    symbols(px[j], py[j], circles = ns[j] + 0.035, inches = FALSE, add = TRUE, fg = BEE_WEB[["bee"]], bg = NA, lwd = 3)
+    symbols(px[j], py[j], circles = ns[j] + (if (big) 0.055 else 0.035), inches = FALSE, add = TRUE, fg = BEE_SELECT, bg = NA, lwd = if (big) 5.5 else 3.5)
   }
-  lx <- px + (ns + 0.09)*cos(ang); ly <- py + (ns + 0.09)*sin(ang)
+  lx <- px + (ns + (if (big) 0.14 else 0.09))*cos(ang); ly <- py + (ns + (if (big) 0.14 else 0.09))*sin(ang)
   adjx <- ifelse(cos(ang) > 0.15, 0, ifelse(cos(ang) < -0.15, 1, 0.5))
-  for (i in seq_len(N)) text(lx[i], ly[i], petal_expr(d$plant_genus[i]), adj = c(adjx[i], 0.5), cex = 0.78, col = BEE_INK$primary)
-  symbols(0, 0, circles = 0.25, inches = FALSE, add = TRUE, bg = BEE_RARE[[5]], fg = "white", lwd = 2)   # centre node
-  draw_bee(0, 0)                                                                                          # the bee, drawn from shapes
-  text(0, 1.46, common_of[lbl], font = 2, cex = 1.0, col = BEE_INK$primary)
-  text(0, 1.28, iucn_of[lbl],   cex = 0.72, col = BEE_INK$secondary)
+  cexlab <- if (big) 1.05 else 0.78
+  for (i in seq_len(N)) {
+    lab <- petal_expr(d$plant_genus[i])
+    text(lx[i], ly[i], lab, adj = c(adjx[i], 0.5), cex = cexlab, col = BEE_INK$primary)
+    if (!is.null(pf) && !is.na(pf) && d$plant_genus[i] == pf) {   # gold heart next to the selected plant's name
+      w <- strwidth(lab, cex = cexlab)
+      if (cos(ang[i]) < -0.15) { hx <- lx[i] - w - 0.02; hadj <- 1 } else { hx <- lx[i] + w * (1 - adjx[i]) + 0.02; hadj <- 0 }
+      text(hx, ly[i], "♥", adj = c(hadj, 0.5), cex = cexlab * 1.15, col = BEE_SELECT)
+    }
+  }
+  cr <- if (big) 0.34 else 0.25
+  # centre node: on slides (big) leave it an EMPTY circle so a real bee photo can be dropped in; combined figure keeps the drawn bee
+  symbols(0, 0, circles = cr, inches = FALSE, add = TRUE, bg = if (big) "white" else BEE_RARE[[5]], fg = if (big) BEE_INK$muted else "white", lwd = 2)
+  if (!big) draw_bee(0, 0, s = cr / 0.25)                                                               # drawn bee only in the combined report figure
+  text(0, wy[2] - (if (big) 0.20 else 0.14), common_of[lbl], font = 2, cex = if (big) 1.35 else 1.0, col = BEE_INK$primary)
+  # header line: scientific name (italic) + IUCN category in BOLD (keeps the "(as ...)" assessed name)
+  .sci  <- sci_of[[lbl]]
+  .cs   <- unname(threat_status[.sci]); .p <- strsplit(.cs, " (as ", fixed = TRUE)[[1]]
+  .catw <- .p[1]; .asp <- if (length(.p) > 1) paste0("(as ", .p[2]) else ""
+  .sub  <- if (nzchar(.asp)) bquote(italic(.(.sci)) * "   ·   IUCN " * bold(.(.catw)) * "  " * .(.asp))
+           else              bquote(italic(.(.sci)) * "   ·   IUCN " * bold(.(.catw)))
+  text(0, wy[2] - (if (big) 0.46 else 0.32), .sub, cex = if (big) 0.92 else 0.72, col = BEE_INK$secondary)
 }
 ord <- tot$label[order(-tot$n_records)]                            # biggest-sampled bee first
+# DELETED (superseded by the per-bee flower SLIDES below): the combined 3-panel flower figure.
+# Kept disabled for reference -- flip `if (FALSE)` -> `if (TRUE)` to bring it back.
+if (FALSE) {
 bee_png(file.path(OUT_DIR, "rare_threatened_bee_flowers.png"), width = 720*length(ord), height = 1080, res = 200)
 bee_base_par(); par(mfrow = c(1, length(ord)), mar = c(1, 1, 1, 1), oma = c(5.2, 0, 3.2, 0), xpd = NA)
 for (lbl in ord) draw_flower(lbl)
 mtext("Plants the Park's Threatened Bees Rely On", side = 3, outer = TRUE, font = 2, cex = 1.15, col = BEE_INK$primary, line = 1.5)
 mtext("A handful of plants -- Deervetch, Milkvetches, Wirelettuces -- carry the park's threatened bees.",
       side = 3, outer = TRUE, cex = 0.82, col = BEE_INK$secondary, line = 0.4)   # takeaway
-# standardized caption: figure note first, then the shared scope_cap provenance line(s)
-mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring = its availability-corrected favourite.",
-      side = 1, outer = TRUE, cex = 0.72, col = BEE_INK$secondary, line = 0.9)
+# standardized caption: scope_cap provenance FIRST (top of the block), then the glyph-legend note
 .fprov <- strsplit(scope_cap(scope = "IUCN-threatened bees (CR/EN/VU); plant records pooled, live from the IUCN Red List",
                              method = "lethal + non-lethal pooled", rank = "plant genus"), "\n")[[1]]
-for (.k in seq_along(.fprov)) mtext(.fprov[.k], side = 1, outer = TRUE, cex = 0.66, col = BEE_INK$secondary, line = 1.9 + 0.9 * (.k - 1))
+for (.k in seq_along(.fprov)) mtext(.fprov[.k], side = 1, outer = TRUE, cex = 0.66, col = BEE_INK$secondary, line = 0.9 + 0.9 * (.k - 1))
+mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favourite.",
+      side = 1, outer = TRUE, cex = 0.72, col = BEE_INK$secondary, line = 0.9 + 0.9 * length(.fprov))
 dev.off()
+}  # end DELETED combined 3-panel flower figure
 
-message("Wrote rare_bee_plant_hubs.{png,csv} + rare_named_bee_plants.{png,csv} + rare_threatened_bee_flowers.png to ", OUT_DIR)
+# ---- standalone per-bee flower SLIDES: one file each, wider ring + big photo-ready petals ----
+.slug <- function(s) gsub("(^_|_$)", "", tolower(gsub("[^A-Za-z0-9]+", "_", s)))
+for (lbl in ord) {
+  fn <- file.path(OUT_DIR, sprintf("rare_flower_%s.png", .slug(common_of[lbl])))
+  bee_png(fn, width = 1500, height = 1550, res = 200)
+  bee_base_par(); par(mar = c(1, 1, 1, 1), oma = c(4.6, 0.5, 1, 0.5), xpd = NA)
+  draw_flower(lbl, big = TRUE)
+  .sp <- strsplit(scope_cap(scope = "IUCN-threatened bees (CR/EN/VU); plant records pooled, live from the IUCN Red List",
+                            method = "lethal + non-lethal pooled", rank = "plant genus",
+                            control = "plant availability, matched to month x year x method"), "\n")[[1]]
+  for (.k in seq_along(.sp)) mtext(.sp[.k], side = 1, outer = TRUE, cex = 0.62, col = BEE_INK$secondary, line = 0.5 + 0.85 * (.k - 1))
+  mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favourite.",
+        side = 1, outer = TRUE, cex = 0.66, col = BEE_INK$secondary, line = 0.5 + 0.85 * length(.sp))
+  dev.off()
+  message("  wrote slide: ", basename(fn))
+}
+
+message("Wrote rare_bee_plant_hubs.{png,csv} + rare_named_bee_plants.{png,csv} + per-bee rare_flower_*.png slides to ", OUT_DIR)

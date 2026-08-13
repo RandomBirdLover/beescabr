@@ -53,13 +53,13 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
        subtitle = sprintf("Non-lethal photos logged far more survey trips than lethal netting (%d vs %d) -- the effort behind the catch.",
                           tr$trips[tr$method == "non-lethal"], tr$trips[tr$method == "lethal"]),
        caption = paste0(
-         str_wrap(paste0(
-           "Note: a lethal (net) trip covers all 3 transects, while a non-lethal (photo) trip covers one -- ",
-           "so raw trip counts understate lethal's per-trip coverage."), 108),
-         "\n",
          scope_cap(scope  = "fair window: survey trips only, Mar-Oct 2021-2023 (excludes trips outside the lethal-netting years)",
                    method = "lethal vs non-lethal",
-                   rank   = "trips (survey effort)")),
+                   rank   = "trips (survey effort)"),
+         "\n",
+         str_wrap(paste0(
+           "A lethal (net) trip covers all 3 transects, while a non-lethal (photo) trip covers one -- ",
+           "so raw trip counts understate lethal's per-trip coverage."), 108)),
        x = NULL, y = "survey trips") +
   theme_beescabr(12) +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

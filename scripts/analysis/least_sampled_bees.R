@@ -76,7 +76,7 @@ coverage_of <- function(net, photo)
 top2 <- function(x) { x <- x[has(x)]; if (!length(x)) return("-")
   tb <- sort(table(x), decreasing = TRUE); paste(names(tb)[seq_len(min(2, length(tb)))], collapse = ", ") }
 peak_mo <- function(m) { m <- m[!is.na(m)]; if (!length(m)) return("-")
-  tb <- sort(table(m), decreasing = TRUE); paste(month.abb[as.integer(names(tb)[seq_len(min(2, length(tb)))])], collapse = ", ") }
+  tb <- sort(table(m), decreasing = TRUE); month.abb[as.integer(names(tb)[1])] }   # single busiest month
 span_mo <- function(m) { m <- m[!is.na(m)]; if (!length(m)) return("-")
   r <- range(m); if (r[1] == r[2]) month.abb[r[1]] else paste0(month.abb[r[1]], "-", month.abb[r[2]]) }
 mode_chr <- function(x) { x <- x[has(x)]; if (!length(x)) return("") ; names(sort(table(x), decreasing = TRUE))[1] }
@@ -88,7 +88,9 @@ ctx <- lapply(split_tbl$species, function(k) {
   fl_top <- if (length(fl)) names(sort(table(fl), decreasing = TRUE))[seq_len(min(3, length(unique(fl))))] else character(0)
   data.frame(
     species       = k,
-    common_name   = mode_chr(d$common),
+    # species-level row -> take the SPECIES vernacular, not a subspecies' name that may
+    # dominate the pooled records (see A. urbana vs its clementina subspecies in the field guide).
+    common_name   = { cn <- mode_chr(d$common[d$taxon_rank == "species"]); if (cn == "") cn <- mode_chr(d$common); cn },
     peak_months   = peak_mo(d$month),
     active_window = span_mo(d$month),
     top_transects = top2(d$transect),
@@ -136,37 +138,29 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   cov_icon <- if (grepl("^photo", r$coverage))    ' <span class="vneed" title="specimen voucher needed -- photographed but never netted; go net one">&#128300;</span>'       # microscope = collect a voucher
          else if (grepl("^specimen", r$coverage)) ' <span class="vneed" title="photographs needed -- collected but never photographed; go photograph one">&#128247;</span>'  # camera = take more photos
          else ""
-  sprintf(paste0('<tr>%s<td class="num">%d</td><td class="num">%d</td><td class="num">%d</td>',
-                 '<td><span class="pill %s">%s</span>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td>%s</tr>'),
-          bee_td, r$net_records, r$photo_records, r$total_records,
-          cov_class(r$coverage), esc(r$coverage), cov_icon, esc(r$peak_months), esc(r$active_window),
-          esc(r$top_transects), fl, iucn_td)
+  sprintf(paste0('<tr>%s%s<td class="num">%d</td><td class="num">%d</td><td class="num">%d</td>',
+                 '<td style="white-space:nowrap"><span class="pill %s">%s</span>%s</td><td>%s</td><td>%s</td><td class="loc">%s</td><td>%s</td></tr>'),
+          bee_td, iucn_td, r$net_records, r$photo_records, r$total_records,
+          cov_class(r$coverage), esc(r$coverage), cov_icon, esc(r$active_window), esc(r$peak_months),
+          esc(r$top_transects), fl)
 }, character(1))
 iucn_th <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 html <- paste0(
-'<!doctype html><html><head><meta charset="utf-8"><title>CABR Least-Sampled Bees</title><style>',
-'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb}',
-'h1{font-size:20px;margin:0 0 2px}p.sub{color:#6b6a66;margin:0 0 14px;font-size:13px}',
-'p.scope{color:#52514e;margin:0 0 8px;font-size:12px;font-weight:600;border-left:3px solid #d8d5cc;padding-left:8px}',
-'table{border-collapse:collapse;width:100%;font-size:13px}',
-'th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}',
-'th{position:sticky;top:0;background:#f3f1ec;cursor:pointer;font-weight:600;white-space:nowrap;border-bottom:2px solid #ddd}',
-'th:hover{background:#e8e5de}tr:hover{background:#f7f6f2}',
-'td.bee i{color:#111}td .cn{display:block;color:#8a8880;font-size:11px}sup.cs{color:#8a1c1c;font-weight:700}',
-'td.num{text-align:right;font-variant-numeric:tabular-nums}td.loc{color:#52514e;font-size:12px}',
-'.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
+'<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Least-Sampled Native Bees</title><style>',
+bee_table_css(),                                                                   # shared base table chrome (single source -- theme_beescabr.R)
 bee_badge_css(BEE_COVERAGE_BG, BEE_COVERAGE_FG, function(k) paste0(".pill.", k)),   # coverage pills from theme tokens
 '.vneed{font-size:12px;vertical-align:middle}',
-'.iucn{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}',
-bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),   # IUCN chips from theme tokens
+bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),         # IUCN chips from theme tokens
 'a{color:#3a6b8a;text-decoration:none}',
 '</style></head><body>',
-'<h1>CABR least-sampled native bees &mdash; go-find-it sheet</h1>',
-sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND by iNaturalist. <b>Coverage</b> shows the split: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. A &#128247; marks specimen-only species that need photographs (go photograph one); a &#128300; marks photo-only species that need a specimen voucher (go net one). When / where / flower are pooled across both methods (peak months by record count; active window = month span seen; where = top transect(s); flower = most-recorded plant genera). %s links an example iNaturalist observation. Click a header to sort.</p>',
+'<div class="org">Cabrillo National Monument</div>',
+'<h1>Least-Sampled Native Bees</h1>',
+'<div class="byline">by Brandi Sanchez</div>',
+sprintf('<p class="sub">The %d bee species with fewer than %d records TOTAL across both methods &mdash; under-detected by netting AND iNaturalist. <b>Coverage</b>: <span class="pill cb">both (thin)</span> a few of each, <span class="pill cp">photo-only</span> never netted (needs a voucher), <span class="pill cs">specimen-only</span> never photographed. &#128247; = specimen-only, go photograph one; &#128300; = photo-only, go net one. When/where/flower are pooled across methods. %s links an example iNaturalist observation. Click a header to sort.</p>',
         nrow(tbl), THIN_TOTAL, INAT_ICON),
 sprintf('<p class="scope">%s</p>', esc(scope_str)),
-'<table id="t"><thead><tr><th>Bee</th><th class="num">Net</th><th class="num">Photo</th><th class="num">Total</th>',
-'<th>Coverage</th><th>Peak months</th><th>Active window</th><th>Where (transect)</th><th>Top flowers</th>', iucn_th,
+'<table id="t"><thead><tr><th>Bee</th>', iucn_th, '<th class="num">Net</th><th class="num">Photo</th><th class="num">Total</th>',
+'<th>Coverage</th><th>Active window</th><th>Peak month</th><th>Where (transect)</th><th>Top flowers</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<script>',
 'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
@@ -183,9 +177,9 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
   disp <- tbl %>% transmute(
     Bee = ifelse(has(conservation), paste0(species, " *"), species),
     Net = net_records, Photo = photo_records, Total = total_records, Coverage = coverage,
-    `Peak months` = peak_months, `Active` = active_window,
+    `Active` = active_window, `Peak month` = peak_months,
     `Where` = top_transects, `Top flowers` = top_flowers)
-  if (HAVE_IUCN) disp$IUCN <- ifelse(has(tbl$iucn), tbl$iucn, "NE")
+  if (HAVE_IUCN) { disp$IUCN <- ifelse(has(tbl$iucn), tbl$iucn, "NE"); disp <- dplyr::relocate(disp, IUCN, .after = Bee) }
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,

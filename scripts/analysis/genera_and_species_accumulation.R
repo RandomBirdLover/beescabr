@@ -169,7 +169,7 @@ plot_accumulation <- function(key_col, rank_label, file) {
   bee_base_par()                     # house-style fonts + muted axis/label colours
   op <- par(mar = c(4.2, 4.4, 4.6, 1), oma = c(2.4, 0, 0, 0))
   plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
-       xlab = "Number of surveys", ylab = paste("Number of", rank_label))
+       xlab = "surveys", ylab = paste(rank_label, "recorded"))
   LTY <- if (startsWith(rank_label, "gen")) 2 else 1       # house rule: GENUS figure = dashed lines, species = solid
   for (tr in names(sacs))                                  # one curve per transect (methods pooled)
     lines(sacs[[tr]]$sites, sacs[[tr]]$richness, col = COLS[tr], lwd = 2.8, lty = LTY)
@@ -225,8 +225,8 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
   legend("center", title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
          col = METHOD_COL[c("lethal", "nonlethal")], lwd = 2.8, lty = LTY[c("lethal", "nonlethal")],
          bty = "n", cex = 1.1, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
-  mtext("Number of surveys", side = 1, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
-  mtext(paste("Number of", rank_label), side = 2, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
+  mtext("surveys", side = 1, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
+  mtext(paste(rank_label, "recorded"), side = 2, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
   mtext(sprintf("Native Bee %s Accumulation: Lethal vs Non-Lethal by Transect",
                 paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
         side = 3, outer = TRUE, line = 2.4, col = BEE_INK$primary, font = 2, cex = 1.05)

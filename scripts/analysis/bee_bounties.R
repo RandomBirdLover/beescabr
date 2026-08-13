@@ -147,29 +147,44 @@ message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} 
 
 # ---- 5. two bounty maps -- each uses the spatial data that exists for its taxa ----
 # Specimen bounty taxa ARE in iNaturalist -> real GPS points (where to net them).
-# iNat bounty taxa exist ONLY as specimens, whose coords are transect centroids
-# (980 records -> ~18 points), so we don't map fake points: we shade the transect
-# CORRIDOR (its iNat trail buffered) = "walk this stretch to photograph it".
+# iNat bounty taxa exist ONLY as specimens, whose coords are transect centroids, so we don't map fake
+# points: we draw the real transect LINES from the GIS shapefile and list each one's photo-targets.
 TR <- c("BST", "UPMON", "TP", "OT")
-HALF_WIDTH_M <- 5                                    # corridor half-width (~10 m band, tight to the trail)
 inat_geo <- inat %>% filter(!is.na(lat), !is.na(lon), transect %in% TR)
-# These maps are now INTERACTIVE HTML (leaflet) -- the flat static scatter wasn't legible. Each opens
-# with a Satellite/Street basemap you can toggle, every point/corridor has a click popup, and colours
-# follow the bounty rule: collect-targets = non-lethal blue (iNat records we have); specimen locations
-# = lethal red (specimen records we have). Saved as a SINGLE self-contained .html (like every other
-# HTML in this project) when pandoc is available; falls back to a lib/ folder only if pandoc is missing.
+
+# --- per-species popup detail (both maps): month WINDOW + one flower field -- the SELECTIVE favourite
+#     where the availability test can run (>= 50 flower-visit records), else the MOST-RECORDED plant. ---
+if (!exists("selectivity_table_species")) source("scripts/analysis/forage_selectivity.R")
+.sel_fav <- { st <- selectivity_table_species()          # taxon -> selective favourite plant (NA if none)
+  setNames(ifelse(st$selective & !is.na(st$preferred_plant), st$preferred_plant, NA_character_), st$taxon) }
+.detail_tbl <- function(src, taxa) {                       # window (month range) + top plant per taxon
+  src$tkey <- ifelse(!is.na(src$species_key) & src$species_key != "", src$species_key, src$genus_key)
+  src <- src[!is.na(src$tkey) & src$tkey %in% taxa, ]
+  src %>% group_by(taxon = tkey) %>% summarise(
+    win = { m <- month[!is.na(month)]; if (!length(m)) "\U2014" else { r <- range(m)
+            if (r[1] == r[2]) month.abb[r[1]] else paste0(month.abb[r[1]], "\U2013", month.abb[r[2]]) } },
+    top = { p <- plant[!is.na(plant) & plant != ""]; if (!length(p)) NA_character_ else names(sort(table(p), decreasing = TRUE))[1] },
+    .groups = "drop") }
+.detail_html <- function(taxon, win, top) {                # muted "window: … · favorite flower / most recorded on: …"
+  fav <- unname(.sel_fav[taxon])
+  flower <- if (!is.na(fav)) sprintf("favorite flower: <i>%s</i>", fav)
+            else if (!is.na(top)) sprintf("most recorded on: <i>%s</i>", top) else NA_character_
+  bits <- c(sprintf("window: %s", if (is.na(win)) "\U2014" else win), flower); bits <- bits[!is.na(bits)]
+  sprintf('<span style="color:%s;font-weight:400">%s</span>', BEE_HTML[["sub"]], paste(bits, collapse = " \U00B7 ")) }
+# These maps are INTERACTIVE HTML (leaflet): a Satellite/Street basemap you can toggle, the NPS park
+# boundary outlined, every point/line has a click popup, colours from the house palette. Saved as a
+# SINGLE self-contained .html when pandoc is available; falls back to a lib/ folder if pandoc is missing.
 
 # --- 5a. Specimen Bee Bounty: iNat sightings of the collect-targets (blue) ---
 sb_sp <- specimen_bounty$taxon[specimen_bounty$rank == "species"]
 sb_gn <- specimen_bounty$taxon[specimen_bounty$rank == "genus"]
 sb_tgt <- inat_geo %>% filter(species_key %in% sb_sp | genus_key %in% sb_gn) %>%
-  mutate(taxon = ifelse(!is.na(species_key) & species_key != "", species_key, genus_key),
-         popup = sprintf("<b><i>%s</i></b><br>peak month: %s<br>flower: %s%s",
-                         ifelse(is.na(taxon), "bee", taxon),
-                         ifelse(is.na(month), "?", month.abb[month]),
-                         ifelse(is.na(plant) | plant == "", "—", plant),
-                         ifelse(is.na(url) | url == "", "",
-                                sprintf('<br><a href="%s" target="_blank">iNaturalist observation ↗</a>', url))))
+  mutate(taxon = ifelse(!is.na(species_key) & species_key != "", species_key, genus_key))
+sb_tgt <- dplyr::left_join(sb_tgt, .detail_tbl(inat, unique(sb_tgt$taxon)), by = "taxon")   # aggregate window + flower
+sb_tgt$popup <- mapply(function(taxon, win, top, url)
+  sprintf('<b><i>%s</i></b><br>%s%s', ifelse(is.na(taxon), "bee", taxon), .detail_html(taxon, win, top),
+          if (is.na(url) || url == "") "" else sprintf('<br><a href="%s" target="_blank">iNaturalist observation \U2197</a>', url)),
+  sb_tgt$taxon, sb_tgt$win, sb_tgt$top, sb_tgt$url)
 # colour every collect-target by its FAMILY hue (BEE_FAMILY -- distinct hues), then within a family
 # spread the taxa across a light->dark ramp of that hue ORDERED by genus,species -- so each genus is a
 # contiguous shade band and species within a genus are adjacent steps. Legend is keyed to family; the
@@ -196,44 +211,33 @@ fam_present <- intersect(BEE_FAMILY_ORDER, unique(taxo$fam))   # families for th
 # the family hue -- so you can read a specific dot's genus. Representative colour = the genus band's midpoint.
 genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
   group_by(fam, genus) %>% summarise(col = tcol[ceiling(dplyr::n() / 2)], .groups = "drop")
-.dot <- function(col) sprintf('<span style="display:inline-block;width:10px;height:10px;border-radius:50%%;background:%s;margin-right:5px;vertical-align:middle"></span>', col)
-genus_html <- paste0(
-  '<div style="background:rgba(255,255,255,0.92);padding:6px 9px;border-radius:5px;font:12px -apple-system,sans-serif;max-height:74vh;overflow:auto;box-shadow:0 1px 4px rgba(0,0,0,.3)">',
-  '<div style="font-weight:700">collect-target genus \U0001F52C</div>',
-  '<div style="font-weight:400;font-size:11px;color:#555;margin-bottom:3px">net a voucher \U00B7 species in popup</div>',
-  paste(vapply(fam_present, function(fm) {
-    gg <- genus_leg[genus_leg$fam == fm, ]
-    paste0(sprintf('<div style="font-weight:700;color:%s;margin-top:4px">%s</div>', unname(BEE_FAMILY[fm]), fm),
-           paste(sprintf('<div style="margin-left:4px">%s<i>%s</i></div>', .dot(gg$col), gg$genus), collapse = ""))
-  }, character(1)), collapse = ""),
-  '</div>')
+.dot <- function(col) sprintf('<span style="display:inline-block;width:11px;height:11px;border-radius:50%%;background:%s;margin-right:7px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.14)"></span>', col)
+# shared white-card chrome for the map title + side legends -- matches the report tables' look
+.CARD <- sprintf("background:%s;border:1px solid %s;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:%s",
+                 BEE_HTML[["page"]], BEE_HTML[["border"]], BEE_HTML[["ink"]])
+# a genus legend grouped under its family: NPS eyebrow, teal heading, family rows with a coloured
+# accent bar (its hue) + dark name, genera indented + italic with their colour dot.
+# Composable legend pieces (the map's title/instructions live in the title card, NOT here):
+#   .col_title  -- a short uppercase section label for a legend column
+#   .genus_block -- FAMILY (uppercase roman header + hue accent bar) > GENUS (indented italic + dot)
+#   .tran_block  -- transect rows, each a short line swatch in its transect hue
+#   .legend_wrap -- the shared white card around whatever columns get passed
+.col_title   <- function(t) sprintf('<div style="font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:%s;margin:0 0 5px">%s</div>', BEE_TEAL[[4]], t)
+.genus_block <- function(fams, glg) paste(vapply(fams, function(fm) { gg <- glg[glg$fam == fm, ]
+    paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_TEAL[[6]], unname(BEE_FAMILY[fm]), fm),
+           paste(sprintf('<div style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
+  }, character(1)), collapse = "")
+.tran_block  <- function(tks) paste(vapply(tks, function(t) sprintf(
+    '<div style="margin:3px 0;white-space:nowrap"><span style="display:inline-block;width:18px;height:3px;border-radius:2px;background:%s;vertical-align:middle;margin-right:8px"></span>%s</div>',
+    unname(BEE_TRANSECT[t]), t), character(1)), collapse = "")
+.legend_wrap <- function(...) paste0('<div style="', .CARD, ';padding:11px 14px;max-height:76vh;overflow:auto;font-size:12px;line-height:1.4">', ..., '</div>')
+# both legends (genus_html for m1, ib_genus_html for m2) are built together in 5b, once the transect
+# data exists -- they share the same stacked TRANSECT-over-TARGET-GENERA layout.
 
 # --- 5b. iNaturalist Bee Bounty: photo-targets at their transect + the trail to walk ---
 ib_sp <- inat_bounty$taxon[inat_bounty$rank == "species"]
 ib_gn <- inat_bounty$taxon[inat_bounty$rank == "genus"]
-ib_spec <- spec %>% filter(!is.na(lat), !is.na(lon), transect %in% TR,
-                           species_key %in% ib_sp | genus_key %in% ib_gn)
-tr_involved <- sort(unique(ib_spec$transect))
-build_corridor <- function(d) {
-  p <- st_transform(st_as_sf(d, coords = c("lon", "lat"), crs = 4326), 32611)
-  st_sf(transect = d$transect[1],
-        geometry = st_transform(st_sfc(st_union(st_buffer(p, HALF_WIDTH_M)), crs = 32611), 4326))
-}
-corr <- do.call(rbind, lapply(split(inat_geo[inat_geo$transect %in% tr_involved, ],
-                                     inat_geo$transect[inat_geo$transect %in% tr_involved]), build_corridor))
-# per-transect list of photo-targets, for the trail popups
-ib_taxa <- ib_spec %>%
-  mutate(taxon = ifelse(!is.na(species_key) & species_key != "", species_key, genus_key)) %>%
-  filter(!is.na(taxon)) %>% distinct(transect, taxon) %>%
-  group_by(transect) %>% summarise(n = dplyr::n(), taxa = paste(sort(unique(taxon)), collapse = ", "), .groups = "drop")
-corr <- dplyr::left_join(corr, ib_taxa, by = "transect")
-corr$popup <- sprintf("<b>%s trail</b><br>walk this stretch \U00B7 %d taxa to photograph:<br><i>%s</i>",
-                      corr$transect, ifelse(is.na(corr$n), 0L, corr$n),
-                      ifelse(is.na(corr$taxa), "\U2014", corr$taxa))
-# IMPORTANT: specimen coords are transect CENTROIDS -- there is no real per-bee GPS. So we do NOT scatter
-# fake points; we mark each TRANSECT once (at its centroid) and its popup lists that transect's photo-
-# targets, colour-coded by family->genus. The map answers WHERE (which transect to walk); the popup +
-# side legend answer WHAT (the taxa). Colour describes the taxa (a catalogue), never a precise location.
+ib_spec <- spec %>% filter(transect %in% TR, species_key %in% ib_sp | genus_key %in% ib_gn)
 ib_tx <- ib_spec %>%
   mutate(taxon = ifelse(!is.na(species_key) & species_key != "", species_key, genus_key),
          fam   = fam_of(family)) %>%
@@ -245,59 +249,111 @@ for (fm in unique(ib_taxo$fam)) { idx <- which(ib_taxo$fam == fm)
 ib_colmap <- setNames(ib_taxo$tcol, ib_taxo$taxon)
 ib_tx$col <- ifelse(ib_tx$taxon %in% names(ib_colmap), unname(ib_colmap[ib_tx$taxon]), BEE_GENUS_GREY)
 ib_tx <- ib_tx %>% arrange(transect, match(fam, BEE_FAMILY_ORDER), genus, taxon)
-# one labelled marker per transect at its centroid; popup = that transect's colour-coded target list
+ib_tx <- dplyr::left_join(ib_tx, .detail_tbl(spec, unique(ib_tx$taxon)), by = "taxon")   # window + flower per species
+# per-transect species list: colour dot + name, then a muted window + flower sub-line
 tr_list <- ib_tx %>% group_by(transect) %>%
   summarise(nt = dplyr::n_distinct(taxon),
-            lst = paste(sprintf('<div style="margin:1px 0">%s<i>%s</i></div>', .dot(col), taxon), collapse = ""),
+            lst = paste(mapply(function(col, taxon, win, top)
+              sprintf('<div style="margin:5px 0">%s<i>%s</i><div style="margin-left:19px;font-size:10.5px;line-height:1.3">%s</div></div>',
+                      .dot(col), taxon, .detail_html(taxon, win, top)),
+              col, taxon, win, top), collapse = ""),
             .groups = "drop")
-ib_cent <- ib_spec %>% group_by(transect) %>%
-  summarise(lat = stats::median(lat, na.rm = TRUE), lon = stats::median(lon, na.rm = TRUE), .groups = "drop") %>%
-  dplyr::left_join(tr_list, by = "transect")
-ib_cent$popup <- sprintf('<b>%s trail</b> \U2014 %d taxa to photograph<br><span style="font-size:11px;color:#555">specimen-only: no exact GPS, so walk the whole transect</span><br>%s',
-                         ib_cent$transect, ib_cent$nt, ib_cent$lst)
+
+# real transect LINES + the NPS park boundary, straight from the GIS shapefiles (single source:
+# data/spatial/). Specimen coords are only transect centroids, so we draw the actual survey lines.
+read_shp <- function(p) tryCatch(sf::st_transform(sf::st_read(p, quiet = TRUE), 4326), error = function(e) NULL)
+park_bnd <- read_shp("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
+tran_ln  <- read_shp("data/spatial/transects/cabr_bee_transects.shp")
+if (!is.null(tran_ln)) {
+  tran_ln$transect <- toupper(str_squish(tran_ln$Name))
+  tran_ln$col <- ifelse(tran_ln$transect %in% names(BEE_TRANSECT), unname(BEE_TRANSECT[tran_ln$transect]), "#8A8880")
+  tl <- dplyr::left_join(sf::st_drop_geometry(tran_ln)["transect"], tr_list, by = "transect")   # targets per line
+  tran_ln$popup <- ifelse(is.na(tl$lst),
+    sprintf('<b>%s transect</b><br><span style="font-size:11px;color:%s">no photograph-targets recorded here</span>',
+            tran_ln$transect, BEE_HTML[["sub"]]),
+    sprintf('<b>%s transect</b> \U2014 %d species to photograph<br><span style="font-size:11px;color:%s">specimen-only: no exact GPS, so walk the whole transect</span>%s',
+            tran_ln$transect, ifelse(is.na(tl$nt), 0L, tl$nt), BEE_HTML[["sub"]], tl$lst))
+  # label anchor = each line's true MIDPOINT (leaflet otherwise pins polyline labels near an end)
+  .midpt <- function(g) { g <- sf::st_line_merge(sf::st_transform(g, 3310))   # CA Albers (metres) for planar interpolation
+    if (as.character(sf::st_geometry_type(g)) == "MULTILINESTRING") {
+      p <- sf::st_cast(g, "LINESTRING"); g <- p[which.max(as.numeric(sf::st_length(p)))] }
+    sf::st_coordinates(sf::st_transform(sf::st_line_interpolate(g, 0.5, normalized = TRUE), 4326))[1, 1:2] }
+  mm <- t(vapply(seq_len(nrow(tran_ln)), function(i) .midpt(sf::st_geometry(tran_ln)[i]), numeric(2)))
+  tran_lab <- data.frame(transect = tran_ln$transect, lon = mm[, 1], lat = mm[, 2])
+}
 ib_fam_present <- intersect(BEE_FAMILY_ORDER, unique(ib_taxo$fam))
 ib_glg <- ib_taxo %>% group_by(fam, genus) %>% summarise(col = tcol[ceiling(dplyr::n() / 2)], .groups = "drop") %>%
   arrange(match(fam, BEE_FAMILY_ORDER), genus)
-ib_genus_html <- paste0(
-  '<div style="background:rgba(255,255,255,0.92);padding:6px 9px;border-radius:5px;font:12px -apple-system,sans-serif;max-height:74vh;overflow:auto;box-shadow:0 1px 4px rgba(0,0,0,.3)">',
-  '<div style="font-weight:700">photograph-target genus \U0001F4F7</div>',
-  '<div style="font-weight:400;font-size:11px;color:#555;margin-bottom:3px">get a photo \U00B7 walk the transect it is found on (click a marker)</div>',
-  paste(vapply(ib_fam_present, function(fm) { gg <- ib_glg[ib_glg$fam == fm, ]
-    paste0(sprintf('<div style="font-weight:700;color:%s;margin-top:4px">%s</div>', unname(BEE_FAMILY[fm]), fm),
-           paste(sprintf('<div style="margin-left:4px">%s<i>%s</i></div>', .dot(gg$col), gg$genus), collapse = ""))
-  }, character(1)), collapse = ""),
-  '</div>')
+# both maps: TRANSECT key stacked ABOVE the TARGET-GENERA key (a thin rule between them)
+tks <- if (is.null(tran_ln)) character(0) else { u <- unique(tran_ln$transect); u[order(match(u, names(BEE_TRANSECT)))] }
+.legend_stacked <- function(fams, glg) .legend_wrap(
+  if (length(tks)) paste0(.col_title("Transect"), .tran_block(tks),
+    sprintf('<div style="height:1px;background:%s;margin:9px 0 4px"></div>', BEE_HTML[["scope_rule"]])) else "",
+  .col_title("Target genera"), .genus_block(fams, glg))
+genus_html    <- .legend_stacked(fam_present, genus_leg)    # m1 (collect map)
+ib_genus_html <- .legend_stacked(ib_fam_present, ib_glg)    # m2 (photograph map)
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
 TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"
-m1 <- leaflet::leaflet() %>%
+# official title overlay (top-left corner) -- white card w/ NPS eyebrow + teal head, matching the tables
+.map_title <- function(head, sub) paste0(
+  '<div style="', .CARD, ';padding:9px 15px;max-width:430px">',
+  sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_TEAL[[4]]),
+  sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;line-height:1.18;white-space:nowrap;color:%s">%s</div>', BEE_TEAL[[6]], head),
+  sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">%s</div>', BEE_HTML[["sub"]], sub), '</div>')
+title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!")
+title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!")
+# zoom moved OFF the top-left (default) so the title card owns that corner; re-added TOP-RIGHT so it
+# stacks directly under the Satellite/Street + layers box.
+.zoom_tr <- "function(el, x) { L.control.zoom({ position: 'topright' }).addTo(this); }"
+# park-boundary outline (white casing + dark-teal core = crisp on either basemap); no-op if the
+# shapefile failed to load. Same helper on both maps.
+.add_boundary <- function(m) if (is.null(park_bnd)) m else m %>%
+  leaflet::addPolygons(data = park_bnd, fill = FALSE, color = "#ffffff", weight = 3, opacity = 0.95, group = "park boundary")
+
+m1 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
   leaflet::addProviderTiles(TILE_SAT, group = "Satellite") %>%
   leaflet::addProviderTiles(TILE_STR, group = "Street") %>%
-  leaflet::addCircleMarkers(data = inat_geo, lng = ~lon, lat = ~lat, radius = 2,
-      color = BEE_INK[["muted"]], stroke = FALSE, fillOpacity = 0.2, group = "all iNat effort") %>%
+  .add_boundary()
+if (!is.null(tran_ln))   # transect lines as CONTEXT here (the collect-targets are real GPS points, drawn on top)
+  m1 <- m1 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9,
+      group = "transects") %>%
+    leaflet::addLabelOnlyMarkers(data = tran_lab, lng = ~lon, lat = ~lat, label = ~transect,
+      labelOptions = leaflet::labelOptions(noHide = TRUE, direction = "top",
+              style = list("font-weight" = "700", "background" = "rgba(255,255,255,0.85)", "padding" = "1px 5px")),
+      group = "transects")
+m1 <- m1 %>%
   leaflet::addCircleMarkers(data = sb_tgt, lng = ~lon, lat = ~lat, radius = 5, color = "white",
       weight = 1, fillColor = ~gcol, fillOpacity = 0.9, popup = ~popup,
-      group = "collect-targets") %>%
+      group = "targets") %>%
   leaflet::addControl(html = genus_html, position = "bottomleft") %>%
+  leaflet::addControl(html = title1, position = "topleft") %>%
   leaflet::addLayersControl(baseGroups = c("Satellite", "Street"),
-      overlayGroups = c("all iNat effort", "collect-targets"),
-      options = leaflet::layersControlOptions(collapsed = FALSE))
-m2 <- leaflet::leaflet() %>%
+      overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
+      options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
+  htmlwidgets::onRender(.zoom_tr)
+
+# m2: one layer for the transects -- the real shapefile line, coloured by transect, carrying a SINGLE
+# popup (its species to photograph) and a permanent name label. No more twin corridor/marker popups.
+m2 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
   leaflet::addProviderTiles(TILE_SAT, group = "Satellite") %>%
   leaflet::addProviderTiles(TILE_STR, group = "Street") %>%
-  leaflet::addCircleMarkers(data = inat_geo, lng = ~lon, lat = ~lat, radius = 2,
-      color = BEE_INK[["muted"]], stroke = FALSE, fillOpacity = 0.2, group = "all iNat effort") %>%
-  leaflet::addPolygons(data = corr, fillColor = "#8A8880", color = "#8A8880", weight = 1, fillOpacity = 0.35,
-      popup = ~popup, group = "transect trails") %>%
-  leaflet::addCircleMarkers(data = ib_cent, lng = ~lon, lat = ~lat, radius = 9, color = "white",
-      weight = 2, fillColor = BEE_INK[["primary"]], fillOpacity = 0.85, popup = ~popup,
-      label = ~transect, labelOptions = leaflet::labelOptions(noHide = TRUE, direction = "top",
-              style = list("font-weight" = "700", "background" = "rgba(255,255,255,0.85)", "padding" = "1px 5px")),
+  .add_boundary()
+if (!is.null(tran_ln))
+  m2 <- m2 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9, popup = ~popup,
+      highlightOptions = leaflet::highlightOptions(weight = 7, opacity = 1, bringToFront = TRUE),
       group = "transects (click for targets)") %>%
+    leaflet::addLabelOnlyMarkers(data = tran_lab, lng = ~lon, lat = ~lat, label = ~transect,   # label at the line midpoint
+      labelOptions = leaflet::labelOptions(noHide = TRUE, direction = "top",
+              style = list("font-weight" = "700", "background" = "rgba(255,255,255,0.85)", "padding" = "1px 5px")),
+      group = "transects (click for targets)")
+m2 <- m2 %>%
   leaflet::addControl(html = ib_genus_html, position = "bottomleft") %>%
+  leaflet::addControl(html = title2, position = "topleft") %>%
   leaflet::addLayersControl(baseGroups = c("Satellite", "Street"),
-      overlayGroups = c("all iNat effort", "transect trails", "transects (click for targets)"),
-      options = leaflet::layersControlOptions(collapsed = FALSE))
+      overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects (click for targets)"),
+      options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
+  htmlwidgets::onRender(.zoom_tr)
 # self-contained single file when pandoc is available (matches every other HTML in the project);
 # fall back to a lib/ folder only if pandoc is missing, so the pipeline never hard-fails.
 .sc <- requireNamespace("rmarkdown", quietly = TRUE) && isTRUE(try(rmarkdown::pandoc_available(), silent = TRUE))

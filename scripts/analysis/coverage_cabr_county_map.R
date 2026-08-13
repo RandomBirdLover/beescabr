@@ -62,9 +62,9 @@ ay <- cc[2] + (bb["ymax"] - bb["ymin"]) * 0.42
 g <- ggplot() +
   geom_sf(data = county, fill = BEE_MAP[["land"]], color = BEE_MAP[["boundary"]], linewidth = 0.35) +
   geom_sf(data = cabr_pt, color = unname(BEE_NPS[["green_md"]]), fill = unname(BEE_NPS[["green_md"]]),
-          shape = 21, size = 5.5, stroke = 0) +
-  geom_sf(data = cabr_pt, color = "white", shape = 21, size = 5.5, stroke = 1.1, fill = NA) +
-  annotate("curve", x = ax, y = ay, xend = cc[1] + 2500, yend = cc[2] + 1500,
+          shape = 21, size = 2.8, stroke = 0) +
+  geom_sf(data = cabr_pt, color = "white", shape = 21, size = 2.8, stroke = 1.1, fill = NA) +
+  annotate("curve", x = ax, y = ay, xend = cc[1] + 300, yend = cc[2] + 1250,
            curvature = 0.28, linewidth = 0.5, color = BEE_INK$secondary,
            arrow = arrow(length = unit(0.14, "cm"), type = "closed")) +
   annotate("label", x = ax, y = ay, label = call_txt, hjust = 0, vjust = 0.5,

@@ -42,11 +42,11 @@ d$lab  <- ifelse(d$frac >= 0.03, sprintf("%.0f%%", 100 * d$frac), "")   # on-sli
 d$labcol <- "white"   # on-slice % labels are always white (user preference), even on the lighter hues
 write.csv(d[, c("family", "records", "frac")], file.path(OUT_REPORT, "records_by_family.csv"), row.names = FALSE)
 message(sprintf("Records by family (both methods pooled): %s | total %s | excluded %d records with no family-level ID",
-                paste(sprintf("%s=%d", d$family, d$records), collapse = "  "), format(tot, big.mark = ","), n_noid))
+                paste(sprintf("%s=%d", d$family, d$records), collapse = "  "), format(tot, big.mark = ",", trim = TRUE), n_noid))
 
 # ---- 2. donut: one slice per family, coloured by BEE_FAMILY, % on the slices ----
-.li <- match(levels(d$family), d$family)   # legend shows count AND % (so thin slivers like Megachilidae still report their %)
-leg <- sprintf("%s  (%s, %.0f%%)", levels(d$family), format(d$records[.li], big.mark = ","), 100 * d$frac[.li])
+.li <- match(levels(d$family), d$family)   # legend shows just the record count (slice % is on the slices / the Megachilidae leader)
+leg <- sprintf("%s  (%s)", levels(d$family), format(d$records[.li], big.mark = ",", trim = TRUE))   # trim = TRUE -> no padding gaps like "(  920"
 # Megachilidae is too thin for an on-slice %, so point a short leader out of its slice.
 # Clockwise-from-top cumulative = reverse of the factor order, so a slice's start angle is
 # the sum of the fracs of the families that follow it in the data (the rows below it).
@@ -64,8 +64,8 @@ g <- ggplot(d, aes(x = 2, y = frac, fill = family)) +
            colour = BEE_INK$secondary, linewidth = 0.4) +
   annotate("text", x = 2.82, y = mega_y, label = mega_lab, hjust = 0.5, vjust = 0.5,
            fontface = "bold", size = 3.3, colour = BEE_INK$primary) +
-  scale_fill_manual(values = BEE_FAMILY, breaks = levels(d$family), labels = leg, name = "family") +
-  annotate("text", x = 0.4, y = 0, label = sprintf("%s\nrecords", format(tot, big.mark = ",")),
+  scale_fill_manual(values = BEE_FAMILY, breaks = levels(d$family), labels = leg, name = "Family") +
+  annotate("text", x = 0.4, y = 0, label = sprintf("%s\nrecords", format(tot, big.mark = ",", trim = TRUE)),
            fontface = "bold", size = 4.3, lineheight = 0.95, color = BEE_INK$primary) +
   labs(title = "Bee Records by Family",
        subtitle = sprintf("%s dominate the park's bee records (~%.0f%%) -- a few families make up nearly all of them.",

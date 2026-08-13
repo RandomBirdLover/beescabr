@@ -86,11 +86,9 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
       }))) else NULL } +
     labs(title = if (!is.null(title)) title else sprintf("%s phenology - seasonal activity (ridgeline)", label),
          subtitle = "Ordered by peak day -- each taxon concentrates its activity in a different part of the year.",
-         caption = paste0(
-           sprintf("%d taxa with >= %d records.", length(ord), min_records),
-           "\n",
-           scope_cap(scope  = if (!is.null(scope)) scope else sprintf("all records, whole park; %s activity over the year", tolower(label)),
-                     method = method, rank = tolower(label))),   # lowercase: Rank field values are lowercase like the rest
+         caption = scope_cap(scope  = paste0(if (!is.null(scope)) scope else sprintf("all records, whole park; %s activity over the year", tolower(label)),
+                                             sprintf("; %d taxa (>= %d records)", length(ord), min_records)),
+                             method = method, rank = tolower(label)),   # lowercase: Rank field values are lowercase like the rest
          x = NULL, y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6, face = if (identical(sci, "bee")) "italic" else "plain"),  # bee names whole-italic; plant labels italicised per-part above

@@ -100,12 +100,13 @@ plant_label_map <- function(genus, sci_wrap = "%s") {
 
 # ---- PUBLIC: base-R plotmath labels -- common name upright, Latin in italics ----
 # Returns an expression vector for text()/axis(): "Common Name (italic Genus)".
-# A genus with no common name still keeps the parenthesised italic Latin: "(italic Genus)".
+# A genus with no common name renders as a bare italic Latin genus ("italic Genus"),
+# NOT parenthesised -- consistent with plant_label() and the hub/flower figures.
 plant_label_expr <- function(genus) {
   g  <- str_squish(as.character(genus))
   cn <- plant_common_name(g)
   as.expression(lapply(seq_along(g), function(i) {
-    if (is.na(cn[i]) || !nzchar(cn[i])) bquote("(" * italic(.(g[i])) * ")")
+    if (is.na(cn[i]) || !nzchar(cn[i])) bquote(italic(.(g[i])))
     else bquote(.(cn[i]) ~ "(" * italic(.(g[i])) * ")")
   }))
 }

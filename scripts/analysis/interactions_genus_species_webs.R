@@ -171,6 +171,7 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   cap <- scope_cap(scope = sprintf("all records, whole park; %s species vs plant genera", genus),
                    method = "lethal + non-lethal pooled",
                    rank = "species (within-genus partitioning; favourite = species-level test)",
+                   control = "plant availability, matched to month x year x method",
                    sig = h2lab, width = 10000)
   maxchars  <- max(60, floor(par("pin")[1] / strwidth("n", cex = 0.56, units = "inches") * 0.97))
   cap_lines <- strsplit(str_wrap(cap, maxchars), "\n")[[1]]
@@ -258,24 +259,23 @@ ov <- h2_tbl %>% filter(!is.na(H2prime), !is.na(H2prime_p), H2prime_p < 0.05) %>
   transmute(bee_genus, x = H2prime, lab = sprintf("%.2f", H2prime))
 ov$bee_genus <- factor(ov$bee_genus, levels = rev(ov$bee_genus[order(-ov$x)]))
 gen_note <- if (length(ns_dropped))
-    sprintf("  Generalists -- species overlap on the same plants, no significant partitioning once flight-season & method are controlled (not shown): %s.",
-            paste(sort(ns_dropped), collapse = ", ")) else ""
+    sprintf("Not shown -- generalists (no significant partitioning): %s.", paste(sort(ns_dropped), collapse = ", ")) else ""
 untest_note <- if (nrow(dropped))
-    sprintf("  Untestable (>= %d species but < %d records, too few to test; not shown): %s.",
-            MIN_SPECIES, MIN_REC, paste(sort(dropped$bee_genus), collapse = ", ")) else ""
+    sprintf("Untestable (< %d records): %s.", MIN_REC, paste(sort(dropped$bee_genus), collapse = ", ")) else ""
 g <- ggplot(ov, aes(x = x, y = bee_genus)) +
   geom_col(width = 0.72, fill = BEE_NEUTRAL[["dark"]]) +
   geom_text(aes(label = lab), hjust = -0.12, size = 3.0, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
   labs(title = "Which Bee Genera Have Specialist Species?",
        subtitle = sprintf("%d bee genera have species that carve up different plants -- true niche specialists, not chance.", nrow(ov)),
-       caption = paste0(str_wrap(paste0(
-         sprintf("Higher bar = species partition plants more (H2', controlled for flight season & method). Only the %d of %d testable (>= %d species) genera whose species significantly specialise (p<0.05) are drawn.",
-                 nrow(ov), n_tested, MIN_SPECIES), gen_note, untest_note), 96), "\n",
-         scope_cap(scope = "all records, whole park; within-genus niche partitioning across bee genera",
-                   method = "lethal + non-lethal pooled",
-                   rank = "genus (within-genus H2', season+method-controlled null)", width = 96)),
-       x = "within-genus H2'   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
+       caption = paste(Filter(nzchar, c(
+         str_wrap(scope_cap(sprintf("all records, whole park; %d of %d testable genera partition plants significantly (p<0.05)",
+                                    nrow(ov), n_tested),
+                            method = "lethal + non-lethal pooled",
+                            rank = "genus (within-genus H2')",
+                            control = "flight season + method (matched-cell null)", width = 100), 100),
+         str_wrap(paste(Filter(nzchar, c(gen_note, untest_note)), collapse = "  "), 100))), collapse = "\n"),
+       x = "species specialization within the genus (H2')   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
         panel.grid.major.y = element_blank())

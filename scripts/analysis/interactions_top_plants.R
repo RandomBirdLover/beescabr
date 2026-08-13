@@ -78,7 +78,7 @@ M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
 }))
 bp <- barplot(M, horiz = TRUE, names.arg = rep("", ncol(M)), border = NA,
         col = c(nonlethal = COL_NONLETHAL, lethal = COL_LETHAL),
-        xlab = "Bee-visit records (whole park)",
+        xlab = "bee-visit records",
         main = sprintf("Top %d Plant Genera Visited by Bees", TOP_N))
 axis(2, at = bp, labels = .plab, las = 1, tick = FALSE, cex.axis = 0.82, col.axis = BEE_INK$muted)
 mtext("A few plant genera pull most of the bee visits -- the park's keystone forage.", side = 3, line = 0.3, cex = 0.8, col = BEE_INK$secondary)   # takeaway
@@ -109,7 +109,7 @@ write.csv(data.frame(favourite_rank = seq_along(top_m), plant_genus = rownames(M
 # rank + common name upright, Latin italic, + total count -- as plotmath so only the Latin is italicised
 rank_lab <- setNames(lapply(seq_along(top_m), function(i) {
   g <- top_m[i]; cn <- plant_common_name(g)
-  rk <- paste0(i, ". "); ct <- paste0(" (", format(top_tot[i], big.mark = ","), ")")
+  rk <- paste0(i, ". "); ct <- paste0(" (", format(top_tot[i], big.mark = ",", trim = TRUE), ")")
   if (is.na(cn)) bquote(.(rk) * italic(.(g)) * .(ct)) else bquote(.(rk) * .(cn) ~ "(" * italic(.(g)) * ")" * .(ct))
 }), top_m)
 

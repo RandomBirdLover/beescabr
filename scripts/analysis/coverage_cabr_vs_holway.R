@@ -177,7 +177,7 @@ bee_png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
 bee_base_par()                                    # house-style fonts + muted axis/title colours
 op <- par(mar = c(4.5, 12, 4.4, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption; top fits title + takeaway
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA, width = 0.8, space = 0.35,
-              xlab = "Number of Cabrillo National Monument Records",
+              xlab = "records at Cabrillo",
               cex.names = 0.8)
 mtext("Bees New to the San Diego County Checklist", side = 3, line = 2.4, font = 2, cex = 1.05, col = BEE_INK$primary)
 mtext(sprintf("%d Cabrillo taxa aren't on the county checklist -- candidate county additions, or IDs to verify.", ncol(M)),

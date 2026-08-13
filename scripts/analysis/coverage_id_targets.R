@@ -213,7 +213,7 @@ funnel$level  <- factor(funnel$level,  levels = c("species", "genus", "coarser")
 funnel$method <- factor(funnel$method, levels = c("specimen", "photo"))
 gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
   geom_col(position = position_dodge(0.72), width = 0.68) +
-  geom_text(aes(label = format(n, big.mark = ",")), position = position_dodge(0.72), vjust = -0.3, size = 3) +
+  geom_text(aes(label = format(n, big.mark = ",", trim = TRUE)), position = position_dodge(0.72), vjust = -0.3, size = 3) +
   scale_fill_manual(values = c(specimen = COL_L, photo = COL_NL), name = NULL,
                     labels = c(specimen = "lethal", photo = "non-lethal")) +
   scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +

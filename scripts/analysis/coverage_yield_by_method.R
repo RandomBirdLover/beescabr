@@ -166,13 +166,13 @@ plot_report <- function(rank, file) {
     labs(title = ttl,
          subtitle = "Interns, beeple, and the public each turn up taxa the others miss -- no single group or method sees it all.",
          caption = paste0(
-           str_wrap(paste0(
-             "Interns' bar = their specimens + 2024 photos, so the contributor and method views reconcile to the ",
-             "same total. Group-exclusive = a taxon only that group recorded."), 108),
-           "\n",
            scope_cap(scope  = "all records, no window; every specimen + every iNaturalist photo (survey or not)",
                      method = "lethal vs non-lethal",
-                     rank   = rank)),
+                     rank   = rank),
+           "\n",
+           str_wrap(paste0(
+             "Interns' bar = their specimens + 2024 photos, so the contributor and method views reconcile to the ",
+             "same total. Group-exclusive = a taxon only that group recorded."), 108)),
          x = NULL, y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.x = element_text(size = 8.5),

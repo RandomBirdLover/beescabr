@@ -112,12 +112,16 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
   # size-based rarefaction/extrapolation curves (type 1), faceted by Hill order q
   g1 <- add_cols(iNEXT::ggiNEXT(out, type = 1, facet.var = "Order.q") +
     labs(title = title, subtitle = "Effort-standardized richness (Hill numbers) -- a fair diversity comparison across methods/observers.",
-         caption = paste0("iNEXT size-based rarefaction/extrapolation (Hill q0/q1/q2)", "\n", sub)) + th, cols)
+         x = "records sampled (sample size)", y = "diversity (Hill numbers)",
+         caption = scope_cap(scope = "survey records only", method = "lethal + non-lethal pooled", rank = rank,
+                             sig = bee_test("iNEXT size-based rarefaction/extrapolation", "Hill q0/q1/q2"))) + th, cols)
   bee_ggsave(file.path(outsub, paste0(pre, "_size_", rank, ".png")), g1, width = 10, height = 4.2, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
   g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
     labs(title = title, subtitle = "Effort-standardized richness (Hill numbers) -- a fair diversity comparison across methods/observers.",
-         caption = paste0("iNEXT coverage-based rarefaction/extrapolation (Hill q0/q1/q2)", "\n", sub)) + th, cols)
+         x = "sample completeness (coverage)", y = "diversity (Hill numbers)",
+         caption = scope_cap(scope = "survey records only", method = "lethal + non-lethal pooled", rank = rank,
+                             sig = bee_test("iNEXT coverage-based rarefaction/extrapolation", "Hill q0/q1/q2"))) + th, cols)
   bee_ggsave(file.path(outsub, paste0(pre, "_coverage_", rank, ".png")), g3, width = 10, height = 4.2, bg = "white")
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
   write.csv(out$AsyEst, file.path(outsub, paste0(pre, "_asymptotic_", rank, ".csv")), row.names = FALSE)

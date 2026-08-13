@@ -106,7 +106,7 @@ g <- ggplot(plot_df, aes(x = n, y = rank, fill = region)) +
        subtitle = sprintf("Off-transect recording turns up %d bee species the fixed transects never caught.", length(offonly_sp)),
        caption = scope_cap(scope = "all records; on-transect (standardized survey effort) vs off-transect (casual park-wide records)",
                            method = "lethal + non-lethal pooled", rank = "species + genus"),
-       x = "Distinct Taxa", y = NULL) +
+       x = "distinct kinds of bee", y = NULL) +
   theme_beescabr(11) +
   theme(panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
 bee_ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, bg = "white")

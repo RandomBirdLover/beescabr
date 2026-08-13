@@ -82,7 +82,7 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
          caption = scope_cap(
            scope  = sprintf("%s; species with >= %d records (%d of %d shown; full list in the CSV)", scope_lab, min_shown, nrow(wf), nrow(wide)),
            method = "lethal vs non-lethal", rank = "species"),
-         x = "Number of records", y = NULL) +
+         x = "records", y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           panel.grid.major.y = element_blank(),

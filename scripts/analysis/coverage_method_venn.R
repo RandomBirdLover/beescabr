@@ -90,12 +90,12 @@ SCOPES <- list(
     spec = fair_window(spec_all), inat = fair_window(inat_all),
     subfn = function(nl, nn) sprintf(
       "Fair window (survey-only, Mar-Oct 2021-2023):  lethal %s records   |   non-lethal %s records",
-      format(nl, big.mark = ","), format(nn, big.mark = ","))),
+      format(nl, big.mark = ",", trim = TRUE), format(nn, big.mark = ",", trim = TRUE))),
   report = list(
     spec = spec_all, inat = inat_all,
     subfn = function(nl, nn) sprintf(
       "All records (every specimen vs every iNaturalist photo, no window):  lethal %s records   |   non-lethal %s records",
-      format(nl, big.mark = ","), format(nn, big.mark = ",")))
+      format(nl, big.mark = ",", trim = TRUE), format(nn, big.mark = ",", trim = TRUE)))
 )
 
 # ---- region membership + counts (per rank) ----------------------------------

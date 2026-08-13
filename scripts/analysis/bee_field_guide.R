@@ -53,6 +53,7 @@ grab <- function(df) data.frame(
   taxon_rank  = tolower(str_squish(df$taxon_rank)),
   genus       = str_squish(df$genus),
   epithet     = tolower(word(str_squish(df$species), -1)),
+  subsp       = tolower(str_squish(if ("subspecies" %in% names(df)) df$subspecies else rep("", nrow(df)))),
   common      = str_squish(df$common_name),
   doy         = doy_of(df$observed_on),
   plant_genus = str_squish(df$plant_genus),
@@ -90,16 +91,18 @@ where_call <- function(d) {
 }
 mode_chr <- function(x) { x <- x[has(x)]; if (!length(x)) return("") ; names(sort(table(x), decreasing = TRUE))[1] }
 
-sp_keys <- sort(unique(rec$species))
-rows <- lapply(sp_keys, function(k) {
-  d  <- rec[rec$species == k, ]
+make_row <- function(d, k, rank = "species", lookup = k) {
   pv <- d[has(d$plant_genus), ]
   fl <- sort(table(pv$plant_genus), decreasing = TRUE)
   peak <- circ_mean_doy(d$doy)
+  # Common name from records ID'd AT THIS row's rank: a species row must show the SPECIES
+  # vernacular, not a subspecies' name that happens to dominate the pooled records (e.g.
+  # A. urbana = "Urbane Digger Bee", NOT its subspecies clementina's "San Clemente Digger Bee").
+  cn <- mode_chr(d$common[d$taxon_rank == rank]); if (cn == "") cn <- mode_chr(d$common)
   data.frame(
     genus          = d$genus[1],
     bee            = k,
-    common_name    = mode_chr(d$common),
+    common_name    = cn,
     n_records      = nrow(d),
     confidence     = if (nrow(d) < MIN_CONF) "low (n<10)" else "ok",
     status         = status_call(nrow(d)),
@@ -111,24 +114,48 @@ rows <- lapply(sp_keys, function(k) {
     n_plant_genera = length(fl),
     diet           = if (nrow(d) < CLAIM_MIN) "not enough records" else diet_call(length(fl), nrow(pv)),
     where_to_find  = where_call(d),
+    rank           = rank,     # species | subspecies -- subspecies get their own row, sorted under the parent
+    lookup         = lookup,   # binomial used for the species-level IUCN + forage lookups
     stringsAsFactors = FALSE)
+}
+sp_keys <- sort(unique(rec$species))
+rows <- lapply(sp_keys, function(k) make_row(rec[rec$species == k, ], k))
+
+# Named subspecies get their OWN row (full trinomial), computed from their own records, so they
+# appear in the guide sorted right under their parent species. This does NOT touch the species
+# rows or any figure -- every graph still pools subspecies into the species (species-level).
+rec_ss <- bind_rows(grab(spec), grab(inat)) %>%
+  filter(taxon_rank == "subspecies", genus != "", epithet != "", has(subsp)) %>%
+  mutate(parent = paste(genus, epithet), species = paste(genus, epithet, subsp))
+ss_rows <- lapply(sort(unique(rec_ss$species)), function(k) {
+  d <- rec_ss[rec_ss$species == k, ]; make_row(d, k, rank = "subspecies", lookup = d$parent[1])
 })
-tbl <- do.call(rbind, rows) %>% arrange(genus, bee)
+tbl <- do.call(rbind, c(rows, ss_rows)) %>% arrange(genus, bee)
 
 # ---- IUCN Red List status from the shared conservation module (one source) ----
 # conservation_status.R reads data/checklists/iucn/iucn_status.csv (written by
 # refresh_iucn_status.R); the IUCN column shows when that cache exists.
 HAVE_IUCN        <- iucn_cache_exists()
-tbl$iucn         <- iucn_code_of(tbl$bee)
-tbl$iucn_name    <- iucn_name_of(tbl$bee)
-tbl$conservation <- conservation_label(tbl$bee)
+# IUCN is a SPECIES-level determination -> look it up on the binomial (tbl$lookup), so a
+# subspecies row inherits its parent species' Red List category (they aren't listed separately).
+tbl$iucn         <- iucn_code_of(tbl$lookup)
+tbl$iucn_name    <- iucn_name_of(tbl$lookup)
+tbl$conservation <- conservation_label(tbl$lookup)
 # Forage preference -- availability-corrected (matched month/year/method test), SPECIES level.
 # Populated for species with >= SELECT_MIN_REC plant-visit records; "too few records to judge" below that.
 tbl$forage_pref      <- forage_preference_label_species(tbl$bee, plant_fmt = plant_label)
 tbl$forage_pref_html <- forage_preference_label_species(tbl$bee, plant_fmt = function(g) plant_label(g, sci_wrap = "<i>%s</i>"))  # HTML: Latin italic
-write.csv(tbl %>% dplyr::select(-top_flowers_html, -forage_pref_html), file.path(OUT_DIR, "bee_field_guide_species.csv"), row.names = FALSE)   # CSV keeps plain labels
-message(sprintf("Field guide: %d species (%d with >= %d records)",
-                nrow(tbl), sum(tbl$confidence == "ok"), MIN_CONF))
+# The forage test pools subspecies into the species, so a subspecies can't be judged on its own
+# (finer) sample -- state that, consistent with its Diet column, rather than the "-" no-match.
+is_ss <- tbl$rank == "subspecies"
+tbl$forage_pref[is_ss]      <- "not enough records"
+tbl$forage_pref_html[is_ss] <- "not enough records"
+write.csv(tbl %>% dplyr::select(-top_flowers_html, -forage_pref_html, -rank, -lookup),
+          file.path(OUT_DIR, "bee_field_guide_species.csv"), row.names = FALSE)   # CSV keeps plain labels + original schema
+message(sprintf("Field guide: %d species%s (%d with >= %d records)",
+                sum(tbl$rank == "species"),
+                if (any(is_ss)) sprintf(" + %d subspecies", sum(is_ss)) else "",
+                sum(tbl$confidence == "ok"), MIN_CONF))
 
 # scope caption (same "Scope | Method | Rank | Source" format as the figure captions), shown ABOVE the table
 scope_str <- scope_cap(
@@ -146,13 +173,13 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   cs <- if (r$conservation != "") sprintf('<sup class="cs" title="%s">*</sup>', esc(r$conservation)) else ""
   iucn_td <- if (HAVE_IUCN) sprintf('<td class="num"><span class="iucn i-%s" title="%s">%s</span></td>',
                                     tolower(r$iucn), esc(r$iucn_name), esc(r$iucn)) else ""
-  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td><td class="num">%d</td>%s',
+  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td>%s<td class="num">%d</td>',
                  '<td data-sort="%d">%s</td><td>%s</td><td>%s</td><td><span class="pill %s">%s</span></td>',
                  '<td><span class="pill %s">%s</span></td><td class="loc">%s</td>',
                  '<td data-sort="%d"><span class="pill st-%s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$bee), cs,
           if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "",
-          r$n_records, iucn_td, r$peak_doy, esc(r$peak_day), esc(r$active_months), r$top_flowers_html,
+          iucn_td, r$n_records, r$peak_doy, esc(r$peak_day), esc(r$active_months), r$top_flowers_html,
           diet_class(r$diet), esc(r$diet), pref_class(r$forage_pref), r$forage_pref_html,
           esc(r$where_to_find), unname(st_rank[r$status]), r$status, r$status)
 }, character(1))
@@ -166,33 +193,22 @@ status_note <- sprintf("Records and Status count ALL data -- specimen nets plus 
                         RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN)
 note_txt <- paste(status_note, note_txt)
 html <- paste0(
-'<!doctype html><html><head><meta charset="utf-8"><title>CABR Native Bee Field Guide - by species</title>',
+'<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Field Guide (Species)</title>',
 '<style>',
-'body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fcfcfb}',
-'h1{font-size:20px;margin:0 0 2px}p.sub{color:#6b6a66;margin:0 0 16px;font-size:13px}',
-'p.scope{color:#52514e;margin:0 0 8px;font-size:12px;font-weight:600;border-left:3px solid #d8d5cc;padding-left:8px}',
-'p.note{color:#6b6a66;margin:12px 0 0;font-size:12px}',
-'sup.cs{color:#8a1c1c;font-weight:700;margin-left:1px}',
-'table{border-collapse:collapse;width:100%;font-size:13px}',
-'th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}',
-'th{position:sticky;top:0;background:#f3f1ec;cursor:pointer;font-weight:600;white-space:nowrap;border-bottom:2px solid #ddd}',
-'th:hover{background:#e8e5de}tr:hover{background:#f7f6f2}',
-'td.bee i{color:#111}td .cn{display:block;color:#8a8880;font-size:11px}',
-'td.num{text-align:right;font-variant-numeric:tabular-nums}td.loc{color:#52514e;font-size:12px}',
-'tr.low{color:#a09e98}tr.low td.bee i{color:#a09e98}',
-'.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}',
+bee_table_css(),                                                                    # shared base table chrome (single source -- theme_beescabr.R)
 bee_badge_css(BEE_DIET_BG,   BEE_DIET_FG,   function(k) paste0(".pill.", k)),        # diet pills (sp/ge/mo/na)
 bee_badge_css(BEE_ABUND_BG,  BEE_ABUND_FG,  function(k) paste0(".pill.st-", k)),     # abundance-status pills
 bee_badge_css(BEE_FORAGE_BG, BEE_FORAGE_FG, function(k) paste0(".pill.pref-", k)),   # forage-preference pills
-'.iucn{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}',
 bee_badge_css(BEE_IUCN_BG,   BEE_IUCN_FG,   function(k) paste0(".iucn.i-", k)),      # IUCN chips
 '</style></head><body>',
-'<h1>CABR native bee field guide - by species</h1>',
-'<p class="sub">One row per bee species. Peak day = circular mean of record dates; active months = 5th-95th percentile; diet = number of plant genera used (stated only at &ge;50 records &mdash; fewer read &quot;not enough records&quot;); where = favoured transect(s) or an off-transect centre + buffer; status = how often the species is recorded here (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; counts all data incl. casual photos, so it is recording frequency, not true abundance). Rows in grey have &lt;10 records (peak/season are rough). Click a column header to sort.</p>',
-'<p class="sub"><b>Most-recorded flowers = the plants this species was seen on most often</b>, which reflects how much each plant was blooming and sampled as much as any true preference &mdash; read it as &quot;where it was seen,&quot; not proof of what it likes best. <b>Forage preference</b> is the availability-corrected verdict (a matched month/year/method test vs the rest of the community, the same one the by-genus guide uses): &quot;Selective &rarr; plant (N&times;)&quot; = visits it well beyond availability; &quot;Generalist&quot; = visits ~ what&#39;s around; &quot;too few records to judge&quot; below ', SELECT_MIN_REC, ' plant-visit records (most species &mdash; it fills in as sampling grows).</p>',
+'<div class="org">Cabrillo National Monument</div>',
+'<h1>A Native Bee Species Field Guide</h1>',
+'<div class="byline">by Brandi Sanchez</div>',
+'<p class="sub">One row per bee species (any named subspecies gets its own row too, sorted under its parent). Peak day = mean record date; active months = 5th&ndash;95th percentile of dates; diet = number of plant genera used (&ge;50 records, else &quot;not enough records&quot;); where = favoured transect(s); status = recording frequency (rare &lt;15, uncommon 15&ndash;49, common &ge;50 records &mdash; all data incl. casual photos, so frequency, not true abundance). Grey rows: &lt;10 records (peak/season rough). Click a header to sort.</p>',
+'<p class="sub"><b>Most-recorded flowers</b> = where the species was seen most (reflects bloom + sampling, not proof of preference). <b>Forage preference</b> is availability-corrected &mdash; a matched month/year/method chi-square vs the rest of the community: &quot;Selective &rarr; plant (N&times;)&quot; = visits it well beyond availability; &quot;Generalist&quot; = ~ what&#39;s around; &quot;too few records to judge&quot; below ', SELECT_MIN_REC, ' plant-visit records.</p>',
 sprintf('<p class="scope">%s</p>', esc(scope_str)),
 '<table id="t"><thead><tr>',
-'<th>Bee</th><th class="num">Records</th>', iucn_th, '<th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
+'<th>Bee</th>', iucn_th, '<th class="num">Records</th><th>Peak day</th><th>Active months</th><th>Most-recorded flowers</th><th>Diet</th><th>Forage preference</th><th>Where to find</th><th>Status</th>',
 '</tr></thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table>',
 '<p class="note">', esc(note_txt), '</p>',
 '<script>',
@@ -217,7 +233,7 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                             `Active months` = active_months, `Most-recorded flowers` = top_flowers,
                             Diet = diet, `Forage preference` = pref_short,
                             `Where to find` = where_to_find, Status = status)
-  if (HAVE_IUCN) disp <- dplyr::relocate(dplyr::mutate(disp, IUCN = tbl$iucn), IUCN, .after = N)
+  if (HAVE_IUCN) disp <- dplyr::relocate(dplyr::mutate(disp, IUCN = tbl$iucn), IUCN, .after = Bee)
   ff <- matrix("plain", nrow(disp), ncol(disp)); ff[, which(names(disp) == "Bee")] <- "italic"   # bee binomial column italic
   th <- gridExtra::ttheme_minimal(
     base_size = 7,

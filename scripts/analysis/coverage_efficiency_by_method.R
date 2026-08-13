@@ -120,11 +120,11 @@ eff_fig <- function(key_col, rank_lab, file) {
     labs(title = sprintf("Efficiency by Method at %s Level", rank_lab),
          subtitle = take,
          caption = paste0(
-           str_wrap(sprintf("The per-100-records rate favours the smaller-record method (dilution); 'at equal effort' rarefies both to the smaller total (%s records) -- the fair comparison.", format(minN, big.mark = ",")), 108),
-           "\n",
            scope_cap(scope  = "fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos)",
                      method = "lethal vs non-lethal",
-                     rank   = rank_lab)),
+                     rank   = rank_lab),
+           "\n",
+           str_wrap(sprintf("The per-100-records rate favours the smaller-record method (dilution); 'at equal effort' rarefies both to the smaller total (%s records) -- the fair comparison.", format(minN, big.mark = ",", trim = TRUE)), 108)),
          x = NULL, y = NULL) +
     theme_beescabr(12) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

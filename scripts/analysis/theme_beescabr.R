@@ -131,6 +131,48 @@ BEE_MAP   <- c(land = "#ECEAE4", land_inset = "#F1EFEA", boundary = "#AEAAA0",
                boundary_inset = "#A7A399", frame = "#CBC7BE")   # basemap fills / boundaries / panel frame
 BEE_TABLE <- c(row_odd = "#ffffff", row_even = "#f6f5f2", head = "#1a1a1a", subtext = "#666666")  # grid.table row-stripes + text
 
+# ---- HTML interactive tables: single source for the base table chrome -------
+# Every report HTML table (field guides, least-sampled, summary tables) shares ONE stylesheet built
+# from these tokens -- so page/header/border/stripe/hover colours live here ONCE, never copy-pasted as
+# hardcoded hex into each script's <style>. Badge/pill palettes are the BEE_*_BG/FG tokens above
+# (rendered by bee_badge_css); this covers the surrounding table chrome + layout.
+BEE_HTML <- c(page = "#ffffff", page_alt = "#ece9e2", ink = "#22211e", sub = "#6b6a66", scope = "#4a4945",
+              scope_rule = "#d8d5cc", head_bg = "#f2efe8", head_hover = "#e8e4da",
+              row_hover = "#e6f1ec",                      # pale teal -> ties tables to the house palette; reads over the zebra stripe
+              border = "#dddddd", border_lt = "#ededea", cn = "#8a8880", low = "#a09e98", cs = "#8a1c1c")
+# The shared stylesheet (the rules that go BETWEEN <style> and </style>). A script appends its own
+# bee_badge_css(...) for whichever pill sets it uses. Zebra striping (BEE_TABLE row_even) + sticky,
+# sortable, teal-hover header give every table the same look + organization.
+bee_table_css <- function() paste0(
+  "*{box-sizing:border-box}",
+  # FULL-WIDTH layout (no fixed-width card) -- these field-guide tables are wide (10-13 cols), so a fixed
+  # card either clips columns (too narrow) or overflows a laptop screen (too wide). Full width fits any
+  # screen and the columns wrap to fit; the teal typography polish stays. (Narrow tables like the NPS
+  # summary keep their centred card in their own CSS.)
+  "body{font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:", BEE_HTML[["ink"]], ";margin:22px 28px 44px;background:", BEE_HTML[["page"]], ";-webkit-font-smoothing:antialiased}",
+  ".org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:", BEE_TEAL[[4]], ";margin:0 0 3px}",   # park-name eyebrow above the title
+  "h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap;color:", BEE_TEAL[[6]], "}",
+  "h1:after{content:'';display:block;width:56px;height:3px;background:", BEE_TEAL[[4]], ";border-radius:2px;margin:11px 0 2px}",
+  ".byline{font-size:13px;color:", BEE_HTML[["sub"]], ";margin:7px 0 0;font-style:italic}",   # author credit under the title bar
+  "h2{font-size:15px;font-weight:700;margin:30px 0 6px;color:", BEE_TEAL[[6]], "}",
+  "p.sub{color:", BEE_HTML[["sub"]], ";margin:13px 0 4px;font-size:13.5px;max-width:980px}",
+  "p.scope{color:", BEE_HTML[["scope"]], ";margin:14px 0 6px;font-size:12px;font-weight:600;background:", BEE_HTML[["head_bg"]], ";border-left:3px solid ", BEE_TEAL[[4]], ";padding:9px 13px;border-radius:0 7px 7px 0;max-width:1100px}",
+  "p.note{color:", BEE_HTML[["sub"]], ";margin:14px 0 0;font-size:12px}",
+  "sup.cs{color:", BEE_HTML[["cs"]], ";font-weight:700;margin-left:1px}",
+  "table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;margin-top:14px}",
+  "th,td{text-align:left;padding:9px 12px;border-bottom:1px solid ", BEE_HTML[["border_lt"]], ";vertical-align:top}",
+  "thead th{position:sticky;top:0;background:", BEE_HTML[["head_bg"]], ";cursor:pointer;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:", BEE_TEAL[[6]], ";border-bottom:2px solid ", BEE_TEAL[[3]], "}",
+  "thead th:hover{background:", BEE_HTML[["head_hover"]], "}",
+  "tbody tr:nth-child(even){background:", BEE_TABLE[["row_even"]], "}",
+  "tbody tr:hover{background:", BEE_HTML[["row_hover"]], "}",
+  "tbody tr:last-child td{border-bottom:none}",
+  "th.num{text-align:right}td.num{text-align:right;font-variant-numeric:tabular-nums}",
+  "td.bee i{color:#111}td .cn{display:block;color:", BEE_HTML[["cn"]], ";font-size:11px}",
+  "td.loc{color:", BEE_HTML[["scope"]], ";font-size:12px}",
+  "tr.low{color:", BEE_HTML[["low"]], "}tr.low td.bee i{color:", BEE_HTML[["low"]], "}",
+  ".pill{display:inline-block;padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;white-space:nowrap}",
+  ".iucn{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700}")
+
 # ---- NPS FOOTPRINT theme: the CABR "punches above its weight" figures get their OWN
 # National Park Service look (arrowhead sandstone + forest green). Its GREEN keeps the footprint
 # figures a DIFFERENT family from both the teal magnitude ramp and the red rare/urgent ramp. Used ONLY
@@ -152,6 +194,10 @@ BEE_RARE <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")   # rare/ur
 # carry the colour; labels are BLACK (ink) for legibility. link = neutral grey. interactions_network.R + *_webs.R.
 BEE_WEB <- c(plant = "#3E7D43", bee = "#C8952A",
              plant_label = BEE_INK$primary, bee_label = BEE_INK$primary, link = "#a29e94")
+# High-visibility gold for SELECTION markers (availability-corrected favourite): the gold ring on the
+# flower petals + the outlined bar / marker on the rare-bee plant figures. Brighter & more saturated than
+# the muted web goldenrod so it pops against both the pale-pink and deep-red bars.
+BEE_SELECT <- "#FFB300"
 
 # ---- BEE FAMILY palette: colours the interaction webs' family brackets + selective nodes -------
 # One colour per bee family (Paul Tol bright set), CVD-safe; selective genera/species inherit their
@@ -218,13 +264,17 @@ bee_test <- function(name, stats) paste0("Analysis: ", name, " -- ", stats)
 # but now also stamps source + data date (and n / sig when given). `sig` should be a bee_test(...) clause
 # on any figure that ran a statistical test; leave it NULL for purely descriptive figures.
 scope_cap <- function(scope = NULL, method = NULL, rank = NULL, n = NULL, sig = NULL,
-                      source = BEE_SOURCE, asof = bee_data_asof(), width = 110) {
+                      source = BEE_SOURCE, asof = bee_data_asof(), width = 110, control = NULL) {
+  # `control` (named-only, placed last so positional calls are unaffected) = what a statistical figure
+  # holds constant / its null model (e.g. "flight season + method (matched-cell null)"). Renders right
+  # after Rank. Leave NULL on descriptive figures (no test -> no control).
   bits <- c(
-    if (!is.null(scope))  paste0("Scope: ",  scope),
-    if (!is.null(method)) paste0("Method: ", method),
-    if (!is.null(rank))   paste0("Rank: ",   rank),
-    if (!is.null(n))      paste0("n = ",     format(n, big.mark = ",", trim = TRUE)),
-    if (!is.null(sig))    sig,
+    if (!is.null(scope))   paste0("Scope: ",   scope),
+    if (!is.null(method))  paste0("Method: ",  method),
+    if (!is.null(rank))    paste0("Rank: ",    rank),
+    if (!is.null(control)) paste0("Control: ", control),
+    if (!is.null(n))       paste0("n = ",      format(n, big.mark = ",", trim = TRUE)),
+    if (!is.null(sig))     sig,
     paste0("Source: ", source, " (data as of ", asof, ")"))
   stringr::str_wrap(paste(bits, collapse = "  |  "), width)
 }
@@ -240,13 +290,19 @@ bee_caption <- scope_cap   # descriptive alias for new call sites
 #   - bee_png(): base-graphics figures. Their canvases are sized in PIXELS, so we keep the
 #     caller's width/height/res (changing res would rescale text against a fixed canvas) and
 #     only swap in ragg's smoother anti-aliasing.
-bee_ggsave <- function(filename, plot = ggplot2::last_plot(), ..., dpi = 300) {
+# HD output: more pixels so figures stay sharp when enlarged/stretched on a screen or in slides.
+BEE_HD <- 2   # base-graphics upscale: multiplies pixel width/height AND res together -> same layout, 2x resolution
+bee_ggsave <- function(filename, plot = ggplot2::last_plot(), ..., dpi = 400) {   # 400 dpi (was 300) -- inches-based, so just more pixels, same layout
   dev <- if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png else NULL
   ggplot2::ggsave(filename, plot = plot, dpi = dpi, device = dev, ...)
 }
 bee_png <- function(filename, ...) {
-  if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png(filename, ...)
-  else grDevices::png(filename, ...)
+  a <- list(...)
+  if (!is.null(a$width))  a$width  <- a$width  * BEE_HD     # scale canvas + res by the SAME factor => pure
+  if (!is.null(a$height)) a$height <- a$height * BEE_HD     # resolution bump, text/line proportions unchanged
+  a$res <- (if (is.null(a$res)) 72 else a$res) * BEE_HD
+  dev <- if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png else grDevices::png
+  do.call(dev, c(list(filename = filename), a))
 }
 
 # ---- ggplot house theme ----------------------------------------------------

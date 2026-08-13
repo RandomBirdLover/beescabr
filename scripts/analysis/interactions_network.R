@@ -137,6 +137,13 @@ write_heatmap(Mg, file.path(OUT_DIR, "interactions_heatmap_genus.png"),   "genus
 write_heatmap(Ms, file.path(OUT_DIR, "interactions_heatmap_species.png"), "species")
 
 # ---- 3. bee-genus shared-forage network (igraph one-mode projection) ---------
+# DISABLED (kept for reference, not rendered) -- project decision: the shared-forage
+# network is a descriptive/exploratory visual whose apparent "generalism" is confounded
+# with sampling effort and inflated by the one-mode projection, so it can't PROVE
+# specialization structure. We rely on the specialization/selectivity table (Sec. 4) +
+# NODF nestedness for the actual claims instead. Flip `if (FALSE)` -> `if (TRUE)` to
+# bring both network figures (Sec. 3 + 3b) back.
+if (FALSE) {
 # two bee genera are linked if they visit the same plant genera; edge weight =
 # number of shared plant genera. Node size = plant-genera breadth (big central
 # hub = generalists; small rim nodes = narrow-forage specialists). Only edges
@@ -205,6 +212,7 @@ mtext("The connected core only -- genera that share no plants with others are dr
 .cl2 <- c(strsplit(str_wrap(.note2, .mc2), "\n")[[1]], strsplit(str_wrap(.prov2, .mc2), "\n")[[1]])
 for (.k in seq_along(.cl2)) mtext(.cl2[.k], side = 1, line = 1.8 + 1.0 * (.k - 1), cex = 0.56, col = BEE_INK$secondary)
 par(op); dev.off()
+}  # end DISABLED shared-forage network block (Sec. 3 + 3b) -- see note above
 
 # ---- 4. per-bee-species specialization / rarity table -----------------------
 deg  <- colSums(Ms > 0)                    # distinct plant genera visited
@@ -550,7 +558,8 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
   # standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure
   mtext(scope_cap(scope = sprintf("all records, whole park; %d plant genera x %d bee genera, grouped by family", np, nb),
                   method = "lethal + non-lethal pooled",
-                  rank = "genus (colour = availability-corrected selectivity, p<0.05)", width = 300),
+                  rank = "genus (colour = selective genera, p<0.05)",
+                  control = "plant availability, matched to month x year x method", width = 300),
         side = 1, line = 9.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
@@ -639,7 +648,8 @@ web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
   mtext(desc, side = 3, line = 3.3, cex = 0.58, col = BEE_INK$secondary)
   # standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure
   mtext(scope_cap(scope = scope,
-                  method = "lethal + non-lethal pooled", rank = "species (favourite = species-level test)", width = 300),
+                  method = "lethal + non-lethal pooled", rank = "species (favourite = species-level test)",
+                  control = "plant availability, matched to month x year x method", width = 300),
         side = 1, line = 11.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
@@ -672,5 +682,5 @@ brd <- sort(colSums(Mg > 0), decreasing = TRUE)
 print(utils::head(brd, 8))
 message("\nSpecialist bee species (visit <= ", SPECIALIST_MAX_PLANTS, " plant genera): ",
         sum(spec_tbl$specialist), " of ", nrow(spec_tbl))
-message("Wrote matrices, heatmaps, bee-genus network, and specialization table to ",
+message("Wrote matrices, heatmaps, webs, and specialization table to ",
         normalizePath(OUT_DIR))

@@ -80,7 +80,7 @@ plot_df <- data.frame(
   measure = factor(c("Land area", "Bee species", "Bee genera"),
                    levels = c("Land area", "Bee species", "Bee genera")),   # area bottom -> genera top
   pct = c(area_pct, sp_pct, gen_pct),
-  lab = c(sprintf("%.3f%%   (%.0f acres of ~%s sq mi)", area_pct, CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ",")),
+  lab = c(sprintf("%.3f%%   (%.0f acres of ~%s sq mi)", area_pct, CABR_ACRES, format(SD_COUNTY_SQMI, big.mark = ",", trim = TRUE)),
           sprintf("%.0f%%   (%d of %d species)", sp_pct, n_cabr_sp, n_hol_sp),
           sprintf("%.0f%%   (%d of %d genera)", gen_pct, n_cabr_gn, n_hol_gn)))
 # lollipop (line + dot), NOT bars: land area is ~0.006%, so a bar is invisible and reads as
@@ -100,7 +100,7 @@ g <- ggplot(plot_df, aes(x = pct, y = measure, colour = pct)) +
                            method = "lethal + non-lethal pooled",
                            rank = "species + genus",
                            source = "official CABR checklist vs Holway SD County checklist (v3)"),
-       x = "Cabrillo National Monument's share of San Diego County (%)", y = NULL) +
+       x = "Cabrillo's share of San Diego County (%)", y = NULL) +
   theme_beescabr(12) +
   theme(legend.position = "none", panel.grid.major.y = element_blank(),
         plot.title = element_text(hjust = 0.5))
