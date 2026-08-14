@@ -66,8 +66,8 @@ m <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>
   leaflet::addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
   leaflet::addProviderTiles("CartoDB.Positron",  group = "Street")
 if (!is.null(park))
-  m <- m %>% leaflet::addPolygons(data = park, fillColor = BEE_TEAL[[2]], fillOpacity = 0.18,
-      color = BEE_TEAL[[6]], weight = 1.5, opacity = 0.7, group = "park boundary")
+  m <- m %>% leaflet::addPolygons(data = park, fillColor = BEE_HTML_GREEN[["light"]], fillOpacity = 0.18,
+      color = BEE_HTML_GREEN[["deep"]], weight = 1.5, opacity = 0.7, group = "park boundary")
 m <- m %>%
   leaflet::addPolylines(data = tran, color = ~col, weight = 5, opacity = 0.95,
       label = ~sprintf("%s (%s) \u2014 %d m", name, code, len_m),
@@ -121,7 +121,7 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
 
   build_map <- function(tiletype) {
     g <- ggplot() + annotation_map_tile(type = tiletype, zoomin = 0, progress = "none")
-    if (!is.null(pk3857)) g <- g + geom_sf(data = pk3857, fill = NA, color = BEE_TEAL[[6]], linewidth = 0.6)
+    if (!is.null(pk3857)) g <- g + geom_sf(data = pk3857, fill = NA, color = BEE_HTML_GREEN[["deep"]], linewidth = 0.6)
     g + geom_sf(data = tr3857, aes(color = code_f), linewidth = 1.4, lineend = "round") +
       geom_sf_label(data = mid3857, aes(label = code), size = 2.9, fontface = "bold", fill = "white",
                     alpha = 0.82, label.size = 0, label.padding = unit(0.14, "lines"), color = BEE_INK[["primary"]]) +
@@ -135,9 +135,9 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
            subtitle = sprintf("Cabrillo National Monument · four fixed walking transects, 2021–2026 · %s m total",
                               format(sum(tran$len_m), big.mark = ",", trim = TRUE))) +
       theme_void(base_size = 12) +
-      theme(plot.title = element_text(face = "bold", size = 15, color = BEE_TEAL[[6]]),
+      theme(plot.title = element_text(face = "bold", size = 15, color = BEE_HTML_GREEN[["deep"]]),
             plot.subtitle = element_text(size = 10, color = BEE_INK[["secondary"]], margin = margin(b = 6)),
-            legend.title = element_text(face = "bold", size = 10, color = BEE_TEAL[[6]]),
+            legend.title = element_text(face = "bold", size = 10, color = BEE_HTML_GREEN[["deep"]]),
             legend.text = element_text(size = 9),
             legend.background = element_rect(fill = "white", color = BEE_HTML[["border"]], linewidth = 0.3),
             legend.margin = margin(6, 9, 7, 9),

@@ -177,14 +177,14 @@ html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Field Guide (Genus)</title>',
 '<style>',
 bee_table_css(),                                                                # shared base table chrome (single source -- theme_beescabr.R)
-'td.pref-sel{color:#0e5a52;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',   # genus-guide preference cell colours
+'td.pref-sel{color:#1f6b46;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',   # genus-guide preference cell colours
 bee_badge_css(BEE_DIET_BG,  BEE_DIET_FG,  function(k) paste0(".pill.", k)),      # diet pills (sp/ge/mo/na)
 bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),   # abundance-status pills
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
 '<h1>A Native Bee Genus Field Guide &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-'<p class="sub">A companion to the species guide, with one row per bee genus, pooling all records at every identification level. <b style="color:#08463D">Species ID&rsquo;d</b> counts the distinct species pinned within the genus, and 0 means none yet. Each column&rsquo;s meaning is noted right under its header. As on the species guide, <b style="color:#08463D">most-recorded flowers</b> and <b style="color:#08463D">most-used plant</b> are simply where the genus was seen most, which reflects bloom and effort as much as choice, while <b style="color:#08463D">forage preference</b> corrects for what was available in the same month, year, and sampling method. Because these counts include casual photos too, <b style="color:#08463D">Status</b> reflects how often a genus is recorded here, not true abundance. Click a header to sort.</p>',
+'<p class="sub">A companion to the species guide, with one row per bee genus, pooling all records at every identification level. <b style="color:#1e5a2b">Species ID&rsquo;d</b> counts the distinct species pinned within the genus, and 0 means none yet. Each column&rsquo;s meaning is noted right under its header. As on the species guide, <b style="color:#1e5a2b">most-recorded flowers</b> and <b style="color:#1e5a2b">most-used plant</b> are simply where the genus was seen most, which reflects bloom and effort as much as choice, while <b style="color:#1e5a2b">forage preference</b> corrects for what was available in the same month, year, and sampling method. Because these counts include casual photos too, <b style="color:#1e5a2b">Status</b> reflects how often a genus is recorded here, not true abundance. Click a header to sort.</p>',
 '<div class="scope"><p class="lead">', esc(scope_str), '</p>',
 '<p>', esc(status_note), '</p>',
 '<p><sup class="cs">*</sup> ', esc(CONSERV_LEGEND), '</p></div>',

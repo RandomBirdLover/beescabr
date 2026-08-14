@@ -102,8 +102,8 @@ BEE_COVERAGE_BG <- c(cb = .pill_bg(BEE_METHOD_BOTH), cp = .pill_bg(BEE_METHOD_CO
 BEE_COVERAGE_FG <- c(cb = .pill_fg(BEE_METHOD_BOTH), cp = .pill_fg(BEE_METHOD_COL[["nonlethal"]]), cs = .pill_fg(BEE_METHOD_COL[["lethal"]]))
 BEE_ABUND_BG    <- c(rare = "#efdcd2", uncommon = "#efe9dc", common = "#dcebe0")   # abundance status pills
 BEE_ABUND_FG    <- c(rare = "#8a3d1e", uncommon = "#6b5a2e", common = "#2f6b46")
-BEE_DIET_BG     <- c(sp = "#f0dcc8", ge = "#cfe6e2", mo = "#e9e7e0", na = "#f1f1f1")   # specialist / generalist / moderate / n-a
-BEE_DIET_FG     <- c(sp = "#7a4a1e", ge = "#0e5a52", mo = "#5a5850", na = "#999999")
+BEE_DIET_BG     <- c(sp = "#f0dcc8", ge = "#dcefd8", mo = "#e9e7e0", na = "#f1f1f1")   # specialist / generalist / moderate / n-a
+BEE_DIET_FG     <- c(sp = "#7a4a1e", ge = "#286b3a", mo = "#5a5850", na = "#999999")
 BEE_FORAGE_BG   <- c(sel = "#dceee0", gen = "#e9e7e0", na = "#f1f1f1")   # forage preference pills
 BEE_FORAGE_FG   <- c(sel = "#1f6b46", gen = "#5a5850", na = "#999999")
 
