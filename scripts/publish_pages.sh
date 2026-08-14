@@ -89,9 +89,10 @@ cat > "$DOCS/index.html" <<HTML
          -webkit-font-smoothing:antialiased; }
   .hero { position:relative; overflow:hidden; background:#16302b; border-bottom:1px solid var(--border); }
   .hero-bg { position:absolute; inset:0; z-index:0; width:100%; height:100%;
-             object-fit:cover; object-position:72% 48%; transform:none; }
+             object-fit:cover; object-position:52% 46%; transform:none; }
   .hero::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
-                 background:linear-gradient(180deg, rgba(14,28,30,.34) 0%, rgba(14,28,30,.72) 100%); }
+                 background:linear-gradient(90deg, rgba(12,24,14,.74) 0%, rgba(12,24,14,.5) 42%, rgba(12,24,14,.32) 100%),
+                            linear-gradient(180deg, rgba(12,24,14,.12) 0%, rgba(12,24,14,.55) 100%); }
   .hero-inner { position:relative; z-index:2; max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
   .eyebrow { display:inline-block; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
              font-weight:700; color:#fff; margin:0 0 .7rem;
@@ -137,7 +138,7 @@ cat > "$DOCS/index.html" <<HTML
       <h1>Native Bee Monitoring Program</h1>
       <p class="lead">Native bee field guides, checklists, and interactive maps from the Cabrillo native-bee monitoring program. Pick a page to explore.</p>
     </div>
-    <p class="credit"><a class="inat" href="https://www.inaturalist.org/observations/98453614" title="View on iNaturalist"><img src="./inat-logo.png" alt="iNaturalist" width="15" height="15"></a> Peridot Sweat Bee (<i>Augochlorella pomoniella</i>) on Coastal Goldenbush (<i>Isocoma menziesii</i>) &middot; Michael Ready &middot; <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</a></p>
+    <p class="credit"><a class="inat" href="https://www.inaturalist.org/observations/248210427" title="View on iNaturalist"><img src="./inat-logo.png" alt="iNaturalist" width="15" height="15"></a> Peridot Sweat Bee (<i>Augochlorella pomoniella</i>) &middot; Brandi Sanchez &middot; <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</a></p>
   </div>
   <main>$cards
   </main>
