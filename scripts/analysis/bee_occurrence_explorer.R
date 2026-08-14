@@ -137,17 +137,8 @@ pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","sp","tran","year","method",
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
 KEYS <- jsonlite::toJSON(c("lat","lon","genus","sp","tran","year","method","url"))
 
-# ---- 3b. record-type icons: iNaturalist bird (embedded) + a drawn microscope ----
-# iNat photo records -> the iNaturalist logo (committed at docs/inat-logo.png), embedded as a
-# data URI so the page is self-contained. Specimen records -> a simple inline-SVG microscope.
-# Each sits in a white badge whose BORDER is the transect color (keeps the transect cue).
-inat_b64 <- if (file.exists("docs/inat-logo.png"))
-  jsonlite::base64_enc(readBin("docs/inat-logo.png", "raw", file.size("docs/inat-logo.png"))) else ""
-INAT_JS  <- jsonlite::toJSON(sprintf('<img src="data:image/png;base64,%s" alt="iNaturalist">', inat_b64), auto_unbox = TRUE)
-micro_svg <- paste(readLines("scripts/analysis/assets/microscope.svg", warn = FALSE), collapse = "")   # Noun Project microscope
-micro_svg <- sub("<svg ", '<svg fill="#274b1e" aria-label="specimen" ', micro_svg, fixed = TRUE)       # tint to theme green (paths inherit)
-micro_svg <- sub('viewBox="[^"]*"', 'viewBox="2 0 96 122"', micro_svg)                                 # crop the author's outer padding so the glyph reads larger
-MICRO_JS  <- jsonlite::toJSON(micro_svg, auto_unbox = TRUE)
+# Record type is shown by marker STYLE, not an icon: specimen = open (outline) circle,
+# iNaturalist = filled circle. Both are colored by the taxon's genus/species (see below).
 
 # ---- 4. write the self-contained HTML ------------------------------------------
 html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -165,20 +156,12 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .panel p.sub{font-size:11.5px;color:#6b6a66;margin:0 0 10px;line-height:1.35}
   .panel label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:8px 0 3px}
   .panel select{width:100%%;padding:5px 7px;border:1px solid #d4e6d2;border-radius:6px;font-size:12.5px;background:#fff;color:#22211e}
-  .chk{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:4px}
-  .chk label{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:normal;font-weight:600;font-size:11.5px;margin:0;color:#333;cursor:pointer}
-  .chk .dot{width:10px;height:10px;border-radius:50%%;display:inline-block;border:1px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+  .legrow{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;color:#333;margin:4px 0}
+  .lswatch{display:inline-block;width:20px;border-top:3px solid #888;flex:none}
+  .cswatch{display:inline-block;width:12px;height:12px;border-radius:50%%;border:2px solid #57564f;flex:none}
   .count{margin-top:9px;font-size:11px;color:#6b6a66}
   .leaflet-popup-content{font:12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   .leaflet-popup-content i{color:#111}
-  .lg{line-height:1.5}
-  .beebadge{background:none!important;border:none!important}
-  .badge{width:24px;height:24px;border-radius:50%%;background:#fff;border:2px solid #888;box-shadow:0 1px 2px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .badge img{width:15px;height:15px;display:block}
-  .badge svg{width:20px;height:20px;display:block}
-  .ticon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;vertical-align:-3px;margin-right:2px}
-  .ticon img{width:15px;height:15px}
-  .ticon svg{width:18px;height:18px}
   .legend{max-width:196px;max-height:52vh;overflow:auto}
   .legend .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:6px}
   .legend .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:6px}
@@ -186,14 +169,14 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .legend .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
 </style></head><body><div id="map"></div>
 <script>
-var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s, INAT=%s, MICRO=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
+var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
 var BOUNDARY=%s, TRANSECTS=%s;
 ',
   BEE_HTML_GREEN[["mid"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]],
   jsonlite::toJSON(as.list(COLS), auto_unbox = TRUE), KEYS, pts,
   jsonlite::toJSON(gs_list, auto_unbox = FALSE),
   if (!is.null(tran_lab)) jsonlite::toJSON(tran_lab, dataframe = "rows", auto_unbox = TRUE) else "[]",
-  jsonlite::toJSON(photos_ok, auto_unbox = TRUE), INAT_JS, MICRO_JS, TCOLS_JS, GREY_JS, LEGEND_JS,
+  jsonlite::toJSON(photos_ok, auto_unbox = TRUE), TCOLS_JS, GREY_JS, LEGEND_JS,
   to_geojson(park_bnd), to_geojson(tran_ln)),
 'var TR_ORDER=["BST","OT","TP","UPMON","off-transect"];
 var map=L.map("map",{preferCanvas:true,zoomControl:false});
@@ -213,23 +196,20 @@ var layer=L.layerGroup().addTo(map);
 function esc(x){return (""+x).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 function draw(){
   layer.clearLayers();
-  var g=selG.value, s=selS.value;
-  var tOn={}; TR_ORDER.forEach(function(t){var c=document.getElementById("t_"+t); tOn[t]=c?c.checked:true;});
-  var mOn={photo:document.getElementById("m_photo").checked, net:document.getElementById("m_net").checked};
-  var n=0;
+  var g=selG.value, s=selS.value, n=0;
   recs.forEach(function(r){
     if(g!=="*"&&r.g!==g) return;
     if(s!=="*"&&r.s!==s) return;
-    if(!tOn[r.t]) return;
-    if(!mOn[r.m]) return;
     n++;
     var name = r.s? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>" : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
     var pop = name+"<br>Transect: <b>"+esc(r.t)+"</b> &middot; "+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
               (r.u?"<br><a href=\\""+esc(r.u)+"\\" target=\\"_blank\\">View on iNaturalist &rarr;</a>":"");
-    var tx=r.s? r.g+" "+r.s : r.g, col=TCOLS[tx]||GREY, ico=(r.m==="net")?MICRO:INAT;   // ring = genus/species color; icon = record type
-    var ic=L.divIcon({className:"beebadge",iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-10],
-      html:"<div class=badge style=\\"border-color:"+col+"\\">"+ico+"</div>"});
-    L.marker([r.lat,r.lon],{icon:ic}).bindPopup(pop).addTo(layer);
+    var tx=r.s? r.g+" "+r.s : r.g, col=TCOLS[tx]||GREY;
+    // record type by marker STYLE: specimen (net) = open circle, iNaturalist (photo) = filled. Color = genus/species.
+    var opt=(r.m==="net")
+      ? {radius:5,color:col,weight:2,opacity:1,fillColor:"#fff",fillOpacity:1}
+      : {radius:5,color:col,weight:1,opacity:1,fillColor:col,fillOpacity:.9};
+    L.circleMarker([r.lat,r.lon],opt).bindPopup(pop).addTo(layer);
   });
   document.getElementById("count").textContent = n.toLocaleString()+" record"+(n===1?"":"s")+" shown";
 }
@@ -239,22 +219,24 @@ panel.onAdd=function(){
   var d=L.DomUtil.create("div","panel"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
   var genera=Object.keys(GS).sort();
   var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
-  var trChk=TR_ORDER.map(function(t){var lbl=t==="off-transect"?"off":t;return "<label><input type=checkbox id=t_"+t+" checked><span class=dot style=\\"background:"+(COLS[t]||"#888")+"\\"></span>"+lbl+"</label>";}).join("");
+  var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
   d.innerHTML=
     "<div class=eyebrow>Cabrillo National Monument</div>"+
     "<h1>Bee Occurrence Explorer</h1>"+
-    "<p class=sub>Pick a genus (then a species) and toggle transects to see where each bee has been recorded.</p>"+
+    "<p class=sub>Pick a genus (then a species) to see where each bee has been recorded.</p>"+
     "<label>Genus</label><select id=selG>"+gopt+"</select>"+
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
-    "<label>Transect</label><div class=chk id=trchk>"+trChk+"</div>"+
-    "<label>Record type</label><div class=chk><label><input type=checkbox id=m_net checked><span class=ticon>"+MICRO+"</span>specimen</label><label><input type=checkbox id=m_photo checked><span class=ticon>"+INAT+"</span>iNaturalist</label></div>"+
+    "<label>Transect lines</label>"+trLeg+
+    "<label>Record type</label>"+
+    "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
+    "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
     "<div class=count id=count></div>";
   return d;
 };
 panel.addTo(map);
-// family-grouped genus color legend (bottom-left), matching the bounty maps
-var legend=L.control({position:"bottomleft"});
+// family-grouped genus color legend (bottom-right, clear of the top-left filter panel)
+var legend=L.control({position:"bottomright"});
 legend.onAdd=function(){
   var d=L.DomUtil.create("div","panel legend"); L.DomEvent.disableScrollPropagation(d); L.DomEvent.disableClickPropagation(d);
   var h="<div class=eyebrow>Genus colors</div>";
@@ -282,9 +264,6 @@ function showPhoto(){
 }
 selG.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
 selS.addEventListener("change",function(){showPhoto();draw();});
-document.getElementById("trchk").addEventListener("change",draw);
-document.getElementById("m_photo").addEventListener("change",draw);
-document.getElementById("m_net").addEventListener("change",draw);
 // fit to the data + first draw
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
 map.fitBounds([[Math.min.apply(null,lat0),Math.min.apply(null,lon0)],[Math.max.apply(null,lat0),Math.max.apply(null,lon0)]],{padding:[20,20]});
