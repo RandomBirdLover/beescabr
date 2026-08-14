@@ -138,7 +138,7 @@ cat > "$DOCS/index.html" <<HTML
       <h1>Native Bee Monitoring Program</h1>
       <p class="lead">Native bee field guides, checklists, and interactive maps from the Cabrillo native-bee monitoring program. Pick a page to explore.</p>
     </div>
-    <p class="credit"><a class="inat" href="https://www.inaturalist.org/observations/248210427" title="View on iNaturalist"><img src="./inat-logo.png" alt="iNaturalist" width="15" height="15"></a> Peridot Sweat Bee (<i>Augochlorella pomoniella</i>) &middot; Brandi Sanchez &middot; <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</a></p>
+    <p class="credit"><a class="inat" href="https://www.inaturalist.org/observations/248210427" title="View on iNaturalist"><img src="./inat-logo.png" alt="iNaturalist" width="15" height="15"></a> Peridot Sweat Bee (<i>Augochlorella pomoniella</i>) on Wirelettuce (<i>Stephanomeria</i>) &middot; Brandi Sanchez &middot; <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</a></p>
   </div>
   <main>$cards
   </main>
