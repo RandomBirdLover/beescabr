@@ -136,6 +136,8 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
   .leaflet-popup-content{font:12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   .leaflet-popup-content i{color:#111}
   .lg{line-height:1.5}
+  .beebadge{background:none!important;border:none!important}
+  .badge{width:22px;height:22px;border-radius:50%%;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
 </style></head><body><div id="map"></div>
 <script>
 var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s;
@@ -171,7 +173,10 @@ function draw(){
     var name = r.s? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>" : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
     var pop = name+"<br>Transect: <b>"+esc(r.t)+"</b> &middot; "+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
               (r.u?"<br><a href=\\""+esc(r.u)+"\\" target=\\"_blank\\">View on iNaturalist &rarr;</a>":"");
-    L.circleMarker([r.lat,r.lon],{radius:5,color:"#fff",weight:1,fillColor:COLS[r.t]||"#888",fillOpacity:.9}).bindPopup(pop).addTo(layer);
+    var col=COLS[r.t]||"#888", em=(r.m==="net")?"\uD83D\uDD2C":"\uD83D\uDCF7";   // microscope = specimen, camera = photo
+    var ic=L.divIcon({className:"beebadge",iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-9],
+      html:"<div class=badge style=\\"background:"+col+"\\">"+em+"</div>"});
+    L.marker([r.lat,r.lon],{icon:ic}).bindPopup(pop).addTo(layer);
   });
   document.getElementById("count").textContent = n.toLocaleString()+" record"+(n===1?"":"s")+" shown";
 }
@@ -190,7 +195,7 @@ panel.onAdd=function(){
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<label>Transect</label><div class=chk id=trchk>"+trChk+"</div>"+
-    "<label>Method</label><div class=chk><label><input type=checkbox id=m_photo checked>photo</label><label><input type=checkbox id=m_net checked>specimen</label></div>"+
+    "<label>Record type</label><div class=chk><label><input type=checkbox id=m_net checked>&#128300; specimen</label><label><input type=checkbox id=m_photo checked>&#128247; iNaturalist</label></div>"+
     "<div class=count id=count></div>";
   return d;
 };
