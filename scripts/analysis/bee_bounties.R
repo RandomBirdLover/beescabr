@@ -223,9 +223,9 @@ genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
 #   .genus_block -- FAMILY (uppercase roman header + hue accent bar) > GENUS (indented italic + dot)
 #   .tran_block  -- transect rows, each a short line swatch in its transect hue
 #   .legend_wrap -- the shared white card around whatever columns get passed
-.col_title   <- function(t) sprintf('<div style="font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:%s;margin:0 0 5px">%s</div>', BEE_TEAL[[4]], t)
+.col_title   <- function(t) sprintf('<div style="font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:%s;margin:0 0 5px">%s</div>', BEE_HTML_GREEN[["mid"]], t)
 .genus_block <- function(fams, glg) paste(vapply(fams, function(fm) { gg <- glg[glg$fam == fm, ]
-    paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_TEAL[[6]], unname(BEE_FAMILY[fm]), fm),
+    paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm),
            paste(sprintf('<div style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
   }, character(1)), collapse = "")
 .tran_block  <- function(tks) paste(vapply(tks, function(t) sprintf(
@@ -299,8 +299,8 @@ TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"
 # official title overlay (top-left corner) -- white card w/ NPS eyebrow + teal head, matching the tables
 .map_title <- function(head, sub) paste0(
   '<div style="', .CARD, ';padding:9px 15px;max-width:430px">',
-  sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_TEAL[[4]]),
-  sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;line-height:1.18;white-space:nowrap;color:%s">%s</div>', BEE_TEAL[[6]], head),
+  sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_HTML_GREEN[["mid"]]),
+  sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;line-height:1.18;white-space:nowrap;color:%s">%s</div>', BEE_HTML_GREEN[["deep"]], head),
   sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">%s</div>', BEE_HTML[["sub"]], sub), '</div>')
 title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!")
 title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!")

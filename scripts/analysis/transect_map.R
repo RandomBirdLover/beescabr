@@ -41,8 +41,8 @@ lab <- data.frame(code = tran$code, lon = mm[, 1], lat = mm[, 2])
 CARD <- sprintf("background:%s;border:1px solid %s;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:%s",
                 BEE_HTML[["page"]], BEE_HTML[["border"]], BEE_HTML[["ink"]])
 title <- paste0('<div style="', CARD, ';padding:9px 15px;max-width:360px">',
-  sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_TEAL[[4]]),
-  sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap;color:%s">Native Bee Survey Transects</div>', BEE_TEAL[[6]]),
+  sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_HTML_GREEN[["mid"]]),
+  sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap;color:%s">Native Bee Survey Transects</div>', BEE_HTML_GREEN[["deep"]]),
   sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">Four fixed walking transects, sampled 2021\u20132026<br>%s m surveyed in total</div>',
           BEE_HTML[["sub"]], format(sum(tran$len_m), big.mark = ",", trim = TRUE)),
   '</div>')
@@ -52,11 +52,11 @@ leg_row <- function(i) sprintf(
   '<div style="margin:6px 0;white-space:nowrap"><span style="display:inline-block;width:28px;height:4px;border-radius:2px;background:%s;vertical-align:middle;margin-right:10px"></span>%s <span style="color:%s">(%s) \u00b7 %d m</span></div>',
   tran$col[i], tran$name[i], BEE_HTML[["sub"]], tran$code[i], tran$len_m[i])
 legend <- paste0('<div style="', CARD, ';padding:11px 14px;font-size:12.5px">',
-  sprintf('<div style="font-weight:700;font-size:13px;color:%s;margin-bottom:5px">CABR Bee Transects</div>', BEE_TEAL[[6]]),
+  sprintf('<div style="font-weight:700;font-size:13px;color:%s;margin-bottom:5px">CABR Bee Transects</div>', BEE_HTML_GREEN[["deep"]]),
   paste(vapply(ord, leg_row, character(1)), collapse = ""), '</div>')
 
 north <- paste0('<div style="', CARD, ';padding:5px 9px 6px;text-align:center;line-height:1.05">',
-  sprintf('<div style="font-weight:700;font-size:11px;color:%s;margin-bottom:1px">N</div>', BEE_TEAL[[6]]),
+  sprintf('<div style="font-weight:700;font-size:11px;color:%s;margin-bottom:1px">N</div>', BEE_HTML_GREEN[["deep"]]),
   sprintf('<svg width="14" height="16" viewBox="0 0 14 16"><polygon points="7,0 12.5,15.5 7,11.5 1.5,15.5" fill="%s"/></svg>', BEE_INK[["primary"]]),
   '</div>')
 

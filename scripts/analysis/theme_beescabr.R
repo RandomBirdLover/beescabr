@@ -129,8 +129,13 @@ BEE_TABLE <- c(row_odd = "#ffffff", row_even = "#f6f5f2", head = "#1a1a1a", subt
 # (rendered by bee_badge_css); this covers the surrounding table chrome + layout.
 BEE_HTML <- c(page = "#ffffff", page_alt = "#ece9e2", ink = "#22211e", sub = "#6b6a66", scope = "#4a4945",
               scope_rule = "#d8d5cc", head_bg = "#f2efe8", head_hover = "#e8e4da",
-              row_hover = "#e6f1ec",                      # pale teal -> ties tables to the house palette; reads over the zebra stripe
+              row_hover = "#e7f2e1",                      # pale bee-green -> ties tables to the web palette; reads over the zebra stripe
               border = "#dddddd", border_lt = "#ededea", cn = "#8a8880", low = "#a09e98", cs = "#8a1c1c")
+# HTML-PAGE accent: the metallic green of the peridot sweat bee (Augochlorella pomoniella), sampled from
+# Michael Ready's hero photo. This is the WEB-page look ONLY (field guides + summary + landing site); it is
+# deliberately SEPARATE from BEE_TEAL, which still drives the figure magnitude/evidence ramps. deep = headings
+# (h1/h2/th), mid = eyebrow/underline/scope-rule, light = subtle def-row divider.
+BEE_HTML_GREEN <- c(deep = "#1e5a2b", mid = "#3e9a43", light = "#7dc26a")
 # The shared stylesheet (the rules that go BETWEEN <style> and </style>). A script appends its own
 # bee_badge_css(...) for whichever pill sets it uses. Zebra striping (BEE_TABLE row_even) + sticky,
 # sortable, teal-hover header give every table the same look + organization.
@@ -141,15 +146,15 @@ bee_table_css <- function() paste0(
   # screen and the columns wrap to fit; the teal typography polish stays. (Narrow tables like the NPS
   # summary keep their centred card in their own CSS.)
   "body{font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:", BEE_HTML[["ink"]], ";margin:22px 28px 44px;background:", BEE_HTML[["page"]], ";-webkit-font-smoothing:antialiased}",
-  ".org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:", BEE_TEAL[[4]], ";margin:0 0 3px}",   # park-name eyebrow above the title
-  "h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap;color:", BEE_TEAL[[6]], "}",
-  "h1:after{content:'';display:block;width:56px;height:3px;background:", BEE_TEAL[[4]], ";border-radius:2px;margin:11px 0 2px}",
+  ".org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:", BEE_HTML_GREEN[["mid"]], ";margin:0 0 3px}",   # park-name eyebrow above the title
+  "h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap;color:", BEE_HTML_GREEN[["deep"]], "}",
+  "h1:after{content:'';display:block;width:56px;height:3px;background:", BEE_HTML_GREEN[["mid"]], ";border-radius:2px;margin:11px 0 2px}",
   ".byline{font-size:13px;color:", BEE_HTML[["sub"]], ";margin:7px 0 0;font-style:italic}",   # author credit under the title bar
-  "h2{font-size:15px;font-weight:700;margin:30px 0 6px;color:", BEE_TEAL[[6]], "}",
+  "h2{font-size:15px;font-weight:700;margin:30px 0 6px;color:", BEE_HTML_GREEN[["deep"]], "}",
   "p.sub{color:", BEE_HTML[["sub"]], ";margin:13px 0 4px;font-size:13.5px;max-width:980px}",
   # .scope is a box (works as <p> for single-line provenance, or <div> holding a bold lead
   # line + secondary notes when the caveats are folded into the same bar).
-  ".scope{color:", BEE_HTML[["sub"]], ";margin:14px 0 6px;font-size:12px;background:", BEE_HTML[["head_bg"]], ";border-left:3px solid ", BEE_TEAL[[4]], ";padding:10px 13px;border-radius:0 7px 7px 0;max-width:1100px}",
+  ".scope{color:", BEE_HTML[["sub"]], ";margin:14px 0 6px;font-size:12px;background:", BEE_HTML[["head_bg"]], ";border-left:3px solid ", BEE_HTML_GREEN[["mid"]], ";padding:10px 13px;border-radius:0 7px 7px 0;max-width:1100px}",
   ".scope>p{margin:9px 0 0}.scope>p:first-child{margin-top:0}",
   ".scope .lead{font-weight:600;color:", BEE_HTML[["scope"]], "}",   # provenance line stays prominent
   "p.note{color:", BEE_HTML[["sub"]], ";margin:14px 0 0;font-size:12px}",
@@ -162,9 +167,9 @@ bee_table_css <- function() paste0(
   ".tbl-wrap table{margin-top:0}",
   "table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;margin-top:14px}",
   "th,td{text-align:left;padding:9px 12px;border-bottom:1px solid ", BEE_HTML[["border_lt"]], ";vertical-align:top}",
-  "thead th{position:sticky;top:0;z-index:3;background:", BEE_HTML[["head_bg"]], ";cursor:pointer;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:", BEE_TEAL[[6]], ";border-bottom:1px solid ", BEE_HTML[["border_lt"]], "}",
+  "thead th{position:sticky;top:0;z-index:3;background:", BEE_HTML[["head_bg"]], ";cursor:pointer;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:", BEE_HTML_GREEN[["deep"]], ";border-bottom:1px solid ", BEE_HTML[["border_lt"]], "}",
   # optional frozen definition sub-row (<tr class="def">): short "what this column means", pinned under the labels
-  "thead tr.def td{position:sticky;top:36px;z-index:2;background:", BEE_HTML[["head_bg"]], ";font-weight:400;text-transform:none;letter-spacing:normal;font-size:10px;line-height:1.2;color:", BEE_HTML[["cn"]], ";padding:0 12px 7px;border-bottom:2px solid ", BEE_TEAL[[3]], ";white-space:normal;vertical-align:top}",
+  "thead tr.def td{position:sticky;top:36px;z-index:2;background:", BEE_HTML[["head_bg"]], ";font-weight:400;text-transform:none;letter-spacing:normal;font-size:10px;line-height:1.2;color:", BEE_HTML[["cn"]], ";padding:0 12px 7px;border-bottom:2px solid ", BEE_HTML_GREEN[["light"]], ";white-space:normal;vertical-align:top}",
   "thead th:hover{background:", BEE_HTML[["head_hover"]], "}",
   "tbody tr:nth-child(even){background:", BEE_TABLE[["row_even"]], "}",
   "tbody tr:hover{background:", BEE_HTML[["row_hover"]], "}",

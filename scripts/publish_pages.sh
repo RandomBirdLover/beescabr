@@ -43,6 +43,9 @@ for row in "${pages[@]}"; do
 done
 
 # ---- build the landing page (docs/index.html) ------------------------------
+# data-as-of date: read the same "data as of YYYY-MM-DD" the HTML pages print, so the footer matches.
+DATE=$(grep -ohE 'data as of [0-9]{4}-[0-9]{2}-[0-9]{2}' "$SRC/reference/nps_summary/nps_summary_tables.html" 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+[ -z "$DATE" ] && DATE="the latest survey export"
 cards=""
 for row in "${pages[@]}"; do
   IFS='|' read -r src out title blurb icon tag <<< "$row"
@@ -65,15 +68,15 @@ cat > "$DOCS/index.html" <<HTML
 <title>Cabrillo National Monument &mdash; Native Bee Monitoring Program</title>
 <style>
   :root {
-    --bg:#f1f8f8; --bg2:#e4f1f1; --fg:#18292c; --muted:#5b6d6f;
-    --card:#ffffff; --border:#d4e6e6; --accent:#438990; --accent-deep:#1d5663; --accent-soft:#daeded;
-    --shadow:0 1px 2px rgba(20,50,54,.05), 0 8px 24px rgba(20,50,54,.07);
-    --shadow-hover:0 2px 6px rgba(20,50,54,.1), 0 16px 40px rgba(20,50,54,.14);
+    --bg:#f3f8f1; --bg2:#e7f2e4; --fg:#1a271b; --muted:#5c6d5b;
+    --card:#ffffff; --border:#d7e6d2; --accent:#3f9a43; --accent-deep:#245c2a; --accent-soft:#e2f1da;
+    --shadow:0 1px 2px rgba(24,50,26,.05), 0 8px 24px rgba(24,50,26,.07);
+    --shadow-hover:0 2px 6px rgba(24,50,26,.1), 0 16px 40px rgba(24,50,26,.14);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:#0e1718; --bg2:#0a1213; --fg:#e6efef; --muted:#92a3a4;
-      --card:#14201f; --border:#243a3a; --accent:#5aa6ad; --accent-deep:#93c8ce; --accent-soft:#123030;
+      --bg:#0f170e; --bg2:#0a120a; --fg:#e7efe5; --muted:#93a491;
+      --card:#161f13; --border:#26391f; --accent:#74c05c; --accent-deep:#b1dd97; --accent-soft:#16300f;
       --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
       --shadow-hover:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.5);
     }
@@ -86,7 +89,7 @@ cat > "$DOCS/index.html" <<HTML
          -webkit-font-smoothing:antialiased; }
   .hero { position:relative; overflow:hidden; background:#16302b; border-bottom:1px solid var(--border); }
   .hero-bg { position:absolute; inset:0; z-index:0; width:100%; height:100%;
-             object-fit:cover; object-position:center 45%; transform:scaleX(-1); }
+             object-fit:cover; object-position:38% 45%; transform:scaleX(-1) scale(1.18); }
   .hero::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
                  background:linear-gradient(180deg, rgba(14,28,30,.34) 0%, rgba(14,28,30,.72) 100%); }
   .hero-inner { position:relative; z-index:2; max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
@@ -138,7 +141,7 @@ cat > "$DOCS/index.html" <<HTML
   </div>
   <main>$cards
   </main>
-  <footer>Generated from the beescabr pipeline. Data as of the latest survey export.</footer>
+  <footer>Generated from the beescabr pipeline by Brandi Sanchez. Data as of ${DATE}.</footer>
 </body>
 </html>
 HTML
