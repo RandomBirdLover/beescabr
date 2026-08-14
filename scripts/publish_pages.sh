@@ -19,21 +19,21 @@ DOCS="docs"
 mkdir -p "$DOCS"
 touch "$DOCS/.nojekyll"                        # serve files as-is, no Jekyll processing
 
-# source_path  ->  docs_filename  |  card title  |  card blurb
-# (kept as parallel arrays so the same list drives both the copy and the index)
+# source_path | docs_filename | card title | card blurb | icon (emoji) | category tag
+# (one list drives both the file copy and the landing-page cards)
 pages=(
-  "$SRC/reference/field_guide/bee_field_guide_species.html|field_guide_species.html|Bee Field Guide (Species)|Every bee species recorded at Cabrillo, with photos, IUCN status, abundance, and forage."
-  "$SRC/reference/field_guide/bee_field_guide_genus.html|field_guide_genus.html|Bee Field Guide (Genus)|The same guide grouped by genus for quicker browsing."
-  "$SRC/reference/nps_summary/nps_summary_tables.html|summary_tables.html|Park Summary Tables|Headline counts: species, genera, plants, survey effort, and participation."
-  "$SRC/coverage/least_sampled/least_sampled_bees.html|least_sampled_bees.html|Least-Sampled Bees|The bees with the thinnest evidence, where more surveying would help most."
-  "$SRC/reference/transects/cabr_bee_transects_map.html|transects_map.html|Survey Transect Map|Interactive map of the fixed survey transects at Cabrillo National Monument."
-  "$SRC/coverage/bee_bounties/specimen_bee_bounty_map.html|specimen_bounty_map.html|Specimen Bee Bounty Map|Where to net a voucher specimen: gaps the collection still needs."
-  "$SRC/coverage/bee_bounties/inaturalist_bee_bounty_map.html|inaturalist_bounty_map.html|iNaturalist Bee Bounty Map|Where to photograph bees to fill iNaturalist gaps."
+  "$SRC/reference/field_guide/bee_field_guide_species.html|field_guide_species.html|Bee Field Guide (Species)|Every bee species recorded at Cabrillo, with photos, IUCN status, abundance, and forage.|🐝|Field guide"
+  "$SRC/reference/field_guide/bee_field_guide_genus.html|field_guide_genus.html|Bee Field Guide (Genus)|The same guide grouped by genus for quicker browsing.|🐝|Field guide"
+  "$SRC/reference/nps_summary/nps_summary_tables.html|summary_tables.html|Park Summary Tables|Headline counts: species, genera, plants, survey effort, and participation.|📊|Summary"
+  "$SRC/coverage/least_sampled/least_sampled_bees.html|least_sampled_bees.html|Least-Sampled Bees|The bees with the thinnest evidence, where more surveying would help most.|🔍|Priorities"
+  "$SRC/reference/transects/cabr_bee_transects_map.html|transects_map.html|Survey Transect Map|Interactive map of the fixed survey transects at Cabrillo National Monument.|🗺️|Map"
+  "$SRC/coverage/bee_bounties/specimen_bee_bounty_map.html|specimen_bounty_map.html|Specimen Bee Bounty Map|Where to net a voucher specimen: gaps the collection still needs.|🔬|Map"
+  "$SRC/coverage/bee_bounties/inaturalist_bee_bounty_map.html|inaturalist_bounty_map.html|iNaturalist Bee Bounty Map|Where to photograph bees to fill iNaturalist gaps.|📷|Map"
 )
 
 # ---- copy each page into docs/ ---------------------------------------------
 for row in "${pages[@]}"; do
-  IFS='|' read -r src out _title _blurb <<< "$row"
+  IFS='|' read -r src out _title _blurb _icon _tag <<< "$row"
   if [ -f "$src" ]; then
     cp "$src" "$DOCS/$out"
     echo "published  $out"
@@ -45,12 +45,14 @@ done
 # ---- build the landing page (docs/index.html) ------------------------------
 cards=""
 for row in "${pages[@]}"; do
-  IFS='|' read -r src out title blurb <<< "$row"
+  IFS='|' read -r src out title blurb icon tag <<< "$row"
   [ -f "$DOCS/$out" ] || continue
   cards="$cards
       <a class=\"card\" href=\"./$out\">
+        <div class=\"card-head\"><span class=\"icon\">$icon</span><span class=\"tag\">$tag</span></div>
         <h2>$title</h2>
         <p>$blurb</p>
+        <span class=\"go\">Open<span class=\"arrow\">&rarr;</span></span>
       </a>"
 done
 
@@ -62,32 +64,60 @@ cat > "$DOCS/index.html" <<HTML
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cabrillo National Monument Native Bees</title>
 <style>
-  :root { --bg:#fbfaf7; --fg:#1c1c1c; --muted:#5c5c5c; --card:#ffffff; --border:#e6e2d8; --accent:#4C9E90; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#161613; --fg:#ececec; --muted:#a6a6a6; --card:#1f1f1c; --border:#2f2f2a; --accent:#5bb0a1; }
+  :root {
+    --bg:#f7f6f1; --bg2:#efeee7; --fg:#1b1b19; --muted:#5f5f58;
+    --card:#ffffff; --border:#e7e3d9; --accent:#3f8d80; --accent-soft:#e4f1ee;
+    --shadow:0 1px 2px rgba(20,30,28,.04), 0 8px 24px rgba(20,30,28,.06);
+    --shadow-hover:0 2px 6px rgba(20,30,28,.08), 0 16px 40px rgba(20,30,28,.12);
   }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg);
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#141513; --bg2:#101110; --fg:#ececea; --muted:#9d9d95;
+      --card:#1c1e1b; --border:#2b2e29; --accent:#63b6a6; --accent-soft:#1e2a27;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+      --shadow-hover:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; color:var(--fg); line-height:1.55;
+         background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+         background-attachment:fixed; min-height:100vh;
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-         line-height:1.5; }
-  header { max-width:920px; margin:0 auto; padding:3rem 1.25rem 1rem; }
-  h1 { margin:0 0 .35rem; font-size:1.9rem; }
-  .lead { color:var(--muted); margin:0; max-width:60ch; }
-  main { max-width:920px; margin:0 auto; padding:1rem 1.25rem 3rem;
-         display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
-  .card { display:block; background:var(--card); border:1px solid var(--border);
-          border-radius:12px; padding:1.1rem 1.2rem; text-decoration:none; color:inherit;
-          transition:border-color .15s, transform .15s; }
-  .card:hover { border-color:var(--accent); transform:translateY(-2px); }
-  .card h2 { margin:0 0 .35rem; font-size:1.1rem; color:var(--accent); }
-  .card p  { margin:0; color:var(--muted); font-size:.92rem; }
-  footer { max-width:920px; margin:0 auto; padding:0 1.25rem 3rem; color:var(--muted); font-size:.85rem; }
+         -webkit-font-smoothing:antialiased; }
+  header { max-width:960px; margin:0 auto; padding:3.5rem 1.5rem 1.5rem; }
+  .eyebrow { display:inline-block; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+             font-weight:700; color:var(--accent); margin:0 0 .6rem;
+             padding:.28rem .6rem; background:var(--accent-soft); border-radius:999px; }
+  h1 { margin:0 0 .5rem; font-size:2.2rem; line-height:1.15; letter-spacing:-.02em; font-weight:800; }
+  .lead { color:var(--muted); margin:0; max-width:58ch; font-size:1.05rem; }
+  main { max-width:960px; margin:0 auto; padding:1.5rem 1.5rem 3.5rem;
+         display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.15rem; }
+  .card { position:relative; display:flex; flex-direction:column; background:var(--card);
+          border:1px solid var(--border); border-radius:16px; padding:1.35rem 1.4rem 1.25rem;
+          text-decoration:none; color:inherit; box-shadow:var(--shadow); overflow:hidden;
+          transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .card::before { content:""; position:absolute; inset:0 auto 0 0; width:3px; background:var(--accent);
+                  opacity:0; transition:opacity .18s ease; }
+  .card:hover { transform:translateY(-4px); box-shadow:var(--shadow-hover); border-color:var(--accent); }
+  .card:hover::before { opacity:1; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:.85rem; }
+  .icon { font-size:1.7rem; line-height:1; }
+  .tag { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+         color:var(--accent); background:var(--accent-soft); padding:.28rem .6rem; border-radius:999px; }
+  .card h2 { margin:0 0 .4rem; font-size:1.18rem; letter-spacing:-.01em; }
+  .card p  { margin:0 0 1.1rem; color:var(--muted); font-size:.93rem; flex:1; }
+  .go { display:inline-flex; align-items:center; gap:.35rem; font-size:.88rem; font-weight:600; color:var(--accent); }
+  .arrow { transition:transform .18s ease; }
+  .card:hover .arrow { transform:translateX(4px); }
+  footer { max-width:960px; margin:0 auto; padding:0 1.5rem 3.5rem; color:var(--muted); font-size:.85rem;
+           border-top:1px solid var(--border); padding-top:1.5rem; }
 </style>
 </head>
 <body>
   <header>
-    <h1>Cabrillo National Monument &mdash; Native Bees</h1>
-    <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page below.</p>
+    <span class="eyebrow">&#127803; Cabrillo National Monument</span>
+    <h1>Native Bee Survey</h1>
+    <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page to explore.</p>
   </header>
   <main>$cards
   </main>
