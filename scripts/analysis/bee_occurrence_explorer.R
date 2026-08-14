@@ -34,11 +34,16 @@ prep <- function(f, method) {
   tr <- toupper(str_squish(as.character(d$transect)))
   tr <- ifelse(grepl("^TP", tr), "TP", tr)                 # TP1/TP2 -> TP
   tr <- ifelse(tr %in% TRANSECTS, tr, "off-transect")      # blanks / others -> off-transect
+  sg <- if ("subgenus" %in% names(d)) str_squish(d$subgenus) else NA_character_
+  cx <- if ("complex"  %in% names(d)) str_squish(d$complex)  else NA_character_
+  cx <- sub("^\\(Complex\\)\\s*", "", ifelse(is.na(cx), "", cx))   # keep the clean species-group name
   data.frame(
     lat    = suppressWarnings(round(as.numeric(d$latitude), 5)),
     lon    = suppressWarnings(round(as.numeric(d$longitude), 5)),
     family = if ("family" %in% names(d)) str_squish(d$family) else NA_character_,
     genus  = str_squish(d$genus),
+    subgenus = ifelse(is.na(sg), "", sg),                  # "" if not identified to subgenus
+    complex  = cx,                                          # "" if not in a named species-complex
     sp     = ifelse(d$taxon_rank %in% SPECIES_RANKS & !is.na(d$species) & d$species != "",
                     word(d$species, -1), ""),               # species epithet, "" if genus-only
     tran   = tr,
@@ -53,10 +58,13 @@ message(sprintf("Georeferenced bee records: %d (photo %d, net %d) across %d gene
                 nrow(rec), sum(rec$method == "photo"), sum(rec$method == "net"),
                 length(unique(rec$genus))))
 
-# genus -> sorted species epithets present (for the cascading dropdown)
-genus_species <- rec %>% filter(sp != "") %>% distinct(genus, sp) %>%
-  arrange(genus, sp) %>% group_by(genus) %>% summarise(species = list(sp), .groups = "drop")
-gs_list <- setNames(lapply(genus_species$species, sort), genus_species$genus)
+# The cascading dropdowns (genus -> subgenus -> complex -> species) are derived
+# CLIENT-SIDE from the point payload below, since every record already carries its
+# genus/subgenus/complex/species. We still build a genus -> species map HERE, but only
+# to know which taxa to fetch a representative photo for (below).
+gs_tbl  <- rec %>% filter(sp != "") %>% distinct(genus, sp) %>%
+  arrange(genus, sp) %>% group_by(genus) %>% summarise(species = list(sort(sp)), .groups = "drop")
+gs_list <- setNames(gs_tbl$species, gs_tbl$genus)
 for (g in sort(unique(rec$genus))) if (is.null(gs_list[[g]])) gs_list[[g]] <- character(0)
 gs_list <- gs_list[sort(names(gs_list))]
 
@@ -133,9 +141,9 @@ LEGEND_JS <- jsonlite::toJSON(lapply(intersect(BEE_FAMILY_ORDER, genus_leg$fam),
   list(family = fm, fcol = unname(BEE_FAMILY[fm]),
        genera = unname(Map(function(n, c) list(n = n, c = c), g$genus, g$col)))
 }), auto_unbox = TRUE)
-pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","sp","tran","year","method","url")],
+pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","subgenus","complex","sp","tran","year","method","url")],
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
-KEYS <- jsonlite::toJSON(c("lat","lon","genus","sp","tran","year","method","url"))
+KEYS <- jsonlite::toJSON(c("lat","lon","genus","subgenus","complex","sp","tran","year","method","url"))
 
 # Record type is shown by marker STYLE, not an icon: specimen = open (outline) circle,
 # iNaturalist = filled circle. Both are colored by the taxon's genus/species (see below).
@@ -170,12 +178,11 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .legend .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
 </style></head><body><div id="map"></div>
 <script>
-var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
+var COLS=%s, KEYS=%s, DATA=%s, LABELS=%s, PHOTOS=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
 var BOUNDARY=%s, TRANSECTS=%s;
 ',
   BEE_HTML_GREEN[["mid"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]],
   jsonlite::toJSON(as.list(COLS), auto_unbox = TRUE), KEYS, pts,
-  jsonlite::toJSON(gs_list, auto_unbox = FALSE),
   if (!is.null(tran_lab)) jsonlite::toJSON(tran_lab, dataframe = "rows", auto_unbox = TRUE) else "[]",
   jsonlite::toJSON(photos_ok, auto_unbox = TRUE), TCOLS_JS, GREY_JS, LEGEND_JS,
   to_geojson(park_bnd), to_geojson(tran_ln)),
@@ -192,17 +199,28 @@ if(TRANSECTS){L.geoJSON(TRANSECTS,{style:function(f){var t=(f.properties.Name||f
 LABELS.forEach(function(l){L.marker([l.lat,l.lon],{icon:L.divIcon({className:"",html:"<div style=\\"font-weight:700;font-size:11px;background:rgba(255,255,255,.85);padding:1px 5px;border-radius:3px\\">"+l.transect+"</div>",iconSize:null})}).addTo(map);});
 // build records from the compact array
 var K={}; KEYS.forEach(function(k,i){K[k]=i;});
-var recs=DATA.map(function(r){return {lat:r[K.lat],lon:r[K.lon],g:r[K.genus],s:r[K.sp],t:r[K.tran],y:r[K.year],m:r[K.method],u:r[K.url]};});
+var recs=DATA.map(function(r){return {lat:r[K.lat],lon:r[K.lon],g:r[K.genus],sub:r[K.subgenus]||"",cx:r[K.complex]||"",s:r[K.sp],t:r[K.tran],y:r[K.year],m:r[K.method],u:r[K.url]};});
+// cascade helpers: distinct, sorted, non-empty values for the current higher-level selection
+function uniqSorted(a){return Array.from(new Set(a)).filter(function(x){return x!=="";}).sort();}
+function subgeneraFor(g){return uniqSorted(recs.filter(function(r){return r.g===g;}).map(function(r){return r.sub;}));}
+function complexesFor(g,sub){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub);}).map(function(r){return r.cx;}));}
+function speciesFor(g,sub,cx){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub)&&(cx==="*"||r.cx===cx);}).map(function(r){return r.s;}));}
 var layer=L.layerGroup().addTo(map);
 function esc(x){return (""+x).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 function draw(){
   layer.clearLayers();
-  var g=selG.value, s=selS.value, n=0;
+  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, n=0;
   recs.forEach(function(r){
     if(g!=="*"&&r.g!==g) return;
+    if(sub!=="*"&&r.sub!==sub) return;
+    if(cx!=="*"&&r.cx!==cx) return;
     if(s!=="*"&&r.s!==s) return;
     n++;
-    var name = r.s? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>" : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
+    // popup name reflects the most specific rank the record actually reached
+    var name = r.s ? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>"
+      : r.cx ? "<i>"+esc(r.cx)+"</i> <span style=\\"color:#888\\">complex</span>"
+      : r.sub ? "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(subgenus <i>"+esc(r.sub)+"</i>)</span>"
+      : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
     var pop = name+"<br>Transect: <b>"+esc(r.t)+"</b> &middot; "+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
               (r.u?"<br><a href=\\""+esc(r.u)+"\\" target=\\"_blank\\">View on iNaturalist &rarr;</a>":"");
     var tx=r.s? r.g+" "+r.s : r.g, col=TCOLS[tx]||GREY;
@@ -218,14 +236,16 @@ function draw(){
 var panel=L.control({position:"topleft"});
 panel.onAdd=function(){
   var d=L.DomUtil.create("div","panel"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
-  var genera=Object.keys(GS).sort();
+  var genera=uniqSorted(recs.map(function(r){return r.g;}));
   var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
   var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
   d.innerHTML=
     "<div class=eyebrow>Cabrillo National Monument</div>"+
     "<h1>Bee Occurrence Explorer</h1>"+
-    "<p class=sub>Pick a genus (then a species) to see where each bee has been recorded.</p>"+
+    "<p class=sub>Pick a genus to see where each bee has been recorded. Many bees are not identified all the way to species, so narrow by subgenus or complex when those appear.</p>"+
     "<label>Genus</label><select id=selG>"+gopt+"</select>"+
+    "<div id=subwrap style=\\"display:none\\"><label>Subgenus</label><select id=selSub><option value=\\"*\\">All subgenera</option></select></div>"+
+    "<div id=cxwrap style=\\"display:none\\"><label>Complex</label><select id=selCx><option value=\\"*\\">All complexes</option></select></div>"+
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<label>Transect lines</label>"+trLeg+
@@ -248,11 +268,23 @@ legend.onAdd=function(){
   d.innerHTML=h; return d;
 };
 legend.addTo(map);
-var selG=document.getElementById("selG"), selS=document.getElementById("selS");
-function fillSpecies(){
-  var g=selG.value, opts="<option value=\\"*\\">All species</option>";
-  if(g!=="*"&&GS[g]){opts+=GS[g].map(function(s){return "<option>"+esc(s)+"</option>";}).join("");}
-  selS.innerHTML=opts;
+var selG=document.getElementById("selG"), selSub=document.getElementById("selSub"),
+    selCx=document.getElementById("selCx"), selS=document.getElementById("selS");
+var subwrap=document.getElementById("subwrap"), cxwrap=document.getElementById("cxwrap");
+function opt(v){return "<option>"+esc(v)+"</option>";}
+function fillSub(){                        // subgenera of the chosen genus (dropdown hidden if none)
+  var g=selG.value, subs=g==="*"?[]:subgeneraFor(g);
+  selSub.innerHTML="<option value=\\"*\\">All subgenera</option>"+subs.map(opt).join("");
+  subwrap.style.display=subs.length?"block":"none";
+}
+function fillCx(){                         // complexes within the current genus/subgenus (hidden if none)
+  var g=selG.value, cxs=g==="*"?[]:complexesFor(g,selSub.value);
+  selCx.innerHTML="<option value=\\"*\\">All complexes</option>"+cxs.map(opt).join("");
+  cxwrap.style.display=cxs.length?"block":"none";
+}
+function fillSpecies(){                    // species within the current genus/subgenus/complex
+  var g=selG.value, spp=g==="*"?[]:speciesFor(g,selSub.value,selCx.value);
+  selS.innerHTML="<option value=\\"*\\">All species</option>"+spp.map(opt).join("");
 }
 function showPhoto(){
   var g=selG.value, s=selS.value, key=(g!=="*"&&s!=="*")?g+" "+s:(g!=="*"?g:null);
@@ -263,7 +295,9 @@ function showPhoto(){
     w.style.display="block";}
   else{w.style.display="none";}
 }
-selG.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
+selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showPhoto();draw();});
+selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();draw();});
+selCx.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
 selS.addEventListener("change",function(){showPhoto();draw();});
 // fit to the data + first draw
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
