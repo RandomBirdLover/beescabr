@@ -56,3 +56,24 @@ message("\n---------------------------------------------")
 message(sprintf("Ran %d analysis scripts; %d failed.", length(.scripts), length(.failed)))
 if (length(.failed)) message("Failed: ", paste(.failed, collapse = ", "))
 message("Figures + tables are in data/analysis/")
+
+# ---- PUBLISH (last stage): sync the public GitHub Pages site with the fresh HTML ----
+# Publishing is PART OF THE PIPELINE so it's never a forgotten manual step: this copies the
+# public report pages (field guides, summary, least-sampled, the maps, the occurrence explorer)
+# into docs/ and rebuilds the landing page. By default it only updates docs/ locally; set
+# BEESCABR_DEPLOY=1 to ALSO commit + push docs/ (GitHub Pages then redeploys automatically).
+message("\n===== publish public site (docs/) =====")
+pub <- tryCatch(system2("bash", "scripts/publish_pages.sh", stdout = TRUE, stderr = TRUE),
+                error = function(e) conditionMessage(e))
+message(paste(utils::tail(pub, 4), collapse = "\n"))
+if (identical(Sys.getenv("BEESCABR_DEPLOY"), "1")) {
+  message("BEESCABR_DEPLOY=1 -> committing + pushing docs/ ...")
+  system2("git", c("add", "docs/"))
+  if (system2("git", c("diff", "--cached", "--quiet")) != 0L) {   # non-zero exit = there ARE staged changes
+    system2("git", c("commit", "-m", "Rebuild published site (docs/)"))
+    system2("git", c("push", "origin", "main"))
+    message("  deployed -- GitHub Pages will update in ~1 minute.")
+  } else message("  no site changes to deploy.")
+} else {
+  message("Site updated in docs/. Commit + push to deploy, or set BEESCABR_DEPLOY=1 to auto-deploy.")
+}
