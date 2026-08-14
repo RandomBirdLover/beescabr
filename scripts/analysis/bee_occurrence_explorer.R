@@ -87,20 +87,30 @@ fetch_photo <- function(name, rank) {   # -> list(u, c, l) or NULL
   list(u = p$medium_url, c = p$attribution %||% "iNaturalist", l = sprintf("https://www.inaturalist.org/taxa/%s", t$id))
 }
 `%||%` <- function(a, b) if (is.null(a) || is.na(a) || a == "") b else a
-needed <- unique(c(names(gs_list),
-                   unlist(lapply(names(gs_list), function(g)
-                     if (length(gs_list[[g]])) paste(g, gs_list[[g]])), use.names = FALSE)))
-to_fetch <- needed[!needed %in% names(photos)]
-if (length(to_fetch)) message(sprintf("Fetching %d taxon photos from iNaturalist (cached after; ~%.0fs)...",
-                                       length(to_fetch), length(to_fetch) * 0.9))
-for (nm in to_fetch) {
-  ph <- fetch_photo(nm, if (grepl(" ", nm)) "species" else "genus")
-  photos[[nm]] <- if (is.null(ph)) list(none = TRUE) else ph        # cache negatives too
+# Every taxon a selection can land on gets a representative photo: genus, each
+# genus+species, each subgenus, and each complex. subgenus/complex cache keys are
+# PREFIXED ("subg "/"cx ") so they can't collide with a genus/species of the same text.
+sp_full   <- unlist(lapply(names(gs_list), function(g)
+               if (length(gs_list[[g]])) paste(g, gs_list[[g]])), use.names = FALSE)
+subg_vals <- sort(unique(rec$subgenus[rec$subgenus != ""]))
+cx_vals   <- sort(unique(rec$complex [rec$complex  != ""]))
+taxa <- rbind(
+  data.frame(key = names(gs_list),             query = names(gs_list), rank = "genus",    stringsAsFactors = FALSE),
+  data.frame(key = sp_full,                     query = sp_full,        rank = "species",  stringsAsFactors = FALSE),
+  data.frame(key = paste0("subg ", subg_vals),  query = subg_vals,      rank = "subgenus", stringsAsFactors = FALSE),
+  data.frame(key = paste0("cx ",   cx_vals),    query = cx_vals,        rank = "complex",  stringsAsFactors = FALSE))
+taxa <- taxa[!duplicated(taxa$key), , drop = FALSE]
+to_fetch <- taxa[!taxa$key %in% names(photos), , drop = FALSE]
+if (nrow(to_fetch)) message(sprintf("Fetching %d taxon photos from iNaturalist (cached after; ~%.0fs)...",
+                                     nrow(to_fetch), nrow(to_fetch) * 0.9))
+for (i in seq_len(nrow(to_fetch))) {
+  ph <- fetch_photo(to_fetch$query[i], to_fetch$rank[i])
+  photos[[to_fetch$key[i]]] <- if (is.null(ph)) list(none = TRUE) else ph   # cache negatives too
 }
 dir.create(dirname(PHOTO_CACHE), recursive = TRUE, showWarnings = FALSE)
 jsonlite::write_json(photos, PHOTO_CACHE, auto_unbox = TRUE)
 photos_ok <- photos[!vapply(photos, function(x) isTRUE(x$none), logical(1))]
-message(sprintf("Representative photos: %d of %d taxa have an openly-licensed image", length(photos_ok), length(needed)))
+message(sprintf("Representative photos: %d of %d taxa have an openly-licensed image", length(photos_ok), nrow(taxa)))
 
 # ---- 2. geometry (park boundary + transect lines) as GeoJSON -------------------
 read_shp <- function(p) tryCatch(sf::st_transform(sf::st_read(p, quiet = TRUE), 4326), error = function(e) NULL)
@@ -301,13 +311,19 @@ function pickSpecies(){                    // choosing a species back-fills its 
   showPhoto();draw();
 }
 function showPhoto(){
-  var g=selG.value, s=selS.value, key=(g!=="*"&&s!=="*")?g+" "+s:(g!=="*"?g:null);
-  var w=document.getElementById("photowrap");
-  if(key&&PHOTOS[key]){var p=PHOTOS[key];
-    document.getElementById("taxphoto").src=p.u;
-    document.getElementById("taxcredit").innerHTML="Photo: "+esc(p.c)+" &middot; <a href=\\""+p.l+"\\" target=_blank>iNaturalist</a>";
-    w.style.display="block";}
-  else{w.style.display="none";}
+  // walk from the most specific level down to genus; show the first that has an open photo,
+  // labeled with what it actually depicts (so a genus fallback is not mistaken for the species).
+  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, w=document.getElementById("photowrap");
+  var tries=[];
+  if(g!=="*"&&s!=="*") tries.push([g+" "+s,   "<i>"+esc(g)+" "+esc(s)+"</i>"]);
+  if(cx!=="*")         tries.push(["cx "+cx,   "<i>"+esc(cx)+"</i> complex"]);
+  if(sub!=="*")        tries.push(["subg "+sub,"subgenus <i>"+esc(sub)+"</i>"]);
+  if(g!=="*")          tries.push([g,          "<i>"+esc(g)+"</i>"]);
+  var hit=null; for(var i=0;i<tries.length;i++){ if(PHOTOS[tries[i][0]]){ hit={p:PHOTOS[tries[i][0]],lab:tries[i][1]}; break; } }
+  if(hit){ document.getElementById("taxphoto").src=hit.p.u;
+    document.getElementById("taxcredit").innerHTML=hit.lab+" &middot; "+esc(hit.p.c)+" &middot; <a href=\\""+hit.p.l+"\\" target=_blank>iNaturalist</a>";
+    w.style.display="block"; }
+  else w.style.display="none";
 }
 selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showPhoto();draw();});
 selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();draw();});
