@@ -132,6 +132,8 @@ cat > "$DOCS/index.html" <<HTML
   .card:hover .arrow { transform:translateX(4px); }
   footer { max-width:960px; margin:0 auto; padding:0 1.5rem 3.5rem; color:var(--muted); font-size:.85rem;
            border-top:1px solid var(--border); padding-top:1.5rem; }
+  footer p { margin:0 0 .55rem; line-height:1.5; }
+  footer a { color:var(--accent-deep); text-decoration:underline; text-underline-offset:2px; }
 </style>
 </head>
 <body>
@@ -146,7 +148,10 @@ cat > "$DOCS/index.html" <<HTML
   </div>
   <main>$cards
   </main>
-  <footer>Generated from the beescabr pipeline by Brandi Sanchez. Data as of ${DATE}.</footer>
+  <footer>
+    <p>With gratitude to <a href="https://www.nps.gov/cabr/">Cabrillo National Monument</a> and the <a href="https://www.nps.gov/">National Park Service</a> for their support of this monitoring program, and to the <a href="https://www.inaturalist.org/">iNaturalist</a> community whose shared observations made this work possible.</p>
+    <p>Generated from the beescabr pipeline by Brandi Sanchez. Data as of ${DATE}.</p>
+  </footer>
 </body>
 </html>
 HTML
