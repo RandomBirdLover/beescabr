@@ -318,11 +318,11 @@ write.csv(net_stats, file.path(OUT_DIR, "interactions_network_stats.csv"), row.n
 message("\nNetwork-level statistics:")
 print(net_stats, row.names = FALSE)
 
-# ---- 4b. forage SELECTIVITY -> which bee genera get a colour in the webs -------
-# A bee genus is coloured only if it favours certain plants BEYOND what's available:
+# ---- 4b. forage SELECTIVITY -> which bee genera get a color in the webs -------
+# A bee genus is colored only if it favors certain plants BEYOND what's available:
 # the shared forage_selectivity module runs a Monte-Carlo chi-square of each genus's
 # plant-visit counts vs the community-wide plant-use marginal. Selective (p<0.05, enough
-# records) -> a distinct colour; sparse or availability-driven -> neutral grey. The SAME
+# records) -> a distinct color; sparse or availability-driven -> neutral grey. The SAME
 # module also drives the genus field guide's preference column, so figures + guide agree.
 if (!exists("selective_genera")) source("scripts/analysis/forage_selectivity.R")
 MIN_COLOR_REC <- SELECT_MIN_REC
@@ -333,14 +333,14 @@ bee_col <- setNames(rep(GREY_LINK, ncol(Mg)), colnames(Mg))
 if (length(sig_genera))
   bee_col[sig_genera] <- BEE_GENUS[((seq_along(sig_genera) - 1) %% length(BEE_GENUS)) + 1]
 GENUS_COLOR <- function(g) { v <- unname(bee_col[g]); v[is.na(v)] <- GREY_LINK; v }
-message(sprintf("Selective (coloured) bee genera [n>=%d & p<0.05]: %d -- %s",
+message(sprintf("Selective (colored) bee genera [n>=%d & p<0.05]: %d -- %s",
                 MIN_COLOR_REC, length(sig_genera), paste(sig_genera, collapse = ", ")))
 
 # ---- 4c. forage-selectivity SUMMARY table (per-genus findings, one row/genus) ---
 # Companion to the interaction webs (same test), in the project's *_summary.csv style:
 # the statistics (chi-square p, records) + the finding (Selective/Generalist and, for
-# selective genera, the plant favoured most RELATIVE to availability vs the plant merely
-# recorded most). This is the readable, sortable digest of what drives the web colours.
+# selective genera, the plant favored most RELATIVE to availability vs the plant merely
+# recorded most). This is the readable, sortable digest of what drives the web colors.
 .sel <- selectivity_table()
 # only report a "preferred plant" where selectivity is statistically supported -- otherwise
 # the ratio isn't a real preference (matches the guide's "Generalist / too few" cells).
@@ -366,15 +366,15 @@ message(sprintf("Wrote forage_selectivity_summary.csv (%d genera: %d selective, 
                 sum(sel_summary$forage_pattern == "Generalist"),
                 sum(sel_summary$forage_pattern == "Too few records")))
 
-# ---- 4d. each selective bee's FAVOURITE plant (availability-corrected) -> heart line -----
-# The thick colour lines show where a bee's visits pile up (raw); the red heart line marks the
-# plant it FAVOURS MOST beyond availability in its flight window (same test that drives the colours)
-# -- often NOT its thickest line. Hearts are drawn on the SPECIES web ONLY (James: a favourite is a
+# ---- 4d. each selective bee's FAVORITE plant (availability-corrected) -> heart line -----
+# The thick color lines show where a bee's visits pile up (raw); the red heart line marks the
+# plant it FAVORS MOST beyond availability in its flight window (same test that drives the colors)
+# -- often NOT its thickest line. Hearts are drawn on the SPECIES web ONLY (James: a favorite is a
 # species-level read; a genus is an aggregate), from the SPECIES-level selectivity test.
-FAVORITE_COL <- BEE_FAVORITE   # favourite-plant heart colour -- single source from theme_beescabr.R
-pref_of <- setNames(.sel$preferred_plant, .sel$genus)          # genus favourite (kept for the summary CSV; no longer drawn on the genus web)
+FAVORITE_COL <- BEE_FAVORITE   # favorite-plant heart color -- single source from theme_beescabr.R
+pref_of <- setNames(.sel$preferred_plant, .sel$genus)          # genus favorite (kept for the summary CSV; no longer drawn on the genus web)
 pref_of[!(names(pref_of) %in% sig_genera)] <- NA_character_
-# SPECIES-level favourite -> the heart on the species web. A species earns a heart only if IT is
+# SPECIES-level favorite -> the heart on the species web. A species earns a heart only if IT is
 # statistically selective (same matched chi-square, >= SELECT_MIN_REC records) -- it does NOT inherit
 # its genus's heart. Keys ("Genus epithet") match the species-web node names.
 .sel_sp <- selectivity_table_species()
@@ -395,11 +395,11 @@ pref_of_species[!(.sel_sp$selective %in% TRUE) | is.na(.sel_sp$preferred_plant)]
   polygon(cx + s * hx, cy + s * hy, col = col, border = NA, xpd = NA)
 }
 
-# col_of_bee: named vector (bee column name -> colour); grey where absent/NA. thickness:
+# col_of_bee: named vector (bee column name -> color); grey where absent/NA. thickness:
 #   "share" -> line width = fraction of THAT bee's visits on the plant (preference vs its
 #              other plants); "count" -> width = raw visit records (shared/common plants).
-# legend_map: optional named vector (label -> colour) drawn as a colour key (for the
-# species web, whose top bars are species but colour encodes GENUS).
+# legend_map: optional named vector (label -> color) drawn as a color key (for the
+# species web, whose top bars are species but color encodes GENUS).
 web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
                      col_of_bee = NULL, thickness = c("share", "count"), legend_map = NULL,
                      favorite_of = NULL, show_grey_links = FALSE, sparse_omitted = FALSE) {
@@ -420,7 +420,7 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
   bx <- if (nb > 1) seq(0.03, 0.97, length.out = nb) else 0.5
   yP <- 0.04; yB <- 0.96; wmax <- max(M); csum <- colSums(M)
 
-  # per-bee colour + whether it is a "grey" (background) bee
+  # per-bee color + whether it is a "grey" (background) bee
   bcol <- if (is.null(col_of_bee)) setNames(rep(GREY_LINK, nb), colnames(M))
           else { v <- unname(col_of_bee[colnames(M)]); v[is.na(v)] <- GREY_LINK; setNames(v, colnames(M)) }
   is_grey <- toupper(bcol) == toupper(GREY_LINK)
@@ -440,24 +440,24 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
   }
   # non-selective ("not reliable yet") bees: show no links by default -- keep only their bars/labels
   if (show_grey_links) for (j in which(is_grey)) draw_col(j, TRUE)
-  for (j in which(!is_grey)) draw_col(j, FALSE)      # coloured (selective) bees carry the lines
+  for (j in which(!is_grey)) draw_col(j, FALSE)      # colored (selective) bees carry the lines
 
   pw <- 0.008 + 0.02 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.008 + 0.02 * sqrt(csum / max(csum))
   rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = BEE_WEB["plant"], border = "white")   # plants = forage green (theme token)
-  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = bcol, border = "white")        # bees coloured by selectivity (grey = not selective)
+  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = bcol, border = "white")        # bees colored by selectivity (grey = not selective)
   text(px, yP - 0.02, plant_label(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = BEE_INK$primary)   # plant labels = common name (Latin), black (matches bee labels)
   bee_lab_col <- ifelse(is_grey, BEE_INK$muted, BEE_INK$primary)
   text(bx, yB + 0.02, colnames(M), srt = 90, adj = 0, cex = 0.62, col = bee_lab_col, font = 3)
 
-  # RED HEART LINE: each selective genus's availability-corrected FAVOURITE plant (may differ
+  # RED HEART LINE: each selective genus's availability-corrected FAVORITE plant (may differ
   # from its thickest/most-visited line). Drawn last so it reads on top of the visit lines.
   n_heart <- 0
   if (!is.null(favorite_of)) {
     for (j in seq_len(nb)) {
       fav <- favorite_of[colnames(M)[j]]
       if (is.na(fav)) next
-      i <- match(fav, rownames(M)); if (is.na(i)) next            # favourite outside the plotted top plants -> skip
+      i <- match(fav, rownames(M)); if (is.na(i)) next            # favorite outside the plotted top plants -> skip
       segments(px[i], yP + 0.012, bx[j], yB - 0.028, col = "white", lwd = 3.2)        # white casing so the red separates from the links behind
       segments(px[i], yP + 0.012, bx[j], yB - 0.028, col = FAVORITE_COL, lwd = 1.8)
       .draw_heart(bx[j], yB - 0.030, s = 0.0145, col = "white")                       # white halo
@@ -472,18 +472,18 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
   thick <- if (thickness == "share") "Thickness = share of that bee's visits (where visits pile up)."
            else "Thickness = number of visit records."
   if (sparse_omitted) {
-    mtext("Colour = genus that favours plants beyond availability -- matched to the same month, year & survey method it was recorded (matched chi-square, p<0.05).",
+    mtext("Color = genus that favors plants beyond availability -- matched to the same month, year & survey method it was recorded (matched chi-square, p<0.05).",
           side = 3, line = 7.0, cex = 0.6, col = BEE_INK$secondary)
     mtext(sprintf("Generalists and sparse (<%d-record) genera are omitted; sparse ones auto-return as data grows.   Thickness = share of that bee's visits.",
                   MIN_COLOR_REC), side = 3, line = 6.2, cex = 0.6, col = BEE_INK$secondary)
   } else {
     grey_note <- if (show_grey_links) "grey = not selective / too few records." else "Grey = not reliable yet -- bars only, no links."
-    mtext(sprintf("Colour = genus that favours plants beyond availability in its flight window (phenology-weighted chi-square, p<0.05, >=%d records).",
+    mtext(sprintf("Color = genus that favors plants beyond availability in its flight window (phenology-weighted chi-square, p<0.05, >=%d records).",
                   MIN_COLOR_REC), side = 3, line = 7.0, cex = 0.6, col = BEE_INK$secondary)
     mtext(paste0(grey_note, "   ", thick), side = 3, line = 6.2, cex = 0.6, col = BEE_INK$secondary)
   }
   if (n_heart > 0)
-    mtext(sprintf("Red heart line = each selective %s's single FAVOURITE plant (most-visited vs. availability in the same month/year/method) -- often NOT its thickest line.", rank_label),
+    mtext(sprintf("Red heart line = each selective %s's single FAVORITE plant (most-visited vs. availability in the same month/year/method) -- often NOT its thickest line.", rank_label),
           side = 3, line = 5.4, cex = 0.6, col = FAVORITE_COL)
   if (!is.null(legend_map) && length(legend_map))
     legend("top", inset = c(0, -0.075), horiz = FALSE, ncol = min(8, length(legend_map)),
@@ -491,9 +491,9 @@ web_plot <- function(M, file, rank_label, top_plants = 30, top_bees = 30,
            bty = "n", cex = 0.6, text.col = BEE_INK$primary, x.intersp = 0.6)
   par(op); dev.off()
 }
-# genus web: colour by selective bee genus; thickness = each genus's plant-preference share.
+# genus web: color by selective bee genus; thickness = each genus's plant-preference share.
 # Show ONLY genera with a real (statistically significant) plant preference. This drops both
-# the too-sparse genera AND the generalists (enough data but no favourite, e.g. Megachile /
+# the too-sparse genera AND the generalists (enough data but no favorite, e.g. Megachile /
 # Nomada). Fully automatic: a genus appears the moment it shows a significant preference.
 # ---- family helpers (shared by the genus web + the family-species web below) -----------------
 FAMILY_COL   <- BEE_FAMILY          # single source from theme_beescabr.R
@@ -502,7 +502,7 @@ FAMILY_ORDER <- BEE_FAMILY_ORDER
 gen2fam <- setNames(.gf$family, .gf$genus)
 
 # genus web: ALL genera, ordered into labelled FAMILY blocks. SELECTIVE genera are drawn in their
-# FAMILY colour (matching the species web); generalist / sparse (<50-record) genera go grey (faint
+# FAMILY color (matching the species web); generalist / sparse (<50-record) genera go grey (faint
 # links + grey labels) so the full community shows while the selective ones still pop.
 web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
   M <- M[order(rowSums(M), decreasing = TRUE), , drop = FALSE]
@@ -525,7 +525,7 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
   yP <- 0.05; yB <- 0.74; csum <- colSums(M)
   bcol <- unname(col_of_bee[gen]); bcol[is.na(bcol)] <- GREY_LINK
   is_grey <- toupper(bcol) == toupper(GREY_LINK)   # col_of_bee flags WHICH genera are selective (grey = not)
-  bcol[!is_grey] <- unname(FAMILY_COL[fam])[!is_grey]   # selective genera -> their FAMILY colour (consistent with the species web)
+  bcol[!is_grey] <- unname(FAMILY_COL[fam])[!is_grey]   # selective genera -> their FAMILY color (consistent with the species web)
   bee_png(file, width = max(2000, 88 * nb), height = 1800, res = 200)
   bee_base_par(); op <- par(mar = c(11.5, 1, 6.5, 1), xpd = NA)   # extra bottom margin for the scope caption moved below the labels
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
@@ -535,7 +535,7 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
   pw <- 0.007 + 0.016 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.006 + 0.011 * sqrt(csum / max(csum))
   rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = BEE_WEB["plant"], border = "white")   # plants = forage green
-  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = bcol, border = "white")         # selective genera coloured; rest grey
+  rect(bx - bw, yB - 0.012, bx + bw, yB + 0.012, col = bcol, border = "white")         # selective genera colored; rest grey
   text(px, yP - 0.02, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.58, col = BEE_INK$primary)
   text(bx, yB + 0.02, gen, srt = 90, adj = 0, cex = 0.6, col = ifelse(is_grey, BEE_INK$muted, BEE_INK$primary), font = 3)
   yfb <- yB + 0.175                                 # labelled family brackets, each with a down-tick over its genera and an ALWAYS-drawn stem up to the label (consistent with the species web)
@@ -553,32 +553,32 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
         side = 3, line = 4.2, cex = 0.68, col = BEE_INK$secondary)   # takeaway
   mtext(sprintf("plant genus (bottom), bee genus (top, grouped by family)   [top %d plants x %d genera]", np, nb),
         side = 3, line = 3.4, cex = 0.62, col = BEE_INK$secondary)
-  mtext("Coloured = genus that favours plants beyond availability (matched chi-square, p<0.05).  Grey = generalist or sparse (<50 records).",
+  mtext("Colored = genus that favors plants beyond availability (matched chi-square, p<0.05).  Grey = generalist or sparse (<50 records).",
         side = 3, line = 2.8, cex = 0.56, col = BEE_INK$secondary)
   mtext("Thickness = share of that genus's visits.", side = 3, line = 2.2, cex = 0.56, col = BEE_INK$secondary)
   # standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure
   mtext(scope_cap(scope = sprintf("all records, whole park; %d plant genera x %d bee genera, grouped by family", np, nb),
                   method = "lethal + non-lethal pooled",
-                  rank = "genus (colour = selective genera, p<0.05)",
+                  rank = "genus (color = selective genera, p<0.05)",
                   control = "plant availability, matched to month x year x method",
                   sig = bee_test("forage selectivity vs availability (Monte-Carlo chi-square)"), width = 300),
         side = 1, line = 9.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
-web_plot_genus_fam(Mg, file.path(OUT_DIR, "bee_plant_network_genus.png"), col_of_bee = bee_col, top_plants = 30)   # ALL genera; bee_col colours the selective ones, generalist/sparse go grey
-# (the selectivity-coloured SPECIES web was dropped -- redundant with the family-species web below,
+web_plot_genus_fam(Mg, file.path(OUT_DIR, "bee_plant_network_genus.png"), col_of_bee = bee_col, top_plants = 30)   # ALL genera; bee_col colors the selective ones, generalist/sparse go grey
+# (the selectivity-colored SPECIES web was dropped -- redundant with the family-species web below,
 #  which shows every species with the same species-level hearts. pref_of_species is still used there.)
 
 # ---- species web nested by GENUS & FAMILY (a la Prendergast et al. 2024) --------------------
 # Bee SPECIES on top, ordered into family blocks and, within a family, into genus blocks (small
 # gaps separate genera; a bigger gap separates families). Thin genus brackets + thick labelled
-# family brackets show the family > genus > species nesting. Colour = family. Red heart = each
-# selective SPECIES' availability-corrected favourite plant (species-level test, same as above).
+# family brackets show the family > genus > species nesting. Color = family. Red heart = each
+# selective SPECIES' availability-corrected favorite plant (species-level test, same as above).
 # (FAMILY_COL / FAMILY_ORDER / gen2fam are defined once above, with the genus web.)
 
 web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
                          title = "Do bee species share foraging niches?",
-                         desc  = "Colour = family.  Thickness = share of that species' visits.  Red heart = each selective species' favourite plant.",
+                         desc  = "Color = family.  Thickness = share of that species' visits.  Red heart = each selective species' favorite plant.",
                          scope = "all records, whole park; bee species nested by genus & family") {
   M <- M[order(rowSums(M), decreasing = TRUE), , drop = FALSE]
   if (nrow(M) > top_plants) M <- M[seq_len(top_plants), , drop = FALSE]
@@ -608,10 +608,10 @@ web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
   pw <- 0.0035 + 0.005 * sqrt(rowSums(M) / max(rowSums(M)))   # capped so adjacent plant boxes never merge (half the plant spacing at 50 plants ~ 0.0096)
   bw <- 0.006 + 0.012 * sqrt(csum / max(csum))
   rect(px - pw, yP - 0.012, px + pw, yP + 0.012, col = BEE_WEB["plant"], border = "white")   # plants = forage green
-  rect(bx - bw, yB - 0.010, bx + bw, yB + 0.010, col = bcol, border = "white")         # species coloured by family
+  rect(bx - bw, yB - 0.010, bx + bw, yB + 0.010, col = bcol, border = "white")         # species colored by family
   text(px, yP - 0.02, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.6, col = BEE_INK$primary)
   text(bx, yB + 0.015, sp, srt = 90, adj = 0, cex = 0.44, col = BEE_INK$primary, font = 3)
-  # red heart line: each selective species' availability-corrected favourite plant
+  # red heart line: each selective species' availability-corrected favorite plant
   if (!is.null(favorite_of)) for (j in seq_len(nb)) {
     f <- favorite_of[sp[j]]; if (is.na(f)) next
     i <- match(f, rownames(M)); if (is.na(i)) next
@@ -643,14 +643,14 @@ web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
     text(xc, ly, ff, col = FAMILY_COL[ff], font = 2, cex = 0.85)
   }
   mtext(title, side = 3, line = 5.6, font = 2, cex = 1.12, col = BEE_INK$primary)
-  mtext("Bee species cluster by family into shared foraging niches -- a selective few (hearts) favour specific plants.",
+  mtext("Bee species cluster by family into shared foraging niches -- a selective few (hearts) favor specific plants.",
         side = 3, line = 4.7, cex = 0.68, col = BEE_INK$secondary)   # takeaway
   mtext(sprintf("bee species (top; small gaps separate genera, thick brackets = family), plant genus (bottom)   [%d plants x %d species]", np, nb),
         side = 3, line = 3.9, cex = 0.62, col = BEE_INK$secondary)
   mtext(desc, side = 3, line = 3.3, cex = 0.58, col = BEE_INK$secondary)
   # standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure
   mtext(scope_cap(scope = scope,
-                  method = "lethal + non-lethal pooled", rank = "species (favourite = species-level test)",
+                  method = "lethal + non-lethal pooled", rank = "species (favorite = species-level test)",
                   control = "plant availability, matched to month x year x method",
                   sig = bee_test("forage selectivity vs availability (Monte-Carlo chi-square)"), width = 300),
         side = 1, line = 11.3, cex = 0.56, col = BEE_INK$secondary)
@@ -662,14 +662,14 @@ message("Wrote bee_plant_network_species.png (species nested by genus & family)"
 # ---- specialists-only species web: ONLY the statistically selective species ------------------
 # Same nested family > genus > species layout, but restricted to bee species that forage beyond
 # plant availability (matched chi-square, p<0.05) -- every species shown here has a red-heart
-# favourite. Lets the selective signal stand out without the generalist majority around it.
+# favorite. Lets the selective signal stand out without the generalist majority around it.
 sel_species <- .sel_sp$taxon[.sel_sp$selective %in% TRUE & !is.na(.sel_sp$preferred_plant)]
 Ms_sel <- Ms[, colnames(Ms) %in% sel_species, drop = FALSE]
 if (ncol(Ms_sel) >= 2) {
   web_plot_sgf(Ms_sel, file.path(OUT_DIR, "bee_specialist_network.png"),
                top_plants = 50, favorite_of = pref_of_species,
                title = "Which bees are the true specialists, and on what?",
-               desc  = sprintf("Only the %d bee species that forage beyond plant availability (matched chi-square, p<0.05).  Colour = family.  Red heart = each species' favourite plant.", ncol(Ms_sel)),
+               desc  = sprintf("Only the %d bee species that forage beyond plant availability (matched chi-square, p<0.05).  Color = family.  Red heart = each species' favorite plant.", ncol(Ms_sel)),
                scope = sprintf("selective species only (%d of %d); whole park; nested by genus & family", ncol(Ms_sel), ncol(Ms)))
   message(sprintf("Wrote bee_specialist_network.png (%d selective species)", ncol(Ms_sel)))
 } else {

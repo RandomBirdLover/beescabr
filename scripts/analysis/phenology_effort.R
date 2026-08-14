@@ -12,9 +12,9 @@
 # SPLIT -- both figures are produced for BOTH papers:
 #   * JOURNAL -> the FAIR WINDOW (FAIR_MONTHS/FAIR_YEARS = Mar-Oct 2021-2023):
 #       calendar shows only the window months, trips + records split by method
-#       colour; the year x month grid is restricted to the same window.
+#       color; the year x month grid is restricted to the same window.
 #   * REPORT  -> ALL trips, ALL months, ALL years, both methods -- the full effort
-#       picture, same method-colour encoding.
+#       picture, same method-color encoding.
 # "Observations" is renamed "Records" throughout. Descriptive counts -- no test.
 #
 # Run from the repo root:  Rscript scripts/analysis/phenology_effort.R

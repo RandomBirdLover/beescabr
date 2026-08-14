@@ -15,7 +15,7 @@
 #   * ACTIVE MONTHS -- 5th-95th percentile of record dates
 #   * TOP FLOWERS   -- the plant genera the genus is recorded on most (what to plant)
 #   * DIET          -- specialist / moderate / generalist, by plant-genus breadth
-#   * WHERE TO FIND -- favoured transect(s) or an off-transect centre + buffer
+#   * WHERE TO FIND -- favored transect(s) or an off-transect centre + buffer
 #   * STATUS        -- how often the genus is recorded here (rare / uncommon / common)
 #
 # Together with the species guide this covers EVERY bee record once (species guide =
@@ -127,8 +127,8 @@ rows <- lapply(gen_keys, function(k) {
     stringsAsFactors = FALSE)
 })
 tbl <- do.call(rbind, rows) %>% arrange(desc(n_records))
-# Forage preference: does the genus FAVOUR certain plants beyond what's available, or just
-# visit whatever's blooming? From the shared selectivity module (same test as the web colours).
+# Forage preference: does the genus FAVOR certain plants beyond what's available, or just
+# visit whatever's blooming? From the shared selectivity module (same test as the web colors).
 # The preferred plant reads as a common name (fall back to the Latin genus if none known).
 .pref_fmt      <- function(g) { cn <- plant_common_name(g); ifelse(is.na(cn), g, cn) }
 .pref_fmt_html <- function(g) { cn <- plant_common_name(g); ifelse(is.na(cn), sprintf("<i>%s</i>", g), cn) }   # HTML: italicise the Latin fallback
@@ -177,7 +177,7 @@ html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Field Guide (Genus)</title>',
 '<style>',
 bee_table_css(),                                                                # shared base table chrome (single source -- theme_beescabr.R)
-'td.pref-sel{color:#1f6b46;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',   # genus-guide preference cell colours
+'td.pref-sel{color:#1f6b46;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',   # genus-guide preference cell colors
 bee_badge_css(BEE_DIET_BG,  BEE_DIET_FG,  function(k) paste0(".pill.", k)),      # diet pills (sp/ge/mo/na)
 bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),   # abundance-status pills
 '</style></head><body>',

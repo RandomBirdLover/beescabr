@@ -7,7 +7,7 @@
 #   * ACTIVE MONTHS -- the months that hold the bulk (5th-95th percentile) of records
 #   * TOP FLOWERS   -- the 3-5 plant genera it is recorded on most
 #   * DIET          -- specialist / moderate / generalist, by how many plant genera it uses
-#   * WHERE TO FIND -- the transect(s) it favours, or (if mostly off-transect) a map
+#   * WHERE TO FIND -- the transect(s) it favors, or (if mostly off-transect) a map
 #                      centre point + buffer radius
 #
 # Species with < MIN_CONF records are flagged low-confidence (peak/season rest on a

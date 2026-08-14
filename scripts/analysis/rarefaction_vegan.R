@@ -148,7 +148,7 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
          else if (dimdir == "by_year") as.character(sort(as.numeric(unique(as.character(bdr$group)))))
          else                          tab$group
   bdr$group <- factor(bdr$group, levels = lev)
-  # transect version colours each bar by its transect hue; every other dimension uses one neutral ink.
+  # transect version colors each bar by its transect hue; every other dimension uses one neutral ink.
   g2 <- if (group_fill)
     ggplot(bdr, aes(group, S, fill = group)) + col_geom(width = 0.62) +
       scale_fill_manual(values = cols, guide = "none")

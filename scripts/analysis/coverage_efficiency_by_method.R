@@ -63,7 +63,7 @@ rec <- bind_rows(prep(spec, "lethal"), prep(inat, "non-lethal"))
 # Two panels, SAME contrast in each ("as recorded" vs "at equal effort"):
 #   * "{Rank} recorded"        -- richness as a COUNT (raw vs rarefied).
 #   * "{Rank} / 100 records"   -- richness as a RATE  (raw vs rarefied).
-# The rate is what Taro reads intuitively, but the raw rate favours the smaller-
+# The rate is what Taro reads intuitively, but the raw rate favors the smaller-
 # record method (dilution). Rarefying fixes BOTH: rarefy richness to the smaller
 # method's record total, then (for the rate) divide by that common total. So the
 # "at equal effort" bars are a fair comparison whether you read counts or rates.
@@ -95,8 +95,8 @@ eff_fig <- function(key_col, rank_lab, file) {
                   paste(sprintf("%s %.1f", rownames(M), naive_rate), collapse = "/"),
                   paste(sprintf("%s %.1f", rownames(M), fair_rate), collapse = "/"),
                   minN, paste(sprintf("%s %.0f", rownames(M), rare), collapse = "/")))
-  # colour by METHOD (lethal = rose-red, non-lethal = periwinkle); the within-method split is a SHADE:
-  # light tint = as recorded, full colour = at equal effort. Method is named on the x-axis, so the legend
+  # color by METHOD (lethal = rose-red, non-lethal = periwinkle); the within-method split is a SHADE:
+  # light tint = as recorded, full color = at equal effort. Method is named on the x-axis, so the legend
   # carries only the shade meaning (neutral light/dark swatches). Genus figure is additionally hatched.
   df$fillkey <- paste(as.character(df$method), as.character(df$kind))
   fillvec <- c(setNames(unname(BEE_METHOD_COL_LT[["lethal"]]),    paste("lethal", aslab)),
@@ -125,7 +125,7 @@ eff_fig <- function(key_col, rank_lab, file) {
                      rank   = rank_lab,
                      sig    = bee_test("individual-based rarefaction to equal effort")),
            "\n",
-           str_wrap(sprintf("The per-100-records rate favours the smaller-record method (dilution); 'at equal effort' rarefies both to the smaller total (%s records) -- the fair comparison.", format(minN, big.mark = ",", trim = TRUE)), 108)),
+           str_wrap(sprintf("The per-100-records rate favors the smaller-record method (dilution); 'at equal effort' rarefies both to the smaller total (%s records) -- the fair comparison.", format(minN, big.mark = ",", trim = TRUE)), 108)),
          x = "method", y = NULL) +
     theme_beescabr(12) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),

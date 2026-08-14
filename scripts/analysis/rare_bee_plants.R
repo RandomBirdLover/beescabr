@@ -203,7 +203,7 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
                             "lethal + non-lethal pooled", "plant genus",
                             control = "plant availability, matched to month x year x method",
                             sig = bee_test("forage selectivity vs availability (matched chi-square)")), 92), "\n",
-                        str_wrap("Favourite named only at >= 20 records; bars are raw records (not corrected for bloom).", 104)),
+                        str_wrap("Favorite named only at >= 20 records; bars are raw records (not corrected for bloom).", 104)),
        x = "plant visits", y = "plant genera") +
   theme_beescabr(11) +
   theme(plot.title = element_text(hjust = 0.5),
@@ -218,7 +218,7 @@ bee_ggsave(file.path(OUT_DIR, "rare_bee_forage_preference.png"), gB,
 # =============================================================================
 # 5. PRESENTATION view -- the "flower": each threatened bee at the CENTRE of a ring
 #    of its plants (petal = a plant; bigger/darker = more visits; gold ring = its
-#    availability-corrected favourite). One clean radial per bee, made for slides.
+#    availability-corrected favorite). One clean radial per bee, made for slides.
 # =============================================================================
 FLOWER_TOP <- 8                                                   # cap petals so the ring stays readable
 sci_of     <- setNames(NAMED$species_key, NAMED$label)   # scientific name per bee (for the slide header)
@@ -255,7 +255,7 @@ draw_flower <- function(lbl, big = FALSE) {   # big = standalone slide version: 
   for (i in seq_len(N)) segments(0, 0, px[i], py[i], lwd = 1 + (if (big) 12 else 8)*v[i]/wmax, col = adjustcolor(pcol[i], 0.6))  # spoke width = visits
   ns <- (if (big) 0.17 else 0.05) + (if (big) 0.15 else 0.11)*sqrt(v/wmax)   # big: floor 0.17 so every circle is photo-sized
   symbols(px, py, circles = ns, inches = FALSE, add = TRUE, bg = pcol, fg = "white", lwd = if (big) 2.5 else 1.5)
-  if (!is.null(pf) && !is.na(pf) && pf %in% d$plant_genus) {        # gold ring = availability-corrected favourite
+  if (!is.null(pf) && !is.na(pf) && pf %in% d$plant_genus) {        # gold ring = availability-corrected favorite
     j <- match(pf, d$plant_genus)
     symbols(px[j], py[j], circles = ns[j] + (if (big) 0.055 else 0.035), inches = FALSE, add = TRUE, fg = BEE_SELECT, bg = NA, lwd = if (big) 5.5 else 3.5)
   }
@@ -298,7 +298,7 @@ mtext("A handful of plants -- Deervetch, Milkvetches, Wirelettuces -- carry the 
 .fprov <- strsplit(scope_cap(scope = "IUCN-threatened bees (CR/EN/VU); plant records pooled, live from the IUCN Red List",
                              method = "lethal + non-lethal pooled", rank = "plant genus"), "\n")[[1]]
 for (.k in seq_along(.fprov)) mtext(.fprov[.k], side = 1, outer = TRUE, cex = 0.66, col = BEE_INK$secondary, line = 0.9 + 0.9 * (.k - 1))
-mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favourite.",
+mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favorite.",
       side = 1, outer = TRUE, cex = 0.72, col = BEE_INK$secondary, line = 0.9 + 0.9 * length(.fprov))
 dev.off()
 }  # end DELETED combined 3-panel flower figure
@@ -315,7 +315,7 @@ for (lbl in ord) {
                             control = "plant availability, matched to month x year x method",
                             sig = bee_test("forage selectivity vs availability (matched chi-square)")), "\n")[[1]]
   for (.k in seq_along(.sp)) mtext(.sp[.k], side = 1, outer = TRUE, cex = 0.62, col = BEE_INK$secondary, line = 0.5 + 0.85 * (.k - 1))
-  mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favourite.",
+  mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favorite.",
         side = 1, outer = TRUE, cex = 0.66, col = BEE_INK$secondary, line = 0.5 + 0.85 * length(.sp))
   dev.off()
   message("  wrote slide: ", basename(fn))

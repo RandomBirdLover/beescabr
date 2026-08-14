@@ -115,7 +115,7 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
   d$group <- factor(d$group, levels = sort(unique(as.character(d$group))))   # transects alphabetical (BST/OT/TP/UPMON), consistent across figures
   d$rank  <- factor(d$rank, levels = c("species", "genus"))
   has_pat <- requireNamespace("ggpattern", quietly = TRUE)
-  # transect bars: hue = transect identity (BEE_TRANSECT), so the colour is "free" for the transect.
+  # transect bars: hue = transect identity (BEE_TRANSECT), so the color is "free" for the transect.
   # The species-vs-genus split is carried by PATTERN instead: species = solid, genus = hatched
   # (house rule for genus-vs-species comparisons). Fill legend is dropped (hue is named on the x-axis).
   # NOTE: evenness stays DODGED (side-by-side), not overlaid like the transect/year RICHNESS bars.
@@ -272,7 +272,7 @@ if (!is.null(mds)) {
     ggrepel::geom_text_repel(size = 2.6, show.legend = FALSE, seed = 1, max.overlaps = Inf,   # repel labels off the dots + each other
                              min.segment.length = 0.15, box.padding = 0.45, point.padding = 0.3,
                              segment.color = "grey75", segment.size = 0.3) +
-    scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
+    scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns color (house palette)
     labs(title = "Do the transects share the same bees?",
          subtitle = str_wrap(takeaway, 96),
          caption = scope_cap(sprintf("survey records only; sites = transect x year, >= %d records each (NMDS stress %.2f)", MIN_SITE_REC, mds$stress),

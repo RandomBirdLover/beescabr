@@ -38,8 +38,8 @@ if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared h
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
 if (!exists("selectivity_table_species")) source("scripts/analysis/forage_selectivity.R")  # species-level selectivity (for the hearts)
 
-# species-level favourite plant, ONLY for statistically selective species (matched chi-square, p<0.05);
-# NA otherwise. Drives the red heart marking each selective species' availability-corrected favourite.
+# species-level favorite plant, ONLY for statistically selective species (matched chi-square, p<0.05);
+# NA otherwise. Drives the red heart marking each selective species' availability-corrected favorite.
 .sel_sp <- selectivity_table_species()
 pref_of_species <- setNames(.sel_sp$preferred_plant, .sel_sp$taxon)
 pref_of_species[!(.sel_sp$selective %in% TRUE) | is.na(.sel_sp$preferred_plant)] <- NA_character_
@@ -54,7 +54,7 @@ FAVORITE_COL <- BEE_FAVORITE   # single source from theme_beescabr.R
   polygon(cx + s * hx, cy + s * hy, col = col, border = NA, xpd = NA)
 }
 
-# one distinct colour per bee species within a genus web -> BEE_SPECIES from the theme (single source)
+# one distinct color per bee species within a genus web -> BEE_SPECIES from the theme (single source)
 OUT_DIR   <- file.path(DIR_REPORT, "interactions/networks")
 WEB_DIR   <- file.path(OUT_DIR, "genus_species_webs")
 SPECIES_RANKS <- c("species", "subspecies")
@@ -134,22 +134,22 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   bx <- if (nb > 1) seq(0.10, 0.90, length.out = nb) else 0.5
   yP <- 0.05; yB <- 0.95; wmax <- max(M)
   epithet   <- sub("^\\S+\\s+", "", colnames(M))            # drop the genus, show species epithet
-  scol      <- BEE_SPECIES[((seq_len(nb) - 1) %% length(BEE_SPECIES)) + 1]   # one colour per species (theme token)
+  scol      <- BEE_SPECIES[((seq_len(nb) - 1) %% length(BEE_SPECIES)) + 1]   # one color per species (theme token)
   bee_png(file, width = max(1500, 150 * nb), height = 1700, res = 200)
   bee_base_par()                                    # house-style sans font
   op <- par(mar = c(17.5, 1, 10, 1), xpd = NA)      # tall bottom margin (plant labels + scope caption at the bottom) and tall top (title + takeaway + legend lines)
   plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
-  # links coloured by BEE SPECIES; thickness = raw visit records (per-genus view uses counts)
+  # links colored by BEE SPECIES; thickness = raw visit records (per-genus view uses counts)
   for (j in seq_len(nb)) for (i in seq_len(np)) if (M[i, j] > 0)
     segments(px[i], yP, bx[j], yB, lwd = 0.5 + 5 * M[i, j] / wmax,
              col = adjustcolor(scol[j], 0.55))
   pw <- 0.010 + 0.022 * sqrt(rowSums(M) / max(rowSums(M)))
   bw <- 0.012 + 0.030 * sqrt(colSums(M) / max(colSums(M)))
   rect(px - pw, yP - 0.013, px + pw, yP + 0.013, col = BEE_WEB["plant"], border = "white")   # plants = forage green (theme token)
-  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = scol, border = "white")        # bee species each its own colour
+  rect(bx - bw, yB - 0.014, bx + bw, yB + 0.014, col = scol, border = "white")        # bee species each its own color
   text(px, yP - 0.022, plant_label_expr(rownames(M)), srt = 90, adj = 1, cex = 0.62, col = BEE_INK$primary)   # plant labels: common name upright, Latin italic in parentheses
   text(bx, yB + 0.024, epithet, srt = 45, adj = 0, cex = 0.74, col = BEE_INK$primary, font = 3)               # bee species epithet (italic)
-  # red heart line: each SELECTIVE species' availability-corrected favourite plant (matched chi-square, p<0.05)
+  # red heart line: each SELECTIVE species' availability-corrected favorite plant (matched chi-square, p<0.05)
   if (!is.null(favorite_of)) for (j in seq_len(nb)) {
     f <- favorite_of[colnames(M)[j]]; if (is.na(f)) next
     i <- match(f, rownames(M)); if (is.na(i)) next
@@ -161,18 +161,18 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
   fam_txt <- if (!is.na(family) && nzchar(family)) sprintf("family %s", family) else "family unresolved"
   mtext(sprintf("How do %s species split up the flora?", genus),
         side = 3, line = 8.2, font = 2, cex = 1.1, col = BEE_INK$primary)
-  mtext(sprintf("%s's species carve up the flora -- each favours its own plants, not the same few.", genus),
+  mtext(sprintf("%s's species carve up the flora -- each favors its own plants, not the same few.", genus),
         side = 3, line = 7.1, cex = 0.72, col = BEE_INK$secondary)   # takeaway
   mtext(sprintf("%s   |   %s   |   %d species, %d plant genera",
                 fam_txt, "species (top), plant genus (bottom)", nb, np),
         side = 3, line = 6.2, cex = 0.66, col = BEE_INK$secondary)
-  mtext("Thickness = visit records (thicker = more).  Red heart = a selective species' favourite plant (matched chi-square, p<0.05).",
+  mtext("Thickness = visit records (thicker = more).  Red heart = a selective species' favorite plant (matched chi-square, p<0.05).",
         side = 3, line = 5.5, cex = 0.62, col = BEE_INK$secondary)
   # ONE standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure.
   # The within-genus H2' test is folded in as the Analysis: component (no separate red note).
   cap <- scope_cap(scope = sprintf("all records, whole park; %s species vs plant genera", genus),
                    method = "lethal + non-lethal pooled",
-                   rank = "species (within-genus partitioning; favourite = species-level test)",
+                   rank = "species (within-genus partitioning; favorite = species-level test)",
                    control = "plant availability, matched to month x year x method",
                    sig = paste0("Statistical analysis: ", h2lab), width = 10000)
   maxchars  <- max(60, floor(par("pin")[1] / strwidth("n", cex = 0.56, units = "inches") * 0.97))

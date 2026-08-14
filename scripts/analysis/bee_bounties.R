@@ -118,7 +118,7 @@ bar <- function(df, ncol_records, title, sub, fill, emoji, file) {
   xlab <- if (grepl("specimen", ncol_records)) "specimen records" else "iNaturalist records"   # bar length = the evidence the taxon already has (from the OTHER method)
   d <- df %>% filter(rank == "species") %>% arrange(desc(.data[[ncol_records]]))
   d$taxon <- factor(d$taxon, levels = rev(d$taxon))
-  # bar length + colour = the evidence the taxon ALREADY has (records + which method they came from);
+  # bar length + color = the evidence the taxon ALREADY has (records + which method they came from);
   # the emoji in the TITLE is that bounty's single call-to-action = the method it still NEEDS.
   g <- ggplot(d, aes(x = .data[[ncol_records]], y = taxon)) +
     geom_col(fill = fill, width = 0.72) +
@@ -138,11 +138,11 @@ bar <- function(df, ncol_records, title, sub, fill, emoji, file) {
 bar(specimen_bounty, "n_photo_records",
     "Specimen Bee Bounty: Species to Collect",
     "In iNaturalist photos but no specimen - net a voucher.",
-    unname(BEE_METHOD_COL["nonlethal"]), "\U0001F52C", file.path(OUT_DIR, "specimen_bee_bounty.png"))   # colour = the records it HAS (iNat photos = non-lethal periwinkle); \U0001F52C = the method it NEEDS (a specimen voucher)
+    unname(BEE_METHOD_COL["nonlethal"]), "\U0001F52C", file.path(OUT_DIR, "specimen_bee_bounty.png"))   # color = the records it HAS (iNat photos = non-lethal periwinkle); \U0001F52C = the method it NEEDS (a specimen voucher)
 bar(inat_bounty, "n_specimen_records",
     "iNaturalist Bee Bounty: Species to Photograph",
     "In specimens but not on iNaturalist - get a community photo.",
-    unname(BEE_METHOD_COL["lethal"]), "\U0001F4F7", file.path(OUT_DIR, "inaturalist_bee_bounty.png"))   # colour = the records it HAS (specimens = lethal rose-red); \U0001F4F7 = the method it NEEDS (an iNaturalist photo)
+    unname(BEE_METHOD_COL["lethal"]), "\U0001F4F7", file.path(OUT_DIR, "inaturalist_bee_bounty.png"))   # color = the records it HAS (specimens = lethal rose-red); \U0001F4F7 = the method it NEEDS (an iNaturalist photo)
 
 message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} to ", OUT_DIR)
 
@@ -153,10 +153,10 @@ message("Wrote specimen_bee_bounty.{csv,png} + inaturalist_bee_bounty.{csv,png} 
 TR <- c("BST", "UPMON", "TP", "OT")
 inat_geo <- inat %>% filter(!is.na(lat), !is.na(lon), transect %in% TR)
 
-# --- per-species popup detail (both maps): month WINDOW + one flower field -- the SELECTIVE favourite
+# --- per-species popup detail (both maps): month WINDOW + one flower field -- the SELECTIVE favorite
 #     where the availability test can run (>= 50 flower-visit records), else the MOST-RECORDED plant. ---
 if (!exists("selectivity_table_species")) source("scripts/analysis/forage_selectivity.R")
-.sel_fav <- { st <- selectivity_table_species()          # taxon -> selective favourite plant (NA if none)
+.sel_fav <- { st <- selectivity_table_species()          # taxon -> selective favorite plant (NA if none)
   setNames(ifelse(st$selective & !is.na(st$preferred_plant), st$preferred_plant, NA_character_), st$taxon) }
 .detail_tbl <- function(src, taxa) {                       # window (month range) + top plant per taxon
   src$tkey <- ifelse(!is.na(src$species_key) & src$species_key != "", src$species_key, src$genus_key)
@@ -173,7 +173,7 @@ if (!exists("selectivity_table_species")) source("scripts/analysis/forage_select
   bits <- c(sprintf("window: %s", if (is.na(win)) "\U2014" else win), flower); bits <- bits[!is.na(bits)]
   sprintf('<span style="color:%s;font-weight:400">%s</span>', BEE_HTML[["sub"]], paste(bits, collapse = " \U00B7 ")) }
 # These maps are INTERACTIVE HTML (leaflet): a Satellite/Street basemap you can toggle, the NPS park
-# boundary outlined, every point/line has a click popup, colours from the house palette. Saved as a
+# boundary outlined, every point/line has a click popup, colors from the house palette. Saved as a
 # SINGLE self-contained .html when pandoc is available; falls back to a lib/ folder if pandoc is missing.
 
 # --- 5a. Specimen Bee Bounty: iNat sightings of the collect-targets (blue) ---
@@ -186,7 +186,7 @@ sb_tgt$popup <- mapply(function(taxon, win, top, url)
   sprintf('<b><i>%s</i></b><br>%s%s', ifelse(is.na(taxon), "bee", taxon), .detail_html(taxon, win, top),
           if (is.na(url) || url == "") "" else sprintf('<br><a href="%s" target="_blank">iNaturalist observation \U2197</a>', url)),
   sb_tgt$taxon, sb_tgt$win, sb_tgt$top, sb_tgt$url)
-# colour every collect-target by its FAMILY hue (BEE_FAMILY -- distinct hues), then within a family
+# color every collect-target by its FAMILY hue (BEE_FAMILY -- distinct hues), then within a family
 # spread the taxa across a light->dark ramp of that hue ORDERED by genus,species -- so each genus is a
 # contiguous shade band and species within a genus are adjacent steps. Legend is keyed to family; the
 # popup names the exact species. (Anchoring on family keeps the busy family, Apidae, from colliding.)
@@ -209,15 +209,15 @@ tax_col     <- setNames(taxo$tcol, taxo$taxon)
 sb_tgt$gcol <- ifelse(sb_tgt$taxon %in% names(tax_col), unname(tax_col[sb_tgt$taxon]), BEE_GENUS_GREY)
 fam_present <- intersect(BEE_FAMILY_ORDER, unique(taxo$fam))   # families for the family legend, canonical order
 # SECOND legend (left side): genera parsed out UNDER their family, each swatch a shade (variation) of
-# the family hue -- so you can read a specific dot's genus. Representative colour = the genus band's midpoint.
+# the family hue -- so you can read a specific dot's genus. Representative color = the genus band's midpoint.
 genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
   group_by(fam, genus) %>% summarise(col = tcol[ceiling(dplyr::n() / 2)], .groups = "drop")
 .dot <- function(col) sprintf('<span style="display:inline-block;width:11px;height:11px;border-radius:50%%;background:%s;margin-right:7px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.14)"></span>', col)
 # shared white-card chrome for the map title + side legends -- matches the report tables' look
 .CARD <- sprintf("background:%s;border:1px solid %s;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:%s",
                  BEE_HTML[["page"]], BEE_HTML[["border"]], BEE_HTML[["ink"]])
-# a genus legend grouped under its family: NPS eyebrow, teal heading, family rows with a coloured
-# accent bar (its hue) + dark name, genera indented + italic with their colour dot.
+# a genus legend grouped under its family: NPS eyebrow, teal heading, family rows with a colored
+# accent bar (its hue) + dark name, genera indented + italic with their color dot.
 # Composable legend pieces (the map's title/instructions live in the title card, NOT here):
 #   .col_title  -- a short uppercase section label for a legend column
 #   .genus_block -- FAMILY (uppercase roman header + hue accent bar) > GENUS (indented italic + dot)
@@ -251,7 +251,7 @@ ib_colmap <- setNames(ib_taxo$tcol, ib_taxo$taxon)
 ib_tx$col <- ifelse(ib_tx$taxon %in% names(ib_colmap), unname(ib_colmap[ib_tx$taxon]), BEE_GENUS_GREY)
 ib_tx <- ib_tx %>% arrange(transect, match(fam, BEE_FAMILY_ORDER), genus, taxon)
 ib_tx <- dplyr::left_join(ib_tx, .detail_tbl(spec, unique(ib_tx$taxon)), by = "taxon")   # window + flower per species
-# per-transect species list: colour dot + name, then a muted window + flower sub-line
+# per-transect species list: color dot + name, then a muted window + flower sub-line
 tr_list <- ib_tx %>% group_by(transect) %>%
   summarise(nt = dplyr::n_distinct(taxon),
             lst = paste(mapply(function(col, taxon, win, top)
@@ -335,7 +335,7 @@ m1 <- m1 %>%
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
   htmlwidgets::onRender(.zoom_tr)
 
-# m2: one layer for the transects -- the real shapefile line, coloured by transect, carrying a SINGLE
+# m2: one layer for the transects -- the real shapefile line, colored by transect, carrying a SINGLE
 # popup (its species to photograph) and a permanent name label. No more twin corridor/marker popups.
 m2 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
   leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%

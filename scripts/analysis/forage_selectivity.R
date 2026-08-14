@@ -1,7 +1,7 @@
 # =============================================================
 # analysis/forage_selectivity.R   (MODULE -- not a standalone figure)
 #
-# Single source of truth for bee-genus FORAGE SELECTIVITY: does a genus favour certain plants
+# Single source of truth for bee-genus FORAGE SELECTIVITY: does a genus favor certain plants
 # BEYOND what was actually available to it? For each bee genus a Monte-Carlo chi-square
 # goodness-of-fit test compares its plant-visit counts to a MATCHED expectation -- what the
 # rest of the community recorded in the SAME (month, year, survey-method) cells the genus
@@ -14,7 +14,7 @@
 # out). Plant DETECTABILITY (showy vs tiny flowers biasing photo probability) is NOT and cannot
 # be controlled here -- there is no independent bloom census (see README limitations).
 #
-# Drives BOTH the interaction-web colours (interactions_network.R) AND the genus field
+# Drives BOTH the interaction-web colors (interactions_network.R) AND the genus field
 # guide's preference column (bee_field_guide_genus.R), so the two always agree. The older
 # OVERALL-abundance p (ignores timing/year/method) is kept as chi_p_abundance for comparison.
 #
@@ -23,8 +23,8 @@
 #
 # FINDINGS (data as of 2026-08-02; regenerate to refresh -- a snapshot, not hardcoded logic):
 # 17 of 31 genera are selective; the set is STABLE across the abundance -> +month -> +year ->
-# +method controls (i.e. the preferences are robust, not artefacts of when/how bees were
-# sampled). Year matching did shift some FAVOURITES: Bombus recorded most on Eriogonum but
+# +method controls (i.e. the preferences are robust, not artifacts of when/how bees were
+# sampled). Year matching did shift some FAVORITES: Bombus recorded most on Eriogonum but
 # prefers Acmispon/deervetch (~46x); Diadasia prefers Opuntia (~108x, a cactus specialist);
 # Andrena prefers Lasthenia (~23x); Habropoda Salvia (~34x); Hylaeus Baccharis (~19x). Halictus
 # is weakly-but-significantly selective (Deinandra ~2.7x) once its flight timing is accounted
@@ -143,7 +143,7 @@ selectivity_table <- function(min_rec = SELECT_MIN_REC) {
       error = function(e) NA_real_)
 
     ratio <- ifelse(Epref > 0, (x / n) / Epref, NA_real_); names(ratio) <- plants   # observed vs season+year-expected
-    elig  <- x >= pmax(3, 0.05 * n)                               # ignore 1-2 record blips when picking the favourite
+    elig  <- x >= pmax(3, 0.05 * n)                               # ignore 1-2 record blips when picking the favorite
     pref  <- if (any(elig)) names(which.max(ifelse(elig, ratio, -Inf))) else NA_character_
     yc    <- table(rb$year)
 
@@ -202,7 +202,7 @@ forage_preference_label <- function(genus, plant_fmt = function(x) x, min_rec = 
 # (Genus epithet) and the community is every other record (leave-one-out). Populated only for
 # species with >= SELECT_MIN_REC plant-visit records (a handful today, more as sampling grows);
 # "too few records to judge" below that. Used by the SPECIES field guide. The genus path above is
-# left untouched (it drives the web colours); .forage_core mirrors selectivity_table()'s maths on
+# left untouched (it drives the web colors); .forage_core mirrors selectivity_table()'s maths on
 # a generic `taxon` column -- keep the two in sync if the test ever changes.
 # =============================================================
 .selectivity_records_species <- function() {

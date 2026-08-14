@@ -44,8 +44,8 @@ if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # s
 YIELD_SUB     <- "method_comparison/yield"   # concept path under each paper root (journal & report)
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
-# METHOD is the whole subject here, so it owns colour: its own palette (purple net / vermillion photo),
-# kept off the transect hues -- the same two method colours used wherever method is shown by fill.
+# METHOD is the whole subject here, so it owns color: its own palette (purple net / vermillion photo),
+# kept off the transect hues -- the same two method colors used wherever method is shown by fill.
 COL_LETHAL    <- unname(BEE_METHOD_COL["lethal"])     # purple     = lethal / specimen (net)
 COL_NONLETHAL <- unname(BEE_METHOD_COL["nonlethal"])  # vermillion = non-lethal / iNat (photo)
 # each scope writes into its own paper folder (created inside run_scope)
@@ -156,7 +156,7 @@ run_scope <- function(scope, spec, inat, subfn) {
 
   bee_png(file.path(od, paste0("yield_by_method", sfx, ".png")),
       width = 2000, height = 1120, res = 200)
-  bee_base_par()                                  # house-style fonts + muted axis/title colours
+  bee_base_par()                                  # house-style fonts + muted axis/title colors
   op <- par(mfrow = c(1, 2), mar = c(1, 1, 3.5, 1), oma = c(3.4, 1.6, 3.8, 1.6))  # left/right + bottom padding so the caption isn't flush/clipped at the edges
   venn2(cn$species, sprintf("Species (%d total)",
         cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))

@@ -84,9 +84,9 @@ abun_list <- function(df, group_col, key_col, keep = NULL) {
 }
 
 # ---- 2. run iNEXT for one comparison: curves + standardized tables -----------
-# house colours onto a ggiNEXT plot (sets both colour + fill, keyed to the group/assemblage).
-# ggiNEXT ships its OWN default colour + fill scales; drop them first so ours REPLACES rather than
-# stacks on top (that stacking is what emitted "Adding another scale for colour ..." warnings).
+# house colors onto a ggiNEXT plot (sets both color + fill, keyed to the group/assemblage).
+# ggiNEXT ships its OWN default color + fill scales; drop them first so ours REPLACES rather than
+# stacks on top (that stacking is what emitted "Adding another scale for color ..." warnings).
 add_cols <- function(p, cols) {
   if (is.null(cols)) return(p)
   p$scales$scales <- Filter(function(s) !any(c("colour", "fill") %in% s$aesthetics), p$scales$scales)
@@ -156,7 +156,7 @@ for (rk in names(RANKS)) {
             cols = c(intern = BEE_TEAL[[5]], beeple = BEE_TEAL[[2]]))   # intern = house ink (focus) / beeple = stone (background)
   run_inext(abun_list(rec_fair, "obs_type", kc, c("observation", "specimen")),
             paste0("by_method_", rk), "At equal effort, do photos or specimens find more bees?", rk,
-            cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours
+            cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colors
 }
 
 message("Wrote rarefaction_by_{method,observer}_inext_*_{species,genus} into journal richness/accumulation/ (iNEXT is journal-only)")

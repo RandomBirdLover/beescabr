@@ -66,7 +66,7 @@ print(top[, c("plant_genus", "whole_park", "survey_only", "lethal", "nonlethal")
 # ---- 3. figure A: top-N plants, method-split bars ---------------------------
 bee_png(file.path(OUT_DIR, "interactions_top_plants.png"),
     width = 2050, height = 1150, res = 200)
-bee_base_par()                                    # house-style fonts + muted axis colours
+bee_base_par()                                    # house-style fonts + muted axis colors
 op <- par(mar = c(5.5, 16, 3.5, 1), oma = c(3.6, 0, 0, 0))  # wide left margin for labels; bottom oma fits the 3-line scope caption
 M <- rbind(nonlethal = top$nonlethal, lethal = top$lethal)   # stacked
 colnames(M) <- top$plant_genus                               # keep raw genus (indexing/order); labels drawn as plotmath below
@@ -92,7 +92,7 @@ par(op); dev.off()
 
 # ---- 4. per-month breakdown of the top plants -------------------------------
 top_m   <- head(tbl$plant_genus, TOP_MONTH)
-top_tot <- head(tbl$whole_park, TOP_MONTH)                  # total bee-visit records = the "favourite" ranking
+top_tot <- head(tbl$whole_park, TOP_MONTH)                  # total bee-visit records = the "favorite" ranking
 mm <- rec %>% filter(!is.na(month), plant_genus %in% top_m) %>%
   count(plant_genus, month)
 Mmon <- matrix(0L, nrow = length(top_m), ncol = 12,
@@ -103,7 +103,7 @@ write.csv(data.frame(favourite_rank = seq_along(top_m), plant_genus = rownames(M
                      total_visits = top_tot, Mmon, check.names = FALSE),
           file.path(OUT_DIR, "interactions_top_plants_by_month.csv"), row.names = FALSE)
 
-# y-axis numbered by the bees' FAVOURITE: rank 1 = most total visit records. Labels carry rank + count.
+# y-axis numbered by the bees' FAVORITE: rank 1 = most total visit records. Labels carry rank + count.
 # plant genus shown as its common name (Latin) via the shared label helper; names() stay the raw
 # genus so the matrix-rowname indexing below still lines up.
 # rank + common name upright, Latin italic, + total count -- as plotmath so only the Latin is italicised
@@ -124,12 +124,12 @@ image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       main = "")
 mtext(sprintf("When are the top %d bee plants in use?", TOP_MONTH), side = 3, line = 2.6, font = 2, cex = 1.05, col = BEE_INK$primary)
 mtext("The top plants bloom into use at different times -- forage shifts across the season.", side = 3, line = 1.4, cex = 0.78, col = BEE_INK$secondary)   # takeaway
-mtext("log records/month; y-axis ranked by the bees' favourite (1 = most visit records)",
+mtext("log records/month; y-axis ranked by the bees' favorite (1 = most visit records)",
       side = 3, line = 0.4, cex = 0.75, col = BEE_INK$secondary)
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), labels = as.expression(rank_lab[rownames(Mplot)]), las = 1, cex.axis = 0.66)
 mtext("month", side = 1, line = 2.6, cex = 0.85, col = BEE_INK$secondary)
-# colour-scale legend (right margin): pale = few / no records, dark = many that month
+# color-scale legend (right margin): pale = few / no records, dark = many that month
 lx0 <- grconvertX(0.905, "ndc", "user"); lx1 <- grconvertX(0.925, "ndc", "user")
 ly0 <- grconvertY(0.34, "ndc", "user");  ly1 <- grconvertY(0.66, "ndc", "user")
 nb  <- length(ramp_m); ys <- seq(ly0, ly1, length.out = nb + 1)

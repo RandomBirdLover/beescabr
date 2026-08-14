@@ -110,7 +110,7 @@ effort_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.png"),
                        method = "lethal vs non-lethal",
                        rank   = "records (by transect)"))
 
-# ---- 3. transect_effort TOTAL -- companion slide: total records per transect, coloured by TRANSECT,
+# ---- 3. transect_effort TOTAL -- companion slide: total records per transect, colored by TRANSECT,
 # no lethal/non-lethal split (same transect order as the split version, so the two slides line up). ----
 effort_total_chart <- function(tbl, file, scope_lab) {
   tbl$transect <- factor(tbl$transect, levels = as.character(tbl$transect[order(-tbl$n_records)]))

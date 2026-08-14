@@ -37,14 +37,14 @@ for (pkg in c("ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style (colours by method)
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style (colors by method)
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/id_resolution")   # fair-window: completeness, targets(journal), specimen, photo
 OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/id_resolution")   # all-records: targets(report) + the keyable worklist CSV
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 is_true   <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 # scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
-# method colours (net = rose-red / photo = periwinkle) + lighter tints for the "still to do" side
+# method colors (net = rose-red / photo = periwinkle) + lighter tints for the "still to do" side
 COL_L  <- unname(BEE_METHOD_COL["lethal"]);       COL_NL    <- unname(BEE_METHOD_COL["nonlethal"])
 COL_L_LT <- unname(BEE_METHOD_COL_LT["lethal"]);  COL_NL_LT <- unname(BEE_METHOD_COL_LT["nonlethal"])   # lighter tints straight from the theme
 
@@ -187,7 +187,7 @@ method_genus_fig <- function(m, file, method_label) {
               hjust = -0.15, size = 2.7, color = "grey25", inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
     scale_y_discrete(drop = FALSE) +
-    scale_fill_manual(values = if (m == "specimen")   # colour by METHOD: lethal = red, non-lethal = blue; light tint = unresolved
+    scale_fill_manual(values = if (m == "specimen")   # color by METHOD: lethal = red, non-lethal = blue; light tint = unresolved
         c("identified to species" = COL_L,  "genus-only (unresolved)" = COL_L_LT)
       else
         c("identified to species" = COL_NL, "genus-only (unresolved)" = COL_NL_LT), name = NULL) +

@@ -81,7 +81,7 @@ message("Genera:  ",
 message("Off-only species (surveys miss these): ", length(offonly_sp))
 
 # ---- 3. figure: on-only / shared / off-only, species + genus -----------------
-# set-overlap colours (two-family scheme): on-only = dark teal (focus), both = light teal (shared core /
+# set-overlap colors (two-family scheme): on-only = dark teal (focus), both = light teal (shared core /
 # background), off-only = RED (BEE_SET b_only) -- the taxa the surveys MISS get the urgent-red pop. "both"
 # takes the calm light teal rather than a teal+red blend (near-complementary hues muddy to taupe).
 plot_df <- summ %>%

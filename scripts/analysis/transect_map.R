@@ -1,7 +1,7 @@
 # =============================================================
 # analysis/transect_map.R -- clean reference map of the 4 CABR bee survey transects.
 #
-# A house-styled remake of the ArcGIS transect map: SAME trail colours (BEE_TRANSECT) and a
+# A house-styled remake of the ArcGIS transect map: SAME trail colors (BEE_TRANSECT) and a
 # topographic basemap, but drawn straight from the GIS shapefile so the lines are crisp, with the
 # full trail names + lengths. Interactive, self-contained HTML (like the bounty maps).
 #

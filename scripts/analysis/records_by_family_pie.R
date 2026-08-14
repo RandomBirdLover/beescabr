@@ -3,7 +3,7 @@
 # beescabr -- share of ALL bee records by FAMILY, as a pie/donut.
 #
 # Companion to records_per_genus_by_evidence.R, but one level up (family) and with
-# NO lethal/non-lethal split -- every record counts once, coloured by family so the
+# NO lethal/non-lethal split -- every record counts once, colored by family so the
 # reader sees which families dominate the park's record base at a glance.
 #
 # Run from the repo root:  Rscript scripts/analysis/bee_family_share_of_records_pie.R
@@ -21,7 +21,7 @@ if (!exists("BEE_FAMILY")) source("scripts/analysis/theme_beescabr.R")   # share
 OUT_REPORT <- file.path(DIR_REPORT, "coverage/records_by_evidence")
 dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 
-# the five bee families with house colours; anything else (or blank) -> "Other"
+# the five bee families with house colors; anything else (or blank) -> "Other"
 MAIN_FAM <- c("Apidae", "Halictidae", "Megachilidae", "Andrenidae", "Colletidae")
 fam_of <- function(f) { f <- str_squish(f); f[is.na(f) | f == ""] <- "Other"; ifelse(f %in% MAIN_FAM, f, "Other") }
 
@@ -44,7 +44,7 @@ write.csv(d[, c("family", "records", "frac")], file.path(OUT_REPORT, "bee_family
 message(sprintf("Records by family (both methods pooled): %s | total %s | excluded %d records with no family-level ID",
                 paste(sprintf("%s=%d", d$family, d$records), collapse = "  "), format(tot, big.mark = ",", trim = TRUE), n_noid))
 
-# ---- 2. donut: one slice per family, coloured by BEE_FAMILY, % on the slices ----
+# ---- 2. donut: one slice per family, colored by BEE_FAMILY, % on the slices ----
 .li <- match(levels(d$family), d$family)   # legend shows just the record count (slice % is on the slices / the Megachilidae leader)
 leg <- sprintf("%s  (%s)", levels(d$family), format(d$records[.li], big.mark = ",", trim = TRUE))   # trim = TRUE -> no padding gaps like "(  920"
 # Megachilidae is too thin for an on-slice %, so point a short leader out of its slice.

@@ -23,7 +23,7 @@
 #   ggplot2          -- interactions_network.R heatmaps + phenology figures
 #   ggridges         -- phenology_activity.R (ridgeline density plots)
 #   ggpattern        -- hatched/patterned fills: texture as a 2nd channel (e.g. method) so ggplot
-#                       fills stay distinguishable in grayscale / print / for colour-blind viewers
+#                       fills stay distinguishable in grayscale / print / for color-blind viewers
 #                       (base-R figures hatch natively via density/angle -- no package needed)
 ANALYSIS_PACKAGES <- c("dplyr", "stringr", "vegan", "igraph", "bipartite", "ggplot2", "ggridges", "sf", "iNEXT", "ggpattern")
 

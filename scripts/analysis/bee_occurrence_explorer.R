@@ -6,7 +6,7 @@
 # + museum specimens). A filter panel lets you:
 #   * pick a GENUS, then a SPECIES within it (cascading dropdowns), and
 #   * toggle each TRANSECT (BST / OT / TP / UPMON / off-transect) and METHOD,
-# to see exactly where that taxon has turned up. Points are coloured by transect.
+# to see exactly where that taxon has turned up. Points are colored by transect.
 #
 # Built as a self-contained HTML (Leaflet from CDN + embedded point data), so it
 # publishes to GitHub Pages like the bounty maps. Matches the site's green theme.
@@ -37,6 +37,7 @@ prep <- function(f, method) {
   data.frame(
     lat    = suppressWarnings(round(as.numeric(d$latitude), 5)),
     lon    = suppressWarnings(round(as.numeric(d$longitude), 5)),
+    family = if ("family" %in% names(d)) str_squish(d$family) else NA_character_,
     genus  = str_squish(d$genus),
     sp     = ifelse(d$taxon_rank %in% SPECIES_RANKS & !is.na(d$species) & d$species != "",
                     word(d$species, -1), ""),               # species epithet, "" if genus-only
@@ -107,8 +108,31 @@ if (!is.null(tran_ln)) {
   tran_lab <- data.frame(transect = tr, lon = mm[, 1], lat = mm[, 2])
 }
 
-# ---- 3. assemble the point payload + colour map --------------------------------
-COLS <- c(BEE_TRANSECT[TRANSECTS], "off-transect" = unname(BEE_INK$muted))
+# ---- 3. assemble the point payload + color maps -------------------------------
+COLS <- c(BEE_TRANSECT[TRANSECTS], "off-transect" = unname(BEE_INK$muted))   # transect colors (lines + filter dots)
+# TAXON colors: each POINT is symbolised by its genus/species, using the SAME family-hue +
+# within-family shade scheme as the bounty maps (colors match across the site).
+fam_of <- function(f){ f<-str_squish(f); f[is.na(f)|f==""]<-"Other"; ifelse(f %in% names(BEE_FAMILY), f, "Other") }
+shade_ramp <- function(base,k){ if (k<=1) return(base)
+  lo <- grDevices::rgb(t(255-(255-grDevices::col2rgb(base))*0.40), maxColorValue=255)   # lighter tint
+  hi <- grDevices::rgb(t(grDevices::col2rgb(base)*0.48),          maxColorValue=255)    # darker shade
+  grDevices::colorRampPalette(c(lo, base, hi))(k) }
+rec$fam   <- fam_of(rec$family)
+rec$taxon <- ifelse(rec$sp != "", paste(rec$genus, rec$sp), rec$genus)
+taxo <- rec %>% distinct(fam, genus, sp, taxon) %>% arrange(match(fam, BEE_FAMILY_ORDER), genus, sp)
+taxo$tcol <- NA_character_
+for (fm in unique(taxo$fam)) { idx <- which(taxo$fam == fm); taxo$tcol[idx] <- shade_ramp(unname(BEE_FAMILY[fm]), length(idx)) }
+TCOLS_JS <- jsonlite::toJSON(as.list(setNames(taxo$tcol, taxo$taxon)), auto_unbox = TRUE)
+GREY_JS  <- jsonlite::toJSON(unname(BEE_GENUS_GREY), auto_unbox = TRUE)
+# family-grouped genus legend (like the bounty maps): one representative color per genus = its band midpoint
+genus_leg <- taxo %>% group_by(fam, genus) %>%
+  summarise(col = tcol[ceiling(dplyr::n() / 2)], .groups = "drop") %>%
+  arrange(match(fam, BEE_FAMILY_ORDER), genus)
+LEGEND_JS <- jsonlite::toJSON(lapply(intersect(BEE_FAMILY_ORDER, genus_leg$fam), function(fm) {
+  g <- genus_leg[genus_leg$fam == fm, ]
+  list(family = fm, fcol = unname(BEE_FAMILY[fm]),
+       genera = unname(Map(function(n, c) list(n = n, c = c), g$genus, g$col)))
+}), auto_unbox = TRUE)
 pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","sp","tran","year","method","url")],
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
 KEYS <- jsonlite::toJSON(c("lat","lon","genus","sp","tran","year","method","url"))
@@ -116,12 +140,13 @@ KEYS <- jsonlite::toJSON(c("lat","lon","genus","sp","tran","year","method","url"
 # ---- 3b. record-type icons: iNaturalist bird (embedded) + a drawn microscope ----
 # iNat photo records -> the iNaturalist logo (committed at docs/inat-logo.png), embedded as a
 # data URI so the page is self-contained. Specimen records -> a simple inline-SVG microscope.
-# Each sits in a white badge whose BORDER is the transect colour (keeps the transect cue).
+# Each sits in a white badge whose BORDER is the transect color (keeps the transect cue).
 inat_b64 <- if (file.exists("docs/inat-logo.png"))
   jsonlite::base64_enc(readBin("docs/inat-logo.png", "raw", file.size("docs/inat-logo.png"))) else ""
 INAT_JS  <- jsonlite::toJSON(sprintf('<img src="data:image/png;base64,%s" alt="iNaturalist">', inat_b64), auto_unbox = TRUE)
 micro_svg <- paste(readLines("scripts/analysis/assets/microscope.svg", warn = FALSE), collapse = "")   # Noun Project microscope
 micro_svg <- sub("<svg ", '<svg fill="#274b1e" aria-label="specimen" ', micro_svg, fixed = TRUE)       # tint to theme green (paths inherit)
+micro_svg <- sub('viewBox="[^"]*"', 'viewBox="2 0 96 122"', micro_svg)                                 # crop the author's outer padding so the glyph reads larger
 MICRO_JS  <- jsonlite::toJSON(micro_svg, auto_unbox = TRUE)
 
 # ---- 4. write the self-contained HTML ------------------------------------------
@@ -149,19 +174,26 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .lg{line-height:1.5}
   .beebadge{background:none!important;border:none!important}
   .badge{width:24px;height:24px;border-radius:50%%;background:#fff;border:2px solid #888;box-shadow:0 1px 2px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .badge img,.badge svg{width:15px;height:15px;display:block}
-  .ticon{display:inline-flex;align-items:center;width:15px;height:15px;vertical-align:-3px;margin-right:2px}
-  .ticon svg,.ticon img{width:15px;height:15px}
+  .badge img{width:15px;height:15px;display:block}
+  .badge svg{width:20px;height:20px;display:block}
+  .ticon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;vertical-align:-3px;margin-right:2px}
+  .ticon img{width:15px;height:15px}
+  .ticon svg{width:18px;height:18px}
+  .legend{max-width:196px;max-height:52vh;overflow:auto}
+  .legend .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:6px}
+  .legend .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:6px}
+  .legend .genrow i{font-style:italic}
+  .legend .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
 </style></head><body><div id="map"></div>
 <script>
-var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s, INAT=%s, MICRO=%s;
+var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s, INAT=%s, MICRO=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
 var BOUNDARY=%s, TRANSECTS=%s;
 ',
-  BEE_HTML_GREEN[["mid"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]],
+  BEE_HTML_GREEN[["mid"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]],
   jsonlite::toJSON(as.list(COLS), auto_unbox = TRUE), KEYS, pts,
   jsonlite::toJSON(gs_list, auto_unbox = FALSE),
   if (!is.null(tran_lab)) jsonlite::toJSON(tran_lab, dataframe = "rows", auto_unbox = TRUE) else "[]",
-  jsonlite::toJSON(photos_ok, auto_unbox = TRUE), INAT_JS, MICRO_JS,
+  jsonlite::toJSON(photos_ok, auto_unbox = TRUE), INAT_JS, MICRO_JS, TCOLS_JS, GREY_JS, LEGEND_JS,
   to_geojson(park_bnd), to_geojson(tran_ln)),
 'var TR_ORDER=["BST","OT","TP","UPMON","off-transect"];
 var map=L.map("map",{preferCanvas:true,zoomControl:false});
@@ -194,7 +226,7 @@ function draw(){
     var name = r.s? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>" : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
     var pop = name+"<br>Transect: <b>"+esc(r.t)+"</b> &middot; "+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
               (r.u?"<br><a href=\\""+esc(r.u)+"\\" target=\\"_blank\\">View on iNaturalist &rarr;</a>":"");
-    var col=COLS[r.t]||"#888", ico=(r.m==="net")?MICRO:INAT;   // microscope = specimen, iNat bird = photo
+    var tx=r.s? r.g+" "+r.s : r.g, col=TCOLS[tx]||GREY, ico=(r.m==="net")?MICRO:INAT;   // ring = genus/species color; icon = record type
     var ic=L.divIcon({className:"beebadge",iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-10],
       html:"<div class=badge style=\\"border-color:"+col+"\\">"+ico+"</div>"});
     L.marker([r.lat,r.lon],{icon:ic}).bindPopup(pop).addTo(layer);
@@ -221,6 +253,18 @@ panel.onAdd=function(){
   return d;
 };
 panel.addTo(map);
+// family-grouped genus color legend (bottom-left), matching the bounty maps
+var legend=L.control({position:"bottomleft"});
+legend.onAdd=function(){
+  var d=L.DomUtil.create("div","panel legend"); L.DomEvent.disableScrollPropagation(d); L.DomEvent.disableClickPropagation(d);
+  var h="<div class=eyebrow>Genus colors</div>";
+  LEGEND.forEach(function(f){
+    h+="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
+    f.genera.forEach(function(g){ h+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>"; });
+  });
+  d.innerHTML=h; return d;
+};
+legend.addTo(map);
 var selG=document.getElementById("selG"), selS=document.getElementById("selS");
 function fillSpecies(){
   var g=selG.value, opts="<option value=\\"*\\">All species</option>";

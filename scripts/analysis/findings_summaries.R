@@ -60,7 +60,7 @@ h2_sig <- if (!is.null(h2)) sum(suppressWarnings(as.numeric(h2$H2prime_p)) < 0.0
 
 # ============================ INFERENTIAL ====================================
 fw("forage_selectivity",
-   "Forage selectivity -- does a bee genus favour plants beyond availability?",
+   "Forage selectivity -- does a bee genus favor plants beyond availability?",
    "inferential",
    sprintf("%s of %s bee genera show a real plant preference; the set is stable across abundance/month/year/method controls.",
            .chr(fs_sel), .chr(fs_tot)),

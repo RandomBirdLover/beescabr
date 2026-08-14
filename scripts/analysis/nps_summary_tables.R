@@ -226,7 +226,7 @@ df_to_html <- function(df, caption, heading, metric_col = FALSE, italic_cols = c
   body <- vapply(seq_len(nrow(d)), function(i) {
     cells <- vapply(seq_along(d), function(j) {
       v <- d[[j]][i]
-      if (names(d)[j] == "iucn")   # IUCN code -> colour chip (all NE for these bees)
+      if (names(d)[j] == "iucn")   # IUCN code -> color chip (all NE for these bees)
         return(sprintf('<td class="chk"><span class="iucn i-%s">%s</span></td>', tolower(as.character(v)), esc(as.character(v))))
       if (is.logical(d[[j]]))   # boolean column -> teal checkmark (yes) / muted dash (no)
         return(sprintf('<td class="chk">%s</td>', if (isTRUE(v)) '<span class="yes">&#10003;</span>' else '<span class="no">&ndash;</span>'))
@@ -248,8 +248,8 @@ n_bg <- .gv(bees_summary, "genera_total");    n_bs  <- .gv(bees_summary, "specie
 n_bss <- .gv(bees_summary, "subspecies_total"); n_pg <- .gv(plants_summary, "plant_genera_recorded")
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Summary Tables</title><style>',
-# static multi-table page -> shares the BEE_HTML colour tokens + polished card look of the interactive
-# tables, but NOT their sticky/sortable header behaviour (these are static reference tables).
+# static multi-table page -> shares the BEE_HTML color tokens + polished card look of the interactive
+# tables, but NOT their sticky/sortable header behavior (these are static reference tables).
 '*{box-sizing:border-box}',
 paste0('html{background:', BEE_HTML[["page_alt"]], '}'),
 paste0("body{font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:", BEE_HTML[["ink"]], ";max-width:940px;margin:26px auto;background:", BEE_HTML[["page"]], ";padding:34px 34px 46px;border:1px solid #e7e4dc;border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06);-webkit-font-smoothing:antialiased}"),

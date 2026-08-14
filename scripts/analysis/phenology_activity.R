@@ -17,9 +17,9 @@
 #     the same two-rank split as the accumulation + network runs.
 #
 # READ IT: each ridge is a kernel density of that taxon's records across the year.
-# Taxa are ordered by peak day (earliest at top -> latest at bottom); fill colour
+# Taxa are ordered by peak day (earliest at top -> latest at bottom); fill color
 # tracks the CALENDAR under each curve (blue winter -> green spring -> yellow summer
-# -> orange fall), so colour = season. A month-share CSV is
+# -> orange fall), so color = season. A month-share CSV is
 # written alongside each figure.
 #
 # CAVEAT: interns survey ~Mar-Sep and beeple (non-lethal) run year-round, so the

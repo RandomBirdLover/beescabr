@@ -158,7 +158,7 @@ write.csv(url_rows %||% data.frame(),
           file.path(OUT_DIR, "cabr_bees_not_on_county_checklist_inat_records.csv"),
           row.names = FALSE)
 
-# ---- 5. figure: the taxa, record counts, coloured by evidence ---------------
+# ---- 5. figure: the taxa, record counts, colored by evidence ---------------
 # evidence = the shared teal confidence ramp: voucher (dark) -> research -> needs-ID (light)
 pal <- c(specimen      = unname(BEE_EVIDENCE["specimen"]),   # dark teal  = voucher-backed (solid)
          inat_research = unname(BEE_EVIDENCE["research"]),   # mid teal   = iNat, community-vetted
@@ -174,7 +174,7 @@ colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
 
 bee_png(file.path(OUT_DIR, "cabr_bees_not_on_county_checklist.png"),
     width = 1900, height = 1150, res = 200)
-bee_base_par()                                    # house-style fonts + muted axis/title colours
+bee_base_par()                                    # house-style fonts + muted axis/title colors
 op <- par(mar = c(4.5, 12, 4.4, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption; top fits title + takeaway
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA, width = 0.8, space = 0.35,
               xlab = "records at Cabrillo (specimens and iNaturalist)",

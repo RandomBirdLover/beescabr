@@ -21,7 +21,7 @@
 #
 # SPLIT by paper:
 #   * REPORT (_report) -- transect COMPLETENESS: one panel per rank, ONE curve PER TRANSECT
-#     (both methods POOLED -- method is noise for completeness), COLOUR = transect, + the
+#     (both methods POOLED -- method is noise for completeness), COLOR = transect, + the
 #     Chao2 completeness table. "How well-sampled is each part of the park?"  ALL survey records.
 #   * JOURNAL (_journal) -- METHOD comparison as SMALL MULTIPLES: one panel per transect,
 #     each lethal vs non-lethal (lethal = intern nets, non-lethal = beeple photos), FAIR
@@ -62,10 +62,10 @@ GENUS_RANKS     <- c("species", "subspecies", "subgenus", # ranks that pin a gen
 PERMUTATIONS    <- 200                                    # specaccum random permutations
 set.seed(1)                                               # reproducible permutation curves
 
-# house style: colours + line-style come from the shared module (theme_beescabr.R)
+# house style: colors + line-style come from the shared module (theme_beescabr.R)
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
-COLS         <- BEE_TRANSECT      # transect colour -> now TINTS each panel's title
-METHOD_COL   <- BEE_METHOD_COL    # curve colour = method: poppy = net (lethal), teal = photo (non-lethal)
+COLS         <- BEE_TRANSECT      # transect color -> now TINTS each panel's title
+METHOD_COL   <- BEE_METHOD_COL    # curve color = method: poppy = net (lethal), teal = photo (non-lethal)
 LTY          <- BEE_METHOD_LTY    # secondary cue: solid = lethal, dashed = non-lethal
 METHOD_LABEL <- BEE_METHOD_LABEL
 
@@ -150,7 +150,7 @@ accumulate <- function(survey_rows, key_col) {
 }
 
 # ONE report figure: genera + species side by side (two panels), each OVERLAYING one curve
-# PER TRANSECT (both methods POOLED -- for completeness, method is noise). COLOUR = transect;
+# PER TRANSECT (both methods POOLED -- for completeness, method is noise). COLOR = transect;
 # genera panel dashed, species panel solid (house rule). A single shared transect legend.
 # CI bands omitted (overlapping polygons unreadable); Chao2 +/- SE lives in the table (section 5).
 sacs_for <- function(key_col) {
@@ -173,17 +173,17 @@ plot_accumulation_combined <- function(file) {
   lty_rank <- c(genera = 2, species = 1)                      # house rule: genera dashed, species solid
 
   bee_png(file, width = 1900, height = 1250, res = 200); on.exit(dev.off())
-  bee_base_par()                     # house-style fonts + muted axis/label colours
+  bee_base_par()                     # house-style fonts + muted axis/label colors
   op <- par(mar = c(4.2, 4.4, 5.0, 1), oma = c(4.6, 0, 0, 0))   # bottom oma room for the wrapped scope caption
   plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "surveys", ylab = "number of unique taxa")
-  for (rk in names(ranks))                                    # overlay both ranks: colour = transect, style = rank
+  for (rk in names(ranks))                                    # overlay both ranks: color = transect, style = rank
     for (tr in names(sac_by_rank[[rk]]))
       lines(sac_by_rank[[rk]][[tr]]$sites, sac_by_rank[[rk]][[tr]]$richness,
             col = COLS[tr], lwd = 2.8, lty = lty_rank[rk])
   mtext("Have we found all the park's bees yet?", side = 3, line = 3.0, font = 2, cex = 1.05, col = BEE_INK$primary)
   mtext("Dashed = genera, solid = species. Curves still climbing on the least-sampled transects, so more surveys keep adding new bees.",
         side = 3, line = 1.4, cex = 0.78, col = BEE_INK$secondary)   # takeaway + line-style key
-  present <- names(sac_by_rank[["species"]])                  # one transect legend (colour = transect)
+  present <- names(sac_by_rank[["species"]])                  # one transect legend (color = transect)
   legend("bottomright", title = "transect", legend = present,
          col = COLS[present], lwd = 2.8, lty = 1, bty = "n", cex = 0.9,
          text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)

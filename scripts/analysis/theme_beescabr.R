@@ -2,13 +2,13 @@
 # analysis/theme_beescabr.R
 # beescabr -- SHARED figure house style (the ONE source of truth).
 #
-# Every analysis script sources this so colours, fonts, and spacing are identical
+# Every analysis script sources this so colors, fonts, and spacing are identical
 # across all figures. Change a value HERE and every figure updates -- a transect is
-# the same colour everywhere, forever.
+# the same color everywhere, forever.
 #
-# DESIGN (each VARIABLE keeps ONE encoding everywhere -- colour-blind validated):
-#   * TRANSECT -- the 4-colour Okabe-Ito CVD-safe palette below. These 4 hues appear ONLY as transects.
-#   * METHOD (lethal net / non-lethal photo) -- its OWN two colours, off the transect palette:
+# DESIGN (each VARIABLE keeps ONE encoding everywhere -- color-blind validated):
+#   * TRANSECT -- the 4-color Okabe-Ito CVD-safe palette below. These 4 hues appear ONLY as transects.
+#   * METHOD (lethal net / non-lethal photo) -- its OWN two colors, off the transect palette:
 #     rose-red (lethal) / periwinkle (non-lethal), softer jewel tones. Line style is a SECONDARY cue for the
 #     one figure where a transect AND a method share a plot (lethal = SOLID, non-lethal = DASHED).
 #   * EVIDENCE / ID-confidence -- a TEAL ordinal ramp (voucher dark -> needs-ID faint), so "less certain"
@@ -16,7 +16,7 @@
 #   * SCOPE / SET / ID-status -- single-figure accents from one small set: dark = focus/primary,
 #     light = background/shared, orchid = the third/other category. Indigo-violet neutrals.
 #   * MAGNITUDE (richness / counts) -- one crimson sequential ramp (pale -> deep wine).
-#   * TEXT always wears ink tokens, never a series colour.
+#   * TEXT always wears ink tokens, never a series color.
 # Base-R helpers need no packages; the ggplot theme needs ggplot2 (lazy).
 #
 # TAXON-NAME ITALICS (house rule, applied in every figure that prints a taxon):
@@ -31,8 +31,8 @@
 #     `plant_label(sci_wrap="<i>%s</i>")` for HTML. Never blanket-italicise a mixed label.
 # =============================================================
 
-# ---- categorical: TRANSECT is the colour identity -------------------------
-# Okabe-Ito colour-blind-safe qualitative set (green / rose / blue / orange) -- keeps each
+# ---- categorical: TRANSECT is the color identity -------------------------
+# Okabe-Ito color-blind-safe qualitative set (green / rose / blue / orange) -- keeps each
 # transect's original superbloom identity but CVD-optimised: worst adjacent dE 53.6 normal,
 # 18.1 under deuteranopia (up from 13.2 for the old superbloom hexes). These 4 hues appear
 # ONLY as transects. OT orange is still sub-3:1 on white, so transect figures always ship
@@ -45,7 +45,7 @@ BEE_TRANSECT_NAME <- c(BST = "Bayside Trail", UPMON = "Upper Monument", TP = "Ti
 # full = the "standardized / focal" bar, so hue = transect identity and shade = the within-transect split.
 BEE_TRANSECT_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(BEE_TRANSECT)) * 0.38), maxColorValue = 255), names(BEE_TRANSECT))
 
-# ---- METHOD: its own two colours (kept OFF the transect palette) -------------
+# ---- METHOD: its own two colors (kept OFF the transect palette) -------------
 # rose-red (lethal net) / periwinkle (non-lethal photo) -- softer jewel tones that sit with the purple &
 # crimson ramps. Red/blue is still a CVD-robust nominal pair; periwinkle leans violet to stay clear of
 # transect-TP's cyan-blue. Line style is the SECONDARY cue where a transect AND a method share a plot:
@@ -54,16 +54,16 @@ BEE_METHOD_LTY   <- c(lethal = 1, nonlethal = 2)                 # solid = letha
 BEE_METHOD_PCH   <- c(lethal = 16, nonlethal = 17)              # filled circle = net, triangle = photo
 BEE_METHOD_COL   <- c(lethal = "#D8455F", nonlethal = "#6B6FCE") # rose-red = net (lethal), periwinkle = photo (non-lethal)
 BEE_METHOD_LABEL <- c(lethal = "lethal", nonlethal = "non-lethal")
-# "both methods / resolved-by-either" = the perceptual blend of the two method colours (red + blue -> purple).
+# "both methods / resolved-by-either" = the perceptual blend of the two method colors (red + blue -> purple).
 # Computed from the tokens so it always tracks them; used by coverage_id_targets.R for the "resolved" bar.
 BEE_METHOD_BOTH  <- grDevices::rgb(t(rowMeans(grDevices::col2rgb(BEE_METHOD_COL[c("lethal", "nonlethal")]))), maxColorValue = 255)
-# lighter tints of each method colour (blend toward white) -- the "still unresolved" side of a method bar.
+# lighter tints of each method color (blend toward white) -- the "still unresolved" side of a method bar.
 BEE_METHOD_COL_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(BEE_METHOD_COL)) * 0.38), maxColorValue = 255), names(BEE_METHOD_COL))
 
 # ---- NON-URGENT TEAL: ONE canonical ramp -> evidence + neutrals + magnitude all derive from it --------
 # The whole NON-URGENT family is a SINGLE teal ramp (pale -> deep). Evidence, the neutral focus/background
 # two-tone, and the magnitude ramp (BEE_SEQ, below) are all just stops of BEE_TEAL -- so "non-urgent" is
-# ONE colour idea, not three. They never share a figure, so the single ramp is unambiguous. CVD-safe, kept
+# ONE color idea, not three. They never share a figure, so the single ramp is unambiguous. CVD-safe, kept
 # clear of transect green/blue. The ONLY other family is RED (BEE_RARE) = rare / urgent.
 BEE_TEAL <- c("#D6ECE6", "#A2D4CA", "#63B3A3", "#2E9584", "#0D6E60", "#08463D")   # pale -> deep teal (non-urgent)
 
@@ -83,14 +83,14 @@ BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research
 # Method-overlap venn uses BEE_METHOD_COL, not this.
 BEE_SET <- c(a_only = BEE_TEAL[[2]], shared = BEE_TEAL[[6]], b_only = BEE_TEAL[[4]])
 
-# ---- ID PROGRESS (Q7): removed -- coverage_id_targets.R now colours by METHOD (red = specimen,
+# ---- ID PROGRESS (Q7): removed -- coverage_id_targets.R now colors by METHOD (red = specimen,
 # blue = photo, purple = the red/blue blend for "resolved", i.e. a mix of both methods), derived
 # straight from BEE_METHOD_COL. No separate ID-status palette needed.
 
 # ---- HTML TABLE BADGES: the pill / chip palettes for the report's HTML tables --------------
-# Single source for every coloured badge in the HTML tables (field guides, least-sampled, checklists),
-# each a soft tinted background + a darker matching text colour. bee_badge_css() below turns a
-# background+foreground pair into the CSS rules, so a colour lives ONCE here, never in a <style> string.
+# Single source for every colored badge in the HTML tables (field guides, least-sampled, checklists),
+# each a soft tinted background + a darker matching text color. bee_badge_css() below turns a
+# background+foreground pair into the CSS rules, so a color lives ONCE here, never in a <style> string.
 BEE_IUCN_BG     <- c(en = "#f3d2cc", cr = "#f3d2cc", vu = "#f6dcc6", nt = "#efe7cf", lc = "#dfeae0", dd = "#efefef", ne = "#efefef")
 BEE_IUCN_FG     <- c(en = "#8a1c1c", cr = "#8a1c1c", vu = "#8a4a12", nt = "#6b5a20", lc = "#2f6b46", dd = "#98968f", ne = "#98968f")
 # coverage pills carry the METHOD identity (has-method rule): photo-only = the bee HAS only iNaturalist
@@ -112,19 +112,19 @@ BEE_FORAGE_FG   <- c(sel = "#1f6b46", gen = "#5a5850", na = "#999999")
 bee_badge_css <- function(bg, fg, sel)
   paste0(sprintf("%s{background:%s;color:%s}", vapply(names(bg), sel, ""), unname(bg), unname(fg[names(bg)])), collapse = "")
 
-# ---- ink + chrome tokens (text never wears a series colour) -----------------
+# ---- ink + chrome tokens (text never wears a series color) -----------------
 BEE_INK <- list(primary = "#0b0b0b", secondary = "#52514e", muted = "#898781",
                 grid = "#e1e0d9", axis = "#c3c2b7", note = "#b2182b")   # note = scope-caption accent
 
 # ---- MAP + TABLE chrome: non-data backgrounds / borders / stripes -----------
-# Basemap and grid.table styling live here too, so no figure hardcodes a colour (single source rule).
+# Basemap and grid.table styling live here too, so no figure hardcodes a color (single source rule).
 BEE_MAP   <- c(land = "#ECEAE4", land_inset = "#F1EFEA", boundary = "#AEAAA0",
                boundary_inset = "#A7A399", frame = "#CBC7BE")   # basemap fills / boundaries / panel frame
 BEE_TABLE <- c(row_odd = "#ffffff", row_even = "#f6f5f2", head = "#1a1a1a", subtext = "#666666")  # grid.table row-stripes + text
 
 # ---- HTML interactive tables: single source for the base table chrome -------
 # Every report HTML table (field guides, least-sampled, summary tables) shares ONE stylesheet built
-# from these tokens -- so page/header/border/stripe/hover colours live here ONCE, never copy-pasted as
+# from these tokens -- so page/header/border/stripe/hover colors live here ONCE, never copy-pasted as
 # hardcoded hex into each script's <style>. Badge/pill palettes are the BEE_*_BG/FG tokens above
 # (rendered by bee_badge_css); this covers the surrounding table chrome + layout.
 BEE_HTML <- c(page = "#ffffff", page_alt = "#ece9e2", ink = "#22211e", sub = "#6b6a66", scope = "#4a4945",
@@ -191,42 +191,42 @@ NPS_SEQ <- c("#CFE3D2", "#8FC0A0", "#4E9E6E", "#2C7A4B", "#12592B")     # pale s
 
 # ---- sequential ramps (magnitude): two families -----------------------------
 # BEE_SEQ = NON-URGENT magnitude = the canonical teal ramp BEE_TEAL itself (visits, richness, trips,
-#   top-plants, rarefaction) -- same colour idea as evidence + neutrals, so "more" never reads as "alarming".
+#   top-plants, rarefaction) -- same color idea as evidence + neutrals, so "more" never reads as "alarming".
 # BEE_RARE = the RARE / URGENT ramp -> RED (pale rose -> deep wine). The ONLY red ramp: reserved for figures
 #   where the magnitude IS the warning (rare bees' host plants). RED = "look here"; teal = ordinary quantity.
 BEE_SEQ  <- BEE_TEAL                                                   # non-urgent magnitude = the canonical teal ramp
 BEE_RARE <- c("#E2A6AB", "#CE6F79", "#B2404E", "#86202F", "#55121D")   # rare/urgent magnitude: pale rose -> deep wine
 
-# ---- INTERACTION WEBS: plant vs bee node colours (bipartite visitation figures) --------
+# ---- INTERACTION WEBS: plant vs bee node colors (bipartite visitation figures) --------
 # plants = forage green, bees = goldenrod (warm vs the cool green -- the two trophic sides). node fills
-# carry the colour; labels are BLACK (ink) for legibility. link = neutral grey. interactions_network.R + *_webs.R.
+# carry the color; labels are BLACK (ink) for legibility. link = neutral grey. interactions_network.R + *_webs.R.
 BEE_WEB <- c(plant = "#3E7D43", bee = "#C8952A",
              plant_label = BEE_INK$primary, bee_label = BEE_INK$primary, link = "#a29e94")
-# High-visibility gold for SELECTION markers (availability-corrected favourite): the gold ring on the
+# High-visibility gold for SELECTION markers (availability-corrected favorite): the gold ring on the
 # flower petals + the outlined bar / marker on the rare-bee plant figures. Brighter & more saturated than
 # the muted web goldenrod so it pops against both the pale-pink and deep-red bars.
 BEE_SELECT <- "#FFB300"
 
-# ---- BEE FAMILY palette: colours the interaction webs' family brackets + selective nodes -------
-# One colour per bee family (Paul Tol bright set), CVD-safe; selective genera/species inherit their
-# family's colour, the family brackets use it, and species webs group by it. Single source for both
+# ---- BEE FAMILY palette: colors the interaction webs' family brackets + selective nodes -------
+# One color per bee family (Paul Tol bright set), CVD-safe; selective genera/species inherit their
+# family's color, the family brackets use it, and species webs group by it. Single source for both
 # interactions_network.R and interactions_genus_species_webs.R.
 # hues spread wide around the wheel (yellow / green / blue / pink / purple / grey) so families read
-# as clearly distinct -- this also anchors the genus colouring: a genus takes a shade of its family hue.
+# as clearly distinct -- this also anchors the genus coloring: a genus takes a shade of its family hue.
 BEE_FAMILY <- c(Apidae = "#E5B80B", Halictidae = "#2CA05A", Megachilidae = "#3F6FB5",
                 Andrenidae = "#C43C8E", Colletidae = "#8256B4", Other = "#9C9A93")
 BEE_FAMILY_ORDER <- c("Apidae", "Halictidae", "Megachilidae", "Andrenidae", "Colletidae", "Other")
 
-# ---- FORAGE FAVOURITE: the red heart marking a selective taxon's availability-corrected best plant ----
-BEE_FAVORITE <- "#E8000B"   # pure red, reserved for the favourite-plant heart on the interaction webs
+# ---- FORAGE FAVORITE: the red heart marking a selective taxon's availability-corrected best plant ----
+BEE_FAVORITE <- "#E8000B"   # pure red, reserved for the favorite-plant heart on the interaction webs
 
-# ---- BEE-GENUS categorical palette: colours the overview webs' SELECTIVE genera ----
-# A bee genus earns a colour only if it has enough records AND forages selectively (chi-square of its
+# ---- BEE-GENUS categorical palette: colors the overview webs' SELECTIVE genera ----
+# A bee genus earns a color only if it has enough records AND forages selectively (chi-square of its
 # plant distribution vs plant availability, p<0.05) -- i.e. it concentrates its visits beyond what mere
 # availability/phenology would give. Non-selective or sparse genera stay grey. ~15 genera clear the bar,
-# so this is a large qualitative set (as tell-apart as 15+ hues allow); the coloured top-node bars double
+# so this is a large qualitative set (as tell-apart as 15+ hues allow); the colored top-node bars double
 # as the legend. Assigned to genera in descending-record order. NOTE: in the per-genus species webs the
-# species do NOT inherit a tint of their genus's colour -- BEE_SPECIES gives each species its own distinct
+# species do NOT inherit a tint of their genus's color -- BEE_SPECIES gives each species its own distinct
 # hue (assigned by position within that one web) so the species can be told apart, which is that view's job.
 BEE_GENUS_GREY <- "#B7B4AC"   # non-selective / too-few-records: nodes + links go neutral grey
 # BEE_GENUS = overview genus web (selective genera); BEE_SPECIES = per-genus species webs (one hue/species).
@@ -242,7 +242,7 @@ BEE_SPECIES <- c("#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7
 
 # ---- PHENOLOGY SEASON: winter BLUE held across Nov-Feb (near-empty bee months), greening from the END
 # OF FEBRUARY through spring (more green), soft-orange SUMMER peak, then a WARM tan/gold fall that fades
-# back to blue by November. Colours are POSITIONED by day-of-year in phenology_activity.R (via `values`);
+# back to blue by November. Colors are POSITIONED by day-of-year in phenology_activity.R (via `values`);
 # the only "plateau" is the winter blue, which sits in low-activity months so it never reads as a sharp
 # edge (unlike the summer orange plateau the user rejected). Fall stays warm (tan), no green on the way down.
 BEE_SEASON <- c("#2C7BB6", "#2C7BB6", "#7DC35E", "#EEDB6E", "#F4972A", "#EBD98C", "#D8C288", "#2C7BB6", "#2C7BB6")
