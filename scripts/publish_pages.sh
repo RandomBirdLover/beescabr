@@ -65,15 +65,15 @@ cat > "$DOCS/index.html" <<HTML
 <title>Cabrillo National Monument &mdash; Native Bee Monitoring Program</title>
 <style>
   :root {
-    --bg:#f7f6f1; --bg2:#efeee7; --fg:#1b1b19; --muted:#5f5f58;
-    --card:#ffffff; --border:#e7e3d9; --accent:#3f8d80; --accent-soft:#e4f1ee;
-    --shadow:0 1px 2px rgba(20,30,28,.04), 0 8px 24px rgba(20,30,28,.06);
-    --shadow-hover:0 2px 6px rgba(20,30,28,.08), 0 16px 40px rgba(20,30,28,.12);
+    --bg:#f1f8f8; --bg2:#e4f1f1; --fg:#18292c; --muted:#5b6d6f;
+    --card:#ffffff; --border:#d4e6e6; --accent:#438990; --accent-deep:#1d5663; --accent-soft:#daeded;
+    --shadow:0 1px 2px rgba(20,50,54,.05), 0 8px 24px rgba(20,50,54,.07);
+    --shadow-hover:0 2px 6px rgba(20,50,54,.1), 0 16px 40px rgba(20,50,54,.14);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:#141513; --bg2:#101110; --fg:#ececea; --muted:#9d9d95;
-      --card:#1c1e1b; --border:#2b2e29; --accent:#63b6a6; --accent-soft:#1e2a27;
+      --bg:#0e1718; --bg2:#0a1213; --fg:#e6efef; --muted:#92a3a4;
+      --card:#14201f; --border:#243a3a; --accent:#5aa6ad; --accent-deep:#93c8ce; --accent-soft:#123030;
       --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
       --shadow-hover:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.5);
     }
@@ -85,8 +85,8 @@ cat > "$DOCS/index.html" <<HTML
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
          -webkit-font-smoothing:antialiased; }
   .hero { position:relative; border-bottom:1px solid var(--border);
-          background:linear-gradient(180deg, rgba(18,24,21,.35) 0%, rgba(18,24,21,.78) 100%),
-                    #26302b url('./hero.jpg') center 40% / cover no-repeat; }
+          background:linear-gradient(180deg, rgba(16,34,37,.5) 0%, rgba(16,34,37,.82) 100%),
+                    #16302b url('./hero.jpg') center 42% / cover no-repeat; }
   .hero-inner { max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
   .eyebrow { display:inline-block; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
              font-weight:700; color:#fff; margin:0 0 .7rem;
@@ -97,7 +97,8 @@ cat > "$DOCS/index.html" <<HTML
   .lead { color:rgba(255,255,255,.92); margin:0; max-width:58ch; font-size:1.08rem;
           text-shadow:0 1px 12px rgba(0,0,0,.35); }
   .credit { position:absolute; right:.9rem; bottom:.6rem; margin:0; font-size:.7rem;
-            color:rgba(255,255,255,.75); text-shadow:0 1px 6px rgba(0,0,0,.6); }
+            color:rgba(255,255,255,.8); text-shadow:0 1px 6px rgba(0,0,0,.7); max-width:70%; text-align:right; }
+  .credit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
   main { max-width:960px; margin:0 auto; padding:1.5rem 1.5rem 3.5rem;
          display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.15rem; }
   .card { position:relative; display:flex; flex-direction:column; background:var(--card);
@@ -112,7 +113,7 @@ cat > "$DOCS/index.html" <<HTML
   .icon { font-size:1.7rem; line-height:1; }
   .tag { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
          color:var(--accent); background:var(--accent-soft); padding:.28rem .6rem; border-radius:999px; }
-  .card h2 { margin:0 0 .4rem; font-size:1.18rem; letter-spacing:-.01em; }
+  .card h2 { margin:0 0 .4rem; font-size:1.18rem; letter-spacing:-.01em; color:var(--accent-deep); }
   .card p  { margin:0 0 1.1rem; color:var(--muted); font-size:.93rem; flex:1; }
   .go { display:inline-flex; align-items:center; gap:.35rem; font-size:.88rem; font-weight:600; color:var(--accent); }
   .arrow { transition:transform .18s ease; }
@@ -128,7 +129,7 @@ cat > "$DOCS/index.html" <<HTML
       <h1>Native Bee Monitoring Program</h1>
       <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page to explore.</p>
     </div>
-    <p class="credit">Photo: native bee at Cabrillo National Monument</p>
+    <p class="credit">Photo: &ldquo;<a href="https://commons.wikimedia.org/wiki/File:Old_Point_Loma_Light_Station_in_2019.jpg">Old Point Loma Light Station</a>&rdquo; by Frank Schulenburg, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></p>
   </div>
   <main>$cards
   </main>
