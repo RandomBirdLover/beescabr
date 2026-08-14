@@ -30,7 +30,7 @@
 # is weakly-but-significantly selective (Deinandra ~2.7x) once its flight timing is accounted
 # for. Clear generalists (visit ~ availability): Megachile, Nomada.
 #
-# Loaded once at the top of run_all_analysis.R and self-sourced by each consumer when run
+# Loaded once at the top of run_all_analysis_pipeline.R and self-sourced by each consumer when run
 # standalone. Defines functions only; writes nothing.
 #
 # Depends on: dplyr, stringr (+ config.R).

@@ -11,7 +11,7 @@
 # pulled in so the summary stays current; everything else is the analysis's documented finding.
 # Missing outputs are handled gracefully (the qualitative summary still writes).
 #
-# Sourced explicitly at the END of run_all_analysis.R (after all analyses have produced their
+# Sourced explicitly at the END of run_all_analysis_pipeline.R (after all analyses have produced their
 # outputs). Depends on: base R only.
 # =============================================================
 

@@ -10,14 +10,18 @@ Browse the public field guides, checklists, and interactive maps online — no c
 
 Includes the bee field guides (species + genus), park summary tables, least-sampled bees, the survey-transect and bee-bounty maps, and an interactive **Bee Occurrence Explorer** (filter every record by genus, species, transect, and method).
 
-**Publishing is part of the pipeline.** `scripts/run_all_analysis.R` regenerates every figure/page **and**, as its last stage, republishes the public HTML into `docs/` (which GitHub Pages serves). So a normal analysis run keeps the site's source current automatically:
+**Publishing is its own pipeline stage** — `scripts/run_publishing_materials_pipeline.R` — alongside data cleaning and analysis. The pipeline runs in three stages, each with its own runner:
+
+1. `scripts/run_data_cleaning_pipeline.R` — ingest iNaturalist → DuckDB cache → cleaned tables
+2. `scripts/run_all_analysis_pipeline.R` — every figure, table, and report/journal HTML
+3. `scripts/run_publishing_materials_pipeline.R` — re-render the **public** pages and sync them into `docs/` (which GitHub Pages serves)
 
 ```
-Rscript scripts/run_all_analysis.R                     # rebuild everything + update docs/ (then git push to deploy)
-BEESCABR_DEPLOY=1 Rscript scripts/run_all_analysis.R   # also commit + push docs/ (auto-deploy)
+Rscript scripts/run_publishing_materials_pipeline.R                     # rebuild the public site into docs/ (then git push to deploy)
+BEESCABR_DEPLOY=1 Rscript scripts/run_publishing_materials_pipeline.R   # also commit + push docs/ (auto-deploy)
 ```
 
-`docs/` is committed to git; GitHub Pages redeploys on every push. (You can still run just the publish step alone with `bash scripts/publish_pages.sh`.)
+`docs/` is committed to git; GitHub Pages redeploys on every push. The publish modules live in `scripts/publish/` (the primitive alone is `bash scripts/publish/publish_pages.sh`), the way cleaning lives in `scripts/clean/` and analysis in `scripts/analysis/`.
 
 ---
 

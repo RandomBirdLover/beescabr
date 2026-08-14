@@ -1,11 +1,11 @@
 # =============================================================
 # utils/console.R -- the pipeline's console reporter (OUTPUT ONLY, no logic).
-# One consistent look for run_pipeline.R and every stage: phase banners, aligned
+# One consistent look for run_data_cleaning_pipeline.R and every stage: phase banners, aligned
 # key/value detail lines, calm notes, output arrows, "»" input markers, and an
 # end-of-run "NEEDS YOU" rollup. UTF-8 glyphs (macOS / RStudio console).
 #
-# Sourced early by run_pipeline.R; also safe to source standalone. Stage scripts
-# call bx_kv / bx_cont / bx_out / bx_note for their detail lines; run_pipeline.R
+# Sourced early by run_data_cleaning_pipeline.R; also safe to source standalone. Stage scripts
+# call bx_kv / bx_cont / bx_out / bx_note for their detail lines; run_data_cleaning_pipeline.R
 # owns the phase banners (bx_phase) and the closing rollup (bx_need_*).
 # =============================================================
 BX_WIDTH <- 62L                                   # banner rule width
@@ -27,7 +27,7 @@ bx_note <- function(...)        message("  note: ", paste0(...))                
 bx_act  <- function(...)        message("  » ", paste0(...))                # » wants your input
 
 # ---- end-of-run "NEEDS YOU" rollup ----
-# Stages don't touch this; run_pipeline.R collects the items after the run (from
+# Stages don't touch this; run_data_cleaning_pipeline.R collects the items after the run (from
 # the review artifacts on disk) and prints them once at the very end.
 .BX_NEED <- new.env(parent = emptyenv()); .BX_NEED$items <- list()
 bx_need_reset <- function() .BX_NEED$items <- list()

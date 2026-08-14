@@ -776,7 +776,7 @@ build_holway_reference <- function(con, holway_df,
 # ------------------------------------------------------------
 # .holway_autorun_ok(): should the bottom-of-file runner fire? TRUE only when this file is
 # run/sourced at top level (env is globalenv) with BEESCABR_RUN_HOLWAY set AND the pipeline
-# runner is NOT the one sourcing it. run_pipeline.R sets BEESCABR_SOURCED_BY_RUNNER (and calls
+# runner is NOT the one sourcing it. run_data_cleaning_pipeline.R sets BEESCABR_SOURCED_BY_RUNNER (and calls
 # build_holway_reference itself at stage 4); without this sentinel guard -- if BEESCABR_RUN_HOLWAY
 # lingers in the session env -- the table built TWICE (once at source-time, once at stage 4).
 # Pure so the branching is unit-tested; pass environment() from the call site (top level).

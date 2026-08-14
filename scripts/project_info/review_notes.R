@@ -4,7 +4,7 @@
 # Created 2026-07-16.
 #
 # OPTIONAL (opt-in) -- reviewing free-text notes is offered as a y/N prompt in
-# run_pipeline.R stage 3b: answer 'y' and it sources this file and calls review_notes();
+# run_data_cleaning_pipeline.R stage 3b: answer 'y' and it sources this file and calls review_notes();
 # otherwise notes are left untouched (see scripts/project_info/free_text_notes_status.md).
 # Triaging free text is a human job.
 #

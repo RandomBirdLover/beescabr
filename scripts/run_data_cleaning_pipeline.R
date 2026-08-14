@@ -1,5 +1,5 @@
 # =============================================================
-# run_pipeline.R
+# run_data_cleaning_pipeline.R
 # beescabr pipeline -- ONE COMMAND: ingest + clean + export
 # Created: 2026-07-13
 #
@@ -26,11 +26,11 @@
 # HOW TO RUN (RStudio, most common first)
 # ------------------------------------------------------------------------------
 #   Normal run -- pull only NEW/edited observations since last time (fast, seconds):
-#     source("scripts/run_pipeline.R")            # no flags needed; this is the default
+#     source("scripts/run_data_cleaning_pipeline.R")            # no flags needed; this is the default
 #
 #   Everyday run -- reuse the caches, don't touch iNat at all:
 #     Sys.setenv(BEESCABR_SKIP_INGEST = "1")
-#     source("scripts/run_pipeline.R")
+#     source("scripts/run_data_cleaning_pipeline.R")
 #
 # ------------------------------------------------------------------------------
 # FLAGS = on/off switches. How they work (READ THIS -- it bit us once):
@@ -42,7 +42,7 @@
 #   * A flag you set STAYS ON for the whole R session (every source() re-uses it)
 #     until you Sys.unsetenv() it or restart RStudio. That is how a leftover
 #     BEESCABR_FULL_INGEST=1 can silently make every run do a slow full rebuild.
-#   * Terminal equivalent: prefix it, e.g.  BEESCABR_SKIP_INGEST=1 Rscript scripts/run_pipeline.R
+#   * Terminal equivalent: prefix it, e.g.  BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R
 #
 # ------------------------------------------------------------------------------
 # THE FLAGS

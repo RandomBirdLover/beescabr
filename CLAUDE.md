@@ -67,9 +67,9 @@ the test first, written to fail.
 ## Running the pipeline
 
 ```
-Rscript scripts/run_pipeline.R              # ingest + checklists + clean
-BEESCABR_SKIP_INGEST=1 Rscript scripts/run_pipeline.R   # reuse cache, no API
-BEESCABR_FULL_INGEST=1 Rscript scripts/run_pipeline.R   # re-fetch everything
+Rscript scripts/run_data_cleaning_pipeline.R              # ingest + checklists + clean
+BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # reuse cache, no API
+BEESCABR_FULL_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # re-fetch everything
 ```
 
 ## Style

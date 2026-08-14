@@ -8,7 +8,7 @@
 # live data, with no hardcoded threatened list anywhere downstream.
 #
 # If the cache is missing (refresh never run), it falls back to the known at-risk bumble
-# bees so every consumer still renders. Loaded once at the top of run_all_analysis.R and
+# bees so every consumer still renders. Loaded once at the top of run_all_analysis_pipeline.R and
 # self-sourced by each consumer when run standalone. Defines functions only; writes nothing.
 #
 # Depends on: stringr.

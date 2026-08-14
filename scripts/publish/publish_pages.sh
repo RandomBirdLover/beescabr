@@ -13,7 +13,7 @@
 # pins-to-fix pages, reviewer drafts) are deliberately excluded.
 # =============================================================
 set -euo pipefail
-cd "$(dirname "$0")/.."                       # repo root
+cd "$(dirname "$0")/../.."                       # repo root
 SRC="data/analysis/nps_report_2026"
 DOCS="docs"
 mkdir -p "$DOCS"

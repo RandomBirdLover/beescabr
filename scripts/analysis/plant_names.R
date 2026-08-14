@@ -17,7 +17,7 @@
 #      scripts/refresh_plant_common_names.R -- fills genera the two local files miss, via
 #      the iNaturalist taxa API). Authoritative: its entries override the local seed.
 #
-# Loaded once at the top of run_all_analysis.R and self-sourced by each consumer when
+# Loaded once at the top of run_all_analysis_pipeline.R and self-sourced by each consumer when
 # run standalone. Defines functions only; writes nothing.
 #
 # Depends on: stringr (+ config.R for PATHS).

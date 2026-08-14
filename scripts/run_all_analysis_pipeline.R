@@ -1,12 +1,12 @@
 # =============================================================
-# scripts/run_all_analysis.R
+# scripts/run_all_analysis_pipeline.R
 # Regenerate EVERY analysis figure + table with the current house palette,
 # WITHOUT re-running ingest/cleaning (which is the slow part). It just reads the
 # already-cleaned tables and rewrites the outputs in data/analysis/.
 #
 # Run from the repo ROOT:
-#   source("scripts/run_all_analysis.R")     # in an R console
-#   Rscript scripts/run_all_analysis.R        # or from a terminal
+#   source("scripts/run_all_analysis_pipeline.R")     # in an R console
+#   Rscript scripts/run_all_analysis_pipeline.R        # or from a terminal
 #
 # Any single script that errors is reported and skipped -- the rest still run,
 # and the failures are listed at the end.
@@ -27,7 +27,7 @@ source("scripts/analysis/forage_selectivity.R")    # shared bee-genus forage sel
 # (scripts/reference/enrich_lookups.R, called by the *_clean.R scripts + cabr_bee_checklist.R,
 # fetched once and cached). This run stays fully OFFLINE and just reads those columns/caches.
 # To force-refresh existing IUCN assessments or common names, run the pipeline with the refresh
-# flag (BEESCABR_REFRESH=1 Rscript scripts/run_pipeline.R) -- or the two tools directly:
+# flag (BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R) -- or the two tools directly:
 #   Rscript scripts/reference/refresh_iucn_status.R  |  Rscript scripts/reference/refresh_plant_common_names.R
 RUNNING_ALL <- TRUE
 
@@ -56,24 +56,4 @@ message("\n---------------------------------------------")
 message(sprintf("Ran %d analysis scripts; %d failed.", length(.scripts), length(.failed)))
 if (length(.failed)) message("Failed: ", paste(.failed, collapse = ", "))
 message("Figures + tables are in data/analysis/")
-
-# ---- PUBLISH (last stage): sync the public GitHub Pages site with the fresh HTML ----
-# Publishing is PART OF THE PIPELINE so it's never a forgotten manual step: this copies the
-# public report pages (field guides, summary, least-sampled, the maps, the occurrence explorer)
-# into docs/ and rebuilds the landing page. By default it only updates docs/ locally; set
-# BEESCABR_DEPLOY=1 to ALSO commit + push docs/ (GitHub Pages then redeploys automatically).
-message("\n===== publish public site (docs/) =====")
-pub <- tryCatch(system2("bash", "scripts/publish_pages.sh", stdout = TRUE, stderr = TRUE),
-                error = function(e) conditionMessage(e))
-message(paste(utils::tail(pub, 4), collapse = "\n"))
-if (identical(Sys.getenv("BEESCABR_DEPLOY"), "1")) {
-  message("BEESCABR_DEPLOY=1 -> committing + pushing docs/ ...")
-  system2("git", c("add", "docs/"))
-  if (system2("git", c("diff", "--cached", "--quiet")) != 0L) {   # non-zero exit = there ARE staged changes
-    system2("git", c("commit", "-m", "Rebuild published site (docs/)"))
-    system2("git", c("push", "origin", "main"))
-    message("  deployed -- GitHub Pages will update in ~1 minute.")
-  } else message("  no site changes to deploy.")
-} else {
-  message("Site updated in docs/. Commit + push to deploy, or set BEESCABR_DEPLOY=1 to auto-deploy.")
-}
+message("Next stage: publish the public site with  Rscript scripts/run_publishing_materials_pipeline.R")

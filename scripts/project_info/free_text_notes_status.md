@@ -2,7 +2,7 @@
 
 The brain (`finding_project_info.R`) flags un-triaged free-text observation notes to
 `data/project_info/review/review_inat_unknown_notes.csv`. Reviewing/using them is
-**optional**. On an interactive run, `run_pipeline.R` **stage 3b** asks:
+**optional**. On an interactive run, `run_data_cleaning_pipeline.R` **stage 3b** asks:
 
 > "Review the observation notes now, or proceed without them? (y = review / N = skip)"
 

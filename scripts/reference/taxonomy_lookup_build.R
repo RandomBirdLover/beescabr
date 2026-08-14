@@ -16,7 +16,7 @@
 #
 # It still BUILDS the SD County checklist in memory -- that checklist is the
 # lookup's input, and the complex map is carved from it -- but it does NOT write
-# any checklist file. Ingest is the CALLER's job (run_pipeline.R ingests once for
+# any checklist file. Ingest is the CALLER's job (run_data_cleaning_pipeline.R ingests once for
 # the whole run). Running this file directly still works: it ingests, builds, done.
 #
 # Modules wired here:
@@ -140,14 +140,14 @@ build_taxonomy_lookup <- function(con) {
 
   # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
   # The enriched Holway reference table (holway_sd_bee_reference_table.csv, built
-  # by holway_reference_build.R earlier in run_pipeline.R) is the BASE of the
+  # by holway_reference_build.R earlier in run_data_cleaning_pipeline.R) is the BASE of the
   # lookup -- it supplies iNat taxon_ids + scientific names for Holway species,
   # including ones never observed in SD County. The lookup NEVER reads the raw
   # Holway sheet for names.
   verified_ids <- load_verified_taxa(PATHS$verified_taxa)
   if (!file.exists(PATHS$holway_reference))
     stop("Holway reference table not found (", basename(PATHS$holway_reference), "). It is the ",
-         "base of the taxonomy lookup -- build it first (run_pipeline.R step 1b, or ",
+         "base of the taxonomy lookup -- build it first (run_data_cleaning_pipeline.R step 1b, or ",
          "holway_reference_build.R).")
   holway_resolved <- readr::read_csv(PATHS$holway_reference, show_col_types = FALSE)
   bx_cont("Holway base from reference table: ", basename(PATHS$holway_reference),
@@ -213,7 +213,7 @@ build_taxonomy_lookup <- function(con) {
 }
 
 # ------------------------------------------------------------
-# Standalone entrypoint (skipped when sourced by run_pipeline.R).
+# Standalone entrypoint (skipped when sourced by run_data_cleaning_pipeline.R).
 # ------------------------------------------------------------
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0) {
   main <- function() {
