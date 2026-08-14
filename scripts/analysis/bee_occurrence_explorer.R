@@ -51,6 +51,7 @@ prep <- function(f, method) {
                           word(d$subspecies, -1), "") else "",   # subspecies epithet, "" otherwise
     tran   = tr,
     year   = suppressWarnings(as.integer(substr(d$observed_on, 1, 4))),
+    month  = suppressWarnings(as.integer(substr(d$observed_on, 6, 7))),   # 1-12, for the phenology strip
     method = method,
     url    = if ("url" %in% names(d)) ifelse(is.na(d$url), "", d$url) else "",
     stringsAsFactors = FALSE)
@@ -165,9 +166,9 @@ LEGEND_JS <- jsonlite::toJSON(lapply(intersect(BEE_FAMILY_ORDER, genus_leg$fam),
                              cx  = if (n %in% names(cxOf))  unname(cxOf[n])  else ""),
                            g$genus, g$col)))
 }), auto_unbox = TRUE)
-pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","method","url")],
+pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","month","method","url")],
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
-KEYS <- jsonlite::toJSON(c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","method","url"))
+KEYS <- jsonlite::toJSON(c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","month","method","url"))
 
 # Record type is shown by marker STYLE, not an icon: specimen = open (outline) circle,
 # iNaturalist = filled circle. Both are colored by the taxon's genus/species (see below).
@@ -205,6 +206,13 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
   .taxrow i{font-style:italic}
   .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
+  .phen{width:190px}
+  .phen label{margin-top:0}
+  .phbars{display:flex;align-items:flex-end;gap:2px;height:34px;margin-top:2px}
+  .phbar{flex:1;background:#bcdcc0;border-radius:1px 1px 0 0;transition:height .15s}
+  .phbar.pk{background:#3f8f4f}
+  .phmon{display:flex;gap:2px;margin-top:3px}
+  .phmon span{flex:1;text-align:center;font-size:8px;color:#8a8880;line-height:1}
 </style></head><body><div id="map"></div>
 <script>
 var COLS=%s, KEYS=%s, DATA=%s, LABELS=%s, PHOTOS=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
@@ -228,7 +236,7 @@ if(TRANSECTS){L.geoJSON(TRANSECTS,{style:function(f){var t=(f.properties.Name||f
 LABELS.forEach(function(l){L.marker([l.lat,l.lon],{icon:L.divIcon({className:"",html:"<div style=\\"font-weight:700;font-size:11px;background:rgba(255,255,255,.85);padding:1px 5px;border-radius:3px\\">"+l.transect+"</div>",iconSize:null})}).addTo(map);});
 // build records from the compact array
 var K={}; KEYS.forEach(function(k,i){K[k]=i;});
-var recs=DATA.map(function(r){return {lat:r[K.lat],lon:r[K.lon],g:r[K.genus],sub:r[K.subgenus]||"",cx:r[K.complex]||"",s:r[K.sp],ssp:r[K.subspecies]||"",t:r[K.tran],y:r[K.year],m:r[K.method],u:r[K.url]};});
+var recs=DATA.map(function(r){return {lat:r[K.lat],lon:r[K.lon],g:r[K.genus],sub:r[K.subgenus]||"",cx:r[K.complex]||"",s:r[K.sp],ssp:r[K.subspecies]||"",t:r[K.tran],y:r[K.year],mo:r[K.month]||0,m:r[K.method],u:r[K.url]};});
 // cascade helpers: distinct, sorted, non-empty values for the current higher-level selection
 function uniqSorted(a){return Array.from(new Set(a)).filter(function(x){return x!=="";}).sort();}
 function subgeneraFor(g){return uniqSorted(recs.filter(function(r){return r.g===g;}).map(function(r){return r.sub;}));}
@@ -239,14 +247,14 @@ var layer=L.layerGroup().addTo(map);
 function esc(x){return (""+x).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 function draw(){
   layer.clearLayers();
-  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, ssp=selSsp.value, n=0;
+  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, ssp=selSsp.value, n=0, mo=[0,0,0,0,0,0,0,0,0,0,0,0];
   recs.forEach(function(r){
     if(g!=="*"&&r.g!==g) return;
     if(sub!=="*"&&r.sub!==sub) return;
     if(cx!=="*"&&r.cx!==cx) return;
     if(s!=="*"&&r.s!==s) return;
     if(ssp!=="*"&&r.ssp!==ssp) return;
-    n++;
+    n++; if(r.mo>=1&&r.mo<=12) mo[r.mo-1]++;   // tally month for the phenology strip
     // popup name reflects the most specific rank the record actually reached
     var name = r.ssp ? "<i>"+esc(r.g)+" "+esc(r.s)+" "+esc(r.ssp)+"</i>"
       : r.s ? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>"
@@ -263,6 +271,16 @@ function draw(){
     L.circleMarker([r.lat,r.lon],opt).bindPopup(pop).addTo(layer);
   });
   document.getElementById("count").textContent = n.toLocaleString()+" record"+(n===1?"":"s")+" shown";
+  renderPhen(mo);
+}
+// phenology strip: 12 month bars sized to the currently shown records (relative to the busiest month)
+function renderPhen(mo){
+  var el=document.getElementById("phbars"); if(!el) return;
+  var mx=Math.max.apply(null,mo)||1;
+  el.innerHTML=mo.map(function(v,i){
+    var pk=(v===mx&&v>0)?" pk":"";
+    return "<span class=\\"phbar"+pk+"\\" style=\\"height:"+(v?Math.max(Math.round(v/mx*100),6):0)+"%\\" title=\\""+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i]+": "+v+"\\"></span>";
+  }).join("");
 }
 // ---- filter panel ----
 var panel=L.control({position:"topleft"});
@@ -301,6 +319,15 @@ panel.onAdd=function(){
   return d;
 };
 panel.addTo(map);
+// phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
+var phen=L.control({position:"bottomright"});
+phen.onAdd=function(){
+  var d=L.DomUtil.create("div","panel phen"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+  d.innerHTML="<label>Active months</label><div class=phbars id=phbars></div>"+
+    "<div class=phmon>"+["J","F","M","A","M","J","J","A","S","O","N","D"].map(function(x){return "<span>"+x+"</span>";}).join("")+"</div>";
+  return d;
+};
+phen.addTo(map);
 var selG=document.getElementById("selG"), selSub=document.getElementById("selSub"),
     selCx=document.getElementById("selCx"), selS=document.getElementById("selS"), selSsp=document.getElementById("selSsp");
 var subwrap=document.getElementById("subwrap"), cxwrap=document.getElementById("cxwrap"), sspwrap=document.getElementById("sspwrap");
