@@ -27,6 +27,7 @@ pages=(
   "$SRC/reference/nps_summary/nps_summary_tables.html|summary_tables.html|Park Summary Tables|Headline counts: species, genera, plants, survey effort, and participation.|📊|Summary"
   "$SRC/coverage/least_sampled/least_sampled_bees.html|least_sampled_bees.html|Least-Sampled Bees|The bees with the thinnest evidence, where more surveying would help most.|❗|Priorities"
   "$SRC/reference/transects/cabr_bee_transects_map.html|transects_map.html|Survey Transect Map|Interactive map of the fixed survey transects at Cabrillo National Monument.|🗺️|Map"
+  "$SRC/reference/occurrence_map/bee_occurrence_explorer.html|occurrence_explorer.html|Bee Occurrence Explorer|Filter by genus, species, transect, and method to see exactly where each bee has been recorded.|🔎|Explore"
   "$SRC/coverage/bee_bounties/specimen_bee_bounty_map.html|specimen_bounty_map.html|Specimen Bee Bounty Map|Where to net a voucher specimen: gaps the collection still needs.|🔬|Map"
   "$SRC/coverage/bee_bounties/inaturalist_bee_bounty_map.html|inaturalist_bounty_map.html|iNaturalist Bee Bounty Map|Where to photograph bees to fill iNaturalist gaps.|📷|Map"
 )
