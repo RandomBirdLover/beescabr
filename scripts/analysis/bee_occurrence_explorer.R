@@ -190,6 +190,14 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .panel p.sub{font-size:11.5px;color:#6b6a66;margin:0 0 10px;line-height:1.35}
   .panel label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:8px 0 3px}
   .panel select{width:100%%;padding:5px 7px;border:1px solid #d4e6d2;border-radius:6px;font-size:12.5px;background:#fff;color:#22211e}
+  #yrlab{text-transform:none;font-weight:400;letter-spacing:0;color:#6b6a66;margin-left:5px}
+  .allyr{float:right;text-transform:none;letter-spacing:0;font-weight:600;font-size:9.5px;color:#3f8f4f;cursor:pointer;text-decoration:underline}
+  .rng{position:relative;height:22px;margin-top:1px}
+  .rng .track{position:absolute;top:9px;left:0;right:0;height:4px;border-radius:2px;background:#d4e6d2}
+  .rng .trackfill{position:absolute;top:9px;height:4px;border-radius:2px;background:#3f8f4f}
+  .rng input[type=range]{position:absolute;top:0;left:0;width:100%%;height:22px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+  .rng input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%%;background:#fff;border:2px solid #3f8f4f;cursor:pointer;pointer-events:auto}
+  .rng input[type=range]::-moz-range-thumb{width:15px;height:15px;border:2px solid #3f8f4f;border-radius:50%%;background:#fff;cursor:pointer;pointer-events:auto}
   .legrow{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;color:#333;margin:4px 0}
   .lswatch{display:inline-block;width:20px;border-top:3px solid #888;flex:none}
   .cswatch{display:inline-block;width:12px;height:12px;border-radius:50%%;border:2px solid #57564f;flex:none}
@@ -243,17 +251,21 @@ function subgeneraFor(g){return uniqSorted(recs.filter(function(r){return r.g===
 function complexesFor(g,sub){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub);}).map(function(r){return r.cx;}));}
 function speciesFor(g,sub,cx){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub)&&(cx==="*"||r.cx===cx);}).map(function(r){return r.s;}));}
 function subspeciesFor(g,sub,cx,s){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub)&&(cx==="*"||r.cx===cx)&&r.s===s;}).map(function(r){return r.ssp;}));}
+var yrsAll=recs.map(function(r){return r.y;}).filter(Boolean);   // year span for the range slider
+var YMIN=yrsAll.length?Math.min.apply(null,yrsAll):2006, YMAX=yrsAll.length?Math.max.apply(null,yrsAll):2025;
 var layer=L.layerGroup().addTo(map);
 function esc(x){return (""+x).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 function draw(){
   layer.clearLayers();
   var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, ssp=selSsp.value, n=0, mo=[0,0,0,0,0,0,0,0,0,0,0,0];
+  var yLo=yrLo?+yrLo.value:YMIN, yHi=yrHi?+yrHi.value:YMAX;
   recs.forEach(function(r){
     if(g!=="*"&&r.g!==g) return;
     if(sub!=="*"&&r.sub!==sub) return;
     if(cx!=="*"&&r.cx!==cx) return;
     if(s!=="*"&&r.s!==s) return;
     if(ssp!=="*"&&r.ssp!==ssp) return;
+    if(r.y&&(r.y<yLo||r.y>yHi)) return;         // year-range filter (undated records always shown)
     n++; if(r.mo>=1&&r.mo<=12) mo[r.mo-1]++;   // tally month for the phenology strip
     // popup name reflects the most specific rank the record actually reached
     var name = r.ssp ? "<i>"+esc(r.g)+" "+esc(r.s)+" "+esc(r.ssp)+"</i>"
@@ -307,6 +319,10 @@ panel.onAdd=function(){
     "<div id=cxwrap style=\\"display:none\\"><label>Complex</label><select id=selCx><option value=\\"*\\">All complexes</option></select></div>"+
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
     "<div id=sspwrap style=\\"display:none\\"><label>Subspecies</label><select id=selSsp><option value=\\"*\\">All subspecies</option></select></div>"+
+    "<label>Year <span id=yrlab></span><a class=allyr id=allyr>All years</a></label>"+
+    "<div class=rng><div class=track></div><div class=trackfill id=yrfill></div>"+
+      "<input type=range id=yrLo min="+YMIN+" max="+YMAX+" value="+YMIN+">"+
+      "<input type=range id=yrHi min="+YMIN+" max="+YMAX+" value="+YMAX+"></div>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<div class=leg>"+
       "<div class=count id=count></div>"+
@@ -388,6 +404,19 @@ selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();d
 selCx.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
 selS.addEventListener("change",pickSpecies);
 selSsp.addEventListener("change",function(){showPhoto();draw();});
+// ---- year range slider ----
+var yrLo=document.getElementById("yrLo"), yrHi=document.getElementById("yrHi"),
+    yrfill=document.getElementById("yrfill"), yrlab=document.getElementById("yrlab");
+function yrShow(){                                        // update the fill bar + label; no redraw
+  var lo=+yrLo.value, hi=+yrHi.value, span=(YMAX-YMIN)||1;
+  yrfill.style.left =((lo-YMIN)/span*100)+"%";
+  yrfill.style.right=((YMAX-hi)/span*100)+"%";
+  yrlab.textContent=(lo===YMIN&&hi===YMAX)?"(all)":(lo===hi?(""+lo):(lo+"-"+hi));
+}
+yrLo.addEventListener("input",function(){ if(+yrLo.value> +yrHi.value) yrLo.value=yrHi.value; yrShow(); draw(); });
+yrHi.addEventListener("input",function(){ if(+yrHi.value< +yrLo.value) yrHi.value=yrLo.value; yrShow(); draw(); });
+document.getElementById("allyr").addEventListener("click",function(){ yrLo.value=YMIN; yrHi.value=YMAX; yrShow(); draw(); });
+yrShow();
 // fit to the data + first draw
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
 map.fitBounds([[Math.min.apply(null,lat0),Math.min.apply(null,lon0)],[Math.max.apply(null,lat0),Math.max.apply(null,lon0)]],{padding:[20,20]});
