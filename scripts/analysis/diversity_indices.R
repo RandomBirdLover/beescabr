@@ -155,7 +155,7 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
   }
   bee_ggsave(file, g, width = 7.5, height = 5.4, bg = "white")
 }
-plot_evenness(div_tr, file.path(OUT_REPORT, "diversity_evenness_by_transect.png"),
+plot_evenness(div_tr, file.path(OUT_REPORT, "bee_evenness_by_transect_pielou.png"),
              "Does one bee dominate any transect?",
              scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus", sig = bee_test("Pielou's evenness (J')")),
              "transect")
@@ -183,7 +183,7 @@ WHY_EVEN <- paste("Only evenness is shown: richness / Shannon / Simpson are effo
          x = "year", y = "how evenly bees are spread   (0 = one dominates, 1 = all equal)") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.caption = element_text(hjust = 0, size = 7.5))
-  bee_ggsave(file.path(OUT_REPORT, "diversity_evenness_by_year.png"), g, width = 8.5, height = 5.4, bg = "white")
+  bee_ggsave(file.path(OUT_REPORT, "bee_evenness_by_year_pielou.png"), g, width = 8.5, height = 5.4, bg = "white")
 }
 
 # ---- 4. RANK-ABUNDANCE (Whittaker) -- SPLIT by paper --------------------------
@@ -241,7 +241,7 @@ gR <- ggplot(comb, aes(rank, rel_abund, color = grp, linewidth = grp)) +
        caption = scope_cap("all records", "lethal + non-lethal pooled", "species", sig = bee_test("rank-abundance distribution")),
        x = "bee species, from most common (left) to rarest (right)", y = "% of all records (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
-bee_ggsave(file.path(OUT_REPORT, "diversity_rank_abundance_report.png"), gR, width = 9, height = 6, bg = "white")
+bee_ggsave(file.path(OUT_REPORT, "bee_species_commonness_rank_abundance.png"), gR, width = 9, height = 6, bg = "white")
 
 # ---- 5. NMDS + PERMANOVA: does composition differ by transect/year? ----------
 # sites = transect x year (survey-only, both methods pooled), species community.
@@ -282,7 +282,7 @@ if (!is.null(mds)) {
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5, size = 9.5, colour = BEE_INK$secondary))
-  bee_ggsave(file.path(OUT_REPORT, "diversity_nmds_composition.png"), g, width = 8.5, height = 6.5, bg = "white")
+  bee_ggsave(file.path(OUT_REPORT, "bee_community_composition_nmds.png"), g, width = 8.5, height = 6.5, bg = "white")
 }
 
 message("\nDone. Report diversity outputs in: ", OUT_REPORT, " | Journal rank-abundance in: ", OUT_JOURNAL)

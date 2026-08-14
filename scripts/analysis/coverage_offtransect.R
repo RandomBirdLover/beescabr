@@ -17,7 +17,7 @@
 # off-only taxa (candidate park residents the standardized surveys are missing).
 # Descriptive -- no hypothesis test, so no p-value.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage_offtransect.R
+# Run from the repo root:  Rscript scripts/analysis/bees_found_off_transect.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -66,12 +66,12 @@ sp_part <- partition("species_key", "species")
 gn_part <- partition("genus_key",   "genus")
 
 summ <- bind_rows(sp_part, gn_part) %>% count(rank, region)
-write.csv(summ, file.path(OUT_DIR, "coverage_offtransect_summary.csv"), row.names = FALSE)
+write.csv(summ, file.path(OUT_DIR, "bees_found_off_transect_summary.csv"), row.names = FALSE)
 
 # full taxon table + the actionable off-only list
 taxa_tbl <- bind_rows(sp_part, gn_part) %>% arrange(rank, region, key) %>%
   select(rank, taxon = key, region, on_transect = on, off_transect = off)
-write.csv(taxa_tbl, file.path(OUT_DIR, "coverage_offtransect_taxa.csv"), row.names = FALSE)
+write.csv(taxa_tbl, file.path(OUT_DIR, "bees_found_off_transect_taxa.csv"), row.names = FALSE)
 offonly_sp <- taxa_tbl %>% filter(rank == "species", region == "off-only") %>% pull(taxon)
 
 message("Species: ",
@@ -109,5 +109,5 @@ g <- ggplot(plot_df, aes(x = n, y = rank, fill = region)) +
        x = "distinct taxa of bees", y = "taxon rank") +
   theme_beescabr(11) +
   theme(panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
-bee_ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, bg = "white")
-message("Wrote coverage_offtransect.{png,_summary.csv,_taxa.csv} to ", OUT_DIR)
+bee_ggsave(file.path(OUT_DIR, "bees_found_off_transect.png"), g, width = 8, height = 5.5, bg = "white")
+message("Wrote bees_found_off_transect.{png,_summary.csv,_taxa.csv} to ", OUT_DIR)

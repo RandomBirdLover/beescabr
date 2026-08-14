@@ -247,7 +247,7 @@ for (g in keep$bee_genus) {
 }
 h2_tbl <- bind_rows(h2_rows) %>% arrange(desc(H2prime))
 sp_tbl <- bind_rows(sp_rows) %>% arrange(bee_genus, desc(n_records))
-write.csv(h2_tbl, file.path(OUT_DIR, "interactions_genus_h2.csv"), row.names = FALSE)
+write.csv(h2_tbl, file.path(OUT_DIR, "bee_genus_specialization_h2.csv"), row.names = FALSE)
 write.csv(sp_tbl, file.path(OUT_DIR, "interactions_genus_species_specialization.csv"), row.names = FALSE)
 message("Webs written to ", WEB_DIR, " (", nrow(keep), " genera)")
 print(h2_tbl, row.names = FALSE)
@@ -282,6 +282,6 @@ g <- ggplot(ov, aes(x = x, y = bee_genus)) +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
         panel.grid.major.y = element_blank())
-bee_ggsave(file.path(OUT_DIR, "interactions_genus_h2_overview.png"), g,
+bee_ggsave(file.path(OUT_DIR, "bee_genus_specialization_overview.png"), g,
        width = 10.5, height = max(3.2, 0.5 * nrow(ov) + 2.0), bg = "white")
-message("Wrote interactions_genus_h2.csv, interactions_genus_species_specialization.csv, interactions_genus_h2_overview.png")
+message("Wrote bee_genus_specialization_h2.csv, interactions_genus_species_specialization.csv, bee_genus_specialization_overview.png")

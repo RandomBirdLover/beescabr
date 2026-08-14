@@ -115,8 +115,8 @@ CONTRIB <- c("general public", "beeple", "interns")
 METHODL <- c("lethal", "non-lethal")
 tbl_c <- yield_by(rep_rec, "contributor"); tbl_c <- tbl_c[match(CONTRIB, tbl_c$grp), ]
 tbl_m <- yield_by(rep_rec, "method_lbl");  tbl_m <- tbl_m[match(METHODL, tbl_m$grp), ]
-write.csv(tbl_c, file.path(OUT_REPORT, "coverage_yield_by_method_report_contributor.csv"), row.names = FALSE)
-write.csv(tbl_m, file.path(OUT_REPORT, "coverage_yield_by_method_report_method.csv"),      row.names = FALSE)
+write.csv(tbl_c, file.path(OUT_REPORT, "bee_yield_by_contributor.csv"), row.names = FALSE)
+write.csv(tbl_m, file.path(OUT_REPORT, "bee_yield_by_method.csv"),      row.names = FALSE)
 message(sprintf("REPORT by contributor: %s",
                 paste(sprintf("%s=%d recs", tbl_c$grp, tbl_c$n_records), collapse = "  ")))
 message(sprintf("REPORT by method:      %s   (grand totals reconcile: contrib=%d, method=%d)",
@@ -181,7 +181,7 @@ plot_report <- function(rank, file) {
           plot.subtitle = element_text(size = 8.7, hjust = 0.5))
   bee_ggsave(file, g, width = 9.5, height = 6.4, bg = "white")
 }
-plot_report("species", file.path(OUT_REPORT, "coverage_yield_by_method_report_species.png"))
-plot_report("genus",   file.path(OUT_REPORT, "coverage_yield_by_method_report_genus.png"))
+plot_report("species", file.path(OUT_REPORT, "bee_yield_by_contributor_and_method_species.png"))
+plot_report("genus",   file.path(OUT_REPORT, "bee_yield_by_contributor_and_method_genus.png"))
 
 message("\nWrote JOURNAL table (_journal.csv) + REPORT figure (_report_{species,genus}.png) + report CSVs to journal_paper_2026/ + nps_report_2026/")

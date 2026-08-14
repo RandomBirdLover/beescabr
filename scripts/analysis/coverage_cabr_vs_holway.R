@@ -134,7 +134,7 @@ prio_rank <- c(
   "Solid - voucher specimen"                       = 4)
 summary_tbl <- summary_tbl[order(prio_rank[summary_tbl$review_priority],
                                  -summary_tbl$n_inat_records), ]
-write.csv(summary_tbl, file.path(OUT_DIR, "coverage_cabr_not_on_holway.csv"), row.names = FALSE)
+write.csv(summary_tbl, file.path(OUT_DIR, "cabr_bees_not_on_county_checklist.csv"), row.names = FALSE)
 
 # ---- 4. iNat observation URLs to double-check (photo-evidenced taxa) ---------
 url_rows <- do.call(rbind, lapply(seq_len(nrow(noth)), function(i) {
@@ -155,7 +155,7 @@ if (!is.null(url_rows))
   url_rows <- url_rows[order(url_rows$scientific_name,
                              url_rows$quality_grade != "research"), ]
 write.csv(url_rows %||% data.frame(),
-          file.path(OUT_DIR, "coverage_cabr_not_on_holway_inat_records.csv"),
+          file.path(OUT_DIR, "cabr_bees_not_on_county_checklist_inat_records.csv"),
           row.names = FALSE)
 
 # ---- 5. figure: the taxa, record counts, coloured by evidence ---------------
@@ -172,7 +172,7 @@ M <- rbind(specimen = spec_n, inat_research = res_n, inat_needsid = needs_n)
 colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
                       pdat$scientific_name, paste0("(unnamed ", pdat$taxon_id, ")"))
 
-bee_png(file.path(OUT_DIR, "coverage_cabr_not_on_holway.png"),
+bee_png(file.path(OUT_DIR, "cabr_bees_not_on_county_checklist.png"),
     width = 1900, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colours
 op <- par(mar = c(4.5, 12, 4.4, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption; top fits title + takeaway
@@ -211,9 +211,9 @@ message("\nCABR-not-on-Holway, by review priority:")
 print(summary_tbl[, c("scientific_name", "taxon_rank", "n_specimen_records",
                       "n_inat_records", "n_inat_research_grade", "review_priority")],
       row.names = FALSE)
-message("\nWrote: coverage_cabr_not_on_holway.csv (summary), ",
-        "coverage_cabr_not_on_holway_inat_records.csv (URLs to verify), ",
-        "coverage_cabr_not_on_holway.png")
+message("\nWrote: cabr_bees_not_on_county_checklist.csv (summary), ",
+        "cabr_bees_not_on_county_checklist_inat_records.csv (URLs to verify), ",
+        "cabr_bees_not_on_county_checklist.png")
 
 # ---- 7. park-facing "new bees not in Holway" summary (shared formatter) ------
 # Same taxa as the pipeline's stage-11 review prompt, but framed as our confirmed

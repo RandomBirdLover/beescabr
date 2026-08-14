@@ -192,7 +192,7 @@ plot_accumulation_combined <- function(file) {
                    sig = bee_test("sample-based species accumulation (specaccum) + Chao2 richness estimator"))
   par(op)
 }
-plot_accumulation_combined(file.path(OUT_REPORT, "accumulation_by_effort_report_combined.png"))
+plot_accumulation_combined(file.path(OUT_REPORT, "bee_taxa_accumulation_by_transect.png"))
 
 # ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
 # ONE figure: a grid with rank as ROWS (genera top, species bottom) and transect as COLUMNS,

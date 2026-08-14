@@ -12,7 +12,7 @@
 # rank name), ranked by number of unresolved records, split by method.
 #
 # OUTPUTS (this figure family is split by paper):
-#   * coverage_id_targets_report.png  -> REPORT: ALL records; the actionable worklist
+#   * bees_needing_id_by_genus.png  -> REPORT: ALL records; the actionable worklist
 #       view -- one dark "done" bar (both methods pooled) + keyable (lethal) + stuck
 #       (non-lethal). The manager's "what's left to key" picture.
 #   * coverage_id_targets_journal.png -> JOURNAL: FAIR WINDOW; the SAME bars but the
@@ -21,7 +21,7 @@
 #   * coverage_id_targets_specimen.png / _photo.png -> JOURNAL only, FAIR WINDOW:
 #       per-method ID progress by genus.
 #   * coverage_id_completeness.png -> JOURNAL only, FAIR WINDOW: resolution funnel.
-#   * coverage_id_targets.csv -> the actionable worklist (ALL records -- any specimen
+#   * bees_needing_id_by_genus.csv -> the actionable worklist (ALL records -- any specimen
 #       can be keyed regardless of window).
 #
 # Descriptive counts -- no hypothesis test, so no p-value.
@@ -88,7 +88,7 @@ work <- rec %>% filter(!resolved) %>%
   left_join(resolved_by_genus_all, by = c("target" = "genus")) %>%
   mutate(resolved_species = coalesce(resolved_species, 0L)) %>%
   arrange(desc(specimen_unresolved), desc(unresolved_total))
-write.csv(work, file.path(OUT_REPORT, "coverage_id_targets.csv"), row.names = FALSE)
+write.csv(work, file.path(OUT_REPORT, "bees_needing_id_by_genus.csv"), row.names = FALSE)
 keyable <- work %>% filter(specimen_unresolved > 0)
 message(sprintf("Targets with specimen-backed (keyable) records: %d genera, %d specimens",
                 nrow(keyable), sum(keyable$specimen_unresolved)))
@@ -159,7 +159,7 @@ draw_targets <- function(dat, scope, file, split_done) {
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5, size = 9))
   bee_ggsave(file, g, width = 9.5, height = max(7, 0.30 * nrow(tt) + 2), bg = "white")
 }
-draw_targets(rec,      "all records",                                  file.path(OUT_REPORT, "coverage_id_targets_report.png"),  split_done = FALSE)
+draw_targets(rec,      "all records",                                  file.path(OUT_REPORT, "bees_needing_id_by_genus.png"),  split_done = FALSE)
 draw_targets(rec_fair, "fair window (survey-only, Mar-Oct 2021-2023)", file.path(OUT_JOURNAL, "coverage_id_targets_journal.png"), split_done = TRUE)
 
 # ---- 4. per-method species-ID progress (JOURNAL only, FAIR WINDOW) -----------
@@ -225,4 +225,4 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
   theme(legend.position = "top", panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
 bee_ggsave(file.path(OUT_JOURNAL, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, bg = "white")
 
-message("Wrote coverage_id_targets.csv + _report.png/_journal.png + _specimen.png/_photo.png + coverage_id_completeness.png to journal_paper_2026/ + nps_report_2026/")
+message("Wrote bees_needing_id_by_genus.csv + _report.png/_journal.png + _specimen.png/_photo.png + coverage_id_completeness.png to journal_paper_2026/ + nps_report_2026/")

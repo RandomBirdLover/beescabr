@@ -177,7 +177,7 @@ message(sprintf("  Bloom evidence (combined): %d points  [survey plant obs %d, i
                 nrow(bloom), sum(bloom$src == "survey plant obs"),
                 sum(bloom$src == "bee-on-flower (iNat field)"), sum(bloom$src == "bee-on-flower (specimen tag)")))
 phenology_ridge(data.frame(taxon = plant_label(bloom$plant_genus), doy = doy_of(bloom$observed_on)),
-                file.path(OUT_DIR, "phenology_plant_genus_bloom_evidence.png"), "Plant bloom (all evidence)",
+                file.path(OUT_DIR, "plant_bloom_timing_for_bees.png"), "Plant bloom (all evidence)",
                 scope = "all bloom evidence, whole park; survey in-flower plant records + every plant a bee was recorded on (a bee on a plant = it was in bloom then); broader than survey plant records alone but blends sources with differing effort",
                 method = "survey plant obs + bee-on-flower (bee records: observation field + specimen tags)",
                 title = "When does each plant bloom for bees?", sci = "plant")
@@ -190,11 +190,11 @@ bees$doy <- doy_of(bees$observed_on)
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% GENUS_RANKS & !is.na(bees$genus),
                             str_squish(bees$genus), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus", title = "When is each bee genus active?")
+  file.path(OUT_DIR, "bee_genus_activity_by_month.png"), "Bee genus", title = "When is each bee genus active?")
 
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% SPECIES_RANKS & !is.na(bees$genus) & bees$species != "",
                             paste(str_squish(bees$genus), word(bees$species, -1)), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species", title = "When is each bee species active?")
+  file.path(OUT_DIR, "bee_species_activity_by_month.png"), "Bee species", title = "When is each bee species active?")
 
 message("\nDone. Phenology ridgelines + tables in: ", normalizePath(OUT_DIR))

@@ -42,9 +42,9 @@ fw <- function(name, title, type, key_finding, details = character(0), outputs =
 
 # ---- live numbers (best-effort) ---------------------------------------------
 fs   <- .rd(file.path(DIR_REPORT, "interactions/networks/forage_selectivity_summary.csv"))
-h2   <- .rd(file.path(DIR_REPORT, "interactions/networks/interactions_genus_h2.csv"))
+h2   <- .rd(file.path(DIR_REPORT, "interactions/networks/bee_genus_specialization_h2.csv"))
 acc  <- .rd(file.path(DIR_REPORT, "richness/accumulation/transect_accumulation_summary.csv"))
-holw <- .rd(file.path(DIR_REPORT, "coverage/checklist_gaps/coverage_cabr_not_on_holway.csv"))
+holw <- .rd(file.path(DIR_REPORT, "coverage/checklist_gaps/cabr_bees_not_on_county_checklist.csv"))
 yld_m <- .rd(file.path(DIR_JOURNAL, "method_comparison/yield/coverage_yield_by_method_journal.csv"))
 lsb   <- .rd(file.path(DIR_REPORT, "coverage/least_sampled/least_sampled_bees.csv"))
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
@@ -71,7 +71,7 @@ fw("forage_selectivity",
      top_specialists = fs_top,
      generalists     = "Megachile, Nomada",
      caveats     = "availability = realized community use per cell, not a bloom census; verdicts near p=0.05 borderline"),
-   "forage_selectivity_summary.csv; interactions_web_genus.png; interactions_web_species.png; field-guide Forage-preference column")
+   "forage_selectivity_summary.csv; bee_plant_network_genus.png; bee_plant_network_species.png; field-guide Forage-preference column")
 
 fw("interactions_genus_species_webs",
    "Within-genus niche partitioning (H2')",
@@ -83,7 +83,7 @@ fw("interactions_genus_species_webs",
      controls_for = "flight season (month) and survey method; NOT year (species overlap in years -> would kill power)",
      effect_of_control = "Melissodes and Habropoda drop to non-significant -- their apparent partitioning was seasonal/method timing",
      caveats     = "borderline p-values can jitter; only significant genera are shown in the figures"),
-   "interactions_genus_h2.csv; interactions_genus_h2_overview.png; genus_species_webs/*.png")
+   "bee_genus_specialization_h2.csv; bee_genus_specialization_overview.png; genus_species_webs/*.png")
 
 # ============================ ESTIMATORS =====================================
 acc_line <- if (!is.null(acc)) paste(sprintf("%s %s%% complete", acc$transect, acc$species_pct_complete), collapse = "; ") else "-"
@@ -94,7 +94,7 @@ fw("genera_and_species_accumulation",
    c("analysis" = "Chao2 asymptotic richness vs observed, per transect + park",
      per_transect_completeness = acc_line,
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
-   "richness/accumulation/: transect_accumulation_summary.csv; REPORT accumulation_by_effort_report_{species,genus}.png (transect completeness); JOURNAL accumulation_by_effort_journal_{species,genus}.png (lethal vs non-lethal, fair window)")
+   "richness/accumulation/: transect_accumulation_summary.csv; REPORT bee_taxa_accumulation_by_transect_{species,genus}.png (transect completeness); JOURNAL accumulation_by_effort_journal_{species,genus}.png (lethal vs non-lethal, fair window)")
 
 fw("rarefaction_inext",
    "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
@@ -118,7 +118,7 @@ fw("diversity_indices",
    "Diversity indices and community composition (NMDS) by transect and year.",
    c("analysis" = "Shannon/Simpson/evenness + rank-abundance + NMDS ordination",
      assumption = "diversity indices are effort-sensitive; the 2024-heavy skew inflates apparent year differences"),
-   "diversity_by_transect.csv; diversity_by_year.csv; REPORT: diversity_nmds_composition.png, diversity_rank_abundance_report.png (pooled + per-transect combined); JOURNAL: diversity_rank_abundance_journal.png")
+   "diversity_by_transect.csv; diversity_by_year.csv; REPORT: bee_community_composition_nmds.png, bee_species_commonness_rank_abundance.png (pooled + per-transect combined); JOURNAL: diversity_rank_abundance_journal.png")
 
 fw("phenology_activity",
    "Seasonal activity phenology (+ Rayleigh test)",
@@ -126,7 +126,7 @@ fw("phenology_activity",
    "When bees (per genus/species) and flowering plants are active across the year; Rayleigh tests seasonal concentration.",
    c("analysis" = "circular-mean activity ridgelines + Rayleigh test of seasonal concentration",
      confound = "seasonal survey effort (interns ~Mar-Oct) can drive apparent bee seasonality -- read timing, not intensity"),
-   "phenology_bee_genus.png; phenology_bee_species.png; phenology_plant_genus_bloom_evidence.png; *_rayleigh.csv")
+   "bee_genus_activity_by_month.png; bee_species_activity_by_month.png; plant_bloom_timing_for_bees.png; *_rayleigh.csv")
 
 # ============================ DESCRIPTIVE ====================================
 fw("interactions_network",
@@ -135,7 +135,7 @@ fw("interactions_network",
    "Who visits what: full plant-genus x bee network as webs + heatmaps (raw co-occurrence; read descriptively).",
    c(note = "raw visitation counts -- NOT preference (see forage_selectivity for the inferential preference test)",
      scope = "specimen net + iNaturalist photo pooled, CABR only"),
-   "interactions_web_genus.png; interactions_web_species.png; interactions_heatmap_*.png; interactions_*_matrix.csv; interactions_bee_genus_network.png")
+   "bee_plant_network_genus.png; bee_plant_network_species.png; bee_plant_interaction_heatmap_*.png; interactions_*_matrix.csv; interactions_bee_genus_network.png")
 
 fw("interactions_top_plants",
    "Top plants bees visit",
@@ -166,7 +166,7 @@ fw("rare_bee_plants",
    c(recorded_vs_preferred = "bars = recorded-on (availability-blended); PREFERRED (starred) = availability-corrected, shown only where n>=20 -- same matched test as the genus webs",
      note = "low counts: read as 'where the few sightings concentrate', not visit rates or preference",
      threatened_source = "IUCN threatened set read live from the IUCN cache"),
-   "rare_bee_plant_hubs.csv/png; rare_named_bee_plants.csv/png")
+   "plants_anchoring_rare_bees.csv/png; rare_bee_forage_preference.csv/png")
 
 fw("bee_bounties",
    "Collecting / photo bounties (method gaps)",
@@ -181,7 +181,7 @@ fw("coverage_cabr_vs_holway",
    sprintf("%s CABR taxa are not on the Holway San Diego County checklist (candidate county additions / to verify).",
            .chr(.n(holw))),
    c(note = "iNaturalist records flagged for verification before treating as county additions"),
-   "coverage_cabr_not_on_holway.csv/png; coverage_cabr_not_on_holway_inat_records.csv")
+   "cabr_bees_not_on_county_checklist.csv/png; cabr_bees_not_on_county_checklist_inat_records.csv")
 
 fw("yield_by_method",
    "Yield by method (lethal vs non-lethal Venn)",
@@ -207,19 +207,19 @@ fw("efficiency_by_method",
      "analysis" = "Hurlbert rarefaction to the smaller method's total records, survey records only"),
    "method_comparison/efficiency/efficiency_by_method_species.png; method_comparison/efficiency/efficiency_by_method_genus.png")
 
-fw("coverage_offtransect",
+fw("bees_found_off_transect",
    "Off-transect coverage",
    "descriptive",
    "What the off-transect (opportunistic) records add beyond the fixed transects.",
    character(0),
-   "coverage_offtransect_summary.csv; coverage_offtransect_taxa.csv; coverage_offtransect.png")
+   "bees_found_off_transect_summary.csv; bees_found_off_transect_taxa.csv; bees_found_off_transect.png")
 
 fw("coverage_id_targets",
    "Identification targets",
    "descriptive",
    "Genus-level records that could still be pushed to species (ID targets), by method.",
    character(0),
-   "coverage_id_targets.csv; coverage_id_targets_*.png; coverage_id_completeness.png")
+   "bees_needing_id_by_genus.csv; coverage_id_targets_*.png; coverage_id_completeness.png")
 
 fw("coverage_yield_by_method",
    "Yield by method (lethal vs non-lethal)",
@@ -230,11 +230,11 @@ fw("coverage_yield_by_method",
            .pick(yld_m, "lethal", "genera"),            .pick(yld_m, "nonlethal", "genera"),
            .pick(yld_m, "lethal", "exclusive_genera"),  .pick(yld_m, "nonlethal", "exclusive_genera")),
    c(scope    = "SURVEY-ONLY, March-October, 2021-2023 (year-clipped so both methods share the window)",
-     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (general public and intern iNat photos are NOT included -- see the REPORT figure coverage_yield_by_method_report_* for the all-records contributor view that adds them)",
+     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (general public and intern iNat photos are NOT included -- see the REPORT figure bee_yield_by_contributor_and_method_* for the all-records contributor view that adds them)",
      controls_for = "season (Mar-Oct) + year (2021-2023) + survey scope -- removes non-lethal's 3 extra years",
      species_vs_genus = "species-level = detection + ID resolution; genus-level = detection alone (photos not penalised for stalling at genus)",
      takeaway = "specimens win on species-level yield/efficiency; detection (genus) is about even -- the gap is ID resolution, not who finds more bees"),
-   "method_comparison/yield/coverage_yield_by_method_journal.csv (table only; the journal figure is the method Venn, method_comparison/yield/yield_by_method_journal.png). REPORT all-records contributor/method view: coverage_yield_by_method_report_{species,genus}.png")
+   "method_comparison/yield/coverage_yield_by_method_journal.csv (table only; the journal figure is the method Venn, method_comparison/yield/yield_by_method_journal.png). REPORT all-records contributor/method view: bee_yield_by_contributor_and_method_{species,genus}.png")
 
 fw("coverage_cabr_share_of_county",
    "CABR share of county diversity",
@@ -283,7 +283,7 @@ fw("transect_effort",
    "descriptive",
    "How many bee records each transect has produced, split by method (lethal vs non-lethal) and as a total; specimens summarised by transect (their reliable spatial unit).",
    c(note = "raw per-transect richness is NOT charted -- unequal effort biases it; the effort-standardized version is rarefaction by_transect"),
-   "transect_effort_{report,journal}.png; transect_effort_total_{report,journal}.png; transect_richness.csv; transect_effort_journal.csv")
+   "transect_effort_{report,journal}.png; transect_effort_total_{report,journal}.png; survey_effort_by_transect_richness.csv; transect_effort_journal.csv")
 
 fw("phenology_effort",
    "Survey effort by month",

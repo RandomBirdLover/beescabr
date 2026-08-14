@@ -115,13 +115,13 @@ all_months <- sort(unique(p$month))
 calendar_fig(p_journal, FAIR_MONTHS, file.path(OUT_JOURNAL, "effort_by_month_journal.png"),
              "Fair window: Mar-Oct 2021-2023, trips + records split by method",
              "per-survey log, fair window (Mar-Oct 2021-2023)")
-calendar_fig(p, all_months, file.path(OUT_REPORT, "effort_by_month_report.png"),
+calendar_fig(p, all_months, file.path(OUT_REPORT, "survey_effort_by_month.png"),
              sprintf("All trips %d-%d, all months, split by method", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)),
              sprintf("per-survey log, all trips %d-%d", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
 
 grid_fig(p_journal, FAIR_MONTHS, file.path(OUT_JOURNAL, "effort_year_month_grid_journal.png"),
          "Fair window: Mar-Oct 2021-2023")
-grid_fig(p, all_months, file.path(OUT_REPORT, "effort_year_month_grid_report.png"),
+grid_fig(p, all_months, file.path(OUT_REPORT, "survey_effort_by_year_and_month.png"),
          sprintf("All trips %d-%d", min(p$year, na.rm=TRUE), max(p$year, na.rm=TRUE)))
 
 message(sprintf("Journal window trips: %d | Report (all) trips: %d", nrow(p_journal), nrow(p)))

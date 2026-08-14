@@ -198,7 +198,7 @@ tr <- do.call(rbind, lapply(names(RANKS), function(rk) {
   M <- comm(filter(rec, transect %in% TRANSECTS), "transect", RANKS[[rk]])
   M <- M[intersect(TRANSECTS, rownames(M)), , drop = FALSE]; M <- M[rowSums(M) > 0, , drop = FALSE]
   t <- rarefy_table(M)
-  write.csv(t, file.path(rare_base("by_transect"), paste0("rarefaction_by_transect_", rk, ".csv")), row.names = FALSE)
+  write.csv(t, file.path(rare_base("by_transect"), paste0("bee_richness_by_transect_rarefaction_", rk, ".csv")), row.names = FALSE)
   data.frame(rank = rk, unit = UNIT(rk), transect = as.character(t$group),
              S = t$rarefied_richness, minN = min(rowSums(M)), stringsAsFactors = FALSE)
 }))
@@ -232,9 +232,9 @@ gtr <- ggplot(tr, aes(transect, S, fill = transect, pattern = rank)) +
   theme_beescabr(11) +
   theme(panel.grid.major.x = element_blank(), legend.position = "right",
         plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-bee_ggsave(file.path(rare_base("by_transect"), "rarefaction_by_transect_bars_combined.png"), gtr,
+bee_ggsave(file.path(rare_base("by_transect"), "bee_richness_by_transect_rarefaction.png"), gtr,
            width = 9.2, height = 5, bg = "white")
-message("  by_transect combined (genus + species): rarefaction_by_transect_bars_combined.png")
+message("  by_transect combined (genus + species): bee_richness_by_transect_rarefaction.png")
 
 # ---- combined BY-YEAR figure: genus + species OVERLAID in ONE horizontal panel ----
 # The public "richer years?" figure. Year is the y-axis; the solid species bar sits behind and
@@ -245,7 +245,7 @@ yr <- do.call(rbind, lapply(names(RANKS), function(rk) {
   M <- comm(rec_win, "year", RANKS[[rk]]); M <- M[rowSums(M) > 0, , drop = FALSE]
   t <- rarefy_table(M)
   # keep the per-rank machine-readable table (the individual bar FIGURES are retired, the data is not)
-  write.csv(t, file.path(rare_base("by_year"), paste0("rarefaction_by_year_", rk, ".csv")), row.names = FALSE)
+  write.csv(t, file.path(rare_base("by_year"), paste0("bee_richness_by_year_rarefaction_", rk, ".csv")), row.names = FALSE)
   data.frame(rank = rk, unit = UNIT(rk), year = as.character(t$group),
              S = t$rarefied_richness, minN = min(rowSums(M)), stringsAsFactors = FALSE)
 }))
@@ -273,9 +273,9 @@ gyr <- ggplot(yr, aes(S, year, pattern = rank)) +
   theme_beescabr(11) +
   theme(panel.grid.major.y = element_blank(), legend.position = "right",
         plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-bee_ggsave(file.path(rare_base("by_year"), "rarefaction_by_year_bars_combined.png"), gyr,
+bee_ggsave(file.path(rare_base("by_year"), "bee_richness_by_year_rarefaction.png"), gyr,
            width = 9, height = 4.8, bg = "white")
-message("  by_year combined (genus + species): rarefaction_by_year_bars_combined.png")
+message("  by_year combined (genus + species): bee_richness_by_year_rarefaction.png")
 
 message("Wrote rarefaction_by_{transect,year}_bars_combined (report) + ",
         "rarefaction_by_{method,observer}_vegan_*_{species,genus} (journal)\n",

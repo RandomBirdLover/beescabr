@@ -1,12 +1,12 @@
 # =============================================================
-# analysis/records_by_family_pie.R
+# analysis/bee_family_share_of_records_pie.R
 # beescabr -- share of ALL bee records by FAMILY, as a pie/donut.
 #
 # Companion to records_per_genus_by_evidence.R, but one level up (family) and with
 # NO lethal/non-lethal split -- every record counts once, coloured by family so the
 # reader sees which families dominate the park's record base at a glance.
 #
-# Run from the repo root:  Rscript scripts/analysis/records_by_family_pie.R
+# Run from the repo root:  Rscript scripts/analysis/bee_family_share_of_records_pie.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
@@ -40,7 +40,7 @@ tot <- sum(d$records)
 d$frac <- d$records / tot
 d$lab  <- ifelse(d$frac >= 0.03, sprintf("%.0f%%", 100 * d$frac), "")   # on-slice % only where it fits; thin slivers get their % in the legend instead
 d$labcol <- "white"   # on-slice % labels are always white (user preference), even on the lighter hues
-write.csv(d[, c("family", "records", "frac")], file.path(OUT_REPORT, "records_by_family.csv"), row.names = FALSE)
+write.csv(d[, c("family", "records", "frac")], file.path(OUT_REPORT, "bee_family_share_of_records.csv"), row.names = FALSE)
 message(sprintf("Records by family (both methods pooled): %s | total %s | excluded %d records with no family-level ID",
                 paste(sprintf("%s=%d", d$family, d$records), collapse = "  "), format(tot, big.mark = ",", trim = TRUE), n_noid))
 
@@ -78,5 +78,5 @@ g <- ggplot(d, aes(x = 2, y = frac, fill = family)) +
         plot.caption = element_text(colour = BEE_INK$secondary, size = 9, hjust = 0, margin = margin(t = 6)),
         plot.caption.position = "plot", legend.position = "right",
         legend.text = element_text(colour = BEE_INK$secondary))
-bee_ggsave(file.path(OUT_REPORT, "records_by_family_pie.png"), g, width = 8, height = 5.6, bg = "white")
-message("Wrote records_by_family_pie.png + records_by_family.csv to ", OUT_REPORT)
+bee_ggsave(file.path(OUT_REPORT, "bee_family_share_of_records_pie.png"), g, width = 8, height = 5.6, bg = "white")
+message("Wrote bee_family_share_of_records_pie.png + bee_family_share_of_records.csv to ", OUT_REPORT)

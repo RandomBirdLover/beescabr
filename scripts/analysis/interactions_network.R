@@ -134,8 +134,8 @@ heatmap_base <- function(M, file, rank_label, top_plants = 30) {   # fallback if
   par(op); dev.off()
 }
 write_heatmap <- if (HAVE_GGPLOT) heatmap_gg else heatmap_base
-write_heatmap(Mg, file.path(OUT_DIR, "interactions_heatmap_genus.png"),   "genus")
-write_heatmap(Ms, file.path(OUT_DIR, "interactions_heatmap_species.png"), "species")
+write_heatmap(Mg, file.path(OUT_DIR, "bee_plant_interaction_heatmap_genus.png"),   "genus")
+write_heatmap(Ms, file.path(OUT_DIR, "bee_plant_interaction_heatmap_species.png"), "species")
 
 # ---- 3. bee-genus shared-forage network (igraph one-mode projection) ---------
 # DISABLED (kept for reference, not rendered) -- project decision: the shared-forage
@@ -565,7 +565,7 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
         side = 1, line = 9.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
-web_plot_genus_fam(Mg, file.path(OUT_DIR, "interactions_web_genus.png"), col_of_bee = bee_col, top_plants = 30)   # ALL genera; bee_col colours the selective ones, generalist/sparse go grey
+web_plot_genus_fam(Mg, file.path(OUT_DIR, "bee_plant_network_genus.png"), col_of_bee = bee_col, top_plants = 30)   # ALL genera; bee_col colours the selective ones, generalist/sparse go grey
 # (the selectivity-coloured SPECIES web was dropped -- redundant with the family-species web below,
 #  which shows every species with the same species-level hearts. pref_of_species is still used there.)
 
@@ -656,8 +656,8 @@ web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
         side = 1, line = 11.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
-web_plot_sgf(Ms, file.path(OUT_DIR, "interactions_web_family_species.png"), top_plants = 50, favorite_of = pref_of_species)   # 50 plants keeps all 78 species (the last few visit only uncommon plants)
-message("Wrote interactions_web_family_species.png (species nested by genus & family)")
+web_plot_sgf(Ms, file.path(OUT_DIR, "bee_plant_network_species.png"), top_plants = 50, favorite_of = pref_of_species)   # 50 plants keeps all 78 species (the last few visit only uncommon plants)
+message("Wrote bee_plant_network_species.png (species nested by genus & family)")
 
 # ---- specialists-only species web: ONLY the statistically selective species ------------------
 # Same nested family > genus > species layout, but restricted to bee species that forage beyond
@@ -666,14 +666,14 @@ message("Wrote interactions_web_family_species.png (species nested by genus & fa
 sel_species <- .sel_sp$taxon[.sel_sp$selective %in% TRUE & !is.na(.sel_sp$preferred_plant)]
 Ms_sel <- Ms[, colnames(Ms) %in% sel_species, drop = FALSE]
 if (ncol(Ms_sel) >= 2) {
-  web_plot_sgf(Ms_sel, file.path(OUT_DIR, "interactions_web_specialists.png"),
+  web_plot_sgf(Ms_sel, file.path(OUT_DIR, "bee_specialist_network.png"),
                top_plants = 50, favorite_of = pref_of_species,
                title = "Which bees are the true specialists, and on what?",
                desc  = sprintf("Only the %d bee species that forage beyond plant availability (matched chi-square, p<0.05).  Colour = family.  Red heart = each species' favourite plant.", ncol(Ms_sel)),
                scope = sprintf("selective species only (%d of %d); whole park; nested by genus & family", ncol(Ms_sel), ncol(Ms)))
-  message(sprintf("Wrote interactions_web_specialists.png (%d selective species)", ncol(Ms_sel)))
+  message(sprintf("Wrote bee_specialist_network.png (%d selective species)", ncol(Ms_sel)))
 } else {
-  message("Skipped interactions_web_specialists.png (fewer than 2 selective species)")
+  message("Skipped bee_specialist_network.png (fewer than 2 selective species)")
 }
 
 # (bipartite::plotweb figures were removed -- the dependency-free web_plot figures

@@ -70,7 +70,7 @@ rare_vis <- rec %>% filter(species_key %in% rare_keys, has(plant_genus))
 hub <- rare_vis %>% group_by(plant_genus) %>%
   summarise(rare_bee_species = n_distinct(species_key), visits = n(), .groups = "drop") %>%
   arrange(desc(rare_bee_species), desc(visits))
-write.csv(hub, file.path(OUT_DIR, "rare_bee_plant_hubs.csv"), row.names = FALSE)
+write.csv(hub, file.path(OUT_DIR, "plants_anchoring_rare_bees.csv"), row.names = FALSE)
 message(sprintf("  plant genera used by rare bees: %d (top: %s)",
                 nrow(hub), paste(sprintf("%s[%dspp]", head(hub$plant_genus, 4), head(hub$rare_bee_species, 4)), collapse = " ")))
 
@@ -95,7 +95,7 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_s
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = "none", panel.grid.major.y = element_blank(),
         plot.subtitle = element_text(size = 8.5))
-bee_ggsave(file.path(OUT_DIR, "rare_bee_plant_hubs.png"), gA, width = 9, height = 5.8, bg = "white")
+bee_ggsave(file.path(OUT_DIR, "plants_anchoring_rare_bees.png"), gA, width = 9, height = 5.8, bg = "white")
 
 # ---- 3b. species-level PREFERRED plant (availability-corrected) -------------
 # Same matched approach as the genus forage-selectivity test, keyed to ONE bee species:
@@ -168,7 +168,7 @@ top_sp   <- named_v %>% filter(has(plant_species)) %>% count(label, plant_genus,
   transmute(label, plant_genus, top_plant_species = plant_species)
 named_tbl <- pg %>% left_join(top_sp, by = c("label", "plant_genus")) %>%
   left_join(tot, by = "label") %>% arrange(label, desc(visits), plant_genus)
-write.csv(named_tbl, file.path(OUT_DIR, "rare_named_bee_plants.csv"), row.names = FALSE)
+write.csv(named_tbl, file.path(OUT_DIR, "rare_bee_forage_preference.csv"), row.names = FALSE)
 
 # availability-corrected PREFERRED plant per threatened bee (NA where < SP_PREF_MIN records)
 pref_of <- setNames(lapply(NAMED$species_key, preferred_plant_sp), NAMED$label)
@@ -212,7 +212,7 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
         panel.grid.major.y = element_blank(),
         plot.subtitle = element_text(size = 8.5),
         strip.text = ggtext::element_markdown(face = "bold", hjust = 0, size = 9, lineheight = 1.3))  # rich text: italic Latin in the panel header
-bee_ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,
+bee_ggsave(file.path(OUT_DIR, "rare_bee_forage_preference.png"), gB,
        width = 11, height = 2.2 + 3.1 * length(unique(plot_df$panel)), bg = "white")
 
 # =============================================================================
@@ -321,4 +321,4 @@ for (lbl in ord) {
   message("  wrote slide: ", basename(fn))
 }
 
-message("Wrote rare_bee_plant_hubs.{png,csv} + rare_named_bee_plants.{png,csv} + per-bee rare_flower_*.png slides to ", OUT_DIR)
+message("Wrote plants_anchoring_rare_bees.{png,csv} + rare_bee_forage_preference.{png,csv} + per-bee rare_flower_*.png slides to ", OUT_DIR)

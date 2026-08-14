@@ -91,8 +91,8 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
   message(sprintf("  %-32s %d of %d species >= %d records", scope_lab, nrow(wf), nrow(wide), min_shown))
 }
 make_fig(rec_all,  MIN_REPORT,  "All records (report)",
-         file.path(OUT_REPORT, "records_by_evidence_report_species.png"),
-         file.path(OUT_REPORT, "records_by_evidence_report_species.csv"))
+         file.path(OUT_REPORT, "bee_species_evidence_depth.png"),
+         file.path(OUT_REPORT, "bee_species_evidence_depth.csv"))
 make_fig(rec_fair, MIN_JOURNAL, "Fair window: Mar-Oct 2021-2023 (journal)",
          file.path(OUT_JOURNAL, "records_by_evidence_journal_species.png"),
          file.path(OUT_JOURNAL, "records_by_evidence_journal_species.csv"))

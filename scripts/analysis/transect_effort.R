@@ -70,7 +70,7 @@ tr_tbl <- summ(recs2)                                    # REPORT: all records, 
 # non-lethal = beeple photos. OT drops out naturally (no 2021-2023 surveys).
 tr_tbl_fair <- summ(recs2 %>% filter(is_survey, month %in% FAIR_MONTHS, year %in% FAIR_YEARS,
                                      method == "lethal" | (method == "nonlethal" & surveyor == "beeple")))
-write.csv(tr_tbl,      file.path(COV_EFFORT,  "transect_richness.csv"),       row.names = FALSE)
+write.csv(tr_tbl,      file.path(COV_EFFORT,  "survey_effort_by_transect_richness.csv"),       row.names = FALSE)
 write.csv(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.csv"), row.names = FALSE)
 message("Per-transect richness (report, all records): ",
         paste(sprintf("%s=%dsp", tr_tbl$transect, tr_tbl$species_richness), collapse = "  "))
@@ -78,7 +78,7 @@ lab_col <- BEE_INK$secondary
 
 # NOTE: a raw observed-richness-per-transect bar chart is deliberately NOT drawn -- comparing raw
 # richness across transects with unequal effort is biased. The effort-standardized version lives in
-# rarefaction_{vegan,inext}.R -> by_transect. The per-transect counts are kept in transect_richness.csv.
+# rarefaction_{vegan,inext}.R -> by_transect. The per-transect counts are kept in survey_effort_by_transect_richness.csv.
 
 # ---- 2. transect_effort -- records per transect, lethal vs non-lethal ---------
 effort_chart <- function(tbl, file, scope_lab) {
@@ -103,7 +103,7 @@ effort_chart <- function(tbl, file, scope_lab) {
                        plot.title = element_text(hjust = 0.5))
   bee_ggsave(file, g, width = 6.4, height = 5, bg = "white")
 }
-effort_chart(tr_tbl, file.path(COV_EFFORT, "transect_effort_report.png"),
+effort_chart(tr_tbl, file.path(COV_EFFORT, "survey_effort_by_transect.png"),
              scope_cap("all records, by transect (OT = off-transect)", "lethal vs non-lethal", "records"))
 effort_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_journal.png"),
              scope_cap(scope  = "fair window: survey-only, Mar-Oct 2021-2023 (OT excluded -- added 2024)",
@@ -127,11 +127,11 @@ effort_total_chart <- function(tbl, file, scope_lab) {
                        plot.title = element_text(hjust = 0.5))
   bee_ggsave(file, g, width = 6.4, height = 5, bg = "white")
 }
-effort_total_chart(tr_tbl, file.path(COV_EFFORT, "transect_effort_total_report.png"),
+effort_total_chart(tr_tbl, file.path(COV_EFFORT, "survey_effort_by_transect_total.png"),
                    scope_cap("all records, by transect (OT = off-transect)", "lethal + non-lethal pooled", "records"))
 effort_total_chart(tr_tbl_fair, file.path(OUT_JOURNAL, "transect_effort_total_journal.png"),
                    scope_cap(scope  = "fair window: survey-only, Mar-Oct 2021-2023 (OT excluded -- added 2024)",
                              method = "lethal + non-lethal pooled", rank = "records (by transect)"))
 
-message("Wrote transect_effort_report.png + transect_richness.csv to ", COV_EFFORT,
+message("Wrote survey_effort_by_transect.png + survey_effort_by_transect_richness.csv to ", COV_EFFORT,
         " | transect_effort_journal.png/.csv to ", OUT_JOURNAL)
