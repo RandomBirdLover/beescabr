@@ -151,10 +151,19 @@ GREY_JS  <- jsonlite::toJSON(unname(BEE_GENUS_GREY), auto_unbox = TRUE)
 genus_leg <- taxo %>% group_by(fam, genus) %>%
   summarise(col = tcol[ceiling(dplyr::n() / 2)], .groups = "drop") %>%
   arrange(match(fam, BEE_FAMILY_ORDER), genus)
+# per-genus subgenus + complex names, listed under each genus in the legend (complex names
+# keep only the epithet since the genus is already shown above them)
+sub_tbl <- rec %>% filter(subgenus != "") %>% distinct(genus, subgenus) %>% arrange(genus, subgenus)
+cx_tbl  <- rec %>% filter(complex  != "") %>% distinct(genus, complex)  %>% arrange(genus, complex)
+subOf <- tapply(sub_tbl$subgenus, sub_tbl$genus, paste, collapse = ", ")
+cxOf  <- tapply(cx_tbl$complex,   cx_tbl$genus, function(v) paste(sub("^\\S+ ", "", v), collapse = ", "))
 LEGEND_JS <- jsonlite::toJSON(lapply(intersect(BEE_FAMILY_ORDER, genus_leg$fam), function(fm) {
   g <- genus_leg[genus_leg$fam == fm, ]
   list(family = fm, fcol = unname(BEE_FAMILY[fm]),
-       genera = unname(Map(function(n, c) list(n = n, c = c), g$genus, g$col)))
+       genera = unname(Map(function(n, c) list(n = n, c = c,
+                             sub = if (n %in% names(subOf)) unname(subOf[n]) else "",
+                             cx  = if (n %in% names(cxOf))  unname(cxOf[n])  else ""),
+                           g$genus, g$col)))
 }), auto_unbox = TRUE)
 pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","method","url")],
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
@@ -190,6 +199,9 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .legend .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:6px}
   .legend .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:6px}
   .legend .genrow i{font-style:italic}
+  .legend .taxrow{font-size:10px;color:#6b6a66;margin:0 0 1px 22px;line-height:1.32}
+  .legend .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
+  .legend .taxrow i{font-style:italic}
   .legend .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
 </style></head><body><div id="map"></div>
 <script>
@@ -282,7 +294,11 @@ legend.onAdd=function(){
   var h="<div class=eyebrow>Genus colors</div>";
   LEGEND.forEach(function(f){
     h+="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
-    f.genera.forEach(function(g){ h+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>"; });
+    f.genera.forEach(function(g){
+      h+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
+      if(g.sub) h+="<div class=taxrow><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
+      if(g.cx)  h+="<div class=taxrow><b>complex</b><i>"+esc(g.cx)+"</i></div>";
+    });
   });
   d.innerHTML=h; return d;
 };
