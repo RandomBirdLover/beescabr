@@ -135,7 +135,7 @@ BEE_HTML <- c(page = "#ffffff", page_alt = "#ece9e2", ink = "#22211e", sub = "#6
 # Michael Ready's hero photo. This is the WEB-page look ONLY (field guides + summary + landing site); it is
 # deliberately SEPARATE from BEE_TEAL, which still drives the figure magnitude/evidence ramps. deep = headings
 # (h1/h2/th), mid = eyebrow/underline/scope-rule, light = subtle def-row divider.
-BEE_HTML_GREEN <- c(deep = "#1e5a2b", mid = "#3e9a43", light = "#7dc26a")
+BEE_HTML_GREEN <- c(deep = "#1c5728", mid = "#3f8f4f", light = "#6ab87a")   # sampled from Brandi's peridot sweat bee (hero photo); light = the bee's own green
 # The shared stylesheet (the rules that go BETWEEN <style> and </style>). A script appends its own
 # bee_badge_css(...) for whichever pill sets it uses. Zebra striping (BEE_TABLE row_even) + sticky,
 # sortable, teal-hover header give every table the same look + organization.
