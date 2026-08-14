@@ -200,6 +200,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .legend .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:6px}
   .legend .genrow i{font-style:italic}
   .legend .taxrow{font-size:10px;color:#6b6a66;margin:0 0 1px 22px;line-height:1.32}
+  .legend .taxrow.cx{margin-left:36px}
   .legend .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
   .legend .taxrow i{font-style:italic}
   .legend .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
@@ -297,7 +298,7 @@ legend.onAdd=function(){
     f.genera.forEach(function(g){
       h+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
       if(g.sub) h+="<div class=taxrow><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
-      if(g.cx)  h+="<div class=taxrow><b>complex</b><i>"+esc(g.cx)+"</i></div>";
+      if(g.cx)  h+="<div class=\\"taxrow cx\\"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
     });
   });
   d.innerHTML=h; return d;
