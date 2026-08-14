@@ -113,8 +113,19 @@ pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","sp","tran","year","method",
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
 KEYS <- jsonlite::toJSON(c("lat","lon","genus","sp","tran","year","method","url"))
 
+# ---- 3b. record-type icons: iNaturalist bird (embedded) + a drawn microscope ----
+# iNat photo records -> the iNaturalist logo (committed at docs/inat-logo.png), embedded as a
+# data URI so the page is self-contained. Specimen records -> a simple inline-SVG microscope.
+# Each sits in a white badge whose BORDER is the transect colour (keeps the transect cue).
+inat_b64 <- if (file.exists("docs/inat-logo.png"))
+  jsonlite::base64_enc(readBin("docs/inat-logo.png", "raw", file.size("docs/inat-logo.png"))) else ""
+INAT_JS  <- jsonlite::toJSON(sprintf('<img src="data:image/png;base64,%s" alt="iNaturalist">', inat_b64), auto_unbox = TRUE)
+micro_svg <- paste(readLines("scripts/analysis/assets/microscope.svg", warn = FALSE), collapse = "")   # Noun Project microscope
+micro_svg <- sub("<svg ", '<svg fill="#274b1e" aria-label="specimen" ', micro_svg, fixed = TRUE)       # tint to theme green (paths inherit)
+MICRO_JS  <- jsonlite::toJSON(micro_svg, auto_unbox = TRUE)
+
 # ---- 4. write the self-contained HTML ------------------------------------------
-html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
+html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cabrillo National Monument &mdash; Bee Occurrence Explorer</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -137,12 +148,22 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
   .leaflet-popup-content i{color:#111}
   .lg{line-height:1.5}
   .beebadge{background:none!important;border:none!important}
-  .badge{width:22px;height:22px;border-radius:50%%;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
+  .badge{width:24px;height:24px;border-radius:50%%;background:#fff;border:2px solid #888;box-shadow:0 1px 2px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .badge img,.badge svg{width:15px;height:15px;display:block}
+  .ticon{display:inline-flex;align-items:center;width:15px;height:15px;vertical-align:-3px;margin-right:2px}
+  .ticon svg,.ticon img{width:15px;height:15px}
 </style></head><body><div id="map"></div>
 <script>
-var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s;
+var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s, INAT=%s, MICRO=%s;
 var BOUNDARY=%s, TRANSECTS=%s;
-var TR_ORDER=["BST","OT","TP","UPMON","off-transect"];
+',
+  BEE_HTML_GREEN[["mid"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]],
+  jsonlite::toJSON(as.list(COLS), auto_unbox = TRUE), KEYS, pts,
+  jsonlite::toJSON(gs_list, auto_unbox = FALSE),
+  if (!is.null(tran_lab)) jsonlite::toJSON(tran_lab, dataframe = "rows", auto_unbox = TRUE) else "[]",
+  jsonlite::toJSON(photos_ok, auto_unbox = TRUE), INAT_JS, MICRO_JS,
+  to_geojson(park_bnd), to_geojson(tran_ln)),
+'var TR_ORDER=["BST","OT","TP","UPMON","off-transect"];
 var map=L.map("map",{preferCanvas:true,zoomControl:false});
 var topo=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles &copy; Esri"}).addTo(map);
 var sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles &copy; Esri"});
@@ -173,9 +194,9 @@ function draw(){
     var name = r.s? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>" : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
     var pop = name+"<br>Transect: <b>"+esc(r.t)+"</b> &middot; "+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
               (r.u?"<br><a href=\\""+esc(r.u)+"\\" target=\\"_blank\\">View on iNaturalist &rarr;</a>":"");
-    var col=COLS[r.t]||"#888", em=(r.m==="net")?"\uD83D\uDD2C":"\uD83D\uDCF7";   // microscope = specimen, camera = photo
-    var ic=L.divIcon({className:"beebadge",iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-9],
-      html:"<div class=badge style=\\"background:"+col+"\\">"+em+"</div>"});
+    var col=COLS[r.t]||"#888", ico=(r.m==="net")?MICRO:INAT;   // microscope = specimen, iNat bird = photo
+    var ic=L.divIcon({className:"beebadge",iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-10],
+      html:"<div class=badge style=\\"border-color:"+col+"\\">"+ico+"</div>"});
     L.marker([r.lat,r.lon],{icon:ic}).bindPopup(pop).addTo(layer);
   });
   document.getElementById("count").textContent = n.toLocaleString()+" record"+(n===1?"":"s")+" shown";
@@ -195,7 +216,7 @@ panel.onAdd=function(){
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<label>Transect</label><div class=chk id=trchk>"+trChk+"</div>"+
-    "<label>Record type</label><div class=chk><label><input type=checkbox id=m_net checked>&#128300; specimen</label><label><input type=checkbox id=m_photo checked>&#128247; iNaturalist</label></div>"+
+    "<label>Record type</label><div class=chk><label><input type=checkbox id=m_net checked><span class=ticon>"+MICRO+"</span>specimen</label><label><input type=checkbox id=m_photo checked><span class=ticon>"+INAT+"</span>iNaturalist</label></div>"+
     "<div class=count id=count></div>";
   return d;
 };
@@ -224,13 +245,7 @@ document.getElementById("m_net").addEventListener("change",draw);
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
 map.fitBounds([[Math.min.apply(null,lat0),Math.min.apply(null,lon0)],[Math.max.apply(null,lat0),Math.max.apply(null,lon0)]],{padding:[20,20]});
 draw();
-</script></body></html>',
-  BEE_HTML_GREEN[["mid"]], BEE_HTML_GREEN[["deep"]], BEE_HTML_GREEN[["deep"]],
-  jsonlite::toJSON(as.list(COLS), auto_unbox = TRUE), KEYS, pts,
-  jsonlite::toJSON(gs_list, auto_unbox = FALSE),
-  if (!is.null(tran_lab)) jsonlite::toJSON(tran_lab, dataframe = "rows", auto_unbox = TRUE) else "[]",
-  jsonlite::toJSON(photos_ok, auto_unbox = TRUE),
-  to_geojson(park_bnd), to_geojson(tran_ln))
+</script></body></html>')
 
 out <- file.path(OUT_DIR, "bee_occurrence_explorer.html")
 writeLines(html, out)
