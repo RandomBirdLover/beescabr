@@ -295,7 +295,7 @@ genus_html    <- .legend_stacked(fam_present, genus_leg)    # m1 (collect map)
 ib_genus_html <- .legend_stacked(ib_fam_present, ib_glg)    # m2 (photograph map)
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
-TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "OpenTopoMap"
+TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "Esri.WorldTopoMap"
 # official title overlay (top-left corner) -- white card w/ NPS eyebrow + teal head, matching the tables
 .map_title <- function(head, sub) paste0(
   '<div style="', .CARD, ';padding:9px 15px;max-width:430px">',
@@ -313,9 +313,9 @@ title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7",
   leaflet::addPolygons(data = park_bnd, fill = FALSE, color = "#ffffff", weight = 3, opacity = 0.95, group = "park boundary")
 
 m1 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
+  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%
   leaflet::addProviderTiles(TILE_SAT, group = "Satellite") %>%
   leaflet::addProviderTiles(TILE_STR, group = "Street") %>%
-  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%
   .add_boundary()
 if (!is.null(tran_ln))   # transect lines as CONTEXT here (the collect-targets are real GPS points, drawn on top)
   m1 <- m1 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9,
@@ -330,7 +330,7 @@ m1 <- m1 %>%
       group = "targets") %>%
   leaflet::addControl(html = genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title1, position = "topleft") %>%
-  leaflet::addLayersControl(baseGroups = c("Satellite", "Street", "Topographic"),
+  leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
   htmlwidgets::onRender(.zoom_tr)
@@ -338,9 +338,9 @@ m1 <- m1 %>%
 # m2: one layer for the transects -- the real shapefile line, coloured by transect, carrying a SINGLE
 # popup (its species to photograph) and a permanent name label. No more twin corridor/marker popups.
 m2 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
+  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%
   leaflet::addProviderTiles(TILE_SAT, group = "Satellite") %>%
   leaflet::addProviderTiles(TILE_STR, group = "Street") %>%
-  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%
   .add_boundary()
 if (!is.null(tran_ln))
   m2 <- m2 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9, popup = ~popup,
@@ -353,7 +353,7 @@ if (!is.null(tran_ln))
 m2 <- m2 %>%
   leaflet::addControl(html = ib_genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title2, position = "topleft") %>%
-  leaflet::addLayersControl(baseGroups = c("Satellite", "Street", "Topographic"),
+  leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects (click for targets)"),
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
   htmlwidgets::onRender(.zoom_tr)
