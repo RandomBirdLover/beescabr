@@ -124,7 +124,7 @@ cat > "$DOCS/index.html" <<HTML
 <body>
   <div class="hero">
     <div class="hero-inner">
-      <span class="eyebrow">&#127803; Cabrillo National Monument</span>
+      <span class="eyebrow">&#128511; Cabrillo National Monument</span>
       <h1>Native Bee Monitoring Program</h1>
       <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page to explore.</p>
     </div>
