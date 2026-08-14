@@ -286,6 +286,20 @@ function fillSpecies(){                    // species within the current genus/s
   var g=selG.value, spp=g==="*"?[]:speciesFor(g,selSub.value,selCx.value);
   selS.innerHTML="<option value=\\"*\\">All species</option>"+spp.map(opt).join("");
 }
+function pickSpecies(){                    // choosing a species back-fills its subgenus + complex above
+  var g=selG.value, s=selS.value;
+  if(g!=="*"&&s!=="*"){
+    var mt=recs.filter(function(r){return r.g===g&&r.s===s;});
+    var sg=uniqSorted(mt.map(function(r){return r.sub;}));   // the subgenus this species sits in (if unambiguous)
+    var cx=uniqSorted(mt.map(function(r){return r.cx;}));    // the complex this species sits in (if any)
+    if(sg.length===1){ selSub.value=sg[0]; subwrap.style.display="block"; }
+    var cxs=complexesFor(g,selSub.value);                    // re-list complexes under that subgenus
+    selCx.innerHTML="<option value=\\"*\\">All complexes</option>"+cxs.map(opt).join("");
+    cxwrap.style.display=cxs.length?"block":"none";
+    if(cx.length===1&&cxs.indexOf(cx[0])>=0){ selCx.value=cx[0]; }
+  }
+  showPhoto();draw();
+}
 function showPhoto(){
   var g=selG.value, s=selS.value, key=(g!=="*"&&s!=="*")?g+" "+s:(g!=="*"?g:null);
   var w=document.getElementById("photowrap");
@@ -298,7 +312,7 @@ function showPhoto(){
 selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showPhoto();draw();});
 selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();draw();});
 selCx.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
-selS.addEventListener("change",function(){showPhoto();draw();});
+selS.addEventListener("change",pickSpecies);
 // fit to the data + first draw
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
 map.fitBounds([[Math.min.apply(null,lat0),Math.min.apply(null,lon0)],[Math.max.apply(null,lat0),Math.max.apply(null,lon0)]],{padding:[20,20]});
