@@ -46,6 +46,9 @@ done
 # data-as-of date: read the same "data as of YYYY-MM-DD" the HTML pages print, so the footer matches.
 DATE=$(grep -ohE 'data as of [0-9]{4}-[0-9]{2}-[0-9]{2}' "$SRC/reference/nps_summary/nps_summary_tables.html" 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
 [ -z "$DATE" ] && DATE="the latest survey export"
+# cache-buster: a short content hash of the hero so browsers re-fetch it whenever the photo changes
+HERO_V=$( { md5 -q "$DOCS/hero.jpg" 2>/dev/null || shasum "$DOCS/hero.jpg" 2>/dev/null; } | cut -c1-8 )
+[ -z "$HERO_V" ] && HERO_V="1"
 cards=""
 for row in "${pages[@]}"; do
   IFS='|' read -r src out title blurb icon tag <<< "$row"
@@ -132,7 +135,7 @@ cat > "$DOCS/index.html" <<HTML
 </head>
 <body>
   <div class="hero">
-    <img class="hero-bg" src="./hero.jpg" alt="">
+    <img class="hero-bg" src="./hero.jpg?v=${HERO_V}" alt="">
     <div class="hero-inner">
       <span class="eyebrow">&#127963;&#65039; Cabrillo National Monument</span>
       <h1>Native Bee Monitoring Program</h1>
