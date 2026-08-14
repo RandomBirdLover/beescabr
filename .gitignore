@@ -60,6 +60,9 @@ vignettes/*.pdf
 docs/*
 !docs/*.html
 !docs/.nojekyll
+!docs/*.jpg
+!docs/*.jpeg
+!docs/*.webp
 
 # translation temp files
 po/*~

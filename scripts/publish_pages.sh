@@ -25,7 +25,7 @@ pages=(
   "$SRC/reference/field_guide/bee_field_guide_species.html|field_guide_species.html|Bee Field Guide (Species)|Every bee species recorded at Cabrillo, with photos, IUCN status, abundance, and forage.|🐝|Field guide"
   "$SRC/reference/field_guide/bee_field_guide_genus.html|field_guide_genus.html|Bee Field Guide (Genus)|The same guide grouped by genus for quicker browsing.|🐝|Field guide"
   "$SRC/reference/nps_summary/nps_summary_tables.html|summary_tables.html|Park Summary Tables|Headline counts: species, genera, plants, survey effort, and participation.|📊|Summary"
-  "$SRC/coverage/least_sampled/least_sampled_bees.html|least_sampled_bees.html|Least-Sampled Bees|The bees with the thinnest evidence, where more surveying would help most.|🔍|Priorities"
+  "$SRC/coverage/least_sampled/least_sampled_bees.html|least_sampled_bees.html|Least-Sampled Bees|The bees with the thinnest evidence, where more surveying would help most.|❗|Priorities"
   "$SRC/reference/transects/cabr_bee_transects_map.html|transects_map.html|Survey Transect Map|Interactive map of the fixed survey transects at Cabrillo National Monument.|🗺️|Map"
   "$SRC/coverage/bee_bounties/specimen_bee_bounty_map.html|specimen_bounty_map.html|Specimen Bee Bounty Map|Where to net a voucher specimen: gaps the collection still needs.|🔬|Map"
   "$SRC/coverage/bee_bounties/inaturalist_bee_bounty_map.html|inaturalist_bounty_map.html|iNaturalist Bee Bounty Map|Where to photograph bees to fill iNaturalist gaps.|📷|Map"
@@ -62,7 +62,7 @@ cat > "$DOCS/index.html" <<HTML
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cabrillo National Monument Native Bees</title>
+<title>Cabrillo National Monument &mdash; Native Bee Monitoring Program</title>
 <style>
   :root {
     --bg:#f7f6f1; --bg2:#efeee7; --fg:#1b1b19; --muted:#5f5f58;
@@ -84,12 +84,20 @@ cat > "$DOCS/index.html" <<HTML
          background-attachment:fixed; min-height:100vh;
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
          -webkit-font-smoothing:antialiased; }
-  header { max-width:960px; margin:0 auto; padding:3.5rem 1.5rem 1.5rem; }
+  .hero { position:relative; border-bottom:1px solid var(--border);
+          background:linear-gradient(180deg, rgba(18,24,21,.35) 0%, rgba(18,24,21,.78) 100%),
+                    #26302b url('./hero.jpg') center 40% / cover no-repeat; }
+  .hero-inner { max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
   .eyebrow { display:inline-block; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
-             font-weight:700; color:var(--accent); margin:0 0 .6rem;
-             padding:.28rem .6rem; background:var(--accent-soft); border-radius:999px; }
-  h1 { margin:0 0 .5rem; font-size:2.2rem; line-height:1.15; letter-spacing:-.02em; font-weight:800; }
-  .lead { color:var(--muted); margin:0; max-width:58ch; font-size:1.05rem; }
+             font-weight:700; color:#fff; margin:0 0 .7rem;
+             padding:.3rem .7rem; background:rgba(255,255,255,.16); backdrop-filter:blur(4px);
+             border:1px solid rgba(255,255,255,.22); border-radius:999px; }
+  h1 { margin:0 0 .5rem; font-size:2.5rem; line-height:1.12; letter-spacing:-.02em; font-weight:800;
+       color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.4); }
+  .lead { color:rgba(255,255,255,.92); margin:0; max-width:58ch; font-size:1.08rem;
+          text-shadow:0 1px 12px rgba(0,0,0,.35); }
+  .credit { position:absolute; right:.9rem; bottom:.6rem; margin:0; font-size:.7rem;
+            color:rgba(255,255,255,.75); text-shadow:0 1px 6px rgba(0,0,0,.6); }
   main { max-width:960px; margin:0 auto; padding:1.5rem 1.5rem 3.5rem;
          display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.15rem; }
   .card { position:relative; display:flex; flex-direction:column; background:var(--card);
@@ -114,11 +122,14 @@ cat > "$DOCS/index.html" <<HTML
 </style>
 </head>
 <body>
-  <header>
-    <span class="eyebrow">&#127803; Cabrillo National Monument</span>
-    <h1>Native Bee Survey</h1>
-    <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page to explore.</p>
-  </header>
+  <div class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">&#127803; Cabrillo National Monument</span>
+      <h1>Native Bee Monitoring Program</h1>
+      <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page to explore.</p>
+    </div>
+    <p class="credit">Photo: native bee at Cabrillo National Monument</p>
+  </div>
   <main>$cards
   </main>
   <footer>Generated from the beescabr pipeline. Data as of the latest survey export.</footer>
