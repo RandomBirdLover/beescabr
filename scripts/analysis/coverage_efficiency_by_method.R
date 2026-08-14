@@ -117,15 +117,16 @@ eff_fig <- function(key_col, rank_lab, file) {
     geom_text(aes(label = lab), position = position_dodge(0.7), vjust = -0.35, size = 3.2, colour = BEE_INK$secondary, show.legend = FALSE) +
     facet_wrap(~ panel, scales = "free_y", nrow = 1) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
-    labs(title = sprintf("Efficiency by Method at %s Level", rank_lab),
+    labs(title = sprintf("At equal effort, which method finds more %s?", tolower(rank_pl)),
          subtitle = take,
          caption = paste0(
            scope_cap(scope  = "fair window: survey records only, Mar-Oct 2021-2023, attributed (excludes casual/off-date records and interns' 2024 photos)",
                      method = "lethal vs non-lethal",
-                     rank   = rank_lab),
+                     rank   = rank_lab,
+                     sig    = bee_test("individual-based rarefaction to equal effort")),
            "\n",
            str_wrap(sprintf("The per-100-records rate favours the smaller-record method (dilution); 'at equal effort' rarefies both to the smaller total (%s records) -- the fair comparison.", format(minN, big.mark = ",", trim = TRUE)), 108)),
-         x = NULL, y = NULL) +
+         x = "method", y = NULL) +
     theme_beescabr(12) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           legend.position = "top", panel.grid.major.x = element_blank())

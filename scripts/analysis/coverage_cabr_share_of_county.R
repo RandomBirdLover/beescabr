@@ -92,8 +92,7 @@ g <- ggplot(plot_df, aes(x = pct, y = measure, colour = pct)) +
   geom_text(aes(label = lab), hjust = 0, nudge_x = 1.1, size = 3.5, colour = BEE_INK$secondary) +
   scale_colour_gradientn(colors = NPS_SEQ, guide = "none") +   # keep the forest-green magnitude ramp (off the crimson family); rest of the styling is house default
   scale_x_continuous(limits = c(0, max(gen_pct) * 1.7), expand = expansion(mult = c(0.02, 0))) +
-  labs(title = sprintf("Cabrillo Carries ~%.0f%% of San Diego County's Native Bees on ~%.3f%% of Its Land",
-                       sp_pct, area_pct),
+  labs(title = "Does Cabrillo punch above its weight for bees?",
        subtitle = sprintf("Roughly %sx the native-bee diversity you'd expect from its area -- and %.0f%% of the county's bee genera.",
                           format(round(overrep, -2), big.mark = ","), gen_pct),
        caption = scope_cap(scope = "CABR's share of San Diego County; area vs native-bee diversity",

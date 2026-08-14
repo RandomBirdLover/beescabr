@@ -154,7 +154,7 @@ plot_report <- function(rank, file) {
   long$panel <- factor(paste0(long$section, ": ", long$metric),
                        levels = c(paste0("By Contributor: ", metrics),
                                   paste0("By Method: ",      metrics)))
-  ttl <- sprintf("Bee Yield of Records at %s Level", tools::toTitleCase(rank))
+  ttl <- sprintf("Did any one method or contributor find every %s?", rank)
   g <- ggplot(long, aes(x = group, y = value, fill = group)) +
     ggpattern::geom_col_pattern(width = 0.66,   # house rule: genus figure hatched, species solid
       pattern = if (rank == "genus") "stripe" else "none", pattern_fill = "white", pattern_colour = NA,
@@ -173,7 +173,7 @@ plot_report <- function(rank, file) {
            str_wrap(paste0(
              "Interns' bar = their specimens + 2024 photos, so the contributor and method views reconcile to the ",
              "same total. Group-exclusive = a taxon only that group recorded."), 108)),
-         x = NULL, y = NULL) +
+         x = "contributor group or method", y = NULL) +
     theme_beescabr(11) +
     theme(axis.text.x = element_text(size = 8.5),
           panel.grid.major.x = element_blank(),

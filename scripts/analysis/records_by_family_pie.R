@@ -67,7 +67,7 @@ g <- ggplot(d, aes(x = 2, y = frac, fill = family)) +
   scale_fill_manual(values = BEE_FAMILY, breaks = levels(d$family), labels = leg, name = "Family") +
   annotate("text", x = 0.4, y = 0, label = sprintf("%s\nrecords", format(tot, big.mark = ",", trim = TRUE)),
            fontface = "bold", size = 4.3, lineheight = 0.95, color = BEE_INK$primary) +
-  labs(title = "Bee Records by Family",
+  labs(title = "Which bee families dominate the records?",
        subtitle = sprintf("%s dominate the park's bee records (~%.0f%%) -- a few families make up nearly all of them.",
                           as.character(d$family[1]), 100 * d$frac[1]),
        caption = scope_cap(scope = "all records with a family-level ID, whole park; both methods pooled (no lethal / non-lethal split)",

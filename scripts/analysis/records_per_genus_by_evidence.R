@@ -78,12 +78,12 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
               hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
     scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
-    labs(title = "Total Records of Bee Genera",
+    labs(title = "How much evidence backs each bee genus?",
          subtitle = "Evidence depth varies widely -- some genera are specimen-backed, others rest on iNaturalist photos alone.",
          caption = scope_cap(
            scope  = sprintf("%s; genera with >= %d records (%d of %d shown; full list in the CSV)", scope_lab, min_shown, nrow(wf), nrow(wide)),
            method = "lethal vs non-lethal", rank = "genus"),
-         x = "records", y = NULL) +
+         x = "records", y = "bee genus") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           axis.text.y = element_text(face = "italic"),   # bee genus names = scientific -> italic

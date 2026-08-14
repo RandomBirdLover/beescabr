@@ -16,7 +16,6 @@ rows <- list(
   list("METHOD light",   "still-unresolved side of a method bar",      unname(BEE_METHOD_COL_LT),c("lethal","non-lethal"), TRUE),
   list("TEAL (non-urgent)", "ONE ramp -> evidence + magnitude + neutrals all draw from this", BEE_TEAL, rep("",length(BEE_TEAL)), TRUE),
   list("RARE / URGENT",  "rare bees / act-here -- the red pop (crimson ramp)", BEE_RARE,          rep("",length(BEE_RARE)), TRUE),
-  list("NEUTRALS (from teal)", "focus/background = 2 stops of BEE_TEAL; accent = red", c(BEE_NEUTRAL[["dark"]], BEE_NEUTRAL[["light"]], BEE_ACCENT), c("focus","background","accent"), TRUE),
   list("WEB nodes",      "plant vs bee (interaction webs)",            c(BEE_WEB[["plant"]], BEE_WEB[["bee"]]), c("plant","bee"), TRUE),
   list("FAMILY",         "bee families",                              unname(BEE_FAMILY),        names(BEE_FAMILY), TRUE),
   list("WEB genus",      "selective bee genera on the webs",           BEE_GENUS,                rep("",length(BEE_GENUS)), FALSE),

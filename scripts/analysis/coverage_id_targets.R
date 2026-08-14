@@ -37,7 +37,7 @@ for (pkg in c("ggplot2")) {
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_IDSTATUS")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style (colours by method)
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/id_resolution")   # fair-window: completeness, targets(journal), specimen, photo
 OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/id_resolution")   # all-records: targets(report) + the keyable worklist CSV
 SPECIES_RANKS <- c("species", "subspecies")
@@ -150,7 +150,7 @@ draw_targets <- function(dat, scope, file, split_done) {
     scale_y_discrete(labels = function(x) as.expression(lapply(x, function(s)
       if (grepl("^\\(", s)) s else bquote(italic(.(s)))))) +
     scale_fill_manual(values = fill, name = NULL) +
-    labs(title = "Latest Progress of ID Resolution by Genus",
+    labs(title = "Which genera still have the most bees to identify?",
          subtitle = sprintf("%.0f%% of records are identified to species; the light bars are the genera with the most left to key.", pct_resolved),
          caption = scope_cap(scope, "lethal + non-lethal pooled", "genus / coarse rank"),
          x = "records", y = NULL) +
@@ -191,7 +191,7 @@ method_genus_fig <- function(m, file, method_label) {
         c("identified to species" = COL_L,  "genus-only (unresolved)" = COL_L_LT)
       else
         c("identified to species" = COL_NL, "genus-only (unresolved)" = COL_NL_LT), name = NULL) +
-    labs(title = sprintf("%s Method: Progress of ID by Genus", method_label),
+    labs(title = sprintf("How much of the %s catch reaches species?", tolower(method_label)),
          subtitle = sprintf("%s: %.0f%% of records reach species; the rest are ID targets, by genus.", method_label, pct),
          caption = scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", tolower(method_label), "genus"),
          x = "records", y = NULL) +
@@ -217,10 +217,10 @@ gf <- ggplot(funnel, aes(x = level, y = n, fill = method)) +
   scale_fill_manual(values = c(specimen = COL_L, photo = COL_NL), name = NULL,
                     labels = c(specimen = "lethal", photo = "non-lethal")) +
   scale_x_discrete(labels = c(species = "to species", genus = "genus-only", coarser = "coarser than genus")) +
-  labs(title = "Counts of ID Resolution between Methods",
+  labs(title = "Which method gets bees identified to species?",
        subtitle = sprintf("Specimens key to species; photos often stall at genus -- %.0f%% of records reach species overall.", pct_res_f),
        caption = scope_cap("fair window (survey-only, Mar-Oct 2021-2023)", "lethal vs non-lethal", "resolution level"),
-       x = NULL, y = "records") +
+       x = "identification level", y = "records") +
   theme_beescabr(11) +
   theme(legend.position = "top", panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5))
 bee_ggsave(file.path(OUT_JOURNAL, "coverage_id_completeness.png"), gf, width = 8.5, height = 5.6, bg = "white")

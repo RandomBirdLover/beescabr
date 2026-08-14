@@ -40,15 +40,11 @@ TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
 # which paper each rarefaction dimension belongs to
 JOURNAL_DIMS  <- c("by_method", "by_observer")
-# No "rarefaction" folder -- each output sits with the FINDING it supports:
-#   by_transect -> richness/accumulation (per-transect richness, next to the accumulation curves + Chao2)
-#   by_year     -> richness/diversity    (next to the other by-year community analyses)
-#   by_method / by_observer (journal)    -> richness/accumulation (journal side)
-rare_base <- function(dimdir) {
-  if (dimdir %in% JOURNAL_DIMS)      OUT_JOURNAL
-  else if (dimdir == "by_year")      file.path(DIR_REPORT, "richness/diversity")
-  else                               OUT_REPORT   # by_transect
-}
+# ALL rarefaction is a richness-by-effort method, so every dimension (by_transect, by_year,
+# and the journal by_method/by_observer) lives together in richness/accumulation -- next to the
+# accumulation curves + Chao2. (It is NOT filed under richness/diversity, which holds the
+# community-structure analyses: evenness, NMDS/PERMANOVA, rank-abundance.)
+rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL else OUT_REPORT
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
@@ -122,7 +118,8 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
   pre    <- paste0("rarefaction_", dimdir)   # rank appended LAST, e.g. rarefaction_by_transect_bars_species
   tab <- rarefy_table(M); write.csv(tab, file.path(outdir, paste0(pre, vlab, "_", rank, ".csv")), row.names = FALSE)
   minN <- min(rowSums(M)); cdf <- curve_df(M)
-  cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank)
+  cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank,
+                    sig = bee_test("individual-based rarefaction to a common record count"))
   cols <- if (is.null(cols)) setNames(grDevices::colorRampPalette(BEE_SEQ)(nrow(M)), rownames(M)) else cols  # ordinal groups (years) -> blue sequential
   g1 <- ggplot(cdf, aes(n, S, color = group)) +
     geom_vline(xintercept = minN, linetype = "dashed", color = "grey50") +
@@ -156,12 +153,13 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
     ggplot(bdr, aes(group, S, fill = group)) + col_geom(width = 0.62) +
       scale_fill_manual(values = cols, guide = "none")
   else
-    ggplot(bdr, aes(group, S)) + col_geom(width = 0.62, fill = BEE_NEUTRAL[["dark"]])
+    ggplot(bdr, aes(group, S)) + col_geom(width = 0.62, fill = BEE_TEAL[[5]])
   g2 <- g2 +
     geom_text(aes(label = round(S)), vjust = -0.35, size = 3) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(title = title, subtitle = sprintf("Rarefied to %d records -- taller bar = genuinely richer, not just more-sampled.", minN),
-         x = NULL, y = unit, caption = cap) +
+         x = switch(dimdir, by_observer = "observer", by_method = "method", by_transect = "transect", by_year = "year", "group"),
+         y = unit, caption = cap) +
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
@@ -181,21 +179,104 @@ rec_fair <- rec %>% filter(month %in% 3:10, year %in% 2021:2023)   # FAIR WINDOW
 for (rk in names(RANKS)) {
   kc <- RANKS[[rk]]
   message(sprintf("Vegan rarefaction, %s rank:", rk))
-  # 1. transect
-  Mt <- comm(filter(rec, transect %in% TRANSECTS), "transect", kc)
-  Mt <- Mt[intersect(TRANSECTS, rownames(Mt)), , drop = FALSE]
-  draw(Mt, paste0("by_transect_", rk), "Bees by Transect", rk, TCOLS, group_fill = TRUE)
-  # 2. year (Mar-Sep)
-  draw(comm(rec_win, "year", kc), paste0("by_year_", rk), "Bees by Year", rk)
+  # 1. transect + 2. year (Mar-Sep) -- both drawn ONCE, combined across ranks, AFTER this loop
+  #    (see below); no per-rank transect/year bar figures are produced, only the combined charts.
   # 3. observer: beeple vs intern (fair window -- lethal vs non-lethal comparison)
   draw(comm(filter(rec_fair, surveyor %in% c("beeple", "intern")), "surveyor", kc),
-       paste0("by_observer_", rk), "Bees by Observer: Beeple vs Intern", rk,
-       c(intern = BEE_NEUTRAL[["dark"]], beeple = BEE_NEUTRAL[["light"]]))   # intern = house ink (focus), beeple = stone (background)
+       paste0("by_observer_", rk), "At equal effort, do interns or beeple find more bees?", rk,
+       c(intern = BEE_TEAL[[5]], beeple = BEE_TEAL[[2]]))   # intern = house ink (focus), beeple = stone (background)
   # 4. method: observations (iNaturalist) vs specimens (fair window)
   draw(comm(rec_fair, "obs_type", kc), paste0("by_method_", rk),
-       "Bees: Observations vs Specimens", rk,
+       "At equal effort, do photos or specimens find more bees?", rk,
        c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
 }
 
-message("Wrote rarefaction_by_{transect,year}_*_{species,genus} (report) + rarefaction_by_{method,observer}_vegan_*_{species,genus} (journal)\n",
+# ---- combined BY-TRANSECT figure: genus + species in ONE horizontal, faceted chart ----
+# Same treatment as the by-year figure. Transect on the y-axis, each bar in its transect hue;
+# genera and species are separate panels (different metrics, each rarefied to its own effort).
+tr <- do.call(rbind, lapply(names(RANKS), function(rk) {
+  M <- comm(filter(rec, transect %in% TRANSECTS), "transect", RANKS[[rk]])
+  M <- M[intersect(TRANSECTS, rownames(M)), , drop = FALSE]; M <- M[rowSums(M) > 0, , drop = FALSE]
+  t <- rarefy_table(M)
+  write.csv(t, file.path(rare_base("by_transect"), paste0("rarefaction_by_transect_", rk, ".csv")), row.names = FALSE)
+  data.frame(rank = rk, unit = UNIT(rk), transect = as.character(t$group),
+             S = t$rarefied_richness, minN = min(rowSums(M)), stringsAsFactors = FALSE)
+}))
+tr$rank     <- factor(tr$rank, levels = c("genus", "species"))                          # genera left, species right
+tr$transect <- factor(tr$transect, levels = sort(unique(as.character(tr$transect))))  # alphabetical (house rule): BST, OT, TP, UPMON
+# genus + species share ONE panel, OVERLAID per transect (not dodged): the solid species
+# bar sits behind, the hatched genus bar in front. Species richness always >= genus, so the
+# genus bar is shorter and the species-only band shows above it -- both stay readable in one bar.
+# Legend just names the ranks; the per-rank rarefaction depths go in the scope caption instead.
+n_gen <- tr$minN[tr$rank == "genus"][1]; n_sp <- tr$minN[tr$rank == "species"][1]
+tr$rank <- factor(tr$rank, levels = c("species", "genus"))  # species drawn first (behind), genus on top
+tr <- tr[order(tr$rank), ]
+gtr <- ggplot(tr, aes(transect, S, fill = transect, pattern = rank)) +
+  ggpattern::geom_col_pattern(width = 0.68, position = position_identity(), colour = NA,
+    pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
+    pattern_density = 0.10, pattern_spacing = 0.028, pattern_key_scale_factor = 0.5) +
+  ggpattern::scale_pattern_manual(values = c(genus = "stripe", species = "none"), name = NULL,
+    breaks = c("genus", "species"), labels = c(genus = "genera", species = "species")) +
+  scale_fill_manual(values = TCOLS, guide = "none") +
+  guides(pattern = guide_legend(override.aes = list(fill = "grey75"))) +   # legend keys show the hatch clearly
+  geom_text(data = subset(tr, rank == "species"), aes(label = round(S)), vjust = -0.35, size = 3) +
+  geom_text(data = subset(tr, rank == "genus"), aes(label = round(S)),
+            vjust = -0.35, size = 3, colour = "white", fontface = "bold") +   # genus count sits just above the hatch top (on the solid species band)
+  scale_y_continuous(expand = expansion(mult = c(0, 0.10))) +
+  labs(title = "Do some transects have more richness of bees than others?",
+       subtitle = "Richness rarefied to a common sampling effort within each rank, so a taller bar means genuinely richer, not just more-sampled.",
+       x = "transect", y = "number of unique taxa",
+       caption = scope_cap("survey records only", "lethal + non-lethal pooled", "genus & species",
+                           control = sprintf("rarefied to a common effort (genera %d, species %d records)", n_gen, n_sp),
+                           sig = bee_test("individual-based rarefaction"))) +
+  theme_beescabr(11) +
+  theme(panel.grid.major.x = element_blank(), legend.position = "right",
+        plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+bee_ggsave(file.path(rare_base("by_transect"), "rarefaction_by_transect_bars_combined.png"), gtr,
+           width = 9.2, height = 5, bg = "white")
+message("  by_transect combined (genus + species): rarefaction_by_transect_bars_combined.png")
+
+# ---- combined BY-YEAR figure: genus + species OVERLAID in ONE horizontal panel ----
+# The public "richer years?" figure. Year is the y-axis; the solid species bar sits behind and
+# the hatched genus bar in front (species richness >= genus in every year, so the species-only
+# band always shows past the hatch). Genus count sits just past the hatch end, on the solid band.
+# Both ranks share one teal fill; the hatch is the only genus/species cue. Depths in the caption.
+yr <- do.call(rbind, lapply(names(RANKS), function(rk) {
+  M <- comm(rec_win, "year", RANKS[[rk]]); M <- M[rowSums(M) > 0, , drop = FALSE]
+  t <- rarefy_table(M)
+  # keep the per-rank machine-readable table (the individual bar FIGURES are retired, the data is not)
+  write.csv(t, file.path(rare_base("by_year"), paste0("rarefaction_by_year_", rk, ".csv")), row.names = FALSE)
+  data.frame(rank = rk, unit = UNIT(rk), year = as.character(t$group),
+             S = t$rarefied_richness, minN = min(rowSums(M)), stringsAsFactors = FALSE)
+}))
+n_gy <- yr$minN[yr$rank == "genus"][1]; n_sy <- yr$minN[yr$rank == "species"][1]
+yr$rank <- factor(yr$rank, levels = c("species", "genus"))          # species drawn first (behind), genus on top
+yr$year <- factor(yr$year, levels = rev(sort(unique(yr$year))))     # chronological, 2021 at top
+yr <- yr[order(yr$rank), ]
+gyr <- ggplot(yr, aes(S, year, pattern = rank)) +
+  ggpattern::geom_col_pattern(fill = BEE_TEAL[[5]], width = 0.68, position = position_identity(), colour = NA,
+    pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
+    pattern_density = 0.10, pattern_spacing = 0.028, pattern_key_scale_factor = 0.5) +
+  ggpattern::scale_pattern_manual(values = c(genus = "stripe", species = "none"), name = NULL,
+    breaks = c("genus", "species"), labels = c(genus = "genera", species = "species")) +
+  guides(pattern = guide_legend(override.aes = list(fill = "grey75"))) +
+  geom_text(data = subset(yr, rank == "species"), aes(label = round(S)), hjust = -0.35, size = 3) +
+  geom_text(data = subset(yr, rank == "genus"), aes(label = round(S)),
+            hjust = -0.35, size = 3, colour = "white", fontface = "bold") +   # genus count just past the hatch end, on the solid band
+  scale_x_continuous(expand = expansion(mult = c(0, 0.10))) +
+  labs(title = "Did some years have more richness of bees than others?",
+       subtitle = "Richness rarefied to a common sampling effort within each rank, so a longer bar means genuinely richer, not just more-sampled.",
+       x = "number of unique taxa", y = "year",
+       caption = scope_cap("survey records only", "lethal + non-lethal pooled", "genus & species",
+                           control = sprintf("rarefied to a common effort (genera %d, species %d records)", n_gy, n_sy),
+                           sig = bee_test("individual-based rarefaction"))) +
+  theme_beescabr(11) +
+  theme(panel.grid.major.y = element_blank(), legend.position = "right",
+        plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+bee_ggsave(file.path(rare_base("by_year"), "rarefaction_by_year_bars_combined.png"), gyr,
+           width = 9, height = 4.8, bg = "white")
+message("  by_year combined (genus + species): rarefaction_by_year_bars_combined.png")
+
+message("Wrote rarefaction_by_{transect,year}_bars_combined (report) + ",
+        "rarefaction_by_{method,observer}_vegan_*_{species,genus} (journal)\n",
         "  into richness/accumulation/ of each paper.")

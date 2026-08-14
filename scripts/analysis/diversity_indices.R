@@ -118,6 +118,10 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
   # transect bars: hue = transect identity (BEE_TRANSECT), so the colour is "free" for the transect.
   # The species-vs-genus split is carried by PATTERN instead: species = solid, genus = hatched
   # (house rule for genus-vs-species comparisons). Fill legend is dropped (hue is named on the x-axis).
+  # NOTE: evenness stays DODGED (side-by-side), not overlaid like the transect/year RICHNESS bars.
+  # An overlap needs one rank consistently taller; here genus evenness can EXCEED species
+  # (e.g. OT: genus 0.78 > species 0.61) and they tie elsewhere (BST), so an overlap flips the
+  # hatch to the top on some transects and reads inconsistently. Dodged keeps both ranks clear.
   base <- list(
     geom_text(data = d, aes(x = group, y = pielou_evenness, label = sprintf("%.2f", pielou_evenness),
               group = rank), position = position_dodge(0.8), vjust = -0.35, size = 3,
@@ -125,10 +129,10 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
     scale_fill_manual(values = BEE_TRANSECT, guide = "none"),
     scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.08))),
     labs(title = title,
-         subtitle = sprintf("Evenness ~%.2f-%.2f -- fairly balanced communities, no single species dominates.",
+         subtitle = sprintf("Communities stay fairly balanced across transects. Evenness runs %.2f to %.2f, so no single species dominates.",
                             min(d$pielou_evenness), max(d$pielou_evenness)),
          caption = cap,   # rationale (why only evenness) moved to the report text -- caption stays scope_cap only
-         x = group_lab, y = "evenness (Pielou J)   (0 = one bee dominates -> 1 = all equal)"),
+         x = group_lab, y = "how evenly bees are spread   (0 = one dominates, 1 = all equal)"),
     theme_beescabr(11),
     theme(panel.grid.major.x = element_blank(), plot.title = element_text(hjust = 0.5),
           plot.caption = element_text(hjust = 0, size = 7.5)))
@@ -138,6 +142,7 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
         pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
         pattern_density = 0.10, pattern_spacing = 0.028, pattern_key_scale_factor = 0.5) +
       ggpattern::scale_pattern_manual(values = c(species = "none", genus = "stripe"), name = "rank",
+        breaks = c("genus", "species"), labels = c(genus = "genera", species = "species"),
         guide = guide_legend(override.aes = list(fill = "grey75", pattern_fill = "white"))) +
       base
   } else {
@@ -151,8 +156,8 @@ plot_evenness <- function(dfin, file, title, cap, group_lab) {
   bee_ggsave(file, g, width = 7.5, height = 5.4, bg = "white")
 }
 plot_evenness(div_tr, file.path(OUT_REPORT, "diversity_evenness_by_transect.png"),
-             "Bee Evenness by Transect",
-             scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus"),
+             "Does one bee dominate any transect?",
+             scope_cap("survey records only", "lethal + non-lethal pooled", "species vs genus", sig = bee_test("Pielou's evenness (J')")),
              "transect")
 
 # ---- 3. ALPHA DIVERSITY BY YEAR (survey-only, both methods, Mar-Sep, species) --
@@ -168,14 +173,14 @@ WHY_EVEN <- paste("Only evenness is shown: richness / Shannon / Simpson are effo
 {
   d <- div_yr[!is.na(div_yr$pielou_evenness), ]
   g <- ggplot(d, aes(x = factor(group), y = pielou_evenness, group = 1)) +
-    geom_line(color = BEE_NEUTRAL[["dark"]]) + geom_point(color = BEE_NEUTRAL[["dark"]], size = 2.4) +
+    geom_line(color = BEE_TEAL[[5]]) + geom_point(color = BEE_TEAL[[5]], size = 2.4) +
     geom_text(aes(label = sprintf("%.2f", pielou_evenness)), vjust = -0.9, size = 3, colour = BEE_INK$secondary) +
     scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0.02, 0.1))) +
-    labs(title = "Bee Evenness by Year",
-         subtitle = sprintf("Evenness ~%.2f-%.2f -- fairly balanced across years, no single species dominates.",
+    labs(title = "Does one bee dominate in any year?",
+         subtitle = sprintf("Communities stay fairly balanced across years. Evenness runs %.2f to %.2f, so no single species dominates.",
                             min(d$pielou_evenness), max(d$pielou_evenness)),
-         caption = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species"),
-         x = "year", y = "evenness (Pielou J)   (0 = one bee dominates -> 1 = all equal)") +
+         caption = scope_cap("survey records only, Mar-Sep window", "lethal + non-lethal pooled", "species", sig = bee_test("Pielou's evenness (J')")),
+         x = "year", y = "how evenly bees are spread   (0 = one dominates, 1 = all equal)") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.caption = element_text(hjust = 0, size = 7.5))
   bee_ggsave(file.path(OUT_REPORT, "diversity_evenness_by_year.png"), g, width = 8.5, height = 5.4, bg = "white")
@@ -197,14 +202,14 @@ radJ <- rbind(rad_df(as.integer(table(rad_rec$species_key)),                    
               rad_df(as.integer(table(rad_rec$species_key[rad_rec$method == "lethal"])),    "lethal"),
               rad_df(as.integer(table(rad_rec$species_key[rad_rec$method == "nonlethal"])), "non-lethal"))
 gJ <- ggplot(radJ, aes(rank, rel_abund, color = grp)) +
-  geom_line(linewidth = 0.9) + geom_point(size = 1) + scale_y_log10() +
+  geom_line(linewidth = 0.9) + geom_point(size = 1) + scale_y_log10(labels = function(x) paste0(format(signif(x * 100, 2), trim = TRUE, scientific = FALSE), "%")) +
   scale_color_manual(values = c("both pooled" = BEE_INK$primary,
                                 "lethal" = unname(BEE_METHOD_COL["lethal"]),
                                 "non-lethal" = unname(BEE_METHOD_COL["nonlethal"])), name = "method") +
-  labs(title = "Rank-Abundance of Bee Species",
-       subtitle = "A few species dominate the records; most are uncommon -- the long-tailed curve of a diverse community.",
-       caption = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal", "species"),
-       x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
+  labs(title = "Are a few bees common and the rest rare?",
+       subtitle = "A few species dominate the records and most are uncommon. That long tail is the signature of a diverse community.",
+       caption = scope_cap("fair window: survey-only, Mar-Oct 2021-2023", "lethal vs non-lethal", "species", sig = bee_test("rank-abundance distribution")),
+       x = "bee species, from most common (left) to rarest (right)", y = "% of all records (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
 bee_ggsave(file.path(OUT_JOURNAL, "diversity_rank_abundance_journal.png"), gJ, width = 9, height = 6, bg = "white")
 
@@ -226,13 +231,15 @@ comb$grp <- factor(comb$grp, levels = c("all bees (pooled)", TRANSECTS))
 rad_cols <- c("all bees (pooled)" = BEE_INK$primary, setNames(unname(BEE_TRANSECT[TRANSECTS]), TRANSECTS))
 rad_lwd  <- c("all bees (pooled)" = 1.7, setNames(rep(0.8, length(TRANSECTS)), TRANSECTS))
 gR <- ggplot(comb, aes(rank, rel_abund, color = grp, linewidth = grp)) +
-  geom_line() + scale_y_log10() +
+  geom_line() + scale_y_log10(labels = function(x) paste0(format(signif(x * 100, 2), trim = TRUE, scientific = FALSE), "%")) +
   scale_color_manual(values = rad_cols, name = NULL) +
   scale_linewidth_manual(values = rad_lwd, guide = "none") +
-  labs(title = "Rank-Abundance of Cabrillo's Bee Species",
-       subtitle = "A few species dominate the records; most are uncommon -- the long-tailed curve of a diverse community.",
-       caption = scope_cap("all records", "lethal + non-lethal pooled", "species"),
-       x = "species rank (most -> least common)", y = "relative abundance (log scale)") +
+  labs(title = "Are a few bees common and the rest rare?",
+       subtitle = str_wrap(paste("The single most common bee is about a quarter of all records and the top three are more than half,",
+                                  "yet 79% of species each make up under 1% and 20 have been seen only once.",
+                                  "That long tail of uncommon bees is what a diverse community looks like, and it is where continued surveying keeps finding more."), 118),
+       caption = scope_cap("all records", "lethal + non-lethal pooled", "species", sig = bee_test("rank-abundance distribution")),
+       x = "bee species, from most common (left) to rarest (right)", y = "% of all records (log scale)") +
   theme_beescabr(11) + theme(plot.title = element_text(hjust = 0.5))
 bee_ggsave(file.path(OUT_REPORT, "diversity_rank_abundance_report.png"), gR, width = 9, height = 6, bg = "white")
 
@@ -258,7 +265,7 @@ if (!is.null(mds)) {
   sc <- as.data.frame(vegan::scores(mds, display = "sites")); sc$transect <- meta$transect
   sig <- bee_test("PERMANOVA (Bray-Curtis)", with(perm, sprintf("transect R2=%.2f, p=%.3f", R2[1], `Pr(>F)`[1])))   # standardized Analysis: slot
   # plain-language TAKEAWAY (the "so what"), shown as a subtitle under the title
-  takeaway <- sprintf("Transects host distinct bee communities -- transect explains %.0f%% of the compositional variation (PERMANOVA, p = %.3f).",
+  takeaway <- sprintf("Transects host distinct bee communities. Transect explains %.0f%% of the compositional variation (PERMANOVA, p = %.3f).",
                       100 * perm$R2[1], perm$`Pr(>F)`[1])
   g <- ggplot(sc, aes(NMDS1, NMDS2, color = transect, label = meta$site)) +
     geom_point(size = 3) +
@@ -266,12 +273,12 @@ if (!is.null(mds)) {
                              min.segment.length = 0.15, box.padding = 0.45, point.padding = 0.3,
                              segment.color = "grey75", segment.size = 0.3) +
     scale_color_manual(values = BEE_TRANSECT, name = "transect") +   # transect owns colour (house palette)
-    labs(title = "Bee Community Composition by Transect",
+    labs(title = "Do the transects share the same bees?",
          subtitle = str_wrap(takeaway, 96),
          caption = scope_cap(sprintf("survey records only; sites = transect x year, >= %d records each (NMDS stress %.2f)", MIN_SITE_REC, mds$stress),
                              "lethal + non-lethal pooled", "species",
                              control = "year (999-permutation null)", sig = sig),
-         x = "NMDS1", y = "NMDS2") +
+         x = "bee community composition (axis 1)", y = "bee community composition (axis 2)") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5, size = 9.5, colour = BEE_INK$secondary))

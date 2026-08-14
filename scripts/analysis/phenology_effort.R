@@ -75,10 +75,10 @@ calendar_fig <- function(dat, months_shown, file, subtitle, scope_txt) {
     facet_wrap(~ metric, scales = "free_y", ncol = 1) +
     scale_x_discrete(drop = FALSE) +
     scale_fill_manual(values = MCOL, name = NULL) +
-    labs(title = "Survey Effort Calendar",
+    labs(title = "When did people survey for bees?",
          subtitle = "Effort peaks in spring-summer and thins in winter -- the backdrop for every seasonal pattern.",
          caption = str_wrap(scope_cap(scope_txt, "lethal vs non-lethal", "n/a (effort)"), 84),
-         x = NULL, y = NULL) +
+         x = "month", y = NULL) +
     theme_beescabr(11) +
     theme(legend.position = "top", panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
@@ -98,10 +98,10 @@ grid_fig <- function(dat, months_shown, file, subtitle) {
     geom_text(aes(label = ifelse(trips > 0, trips, ""), colour = dark), size = 3, show.legend = FALSE) +
     scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = BEE_INK$primary), guide = "none") +
     scale_fill_gradientn(colors = BEE_SEQ, name = "trips") +
-    labs(title = "Survey Trips by Year and Month",
+    labs(title = "Is survey effort even across years and months?",
          subtitle = "Effort is uneven across years and months -- context the seasonal and annual analyses control for.",
          caption = scope_cap("per-survey log", "lethal + non-lethal pooled", "n/a (effort)"),
-         x = NULL, y = NULL) +
+         x = "month", y = "year") +
     theme_beescabr(11) +
     theme(panel.grid = element_blank(), plot.title = element_text(hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5))

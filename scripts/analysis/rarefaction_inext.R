@@ -147,15 +147,15 @@ message("iNEXT rarefaction/extrapolation:")
 for (rk in names(RANKS)) {
   kc <- RANKS[[rk]]; message(sprintf(" %s rank:", rk))
   run_inext(abun_list(filter(rec, transect %in% TRANSECTS), "transect", kc, TRANSECTS),
-            paste0("by_transect_", rk), "Bees by Transect", rk, cols = BEE_TRANSECT)   # transect palette
+            paste0("by_transect_", rk), "Do some transects have more richness of bees than others?", rk, cols = BEE_TRANSECT)   # transect palette
   gl_y <- abun_list(rec_win, "year", kc)
-  run_inext(gl_y, paste0("by_year_", rk), "Bees by Year", rk,
+  run_inext(gl_y, paste0("by_year_", rk), "Did some years have more richness of bees than others?", rk,
             cols = setNames(grDevices::colorRampPalette(BEE_SEQ)(length(gl_y)), names(gl_y)))   # year -> blue sequential
   run_inext(abun_list(rec_fair, "surveyor", kc, c("beeple", "intern")),
-            paste0("by_observer_", rk), "Bees by Observer: Beeple vs Intern", rk,
-            cols = c(intern = BEE_NEUTRAL[["dark"]], beeple = BEE_NEUTRAL[["light"]]))   # intern = house ink (focus) / beeple = stone (background)
+            paste0("by_observer_", rk), "At equal effort, do interns or beeple find more bees?", rk,
+            cols = c(intern = BEE_TEAL[[5]], beeple = BEE_TEAL[[2]]))   # intern = house ink (focus) / beeple = stone (background)
   run_inext(abun_list(rec_fair, "obs_type", kc, c("observation", "specimen")),
-            paste0("by_method_", rk), "Bees: Observations vs Specimens", rk,
+            paste0("by_method_", rk), "At equal effort, do photos or specimens find more bees?", rk,
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colours
 }
 

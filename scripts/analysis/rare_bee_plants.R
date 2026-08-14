@@ -86,11 +86,11 @@ gA <- ggplot(hub_fig, aes(x = rare_bee_species, y = plant_lab, fill = rare_bee_s
     m <- regmatches(s, regexec("^(.*) \\(([^)]*)\\)$", s))[[1]]
     if (length(m) == 3) bquote(.(m[2]) ~ "(" * italic(.(m[3])) * ")") else bquote(italic(.(s)))
   }))) +
-  labs(title = "Plant Hubs for the Park's Rare Bees",
+  labs(title = "Which plants anchor the park's rare bees?",
        subtitle = "A few plants host many of the park's rare bees -- shared hubs worth prioritising (counts of where records fall, not a tested preference).",
        caption = str_wrap(scope_cap(sprintf("%d rare bee species (< %d records); hubs used by 2+", length(rare_keys), RARE_CUT),
                             "lethal + non-lethal pooled", "plant genus"), 96),
-       x = "rare bee species recorded", y = NULL) +
+       x = "rare bee species recorded", y = "plant genera") +
   theme_beescabr(11) +
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = "none", panel.grid.major.y = element_blank(),
@@ -174,15 +174,10 @@ write.csv(named_tbl, file.path(OUT_DIR, "rare_named_bee_plants.csv"), row.names 
 pref_of <- setNames(lapply(NAMED$species_key, preferred_plant_sp), NAMED$label)
 # strip = what the bee was RECORDED on (bars) + its availability-corrected PREFERRED plant
 # where records allow, else an explicit "too few to judge" note.
-# strip text as markdown (ggtext): bee Latin + preferred-plant Latin italic; <br> = line break
-panel_of <- setNames(vapply(tot$label, function(L) {
-  pf <- pref_of[[L]]
-  l2 <- if (!is.na(pf$pref)) sprintf("prefers %s", plant_label(pf$pref, sci_wrap = "<i>%s</i>"))
-        else "too few records to judge a preference"
-  sprintf("%s  &middot;  %d records<br>%s", md_of_label[L], tot$n_records[tot$label == L], l2)
-}, character(1)), tot$label)
-# The availability-corrected PREFERRED plant is called out in each panel's strip ("PREFERS X -- Nx
-# vs available") rather than marked on the bar -- the strip wording carries it cleanly.
+# strip = just the bee's name + IUCN status (markdown: Latin italic). The preferred plant and the
+# visit-count shading are read from the LEGEND (gold diamond = preference; darker red = more visits),
+# so the panel titles stay short instead of carrying a "prefers X, N records" line each.
+panel_of <- setNames(unname(md_of_label[tot$label]), tot$label)
 plot_df  <- pg %>% mutate(panel = panel_of[label], row_key = paste(label, plant_genus, sep = "@@"))
 lev <- plot_df %>% arrange(visits, plant_genus) %>% pull(row_key)
 plot_df$row_key <- factor(plot_df$row_key, levels = unique(lev))
@@ -193,22 +188,28 @@ gB <- ggplot(plot_df, aes(x = visits, y = row_key, fill = visits)) +
   geom_col(width = 0.72) +
   geom_col(data = plot_df[plot_df$is_pref, , drop = FALSE], aes(x = visits, y = row_key),
            inherit.aes = FALSE, fill = NA, colour = BEE_SELECT, linewidth = 1.7, width = 0.72) +   # gold-OUTLINED bar = the plant this bee selects FOR
-  geom_point(data = plot_df[plot_df$is_pref, , drop = FALSE], aes(x = visits, y = row_key),
-             inherit.aes = FALSE, fill = BEE_SELECT, colour = "white", stroke = 1.1, size = 5, shape = 23) +   # gold diamond at the selected bar's end
+  geom_point(data = plot_df[plot_df$is_pref, , drop = FALSE], aes(x = visits, y = row_key, shape = "the plant it prefers (availability-corrected)"),
+             inherit.aes = FALSE, fill = BEE_SELECT, colour = "white", stroke = 1.1, size = 5) +   # gold diamond at the selected bar's end
+  scale_shape_manual(name = NULL, values = c("the plant it prefers (availability-corrected)" = 23)) +
   facet_wrap(~ panel, ncol = 1, scales = "free") +
   scale_y_discrete(labels = function(x) as.expression(plant_label_expr(sub("^.*@@", "", x)))) +   # plant: common upright, Latin italic
-  scale_fill_gradientn(colors = BEE_RARE, guide = "none") +   # RED rare/urgent ramp: gradient shades the count
+  scale_fill_gradientn(colors = BEE_RARE, name = "plant visits",   # RED rare/urgent ramp: darker red = more visits, lighter = fewer
+                       guide = guide_colorbar(barwidth = 7, barheight = 0.5, title.position = "left", title.vjust = 0.9, order = 1)) +
+  guides(shape = guide_legend(override.aes = list(fill = BEE_SELECT, colour = "white", size = 4), order = 2)) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.03))) +
-  labs(title = "Plant Hubs for the Park's IUCN-Threatened Bees",
-       subtitle = "Bars = where records fall (plant abundance x survey effort). The gold diamond marks the plant each bee selects FOR (availability-corrected) -- often not its tallest bar.",
+  labs(title = "What does each threatened bee actually prefer?",
+       subtitle = "Bars = where records fall (plant abundance x survey effort); a bee's preferred plant is often not its tallest bar.",
        caption = paste0(str_wrap(scope_cap("IUCN-threatened bees (CR/EN/VU); live from the IUCN Red List",
                             "lethal + non-lethal pooled", "plant genus",
-                            control = "plant availability, matched to month x year x method"), 92), "\n",
+                            control = "plant availability, matched to month x year x method",
+                            sig = bee_test("forage selectivity vs availability (matched chi-square)")), 92), "\n",
                         str_wrap("Favourite named only at >= 20 records; bars are raw records (not corrected for bloom).", 104)),
-       x = "plant visits", y = NULL) +
+       x = "plant visits", y = "plant genera") +
   theme_beescabr(11) +
   theme(plot.title = element_text(hjust = 0.5),
-        legend.position = "none", panel.grid.major.y = element_blank(),
+        legend.position = "top", legend.box = "horizontal", legend.margin = margin(2, 8, 2, 8),
+        legend.text = element_text(size = 8), legend.title = element_text(size = 8),
+        panel.grid.major.y = element_blank(),
         plot.subtitle = element_text(size = 8.5),
         strip.text = ggtext::element_markdown(face = "bold", hjust = 0, size = 9, lineheight = 1.3))  # rich text: italic Latin in the panel header
 bee_ggsave(file.path(OUT_DIR, "rare_named_bee_plants.png"), gB,
@@ -290,7 +291,7 @@ if (FALSE) {
 bee_png(file.path(OUT_DIR, "rare_threatened_bee_flowers.png"), width = 720*length(ord), height = 1080, res = 200)
 bee_base_par(); par(mfrow = c(1, length(ord)), mar = c(1, 1, 1, 1), oma = c(5.2, 0, 3.2, 0), xpd = NA)
 for (lbl in ord) draw_flower(lbl)
-mtext("Plants the Park's Threatened Bees Rely On", side = 3, outer = TRUE, font = 2, cex = 1.15, col = BEE_INK$primary, line = 1.5)
+mtext("Which few plants carry the threatened bees?", side = 3, outer = TRUE, font = 2, cex = 1.15, col = BEE_INK$primary, line = 1.5)
 mtext("A handful of plants -- Deervetch, Milkvetches, Wirelettuces -- carry the park's threatened bees.",
       side = 3, outer = TRUE, cex = 0.82, col = BEE_INK$secondary, line = 0.4)   # takeaway
 # standardized caption: scope_cap provenance FIRST (top of the block), then the glyph-legend note
@@ -311,7 +312,8 @@ for (lbl in ord) {
   draw_flower(lbl, big = TRUE)
   .sp <- strsplit(scope_cap(scope = "IUCN-threatened bees (CR/EN/VU); plant records pooled, live from the IUCN Red List",
                             method = "lethal + non-lethal pooled", rank = "plant genus",
-                            control = "plant availability, matched to month x year x method"), "\n")[[1]]
+                            control = "plant availability, matched to month x year x method",
+                            sig = bee_test("forage selectivity vs availability (matched chi-square)")), "\n")[[1]]
   for (.k in seq_along(.sp)) mtext(.sp[.k], side = 1, outer = TRUE, cex = 0.62, col = BEE_INK$secondary, line = 0.5 + 0.85 * (.k - 1))
   mtext("Bee at the centre; each petal = a plant it's recorded on (bigger + darker = more visits).  Gold ring + heart = its availability-corrected favourite.",
         side = 1, outer = TRUE, cex = 0.66, col = BEE_INK$secondary, line = 0.5 + 0.85 * length(.sp))

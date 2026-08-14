@@ -79,7 +79,7 @@ M <- M[, ncol(M):1, drop = FALSE]                            # #1 at top
 bp <- barplot(M, horiz = TRUE, names.arg = rep("", ncol(M)), border = NA,
         col = c(nonlethal = COL_NONLETHAL, lethal = COL_LETHAL),
         xlab = "bee-visit records",
-        main = sprintf("Top %d Plant Genera Visited by Bees", TOP_N))
+        main = "Which plants do the park's bees visit most?")
 axis(2, at = bp, labels = .plab, las = 1, tick = FALSE, cex.axis = 0.82, col.axis = BEE_INK$muted)
 mtext("A few plant genera pull most of the bee visits -- the park's keystone forage.", side = 3, line = 0.3, cex = 0.8, col = BEE_INK$secondary)   # takeaway
 legend("bottomright", bty = "n", fill = c(COL_NONLETHAL, COL_LETHAL), text.col = BEE_INK$primary,
@@ -122,14 +122,13 @@ ramp_m <- grDevices::colorRampPalette(BEE_SEQ)(24)   # non-urgent magnitude = te
 image(x = 1:12, y = seq_len(nrow(Mplot)), z = t(log1p(Mplot)),
       col = ramp_m, axes = FALSE, xlab = "", ylab = "",
       main = "")
-mtext(sprintf("When Top %d Plant Genera are Visited by Bees", TOP_MONTH), side = 3, line = 2.6, font = 2, cex = 1.05, col = BEE_INK$primary)
+mtext(sprintf("When are the top %d bee plants in use?", TOP_MONTH), side = 3, line = 2.6, font = 2, cex = 1.05, col = BEE_INK$primary)
 mtext("The top plants bloom into use at different times -- forage shifts across the season.", side = 3, line = 1.4, cex = 0.78, col = BEE_INK$secondary)   # takeaway
 mtext("log records/month; y-axis ranked by the bees' favourite (1 = most visit records)",
       side = 3, line = 0.4, cex = 0.75, col = BEE_INK$secondary)
 axis(1, 1:12, month.abb, las = 2, cex.axis = 0.8)
 axis(2, seq_len(nrow(Mplot)), labels = as.expression(rank_lab[rownames(Mplot)]), las = 1, cex.axis = 0.66)
-mtext("interns survey ~Mar-Sep; beeple year-round -- month coverage is uneven",
-      side = 1, line = 2.6, cex = 0.75, col = BEE_INK$secondary)
+mtext("month", side = 1, line = 2.6, cex = 0.85, col = BEE_INK$secondary)
 # colour-scale legend (right margin): pale = few / no records, dark = many that month
 lx0 <- grconvertX(0.905, "ndc", "user"); lx1 <- grconvertX(0.925, "ndc", "user")
 ly0 <- grconvertY(0.34, "ndc", "user");  ly1 <- grconvertY(0.66, "ndc", "user")

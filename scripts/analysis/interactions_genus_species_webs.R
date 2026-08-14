@@ -12,8 +12,10 @@
 #   * a bipartite web: that genus's bee species (top) linked to plant genera
 #     (bottom), links weighted by visits -- one PNG per genus;
 #   * a within-genus H2' specialization score (0 = its species all visit plants
-#     the same way; 1 = each species on its own distinct plants), tested against a
-#     fixed-marginal r2dtable null for a p-value;
+#     the same way; 1 = each species on its own distinct plants), tested with a
+#     stratified (restricted) permutation null -- bee-species labels are shuffled
+#     WITHIN season x method cells, so the p-value asks whether species partition
+#     plants beyond what flight season and sampling method alone would produce;
 #   * a per-species breadth row (how many plant genera, top plant, % on it).
 # Plus an overview bar chart of H2' across genera (who partitions most).
 #
@@ -157,7 +159,7 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
     .draw_heart(bx[j], yB - 0.032, s = 0.010, col = FAVORITE_COL)                  # red heart at the bee end
   }
   fam_txt <- if (!is.na(family) && nzchar(family)) sprintf("family %s", family) else "family unresolved"
-  mtext(sprintf("Which Plants Each %s Species Uses", genus),
+  mtext(sprintf("How do %s species split up the flora?", genus),
         side = 3, line = 8.2, font = 2, cex = 1.1, col = BEE_INK$primary)
   mtext(sprintf("%s's species carve up the flora -- each favours its own plants, not the same few.", genus),
         side = 3, line = 7.1, cex = 0.72, col = BEE_INK$secondary)   # takeaway
@@ -172,7 +174,7 @@ genus_web <- function(M, file, genus, h2lab, favorite_of = NULL, family = NA) {
                    method = "lethal + non-lethal pooled",
                    rank = "species (within-genus partitioning; favourite = species-level test)",
                    control = "plant availability, matched to month x year x method",
-                   sig = h2lab, width = 10000)
+                   sig = paste0("Statistical analysis: ", h2lab), width = 10000)
   maxchars  <- max(60, floor(par("pin")[1] / strwidth("n", cex = 0.56, units = "inches") * 0.97))
   cap_lines <- strsplit(str_wrap(cap, maxchars), "\n")[[1]]
   for (k in seq_along(cap_lines))
@@ -263,19 +265,20 @@ gen_note <- if (length(ns_dropped))
 untest_note <- if (nrow(dropped))
     sprintf("Untestable (< %d records): %s.", MIN_REC, paste(sort(dropped$bee_genus), collapse = ", ")) else ""
 g <- ggplot(ov, aes(x = x, y = bee_genus)) +
-  geom_col(width = 0.72, fill = BEE_NEUTRAL[["dark"]]) +
+  geom_col(width = 0.72, fill = BEE_TEAL[[5]]) +
   geom_text(aes(label = lab), hjust = -0.12, size = 3.0, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
   labs(title = "Which Bee Genera Have Specialist Species?",
-       subtitle = sprintf("%d bee genera have species that carve up different plants -- true niche specialists, not chance.", nrow(ov)),
+       subtitle = sprintf("%d genera have species that partition different plants. Higher H2' = specialists divide the flora; lower = generalists overlap.", nrow(ov)),
        caption = paste(Filter(nzchar, c(
          str_wrap(scope_cap(sprintf("all records, whole park; %d of %d testable genera partition plants significantly (p<0.05)",
                                     nrow(ov), n_tested),
                             method = "lethal + non-lethal pooled",
                             rank = "genus (within-genus H2')",
-                            control = "flight season + method (matched-cell null)", width = 100), 100),
+                            control = "flight season + method (matched-cell null)",
+                            sig = bee_test("within-genus H2' + stratified (restricted) permutation test"), width = 100), 100),
          str_wrap(paste(Filter(nzchar, c(gen_note, untest_note)), collapse = "  "), 100))), collapse = "\n"),
-       x = "species specialization within the genus (H2')   (low = generalists overlap   |   high = specialists partition)", y = NULL) +
+       x = "species specialization within the genus", y = "bee genus") +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
         panel.grid.major.y = element_blank())

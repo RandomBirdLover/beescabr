@@ -64,7 +64,7 @@ BEE_METHOD_COL_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(B
 # The whole NON-URGENT family is a SINGLE teal ramp (pale -> deep). Evidence, the neutral focus/background
 # two-tone, and the magnitude ramp (BEE_SEQ, below) are all just stops of BEE_TEAL -- so "non-urgent" is
 # ONE colour idea, not three. They never share a figure, so the single ramp is unambiguous. CVD-safe, kept
-# clear of transect green/blue. The ONLY other family is RED (BEE_RARE / BEE_ACCENT) = rare / urgent.
+# clear of transect green/blue. The ONLY other family is RED (BEE_RARE) = rare / urgent.
 BEE_TEAL <- c("#D6ECE6", "#A2D4CA", "#63B3A3", "#2E9584", "#0D6E60", "#08463D")   # pale -> deep teal (non-urgent)
 
 # EVIDENCE / ID-confidence: 3 ordinal stops of BEE_TEAL (deep voucher -> pale needs-ID)
@@ -72,16 +72,9 @@ BEE_EVIDENCE       <- c(specimen = BEE_TEAL[[6]], research = BEE_TEAL[[4]], need
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
-# ---- NEUTRALS + ACCENT: focus/background = two stops of BEE_TEAL; accent = the urgent-red pop ------
-# TWO-FAMILY house rule: TEAL = everything non-urgent (evidence, neutrals, magnitude -- ALL derived from
-# BEE_TEAL above); RED = rare/urgent. Neutrals are the deep + pale ends of BEE_TEAL; the "act here" accent
-# is RED (same family as BEE_RARE). Every neutral figure references THESE tokens (never a raw hex), so a
-# tweak to BEE_TEAL updates the whole non-urgent portfolio at once.
-BEE_NEUTRAL <- c(dark = BEE_TEAL[[5]], light = BEE_TEAL[[2]])   # focus (deep teal) / background (pale teal)
-BEE_ACCENT  <- "#B2404E"                                        # crimson -- the "rare / urgent / act here" pop (red family)
-
-# ---- SCOPE: focus vs background --------------------------------------------
-BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRAL[["light"]])
+# Neutral chart ink (single-series lines/bars) is just a stop of BEE_TEAL used directly: deep teal
+# BEE_TEAL[[5]] for focus, pale BEE_TEAL[[2]] for background. There is no separate neutral/accent token
+# family -- TEAL covers everything non-urgent, RED (BEE_RARE) covers rare/urgent.
 
 # ---- LOCATION / SET OVERLAP: A-only / shared / B-only (on vs off-transect) ----
 # Three stepped teals, ALL non-urgent: both = DEEP (the shared, best-documented core -- the anchor), on-only
@@ -89,10 +82,6 @@ BEE_SCOPE <- c(`survey-only` = BEE_NEUTRAL[["dark"]], `all records` = BEE_NEUTRA
 # off-transect coverage gap is actionable but not a conservation alarm, so it stays in the teal family.
 # Method-overlap venn uses BEE_METHOD_COL, not this.
 BEE_SET <- c(a_only = BEE_TEAL[[2]], shared = BEE_TEAL[[6]], b_only = BEE_TEAL[[4]])
-
-# ---- ID PROGRESS: resolved / keyable / stuck (coverage_id_targets, Q7) -------
-# resolved (done) = teal focus; keyable (specimen, ACT here) = red accent; stuck (photo) = pale teal background.
-BEE_IDSTATUS <- c(resolved = BEE_NEUTRAL[["dark"]], keyable = BEE_ACCENT, stuck = BEE_NEUTRAL[["light"]])
 
 # ---- ID PROGRESS (Q7): removed -- coverage_id_targets.R now colours by METHOD (red = specimen,
 # blue = photo, purple = the red/blue blend for "resolved", i.e. a mix of both methods), derived
@@ -272,7 +261,7 @@ bee_data_asof <- function(path = "data/observations/cache/last_ingest.txt") {
 # Significance clause that always NAMES the test, so a caption says WHICH test ran, not just the numbers.
 # e.g. bee_test("PERMANOVA (Bray-Curtis)", sprintf("R2=%.2f, p=%.3f", r2, p))
 #      -> "Analysis: PERMANOVA (Bray-Curtis) -- R2=0.73, p=0.001"  (pass as the `sig` arg of scope_cap()).
-bee_test <- function(name, stats) paste0("Analysis: ", name, " -- ", stats)
+bee_test <- function(name, stats = NULL) paste0("Statistical analysis: ", name, if (!is.null(stats)) paste0(", ", stats))
 
 # Build the caption string. scope_cap() keeps its old 3-arg shape so existing calls still work,
 # but now also stamps source + data date (and n / sig when given). `sig` should be a bee_test(...) clause
@@ -282,13 +271,15 @@ scope_cap <- function(scope = NULL, method = NULL, rank = NULL, n = NULL, sig = 
   # `control` (named-only, placed last so positional calls are unaffected) = what a statistical figure
   # holds constant / its null model (e.g. "flight season + method (matched-cell null)"). Renders right
   # after Rank. Leave NULL on descriptive figures (no test -> no control).
+  # `sig` = a bee_test(...) clause naming the figure's statistical analysis (renders "Statistical
+  # analysis: <method> -- <result>"). Leave NULL on purely descriptive (count-only) figures.
   bits <- c(
-    if (!is.null(scope))   paste0("Scope: ",   scope),
-    if (!is.null(method))  paste0("Method: ",  method),
-    if (!is.null(rank))    paste0("Rank: ",    rank),
-    if (!is.null(control)) paste0("Control: ", control),
-    if (!is.null(n))       paste0("n = ",      format(n, big.mark = ",", trim = TRUE)),
-    if (!is.null(sig))     sig,
+    if (!is.null(scope))    paste0("Scope: ",    scope),
+    if (!is.null(method))   paste0("Method: ",   method),
+    if (!is.null(rank))     paste0("Rank: ",     rank),
+    if (!is.null(control))  paste0("Control: ",  control),
+    if (!is.null(n))        paste0("n = ",       format(n, big.mark = ",", trim = TRUE)),
+    if (!is.null(sig))      sig,
     paste0("Source: ", source, " (data as of ", asof, ")"))
   stringr::str_wrap(paste(bits, collapse = "  |  "), width)
 }

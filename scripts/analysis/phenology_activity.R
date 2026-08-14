@@ -88,8 +88,9 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
          subtitle = "Ordered by peak day -- each taxon concentrates its activity in a different part of the year.",
          caption = scope_cap(scope  = paste0(if (!is.null(scope)) scope else sprintf("all records, whole park; %s activity over the year", tolower(label)),
                                              sprintf("; %d taxa (>= %d records)", length(ord), min_records)),
-                             method = method, rank = tolower(label)),   # lowercase: Rank field values are lowercase like the rest
-         x = NULL, y = NULL) +
+                             method = method, rank = tolower(label),
+                             sig = bee_test("Rayleigh test of circular uniformity (per taxon)")),   # lowercase: Rank field values are lowercase like the rest
+         x = "month", y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6, face = if (identical(sci, "bee")) "italic" else "plain"),  # bee names whole-italic; plant labels italicised per-part above
           plot.title  = element_text(face = "bold", hjust = 0.5),
@@ -179,7 +180,7 @@ phenology_ridge(data.frame(taxon = plant_label(bloom$plant_genus), doy = doy_of(
                 file.path(OUT_DIR, "phenology_plant_genus_bloom_evidence.png"), "Plant bloom (all evidence)",
                 scope = "all bloom evidence, whole park; survey in-flower plant records + every plant a bee was recorded on (a bee on a plant = it was in bloom then); broader than survey plant records alone but blends sources with differing effort",
                 method = "survey plant obs + bee-on-flower (bee records: observation field + specimen tags)",
-                title = "Seasonal Plant Bloom by Genus", sci = "plant")
+                title = "When does each plant bloom for bees?", sci = "plant")
 
 # ---- 2. BEE phenology (per genus + per species; both methods) ----------------
 bees <- bind_rows(spec[c("observed_on", "taxon_rank", "genus", "species")],
@@ -189,11 +190,11 @@ bees$doy <- doy_of(bees$observed_on)
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% GENUS_RANKS & !is.na(bees$genus),
                             str_squish(bees$genus), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus", title = "Seasonal Bee Activity by Genus")
+  file.path(OUT_DIR, "phenology_bee_genus.png"), "Bee genus", title = "When is each bee genus active?")
 
 phenology_ridge(
   data.frame(taxon = ifelse(bees$taxon_rank %in% SPECIES_RANKS & !is.na(bees$genus) & bees$species != "",
                             paste(str_squish(bees$genus), word(bees$species, -1)), NA), doy = bees$doy),
-  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species", title = "Seasonal Bee Activity by Species")
+  file.path(OUT_DIR, "phenology_bee_species.png"), "Bee species", title = "When is each bee species active?")
 
 message("\nDone. Phenology ridgelines + tables in: ", normalizePath(OUT_DIR))

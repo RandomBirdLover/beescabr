@@ -77,12 +77,12 @@ make_fig <- function(rec, min_shown, scope_lab, out_png, out_csv) {
               hjust = -0.2, size = 2.7, colour = BEE_INK$secondary, inherit.aes = FALSE) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
     scale_fill_manual(values = BEE_METHOD_COL, labels = BEE_METHOD_LABEL, name = "method") +
-    labs(title = "Total Records of Bee Species",
+    labs(title = "How much evidence backs each bee species?",
          subtitle = "Many species rest on just a handful of records; specimen vs photo backing varies species to species.",
          caption = scope_cap(
            scope  = sprintf("%s; species with >= %d records (%d of %d shown; full list in the CSV)", scope_lab, min_shown, nrow(wf), nrow(wide)),
            method = "lethal vs non-lethal", rank = "species"),
-         x = "records", y = NULL) +
+         x = "records", y = "bee species") +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           panel.grid.major.y = element_blank(),

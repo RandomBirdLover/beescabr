@@ -115,6 +115,7 @@ message(sprintf("iNAT BOUNTY (get a photo): %d species + %d genera in specimens 
 # ---- 4. figures: top species targets, most 'findable' first ------------------
 # EVERY gap species (no cap) -- a bounty must be the complete list of taxa missing from the other method.
 bar <- function(df, ncol_records, title, sub, fill, emoji, file) {
+  xlab <- if (grepl("specimen", ncol_records)) "specimen records" else "iNaturalist records"   # bar length = the evidence the taxon already has (from the OTHER method)
   d <- df %>% filter(rank == "species") %>% arrange(desc(.data[[ncol_records]]))
   d$taxon <- factor(d$taxon, levels = rev(d$taxon))
   # bar length + colour = the evidence the taxon ALREADY has (records + which method they came from);
@@ -128,7 +129,7 @@ bar <- function(df, ncol_records, title, sub, fill, emoji, file) {
          caption = scope_cap(scope = "all records, whole park",
                              method = "lethal vs non-lethal",
                              rank = "species", n = nrow(d)),
-         x = "records in the source method (more = easier to target)", y = NULL) +
+         x = xlab, y = NULL) +
     theme_beescabr(11) +
     theme(plot.title = element_text(hjust = 0.5),
           axis.text.y = element_text(face = "italic", colour = BEE_INK$muted), panel.grid.major.y = element_blank())

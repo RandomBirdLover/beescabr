@@ -102,11 +102,11 @@ g <- ggplot(plot_df, aes(x = n, y = rank, fill = region)) +
   guides(fill = guide_legend(override.aes = list(pattern = "none"))) +   # region legend swatches solid (hatch = rank, not region)
   scale_y_discrete(limits = rev) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.08))) +
-  labs(title = "Bees the Transects Catch vs. Miss",
+  labs(title = "Do the fixed transects catch every bee?",
        subtitle = sprintf("Off-transect recording turns up %d bee species the fixed transects never caught.", length(offonly_sp)),
        caption = scope_cap(scope = "all records; on-transect (standardized survey effort) vs off-transect (casual park-wide records)",
                            method = "lethal + non-lethal pooled", rank = "species + genus"),
-       x = "distinct kinds of bee", y = NULL) +
+       x = "distinct taxa of bees", y = "taxon rank") +
   theme_beescabr(11) +
   theme(panel.grid.major.y = element_blank(), plot.title = element_text(hjust = 0.5))
 bee_ggsave(file.path(OUT_DIR, "coverage_offtransect.png"), g, width = 8, height = 5.5, bg = "white")

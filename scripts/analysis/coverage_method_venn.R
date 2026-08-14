@@ -162,7 +162,7 @@ run_scope <- function(scope, spec, inat, subfn) {
         cn$species["lethal_only"] + cn$species["both"] + cn$species["nonlethal_only"]))
   venn2(cn$genus, sprintf("Genera (%d total)",
         cn$genus["lethal_only"] + cn$genus["both"] + cn$genus["nonlethal_only"]))
-  mtext("Comparing Native Bees Sampling Methods", outer = TRUE, line = 1.7,
+  mtext("Did the different sampling methods find the same bees?", outer = TRUE, line = 1.7,
         cex = 1.2, font = 2, col = BEE_INK$primary)
   mtext("Each method turns up taxa the other misses -- the shared core plus each method's own wedge.",
         outer = TRUE, line = 0.5, cex = 0.82, col = BEE_INK$secondary)   # takeaway

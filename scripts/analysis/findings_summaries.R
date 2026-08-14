@@ -278,12 +278,12 @@ fw("least_sampled_bees",
      vs_bounties = "bee_bounties lists taxa MISSING from one method; this keeps the under-sampled species and adds the find-it context in one sheet"),
    "least_sampled_bees.csv; least_sampled_bees.html; least_sampled_bees.png")
 
-fw("spatial_richness_map",
-   "Spatial richness maps",
+fw("transect_effort",
+   "Per-transect sampling effort",
    "descriptive",
-   "Where richness (species/genus, observed + rarefied) and sampling effort concentrate across the park.",
-   c(note = "rarefied richness map controls for uneven per-cell effort; raw maps do not"),
-   "map_species_richness.png; map_genus_richness.png; map_rarefied_richness.png; map_sampling_effort.png; spatial_richness_grid.csv; transect_richness.csv/png")
+   "How many bee records each transect has produced, split by method (lethal vs non-lethal) and as a total; specimens summarised by transect (their reliable spatial unit).",
+   c(note = "raw per-transect richness is NOT charted -- unequal effort biases it; the effort-standardized version is rarefaction by_transect"),
+   "transect_effort_{report,journal}.png; transect_effort_total_{report,journal}.png; transect_richness.csv; transect_effort_journal.csv")
 
 fw("phenology_effort",
    "Survey effort by month",

@@ -95,7 +95,8 @@ heatmap_gg <- function(M, file, rank_label) {
     ggplot2::scale_fill_gradientn(colours = BEE_SEQ, trans = "log", na.value = "white",
                                   name = "visit\nrecords", breaks = c(1, 5, 25, 100)) +   # magnitude = house blue ramp
     ggplot2::labs(
-      title = "Plant and Bee Visitation Heatmap",
+      title = "Which plant-bee pairs anchor the network?",
+      subtitle = "A few plant-bee pairs dominate; most cells are sparse, so a handful of generalist hubs anchor the network.",
       caption = scope_cap(
         scope  = sprintf("all records; %d plant genera by %d bee %s", nrow(M), ncol(M), rank_label),
         method = "lethal + non-lethal pooled", rank = rank_label),
@@ -120,7 +121,7 @@ heatmap_base <- function(M, file, rank_label, top_plants = 30) {   # fallback if
   image(seq_len(ncol(M2)), seq_len(nrow(M2)), t(log1p(M2)),
         col = grDevices::colorRampPalette(BEE_SEQ)(24), axes = FALSE, xlab = "", ylab = "",   # non-urgent magnitude = teal ramp
         main = "")
-  mtext("Plant and Bee Visitation Heatmap", side = 3, line = 2.5, font = 2, cex = 1.1, col = BEE_INK$primary)
+  mtext("Which plant-bee pairs anchor the network?", side = 3, line = 2.5, font = 2, cex = 1.1, col = BEE_INK$primary)
   mtext("A few plant-bee pairs dominate; most cells are sparse -- a handful of generalist hubs anchor the network.",
         side = 3, line = 1.1, cex = 0.78, col = BEE_INK$secondary)   # takeaway
   axis(1, seq_len(ncol(M2)), colnames(M2), las = 2, cex.axis = 0.7)
@@ -169,7 +170,7 @@ plot(beebee_plot,
      edge.width = pmin(0.25 * E(beebee_plot)$weight, 3),
      edge.color = adjustcolor("grey60", 0.5), layout = layout_with_fr,
      main = "")
-mtext("Bee Genera Linked by Shared Plant Genera", side = 3, line = 2.5, font = 2, cex = 1.1, col = BEE_INK$primary)
+mtext("Which bee genera forage on the same plants?", side = 3, line = 2.5, font = 2, cex = 1.1, col = BEE_INK$primary)
 mtext("Bee genera that forage on the same plants cluster together -- broad generalists in the hub, specialists on the edges.",
       side = 3, line = 1.2, cex = 0.78, col = BEE_INK$secondary)   # takeaway
 # ONE combined caption (figure note + standardized scope), together in a single block below the graph
@@ -200,7 +201,7 @@ plot(beebee_conn,
      edge.width = pmin(0.25 * E(beebee_conn)$weight, 3),
      edge.color = adjustcolor("grey60", 0.5), layout = layout_with_fr,
      main = "")
-mtext("Bee Genera Linked by Shared Plant Genera", side = 3, line = 2.5, font = 2, cex = 1.1, col = BEE_INK$primary)
+mtext("Which bee genera forage on the same plants?", side = 3, line = 2.5, font = 2, cex = 1.1, col = BEE_INK$primary)
 mtext("The connected core only -- genera that share no plants with others are dropped, so the co-forage structure reads cleanly.",
       side = 3, line = 1.2, cex = 0.78, col = BEE_INK$secondary)   # takeaway
 .note2 <- sprintf(">= %d shared plant genera drawn; %d unlinked genera omitted; node size = plant-genera breadth (small = specialist, visits <= %d plant genera)",
@@ -547,7 +548,7 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
     segments(xc, yfb, xc, ly - 0.012, col = FAMILY_COL[ff], lwd = 1.2)
     text(xc, ly, ff, col = FAMILY_COL[ff], font = 2, cex = 0.85)
   }
-  mtext("Plant and Bee Visitation Network -- all genera, grouped by family", side = 3, line = 5.1, font = 2, cex = 1.12, col = BEE_INK$primary)
+  mtext("Are the park's bee genera generalists or specialists?", side = 3, line = 5.1, font = 2, cex = 1.12, col = BEE_INK$primary)
   mtext("Most bee genera are generalists (grey); a colored few concentrate their visits on specific plants beyond mere availability.",
         side = 3, line = 4.2, cex = 0.68, col = BEE_INK$secondary)   # takeaway
   mtext(sprintf("plant genus (bottom), bee genus (top, grouped by family)   [top %d plants x %d genera]", np, nb),
@@ -559,7 +560,8 @@ web_plot_genus_fam <- function(M, file, col_of_bee, top_plants = 30) {
   mtext(scope_cap(scope = sprintf("all records, whole park; %d plant genera x %d bee genera, grouped by family", np, nb),
                   method = "lethal + non-lethal pooled",
                   rank = "genus (colour = selective genera, p<0.05)",
-                  control = "plant availability, matched to month x year x method", width = 300),
+                  control = "plant availability, matched to month x year x method",
+                  sig = bee_test("forage selectivity vs availability (Monte-Carlo chi-square)"), width = 300),
         side = 1, line = 9.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
@@ -575,7 +577,7 @@ web_plot_genus_fam(Mg, file.path(OUT_DIR, "interactions_web_genus.png"), col_of_
 # (FAMILY_COL / FAMILY_ORDER / gen2fam are defined once above, with the genus web.)
 
 web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
-                         title = "Plant and Bee Visitation Network -- species, nested by genus & family",
+                         title = "Do bee species share foraging niches?",
                          desc  = "Colour = family.  Thickness = share of that species' visits.  Red heart = each selective species' favourite plant.",
                          scope = "all records, whole park; bee species nested by genus & family") {
   M <- M[order(rowSums(M), decreasing = TRUE), , drop = FALSE]
@@ -649,7 +651,8 @@ web_plot_sgf <- function(M, file, top_plants = 20, favorite_of = NULL,
   # standardized scope caption at the BOTTOM (side = 1), below the plant labels -- like every other figure
   mtext(scope_cap(scope = scope,
                   method = "lethal + non-lethal pooled", rank = "species (favourite = species-level test)",
-                  control = "plant availability, matched to month x year x method", width = 300),
+                  control = "plant availability, matched to month x year x method",
+                  sig = bee_test("forage selectivity vs availability (Monte-Carlo chi-square)"), width = 300),
         side = 1, line = 11.3, cex = 0.56, col = BEE_INK$secondary)
   par(op); dev.off()
 }
@@ -665,7 +668,7 @@ Ms_sel <- Ms[, colnames(Ms) %in% sel_species, drop = FALSE]
 if (ncol(Ms_sel) >= 2) {
   web_plot_sgf(Ms_sel, file.path(OUT_DIR, "interactions_web_specialists.png"),
                top_plants = 50, favorite_of = pref_of_species,
-               title = "Plant and Bee Visitation Network -- selective specialists only",
+               title = "Which bees are the true specialists, and on what?",
                desc  = sprintf("Only the %d bee species that forage beyond plant availability (matched chi-square, p<0.05).  Colour = family.  Red heart = each species' favourite plant.", ncol(Ms_sel)),
                scope = sprintf("selective species only (%d of %d); whole park; nested by genus & family", ncol(Ms_sel), ncol(Ms)))
   message(sprintf("Wrote interactions_web_specialists.png (%d selective species)", ncol(Ms_sel)))

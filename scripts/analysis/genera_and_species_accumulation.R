@@ -149,11 +149,11 @@ accumulate <- function(survey_rows, key_col) {
   specaccum(M, method = "random", permutations = PERMUTATIONS)
 }
 
-# Two figures only (species, genera). Each OVERLAYS one curve PER TRANSECT (both methods
-# POOLED -- for completeness, method is noise): COLOUR = transect (BST, UPMON, TP, OT).
-# A single transect legend. CI bands are omitted (overlapping polygons are unreadable);
-# the Chao2 +/- SE uncertainty lives in the summary table (section 5).
-plot_accumulation <- function(key_col, rank_label, file) {
+# ONE report figure: genera + species side by side (two panels), each OVERLAYING one curve
+# PER TRANSECT (both methods POOLED -- for completeness, method is noise). COLOUR = transect;
+# genera panel dashed, species panel solid (house rule). A single shared transect legend.
+# CI bands omitted (overlapping polygons unreadable); Chao2 +/- SE lives in the table (section 5).
+sacs_for <- function(key_col) {
   sacs <- list()
   for (tr in TRANSECTS) {
     rows <- expanded[expanded$transect == tr, ]         # BOTH methods pooled
@@ -161,39 +161,47 @@ plot_accumulation <- function(key_col, rank_label, file) {
     s <- accumulate(rows, key_col); if (is.null(s)) next
     sacs[[tr]] <- s
   }
-  if (!length(sacs)) { message("No ", rank_label, " to plot."); return(invisible()) }
-  xmax <- max(vapply(sacs, function(s) max(s$sites),    numeric(1)))
-  ymax <- max(vapply(sacs, function(s) max(s$richness), numeric(1)))
+  sacs
+}
+plot_accumulation_combined <- function(file) {
+  ranks <- c(genera = "genus_key", species = "species_key")
+  sac_by_rank <- lapply(ranks, sacs_for)
+  if (!length(unlist(sac_by_rank, recursive = FALSE))) { message("Nothing to plot."); return(invisible()) }
+  all_sac <- unlist(sac_by_rank, recursive = FALSE)           # ONE panel: shared axes across BOTH ranks
+  xmax <- max(vapply(all_sac, function(s) max(s$sites),    numeric(1)))
+  ymax <- max(vapply(all_sac, function(s) max(s$richness), numeric(1)))
+  lty_rank <- c(genera = 2, species = 1)                      # house rule: genera dashed, species solid
 
-  bee_png(file, width = 1700, height = 1150, res = 200); on.exit(dev.off())
+  bee_png(file, width = 1900, height = 1250, res = 200); on.exit(dev.off())
   bee_base_par()                     # house-style fonts + muted axis/label colours
-  op <- par(mar = c(4.2, 4.4, 4.6, 1), oma = c(2.4, 0, 0, 0))
-  plot(NA, xlim = c(0, xmax), ylim = c(0, ymax),
-       xlab = "surveys", ylab = paste(rank_label, "recorded"))
-  LTY <- if (startsWith(rank_label, "gen")) 2 else 1       # house rule: GENUS figure = dashed lines, species = solid
-  for (tr in names(sacs))                                  # one curve per transect (methods pooled)
-    lines(sacs[[tr]]$sites, sacs[[tr]]$richness, col = COLS[tr], lwd = 2.8, lty = LTY)
-  mtext(sprintf("Native Bee %s Accumulation by Survey Effort",
-                paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
-        side = 3, line = 2.6, font = 2, cex = 1.05, col = BEE_INK$primary)
-  mtext("Curves still climbing on the least-sampled transects -- more surveys would keep adding new bees.",
-        side = 3, line = 1.3, cex = 0.8, col = BEE_INK$secondary)   # takeaway
-  legend("bottomright", title = "transect", legend = names(sacs),
-         col = COLS[names(sacs)], lwd = 2.8, lty = LTY, bty = "n", cex = 0.9,
+  op <- par(mar = c(4.2, 4.4, 5.0, 1), oma = c(4.6, 0, 0, 0))   # bottom oma room for the wrapped scope caption
+  plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "surveys", ylab = "number of unique taxa")
+  for (rk in names(ranks))                                    # overlay both ranks: colour = transect, style = rank
+    for (tr in names(sac_by_rank[[rk]]))
+      lines(sac_by_rank[[rk]][[tr]]$sites, sac_by_rank[[rk]][[tr]]$richness,
+            col = COLS[tr], lwd = 2.8, lty = lty_rank[rk])
+  mtext("Have we found all the park's bees yet?", side = 3, line = 3.0, font = 2, cex = 1.05, col = BEE_INK$primary)
+  mtext("Dashed = genera, solid = species. Curves still climbing on the least-sampled transects, so more surveys keep adding new bees.",
+        side = 3, line = 1.4, cex = 0.78, col = BEE_INK$secondary)   # takeaway + line-style key
+  present <- names(sac_by_rank[["species"]])                  # one transect legend (colour = transect)
+  legend("bottomright", title = "transect", legend = present,
+         col = COLS[present], lwd = 2.8, lty = 1, bty = "n", cex = 0.9,
          text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
   bee_caption_base(scope = "all survey records, per transect (x = number of survey trips)",
-                   method = "lethal + non-lethal pooled", rank = rank_label)
+                   method = "lethal + non-lethal pooled", rank = "genera & species",
+                   sig = bee_test("sample-based species accumulation (specaccum) + Chao2 richness estimator"))
   par(op)
 }
-plot_accumulation("species_key", "species", file.path(OUT_REPORT, "accumulation_by_effort_report_species.png"))
-plot_accumulation("genus_key",   "genera",  file.path(OUT_REPORT, "accumulation_by_effort_report_genus.png"))
+plot_accumulation_combined(file.path(OUT_REPORT, "accumulation_by_effort_report_combined.png"))
 
 # ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
-# One panel PER TRANSECT (2x2), each showing lethal vs non-lethal accumulation in the
-# fair window -- so the method effect can be checked for consistency across transects
-# (not hidden by pooling). Shared axes across panels for comparability. Lethal = intern
-# nets, non-lethal = beeple photos, Mar-Oct 2021-2023.
-plot_accumulation_method <- function(key_col, rank_label, file) {
+# ONE figure: a grid with rank as ROWS (genera top, species bottom) and transect as COLUMNS,
+# each cell showing lethal vs non-lethal accumulation in the fair window -- so the method
+# effect can be checked for consistency across transects AND ranks at a glance (not hidden by
+# pooling). Shared x across all, y shared within each rank row. Lethal = intern nets,
+# non-lethal = beeple photos, Mar-Oct 2021-2023. OT is dropped automatically (added 2024, no
+# fair-window data), so only BST/TP/UPMON appear; the freed top-right cell holds the legend.
+method_curves <- function(key_col) {
   curves <- list()
   for (tr in TRANSECTS) for (m in c("lethal", "nonlethal")) {
     rows <- expanded_fair[expanded_fair$transect == tr & expanded_fair$method == m, ]
@@ -202,42 +210,51 @@ plot_accumulation_method <- function(key_col, rank_label, file) {
     if (ncol(M) == 0L || nrow(M) == 0L) next
     curves[[tr]][[m]] <- specaccum(M, method = "random", permutations = PERMUTATIONS)
   }
-  # OT is dropped here automatically: it was not surveyed in 2021-2023 (added in 2024),
-  # so it has no fair-window data. Only the lethal-era transects (BST/TP/UPMON) appear.
-  present <- intersect(TRANSECTS, names(curves))
-  if (!length(present)) { message("No ", rank_label, " (journal) to plot."); return(invisible()) }
-  allc <- unlist(curves, recursive = FALSE)
-  xmax <- max(vapply(allc, function(s) max(s$sites),    numeric(1)))
-  ymax <- max(vapply(allc, function(s) max(s$richness), numeric(1)))
+  curves
+}
+plot_accumulation_method_combined <- function(file) {
+  ranks <- c(genera = "genus_key", species = "species_key")   # rows: genera on top, species below
+  cbr <- lapply(ranks, method_curves)                         # cbr[[rank]][[transect]][[method]]
+  present <- intersect(TRANSECTS, names(cbr[[1]]))
+  if (!length(present)) { message("No journal accumulation to plot."); return(invisible()) }
+  flat <- function(rk) unlist(cbr[[rk]], recursive = FALSE)   # -> flat list of specaccum objects
+  xmax <- max(vapply(do.call(c, lapply(names(ranks), flat)), function(s) max(s$sites), numeric(1)))
+  ymax_by_rank <- vapply(names(ranks), function(rk) max(vapply(flat(rk), function(s) max(s$richness), numeric(1))), numeric(1))
 
-  ncell <- length(present) + 1                       # +1 cell for the shared legend
-  nc <- min(2, ncell); nr <- ceiling(ncell / nc)
-  bee_png(file, width = 850 * nc, height = 650 * nr, res = 200); on.exit(dev.off())
+  nc <- length(present) + 1                          # transect columns + a legend column
+  bee_png(file, width = 720 * nc, height = 640 * 2, res = 200); on.exit(dev.off())
   bee_base_par()
-  op <- par(mfrow = c(nr, nc), oma = c(5, 3, 5, 1), mar = c(2.6, 2.8, 2.2, 0.8), mgp = c(2, 0.6, 0))  # bottom oma leaves room for the scope caption below the x-label
-  for (tr in present) {
-    plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "", ylab = "")
-    title(main = tr, col.main = COLS[tr], font.main = 2, line = 0.5)
-    for (m in names(curves[[tr]]))
-      lines(curves[[tr]][[m]]$sites, curves[[tr]][[m]]$richness, col = METHOD_COL[m], lwd = 2.8, lty = LTY[m])
+  op <- par(mfrow = c(2, nc), oma = c(5, 1, 6.4, 1), mar = c(2.6, 3.4, 2.4, 0.8), mgp = c(2, 0.6, 0))
+  for (ri in seq_along(ranks)) {
+    rk <- names(ranks)[ri]; ymax <- ymax_by_rank[rk]
+    for (ci in seq_len(nc)) {
+      if (ci <= length(present)) {
+        tr <- present[ci]
+        plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "",
+             ylab = if (ci == 1) paste(rk, "recorded") else "")   # col-1 y-label doubles as the row (rank) label
+        if (ri == 1) title(main = tr, col.main = COLS[tr], font.main = 2, line = 0.5)  # transect column header, top row only
+        for (m in names(cbr[[rk]][[tr]]))
+          lines(cbr[[rk]][[tr]][[m]]$sites, cbr[[rk]][[tr]][[m]]$richness, col = METHOD_COL[m], lwd = 2.8, lty = LTY[m])
+      } else {                                        # last column: shared method legend in the top cell, empty below
+        plot.new()
+        if (ri == 1)
+          legend("center", title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
+                 col = METHOD_COL[c("lethal", "nonlethal")], lwd = 2.8, lty = LTY[c("lethal", "nonlethal")],
+                 bty = "n", cex = 1.05, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+      }
+    }
   }
-  plot.new()                                         # final cell = shared method legend
-  legend("center", title = "method", legend = METHOD_LABEL[c("lethal", "nonlethal")],
-         col = METHOD_COL[c("lethal", "nonlethal")], lwd = 2.8, lty = LTY[c("lethal", "nonlethal")],
-         bty = "n", cex = 1.1, text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
-  mtext("surveys", side = 1, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
-  mtext(paste(rank_label, "recorded"), side = 2, outer = TRUE, line = 1.0, col = BEE_INK$secondary, cex = 0.9)
-  mtext(sprintf("Native Bee %s Accumulation: Lethal vs Non-Lethal by Transect",
-                paste0(toupper(substring(rank_label, 1, 1)), substring(rank_label, 2))),
-        side = 3, outer = TRUE, line = 2.4, col = BEE_INK$primary, font = 2, cex = 1.05)
-  mtext("Curves flatten where sampling is near-complete and keep climbing where it isn't -- so more surveys would still add taxa.",
-        side = 3, outer = TRUE, line = 1.2, col = BEE_INK$secondary, cex = 0.8)   # takeaway
+  mtext("surveys", side = 1, outer = TRUE, line = 1.4, col = BEE_INK$secondary, cex = 0.9)
+  mtext("Do nets and photos find bees at the same pace?", side = 3, outer = TRUE,
+        line = 3.6, col = BEE_INK$primary, font = 2, cex = 1.05)
+  mtext("The two methods climb at different rates, and the gap is consistent across transects, so it is a real method effect, not a pooling artifact.",
+        side = 3, outer = TRUE, line = 2.4, col = BEE_INK$secondary, cex = 0.8)   # takeaway (answers the title)
   bee_caption_base(scope = "fair window: survey-only records, per transect (BST/TP/UPMON; OT excluded -- added 2024)",
-                   method = "lethal vs non-lethal", rank = rank_label, line0 = 2.0)
+                   method = "lethal vs non-lethal", rank = "genera & species", line0 = 2.0,
+                   sig = bee_test("sample-based species accumulation (specaccum)"))
   par(op)
 }
-plot_accumulation_method("species_key", "species", file.path(OUT_JOURNAL, "accumulation_by_effort_journal_species.png"))
-plot_accumulation_method("genus_key",   "genera",  file.path(OUT_JOURNAL, "accumulation_by_effort_journal_genus.png"))
+plot_accumulation_method_combined(file.path(OUT_JOURNAL, "accumulation_by_effort_journal_combined.png"))
 
 # ---- 5. summary table + incidence-based richness estimates -------------------
 # richness_est(): observed richness plus the Chao2 incidence estimate of TRUE

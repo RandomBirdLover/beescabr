@@ -49,7 +49,7 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
   geom_text(aes(label = trips), vjust = -0.35, size = 4.2, colour = BEE_INK$secondary) +
   scale_fill_manual(values = fill_cols, guide = "none") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.14))) +
-  labs(title = "Effort by Method",
+  labs(title = "Which method logged the most survey trips?",
        subtitle = sprintf("Non-lethal photos logged far more survey trips than lethal netting (%d vs %d) -- the effort behind the catch.",
                           tr$trips[tr$method == "non-lethal"], tr$trips[tr$method == "lethal"]),
        caption = paste0(
@@ -60,7 +60,7 @@ g <- ggplot(tr, aes(x = method, y = trips, fill = method)) +
          str_wrap(paste0(
            "A lethal (net) trip covers all 3 transects, while a non-lethal (photo) trip covers one -- ",
            "so raw trip counts understate lethal's per-trip coverage."), 108)),
-       x = NULL, y = "survey trips") +
+       x = "method", y = "survey trips") +
   theme_beescabr(12) +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
         panel.grid.major.x = element_blank())
