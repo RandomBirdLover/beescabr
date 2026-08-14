@@ -182,7 +182,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   html,body{margin:0;height:100%%}#map{position:absolute;inset:0}
   .panel{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(20,50,26,.12),0 8px 24px rgba(20,50,26,.14);
-    padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box}
+    padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100vh - 16px);overflow-y:auto}
   #taxphoto{width:100%%;max-height:190px;object-fit:cover;border-radius:7px;display:block}
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
@@ -195,15 +195,16 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .count{margin-top:9px;font-size:11px;color:#6b6a66}
   .leaflet-popup-content{font:12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   .leaflet-popup-content i{color:#111}
-  .legend{width:auto;max-width:196px;max-height:52vh;overflow:auto}
-  .legend .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:6px}
-  .legend .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:6px}
-  .legend .genrow i{font-style:italic}
-  .legend .taxrow{font-size:10px;color:#6b6a66;margin:0 0 1px 22px;line-height:1.32}
-  .legend .taxrow.cx{margin-left:36px}
-  .legend .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
-  .legend .taxrow i{font-style:italic}
-  .legend .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
+  .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
+  .gclist{max-height:34vh;overflow-y:auto;margin-bottom:2px}
+  .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
+  .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:2px}
+  .genrow i{font-style:italic}
+  .taxrow{font-size:10px;color:#6b6a66;margin:0 0 1px 18px;line-height:1.32}
+  .taxrow.cx{margin-left:32px}
+  .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
+  .taxrow i{font-style:italic}
+  .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
 </style></head><body><div id="map"></div>
 <script>
 var COLS=%s, KEYS=%s, DATA=%s, LABELS=%s, PHOTOS=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
@@ -270,6 +271,15 @@ panel.onAdd=function(){
   var genera=uniqSorted(recs.map(function(r){return r.g;}));
   var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
   var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
+  var gcol=LEGEND.map(function(f){                          // genus color key: family -> genus -> subgenus/complex
+    var s="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
+    f.genera.forEach(function(g){
+      s+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
+      if(g.sub) s+="<div class=taxrow><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
+      if(g.cx)  s+="<div class=\\"taxrow cx\\"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
+    });
+    return s;
+  }).join("");
   d.innerHTML=
     "<div class=eyebrow>Cabrillo National Monument</div>"+
     "<h1>Bee Occurrence Explorer</h1>"+
@@ -280,30 +290,17 @@ panel.onAdd=function(){
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
     "<div id=sspwrap style=\\"display:none\\"><label>Subspecies</label><select id=selSsp><option value=\\"*\\">All subspecies</option></select></div>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
-    "<label>Transect lines</label>"+trLeg+
-    "<label>Record type</label>"+
-    "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
-    "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
-    "<div class=count id=count></div>";
+    "<div class=leg>"+
+      "<div class=count id=count></div>"+
+      "<label>Genus colors</label><div class=gclist>"+gcol+"</div>"+
+      "<label>Transect lines</label>"+trLeg+
+      "<label>Record type</label>"+
+      "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
+      "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
+    "</div>";
   return d;
 };
 panel.addTo(map);
-// family-grouped genus color legend (bottom-right, clear of the top-left filter panel)
-var legend=L.control({position:"bottomright"});
-legend.onAdd=function(){
-  var d=L.DomUtil.create("div","panel legend"); L.DomEvent.disableScrollPropagation(d); L.DomEvent.disableClickPropagation(d);
-  var h="<div class=eyebrow>Genus colors</div>";
-  LEGEND.forEach(function(f){
-    h+="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
-    f.genera.forEach(function(g){
-      h+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
-      if(g.sub) h+="<div class=taxrow><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
-      if(g.cx)  h+="<div class=\\"taxrow cx\\"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
-    });
-  });
-  d.innerHTML=h; return d;
-};
-legend.addTo(map);
 var selG=document.getElementById("selG"), selSub=document.getElementById("selSub"),
     selCx=document.getElementById("selCx"), selS=document.getElementById("selS"), selSsp=document.getElementById("selSsp");
 var subwrap=document.getElementById("subwrap"), cxwrap=document.getElementById("cxwrap"), sspwrap=document.getElementById("sspwrap");
