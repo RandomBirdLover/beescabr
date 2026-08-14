@@ -59,6 +59,40 @@ gs_list <- setNames(lapply(genus_species$species, sort), genus_species$genus)
 for (g in sort(unique(rec$genus))) if (is.null(gs_list[[g]])) gs_list[[g]] <- character(0)
 gs_list <- gs_list[sort(names(gs_list))]
 
+# ---- 1b. one REPRESENTATIVE photo per genus + species (from iNaturalist) --------
+# Uses each taxon's iNat "default photo". Only OPENLY-LICENSED photos are kept, and the
+# photographer credit + a link to the iNat taxon page travel with each (attribution required).
+# Results (incl. "no open photo") are cached to disk so re-runs don't re-hit the API.
+PHOTO_CACHE <- "data/observations/cache/taxon_photos.json"
+OPEN_LIC <- c("cc0", "pd", "cc-by", "cc-by-nc", "cc-by-sa", "cc-by-nd", "cc-by-nc-sa", "cc-by-nc-nd")
+photos <- if (file.exists(PHOTO_CACHE)) jsonlite::fromJSON(PHOTO_CACHE, simplifyVector = FALSE) else list()
+fetch_photo <- function(name, rank) {   # -> list(u, c, l) or NULL
+  url <- sprintf("https://api.inaturalist.org/v1/taxa?q=%s&rank=%s&per_page=1",
+                 utils::URLencode(name, reserved = TRUE), rank)
+  res <- tryCatch(jsonlite::fromJSON(url, simplifyVector = FALSE), error = function(e) NULL)
+  Sys.sleep(0.7)                         # be polite to the API
+  if (is.null(res) || length(res$results) == 0) return(NULL)
+  t <- res$results[[1]]; p <- t$default_photo
+  if (tolower(t$name) != tolower(name)) return(NULL)                 # exact-match only
+  if (is.null(p) || is.null(p$license_code) || !(p$license_code %in% OPEN_LIC)) return(NULL)
+  list(u = p$medium_url, c = p$attribution %||% "iNaturalist", l = sprintf("https://www.inaturalist.org/taxa/%s", t$id))
+}
+`%||%` <- function(a, b) if (is.null(a) || is.na(a) || a == "") b else a
+needed <- unique(c(names(gs_list),
+                   unlist(lapply(names(gs_list), function(g)
+                     if (length(gs_list[[g]])) paste(g, gs_list[[g]])), use.names = FALSE)))
+to_fetch <- needed[!needed %in% names(photos)]
+if (length(to_fetch)) message(sprintf("Fetching %d taxon photos from iNaturalist (cached after; ~%.0fs)...",
+                                       length(to_fetch), length(to_fetch) * 0.9))
+for (nm in to_fetch) {
+  ph <- fetch_photo(nm, if (grepl(" ", nm)) "species" else "genus")
+  photos[[nm]] <- if (is.null(ph)) list(none = TRUE) else ph        # cache negatives too
+}
+dir.create(dirname(PHOTO_CACHE), recursive = TRUE, showWarnings = FALSE)
+jsonlite::write_json(photos, PHOTO_CACHE, auto_unbox = TRUE)
+photos_ok <- photos[!vapply(photos, function(x) isTRUE(x$none), logical(1))]
+message(sprintf("Representative photos: %d of %d taxa have an openly-licensed image", length(photos_ok), length(needed)))
+
 # ---- 2. geometry (park boundary + transect lines) as GeoJSON -------------------
 read_shp <- function(p) tryCatch(sf::st_transform(sf::st_read(p, quiet = TRUE), 4326), error = function(e) NULL)
 to_geojson <- function(x) { if (is.null(x)) return("null")
@@ -104,7 +138,7 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
   .lg{line-height:1.5}
 </style></head><body><div id="map"></div>
 <script>
-var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s;
+var COLS=%s, KEYS=%s, DATA=%s, GS=%s, LABELS=%s, PHOTOS=%s;
 var BOUNDARY=%s, TRANSECTS=%s;
 var TR_ORDER=["BST","OT","TP","UPMON","off-transect"];
 var map=L.map("map",{preferCanvas:true,zoomControl:false});
@@ -154,6 +188,7 @@ panel.onAdd=function(){
     "<p class=sub>Pick a genus (then a species) and toggle transects to see where each bee has been recorded.</p>"+
     "<label>Genus</label><select id=selG>"+gopt+"</select>"+
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
+    "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<label>Transect</label><div class=chk id=trchk>"+trChk+"</div>"+
     "<label>Method</label><div class=chk><label><input type=checkbox id=m_photo checked>photo</label><label><input type=checkbox id=m_net checked>specimen</label></div>"+
     "<div class=count id=count></div>";
@@ -166,8 +201,17 @@ function fillSpecies(){
   if(g!=="*"&&GS[g]){opts+=GS[g].map(function(s){return "<option>"+esc(s)+"</option>";}).join("");}
   selS.innerHTML=opts;
 }
-selG.addEventListener("change",function(){fillSpecies();draw();});
-selS.addEventListener("change",draw);
+function showPhoto(){
+  var g=selG.value, s=selS.value, key=(g!=="*"&&s!=="*")?g+" "+s:(g!=="*"?g:null);
+  var w=document.getElementById("photowrap");
+  if(key&&PHOTOS[key]){var p=PHOTOS[key];
+    document.getElementById("taxphoto").src=p.u;
+    document.getElementById("taxcredit").innerHTML="Photo: "+esc(p.c)+" &middot; <a href=\\""+p.l+"\\" target=_blank>iNaturalist</a>";
+    w.style.display="block";}
+  else{w.style.display="none";}
+}
+selG.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
+selS.addEventListener("change",function(){showPhoto();draw();});
 document.getElementById("trchk").addEventListener("change",draw);
 document.getElementById("m_photo").addEventListener("change",draw);
 document.getElementById("m_net").addEventListener("change",draw);
@@ -180,6 +224,7 @@ draw();
   jsonlite::toJSON(as.list(COLS), auto_unbox = TRUE), KEYS, pts,
   jsonlite::toJSON(gs_list, auto_unbox = FALSE),
   if (!is.null(tran_lab)) jsonlite::toJSON(tran_lab, dataframe = "rows", auto_unbox = TRUE) else "[]",
+  jsonlite::toJSON(photos_ok, auto_unbox = TRUE),
   to_geojson(park_bnd), to_geojson(tran_ln))
 
 out <- file.path(OUT_DIR, "bee_occurrence_explorer.html")
