@@ -84,10 +84,12 @@ cat > "$DOCS/index.html" <<HTML
          background-attachment:fixed; min-height:100vh;
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
          -webkit-font-smoothing:antialiased; }
-  .hero { position:relative; border-bottom:1px solid var(--border);
-          background:linear-gradient(180deg, rgba(16,34,37,.5) 0%, rgba(16,34,37,.82) 100%),
-                    #16302b url('./hero.jpg') center 42% / cover no-repeat; }
-  .hero-inner { max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
+  .hero { position:relative; overflow:hidden; background:#16302b; border-bottom:1px solid var(--border); }
+  .hero-bg { position:absolute; inset:0; z-index:0; width:100%; height:100%;
+             object-fit:cover; object-position:center 45%; transform:scaleX(-1); }
+  .hero::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+                 background:linear-gradient(180deg, rgba(14,28,30,.34) 0%, rgba(14,28,30,.72) 100%); }
+  .hero-inner { position:relative; z-index:2; max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
   .eyebrow { display:inline-block; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
              font-weight:700; color:#fff; margin:0 0 .7rem;
              padding:.3rem .7rem; background:rgba(255,255,255,.16); backdrop-filter:blur(4px);
@@ -96,9 +98,11 @@ cat > "$DOCS/index.html" <<HTML
        color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.4); }
   .lead { color:rgba(255,255,255,.92); margin:0; max-width:58ch; font-size:1.08rem;
           text-shadow:0 1px 12px rgba(0,0,0,.35); }
-  .credit { position:absolute; right:.9rem; bottom:.6rem; margin:0; font-size:.7rem;
+  .credit { position:absolute; z-index:2; right:.9rem; bottom:.6rem; margin:0; font-size:.7rem;
             color:rgba(255,255,255,.8); text-shadow:0 1px 6px rgba(0,0,0,.7); max-width:70%; text-align:right; }
   .credit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+  .credit a.inat { text-decoration:none; }
+  .credit img { width:15px; height:15px; vertical-align:-3px; margin-right:.1rem; border-radius:3px; }
   main { max-width:960px; margin:0 auto; padding:1.5rem 1.5rem 3.5rem;
          display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.15rem; }
   .card { position:relative; display:flex; flex-direction:column; background:var(--card);
@@ -124,12 +128,13 @@ cat > "$DOCS/index.html" <<HTML
 </head>
 <body>
   <div class="hero">
+    <img class="hero-bg" src="./hero.jpg" alt="">
     <div class="hero-inner">
       <span class="eyebrow">&#127963;&#65039; Cabrillo National Monument</span>
       <h1>Native Bee Monitoring Program</h1>
       <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page to explore.</p>
     </div>
-    <p class="credit">Photo: &ldquo;<a href="https://commons.wikimedia.org/wiki/File:Old_Point_Loma_Light_Station_in_2019.jpg">Old Point Loma Light Station</a>&rdquo; by Frank Schulenburg, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></p>
+    <p class="credit"><a class="inat" href="https://www.inaturalist.org/observations/98453614" title="View on iNaturalist"><img src="./inat-logo.png" alt="iNaturalist" width="15" height="15"></a> Peridot Sweat Bee (<i>Augochlorella pomoniella</i>) &middot; Michael Ready &middot; <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</a></p>
   </div>
   <main>$cards
   </main>

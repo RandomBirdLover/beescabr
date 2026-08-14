@@ -63,6 +63,7 @@ docs/*
 !docs/*.jpg
 !docs/*.jpeg
 !docs/*.webp
+!docs/*.png
 
 # translation temp files
 po/*~
