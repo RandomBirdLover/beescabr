@@ -150,7 +150,8 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   html,body{margin:0;height:100%%}#map{position:absolute;inset:0}
   .panel{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(20,50,26,.12),0 8px 24px rgba(20,50,26,.14);
-    padding:12px 14px;max-width:290px}
+    padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box}
+  #taxphoto{width:100%%;max-height:190px;object-fit:cover;border-radius:7px;display:block}
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
   .panel p.sub{font-size:11.5px;color:#6b6a66;margin:0 0 10px;line-height:1.35}
@@ -162,7 +163,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .count{margin-top:9px;font-size:11px;color:#6b6a66}
   .leaflet-popup-content{font:12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   .leaflet-popup-content i{color:#111}
-  .legend{max-width:196px;max-height:52vh;overflow:auto}
+  .legend{width:auto;max-width:196px;max-height:52vh;overflow:auto}
   .legend .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:6px}
   .legend .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:6px}
   .legend .genrow i{font-style:italic}
