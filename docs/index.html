@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cabrillo National Monument Native Bees</title>
+<style>
+  :root { --bg:#fbfaf7; --fg:#1c1c1c; --muted:#5c5c5c; --card:#ffffff; --border:#e6e2d8; --accent:#4C9E90; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161613; --fg:#ececec; --muted:#a6a6a6; --card:#1f1f1c; --border:#2f2f2a; --accent:#5bb0a1; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+         line-height:1.5; }
+  header { max-width:920px; margin:0 auto; padding:3rem 1.25rem 1rem; }
+  h1 { margin:0 0 .35rem; font-size:1.9rem; }
+  .lead { color:var(--muted); margin:0; max-width:60ch; }
+  main { max-width:920px; margin:0 auto; padding:1rem 1.25rem 3rem;
+         display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
+  .card { display:block; background:var(--card); border:1px solid var(--border);
+          border-radius:12px; padding:1.1rem 1.2rem; text-decoration:none; color:inherit;
+          transition:border-color .15s, transform .15s; }
+  .card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .card h2 { margin:0 0 .35rem; font-size:1.1rem; color:var(--accent); }
+  .card p  { margin:0; color:var(--muted); font-size:.92rem; }
+  footer { max-width:920px; margin:0 auto; padding:0 1.25rem 3rem; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Cabrillo National Monument &mdash; Native Bees</h1>
+    <p class="lead">Field guides, checklists, and interactive maps from the Cabrillo native-bee survey. Pick a page below.</p>
+  </header>
+  <main>
+      <a class="card" href="./field_guide_species.html">
+        <h2>Bee Field Guide (Species)</h2>
+        <p>Every bee species recorded at Cabrillo, with photos, IUCN status, abundance, and forage.</p>
+      </a>
+      <a class="card" href="./field_guide_genus.html">
+        <h2>Bee Field Guide (Genus)</h2>
+        <p>The same guide grouped by genus for quicker browsing.</p>
+      </a>
+      <a class="card" href="./summary_tables.html">
+        <h2>Park Summary Tables</h2>
+        <p>Headline counts: species, genera, plants, survey effort, and participation.</p>
+      </a>
+      <a class="card" href="./least_sampled_bees.html">
+        <h2>Least-Sampled Bees</h2>
+        <p>The bees with the thinnest evidence, where more surveying would help most.</p>
+      </a>
+      <a class="card" href="./transects_map.html">
+        <h2>Survey Transect Map</h2>
+        <p>Interactive map of the fixed survey transects at Cabrillo National Monument.</p>
+      </a>
+      <a class="card" href="./specimen_bounty_map.html">
+        <h2>Specimen Bee Bounty Map</h2>
+        <p>Where to net a voucher specimen: gaps the collection still needs.</p>
+      </a>
+      <a class="card" href="./inaturalist_bounty_map.html">
+        <h2>iNaturalist Bee Bounty Map</h2>
+        <p>Where to photograph bees to fill iNaturalist gaps.</p>
+      </a>
+  </main>
+  <footer>Generated from the beescabr pipeline. Data as of the latest survey export.</footer>
+</body>
+</html>

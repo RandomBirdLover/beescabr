@@ -56,7 +56,10 @@ vignettes/*.pdf
 .Renviron
 
 # pkgdown site
-docs/
+# internal working docs stay local; only the published GitHub Pages site is tracked
+docs/*
+!docs/*.html
+!docs/.nojekyll
 
 # translation temp files
 po/*~
@@ -77,3 +80,6 @@ _scratch*
 
 # API tokens / secrets (never commit)
 data/secrets/
+
+# rosm/prettymapr downloaded OSM basemap tile cache (regenerated on map render)
+rosm.cache/
