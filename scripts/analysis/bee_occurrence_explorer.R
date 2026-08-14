@@ -46,6 +46,9 @@ prep <- function(f, method) {
     complex  = cx,                                          # "" if not in a named species-complex
     sp     = ifelse(d$taxon_rank %in% SPECIES_RANKS & !is.na(d$species) & d$species != "",
                     word(d$species, -1), ""),               # species epithet, "" if genus-only
+    subspecies = if ("subspecies" %in% names(d))
+                   ifelse(d$taxon_rank == "subspecies" & !is.na(d$subspecies) & d$subspecies != "",
+                          word(d$subspecies, -1), "") else "",   # subspecies epithet, "" otherwise
     tran   = tr,
     year   = suppressWarnings(as.integer(substr(d$observed_on, 1, 4))),
     method = method,
@@ -94,11 +97,13 @@ sp_full   <- unlist(lapply(names(gs_list), function(g)
                if (length(gs_list[[g]])) paste(g, gs_list[[g]])), use.names = FALSE)
 subg_vals <- sort(unique(rec$subgenus[rec$subgenus != ""]))
 cx_vals   <- sort(unique(rec$complex [rec$complex  != ""]))
+ssp_full  <- sort(unique(with(rec[rec$subspecies != "", ], paste(genus, sp, subspecies))))   # trinomials
 taxa <- rbind(
-  data.frame(key = names(gs_list),             query = names(gs_list), rank = "genus",    stringsAsFactors = FALSE),
-  data.frame(key = sp_full,                     query = sp_full,        rank = "species",  stringsAsFactors = FALSE),
-  data.frame(key = paste0("subg ", subg_vals),  query = subg_vals,      rank = "subgenus", stringsAsFactors = FALSE),
-  data.frame(key = paste0("cx ",   cx_vals),    query = cx_vals,        rank = "complex",  stringsAsFactors = FALSE))
+  data.frame(key = names(gs_list),             query = names(gs_list), rank = "genus",      stringsAsFactors = FALSE),
+  data.frame(key = sp_full,                     query = sp_full,        rank = "species",    stringsAsFactors = FALSE),
+  data.frame(key = paste0("subg ", subg_vals),  query = subg_vals,      rank = "subgenus",   stringsAsFactors = FALSE),
+  data.frame(key = paste0("cx ",   cx_vals),    query = cx_vals,        rank = "complex",    stringsAsFactors = FALSE),
+  data.frame(key = ssp_full,                    query = ssp_full,       rank = "subspecies", stringsAsFactors = FALSE))
 taxa <- taxa[!duplicated(taxa$key), , drop = FALSE]
 to_fetch <- taxa[!taxa$key %in% names(photos), , drop = FALSE]
 if (nrow(to_fetch)) message(sprintf("Fetching %d taxon photos from iNaturalist (cached after; ~%.0fs)...",
@@ -151,9 +156,9 @@ LEGEND_JS <- jsonlite::toJSON(lapply(intersect(BEE_FAMILY_ORDER, genus_leg$fam),
   list(family = fm, fcol = unname(BEE_FAMILY[fm]),
        genera = unname(Map(function(n, c) list(n = n, c = c), g$genus, g$col)))
 }), auto_unbox = TRUE)
-pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","subgenus","complex","sp","tran","year","method","url")],
+pts <- jsonlite::toJSON(rec[, c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","method","url")],
                         dataframe = "values", na = "null", auto_unbox = TRUE)   # compact array-of-arrays
-KEYS <- jsonlite::toJSON(c("lat","lon","genus","subgenus","complex","sp","tran","year","method","url"))
+KEYS <- jsonlite::toJSON(c("lat","lon","genus","subgenus","complex","sp","subspecies","tran","year","method","url"))
 
 # Record type is shown by marker STYLE, not an icon: specimen = open (outline) circle,
 # iNaturalist = filled circle. Both are colored by the taxon's genus/species (see below).
@@ -209,25 +214,28 @@ if(TRANSECTS){L.geoJSON(TRANSECTS,{style:function(f){var t=(f.properties.Name||f
 LABELS.forEach(function(l){L.marker([l.lat,l.lon],{icon:L.divIcon({className:"",html:"<div style=\\"font-weight:700;font-size:11px;background:rgba(255,255,255,.85);padding:1px 5px;border-radius:3px\\">"+l.transect+"</div>",iconSize:null})}).addTo(map);});
 // build records from the compact array
 var K={}; KEYS.forEach(function(k,i){K[k]=i;});
-var recs=DATA.map(function(r){return {lat:r[K.lat],lon:r[K.lon],g:r[K.genus],sub:r[K.subgenus]||"",cx:r[K.complex]||"",s:r[K.sp],t:r[K.tran],y:r[K.year],m:r[K.method],u:r[K.url]};});
+var recs=DATA.map(function(r){return {lat:r[K.lat],lon:r[K.lon],g:r[K.genus],sub:r[K.subgenus]||"",cx:r[K.complex]||"",s:r[K.sp],ssp:r[K.subspecies]||"",t:r[K.tran],y:r[K.year],m:r[K.method],u:r[K.url]};});
 // cascade helpers: distinct, sorted, non-empty values for the current higher-level selection
 function uniqSorted(a){return Array.from(new Set(a)).filter(function(x){return x!=="";}).sort();}
 function subgeneraFor(g){return uniqSorted(recs.filter(function(r){return r.g===g;}).map(function(r){return r.sub;}));}
 function complexesFor(g,sub){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub);}).map(function(r){return r.cx;}));}
 function speciesFor(g,sub,cx){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub)&&(cx==="*"||r.cx===cx);}).map(function(r){return r.s;}));}
+function subspeciesFor(g,sub,cx,s){return uniqSorted(recs.filter(function(r){return r.g===g&&(sub==="*"||r.sub===sub)&&(cx==="*"||r.cx===cx)&&r.s===s;}).map(function(r){return r.ssp;}));}
 var layer=L.layerGroup().addTo(map);
 function esc(x){return (""+x).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 function draw(){
   layer.clearLayers();
-  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, n=0;
+  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, ssp=selSsp.value, n=0;
   recs.forEach(function(r){
     if(g!=="*"&&r.g!==g) return;
     if(sub!=="*"&&r.sub!==sub) return;
     if(cx!=="*"&&r.cx!==cx) return;
     if(s!=="*"&&r.s!==s) return;
+    if(ssp!=="*"&&r.ssp!==ssp) return;
     n++;
     // popup name reflects the most specific rank the record actually reached
-    var name = r.s ? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>"
+    var name = r.ssp ? "<i>"+esc(r.g)+" "+esc(r.s)+" "+esc(r.ssp)+"</i>"
+      : r.s ? "<i>"+esc(r.g)+" "+esc(r.s)+"</i>"
       : r.cx ? "<i>"+esc(r.cx)+"</i> <span style=\\"color:#888\\">complex</span>"
       : r.sub ? "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(subgenus <i>"+esc(r.sub)+"</i>)</span>"
       : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
@@ -257,6 +265,7 @@ panel.onAdd=function(){
     "<div id=subwrap style=\\"display:none\\"><label>Subgenus</label><select id=selSub><option value=\\"*\\">All subgenera</option></select></div>"+
     "<div id=cxwrap style=\\"display:none\\"><label>Complex</label><select id=selCx><option value=\\"*\\">All complexes</option></select></div>"+
     "<label>Species</label><select id=selS><option value=\\"*\\">All species</option></select>"+
+    "<div id=sspwrap style=\\"display:none\\"><label>Subspecies</label><select id=selSsp><option value=\\"*\\">All subspecies</option></select></div>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<label>Transect lines</label>"+trLeg+
     "<label>Record type</label>"+
@@ -279,8 +288,8 @@ legend.onAdd=function(){
 };
 legend.addTo(map);
 var selG=document.getElementById("selG"), selSub=document.getElementById("selSub"),
-    selCx=document.getElementById("selCx"), selS=document.getElementById("selS");
-var subwrap=document.getElementById("subwrap"), cxwrap=document.getElementById("cxwrap");
+    selCx=document.getElementById("selCx"), selS=document.getElementById("selS"), selSsp=document.getElementById("selSsp");
+var subwrap=document.getElementById("subwrap"), cxwrap=document.getElementById("cxwrap"), sspwrap=document.getElementById("sspwrap");
 function opt(v){return "<option>"+esc(v)+"</option>";}
 function fillSub(){                        // subgenera of the chosen genus (dropdown hidden if none)
   var g=selG.value, subs=g==="*"?[]:subgeneraFor(g);
@@ -295,6 +304,12 @@ function fillCx(){                         // complexes within the current genus
 function fillSpecies(){                    // species within the current genus/subgenus/complex
   var g=selG.value, spp=g==="*"?[]:speciesFor(g,selSub.value,selCx.value);
   selS.innerHTML="<option value=\\"*\\">All species</option>"+spp.map(opt).join("");
+  fillSsp();                               // species just reset -> hide/reset the subspecies box
+}
+function fillSsp(){                        // subspecies of the chosen species (hidden unless it has any)
+  var g=selG.value, s=selS.value, sspp=(g!=="*"&&s!=="*")?subspeciesFor(g,selSub.value,selCx.value,s):[];
+  selSsp.innerHTML="<option value=\\"*\\">All subspecies</option>"+sspp.map(opt).join("");
+  sspwrap.style.display=sspp.length?"block":"none";
 }
 function pickSpecies(){                    // choosing a species back-fills its subgenus + complex above
   var g=selG.value, s=selS.value;
@@ -308,13 +323,15 @@ function pickSpecies(){                    // choosing a species back-fills its 
     cxwrap.style.display=cxs.length?"block":"none";
     if(cx.length===1&&cxs.indexOf(cx[0])>=0){ selCx.value=cx[0]; }
   }
+  fillSsp();                               // list any subspecies under this species
   showPhoto();draw();
 }
 function showPhoto(){
   // walk from the most specific level down to genus; show the first that has an open photo,
   // labeled with what it actually depicts (so a genus fallback is not mistaken for the species).
-  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, w=document.getElementById("photowrap");
+  var g=selG.value, sub=selSub.value, cx=selCx.value, s=selS.value, ssp=selSsp.value, w=document.getElementById("photowrap");
   var tries=[];
+  if(g!=="*"&&s!=="*"&&ssp!=="*") tries.push([g+" "+s+" "+ssp, "<i>"+esc(g)+" "+esc(s)+" "+esc(ssp)+"</i>"]);
   if(g!=="*"&&s!=="*") tries.push([g+" "+s,   "<i>"+esc(g)+" "+esc(s)+"</i>"]);
   if(cx!=="*")         tries.push(["cx "+cx,   "<i>"+esc(cx)+"</i> complex"]);
   if(sub!=="*")        tries.push(["subg "+sub,"subgenus <i>"+esc(sub)+"</i>"]);
@@ -329,6 +346,7 @@ selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showP
 selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();draw();});
 selCx.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
 selS.addEventListener("change",pickSpecies);
+selSsp.addEventListener("change",function(){showPhoto();draw();});
 // fit to the data + first draw
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
 map.fitBounds([[Math.min.apply(null,lat0),Math.min.apply(null,lon0)],[Math.max.apply(null,lat0),Math.max.apply(null,lon0)]],{padding:[20,20]});
