@@ -89,7 +89,7 @@ cat > "$DOCS/index.html" <<HTML
          -webkit-font-smoothing:antialiased; }
   .hero { position:relative; overflow:hidden; background:#16302b; border-bottom:1px solid var(--border); }
   .hero-bg { position:absolute; inset:0; z-index:0; width:100%; height:100%;
-             object-fit:cover; object-position:56% 36%; transform:scale(1.02); }
+             object-fit:cover; object-position:72% 48%; transform:none; }
   .hero::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
                  background:linear-gradient(180deg, rgba(14,28,30,.34) 0%, rgba(14,28,30,.72) 100%); }
   .hero-inner { position:relative; z-index:2; max-width:960px; margin:0 auto; padding:6rem 1.5rem 3.5rem; }
