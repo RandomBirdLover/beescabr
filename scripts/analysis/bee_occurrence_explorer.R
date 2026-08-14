@@ -151,12 +151,12 @@ GREY_JS  <- jsonlite::toJSON(unname(BEE_GENUS_GREY), auto_unbox = TRUE)
 genus_leg <- taxo %>% group_by(fam, genus) %>%
   summarise(col = tcol[ceiling(dplyr::n() / 2)], .groups = "drop") %>%
   arrange(match(fam, BEE_FAMILY_ORDER), genus)
-# per-genus subgenus + complex names, listed under each genus in the legend (complex names
-# keep only the epithet since the genus is already shown above them)
+# per-genus subgenus + complex names, listed under each genus in the legend
+# (complex names spelled out in full, e.g. "Diadasia australis")
 sub_tbl <- rec %>% filter(subgenus != "") %>% distinct(genus, subgenus) %>% arrange(genus, subgenus)
 cx_tbl  <- rec %>% filter(complex  != "") %>% distinct(genus, complex)  %>% arrange(genus, complex)
 subOf <- tapply(sub_tbl$subgenus, sub_tbl$genus, paste, collapse = ", ")
-cxOf  <- tapply(cx_tbl$complex,   cx_tbl$genus, function(v) paste(sub("^\\S+ ", "", v), collapse = ", "))
+cxOf  <- tapply(cx_tbl$complex,   cx_tbl$genus, paste, collapse = ", ")
 LEGEND_JS <- jsonlite::toJSON(lapply(intersect(BEE_FAMILY_ORDER, genus_leg$fam), function(fm) {
   g <- genus_leg[genus_leg$fam == fm, ]
   list(family = fm, fcol = unname(BEE_FAMILY[fm]),
