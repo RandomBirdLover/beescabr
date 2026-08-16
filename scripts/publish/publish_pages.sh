@@ -43,6 +43,12 @@ for row in "${pages[@]}"; do
   fi
 done
 
+# ---- build the content pages (Acknowledgements, etc.) ----------------------
+# build_content_pages.R reads data/project_info/*_roster.csv and writes
+# docs/acknowledgements.html directly (self-contained; emails are never output).
+Rscript scripts/publish/build_content_pages.R
+echo "published  acknowledgements.html"
+
 # ---- build the landing page (docs/index.html) ------------------------------
 # data-as-of date: read the same "data as of YYYY-MM-DD" the HTML pages print, so the footer matches.
 DATE=$(grep -ohE 'data as of [0-9]{4}-[0-9]{2}-[0-9]{2}' "$SRC/reference/nps_summary/nps_summary_tables.html" 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
@@ -134,6 +140,10 @@ cat > "$DOCS/index.html" <<HTML
            border-top:1px solid var(--border); padding-top:1.5rem; }
   footer p { margin:0 0 .55rem; line-height:1.5; }
   footer a { color:var(--accent-deep); text-decoration:underline; text-underline-offset:2px; }
+  .ack-bubble { display:inline-block; margin-top:1.1rem; padding:.5rem 1.1rem; border-radius:999px;
+                background:var(--accent-soft); color:var(--accent-deep); border:1px solid var(--border);
+                text-decoration:none; font-weight:600; font-size:.9rem; transition:border-color .18s ease; }
+  .ack-bubble:hover { border-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -151,6 +161,7 @@ cat > "$DOCS/index.html" <<HTML
   <footer>
     <p>With gratitude to <a href="https://www.nps.gov/cabr/">Cabrillo National Monument</a> and the <a href="https://www.nps.gov/">National Park Service</a> for their support of this monitoring program, and to the <a href="https://www.inaturalist.org/">iNaturalist</a> community whose shared observations made this work possible.</p>
     <p>Generated from the beescabr pipeline by Brandi Sanchez. Data as of ${DATE}.</p>
+    <a class="ack-bubble" href="./acknowledgements.html">Acknowledgements</a>
   </footer>
 </body>
 </html>
