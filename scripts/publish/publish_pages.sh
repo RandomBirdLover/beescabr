@@ -140,10 +140,8 @@ cat > "$DOCS/index.html" <<HTML
            border-top:1px solid var(--border); padding-top:1.5rem; }
   footer p { margin:0 0 .55rem; line-height:1.5; }
   footer a { color:var(--accent-deep); text-decoration:underline; text-underline-offset:2px; }
-  .ack-bubble { display:inline-block; margin-top:1.1rem; padding:.5rem 1.1rem; border-radius:999px;
-                background:var(--accent-soft); color:var(--accent-deep); border:1px solid var(--border);
-                text-decoration:none; font-weight:600; font-size:.9rem; transition:border-color .18s ease; }
-  .ack-bubble:hover { border-color:var(--accent); }
+  footer p.ack { font-size:.95rem; margin-bottom:1rem; }
+  footer p.ack a { font-weight:600; }
 </style>
 </head>
 <body>
@@ -159,9 +157,9 @@ cat > "$DOCS/index.html" <<HTML
   <main>$cards
   </main>
   <footer>
+    <p class="ack"><a href="./acknowledgements.html">Acknowledgements, learn about the team behind this work &rarr;</a></p>
     <p>With gratitude to <a href="https://www.nps.gov/cabr/">Cabrillo National Monument</a> and the <a href="https://www.nps.gov/">National Park Service</a> for their support of this monitoring program, and to the <a href="https://www.inaturalist.org/">iNaturalist</a> community whose shared observations made this work possible.</p>
     <p>Generated from the beescabr pipeline by Brandi Sanchez. Data as of ${DATE}.</p>
-    <a class="ack-bubble" href="./acknowledgements.html">Acknowledgements</a>
   </footer>
 </body>
 </html>
