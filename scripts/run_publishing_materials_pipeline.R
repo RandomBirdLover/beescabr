@@ -30,7 +30,7 @@ source("scripts/analysis/forage_selectivity.R")
 source("scripts/analysis/not_on_holway.R")
 
 # the analysis scripts that emit a PUBLIC html page. ADD NEW PUBLIC PAGES HERE
-# (and add the matching row to the pages[] list in scripts/publish/publish_pages.sh).
+# (and add the matching row to PUBLISH_PAGES in scripts/publish/publish_pages.R).
 PUBLIC_PAGES <- c(
   "bee_field_guide.R", "bee_field_guide_genus.R", "nps_summary_tables.R",
   "least_sampled_bees.R", "bee_bounties.R", "transect_map.R",
@@ -45,7 +45,7 @@ ok <- vapply(PUBLIC_PAGES, function(nm) {
 if (any(!ok)) message("  (failed: ", paste(PUBLIC_PAGES[!ok], collapse = ", "), ")")
 
 message("\n==> Publishing into docs/")
-pub <- tryCatch(system2("bash", "scripts/publish/publish_pages.sh", stdout = TRUE, stderr = TRUE),
+pub <- tryCatch(system2("Rscript", "scripts/publish/publish_pages.R", stdout = TRUE, stderr = TRUE),
                 error = function(e) conditionMessage(e))
 message(paste(pub, collapse = "\n"))
 

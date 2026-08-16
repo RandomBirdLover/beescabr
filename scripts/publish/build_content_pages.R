@@ -62,7 +62,11 @@ ids <- if (!is.null(id) && nrow(id)) {
   id$name <- trimws(paste(sq(id$first_name), sq(id$last_name)))
   id$name <- ifelse(id$name == "" & sq(id$inaturalist_username) != "", sq(id$inaturalist_username), id$name)  # username-only entries (e.g. itazura) fall back to the handle
   id <- id[id$name != "", , drop = FALSE]
-  id[order(sq(id$last_name) == "", tolower(sq(id$last_name)), tolower(id$name)), , drop = FALSE]
+  # order by combined ID effort (iNaturalist identifications + specimen determinations),
+  # most to least. id_count is sort-only metadata (never displayed, like email); blanks last.
+  cnt <- if ("id_count" %in% names(id)) suppressWarnings(as.integer(id$id_count)) else rep(NA_integer_, nrow(id))
+  cnt[is.na(cnt)] <- -1L
+  id[order(-cnt, tolower(sq(id$last_name)), tolower(id$name)), , drop = FALSE]
 } else id[0, , drop = FALSE]
 
 # ---- render helpers ----------------------------------------------------------
