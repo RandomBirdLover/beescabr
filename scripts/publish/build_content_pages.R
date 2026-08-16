@@ -222,7 +222,7 @@ research_section <- if (!is.null(rt) && nrow(rt)) {
   }, character(1)), collapse = "\n")
   credit_note <- if (length(creds))
     sprintf('\n    <p class="sec-note photo-credit">Photographs: %s.</p>', paste(creds, collapse = "; ")) else ""
-  sprintf('<section>\n    <h2>Main research team</h2>\n    <p class="sec-note">The people who lead the native bee monitoring program.</p>\n    <div class="grid grid-team">%s</div>%s\n  </section>\n  ', chips, credit_note)
+  sprintf('<section>\n    <h2>Main Research Team</h2>\n    <p class="sec-note">The people who lead the native bee monitoring program.</p>\n    <div class="grid grid-team">%s</div>%s\n  </section>\n  ', chips, credit_note)
 } else ""
 
 intro <- if (nzchar(yr_span))
@@ -241,12 +241,12 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
 <main>
   <a class="backlink" href="./index.html">&larr; Back to the program</a>
   %s<section>
-    <h2>Survey team</h2>
+    <h2>Survey Team</h2>
     <p class="sec-note">The people who walked the transects, photographed bees, and collected specimens (%d people). iNaturalist handles link to their profiles.</p>
     <div class="grid">%s</div>
   </section>
   <section>
-    <h2>Identification team</h2>
+    <h2>Identification Team</h2>
     <p class="sec-note">The specialists who put names to the bees and plants!</p>
     %s
   </section>
