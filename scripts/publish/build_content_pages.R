@@ -62,11 +62,13 @@ ids <- if (!is.null(id) && nrow(id)) {
   id$name <- trimws(paste(sq(id$first_name), sq(id$last_name)))
   id$name <- ifelse(id$name == "" & sq(id$inaturalist_username) != "", sq(id$inaturalist_username), id$name)  # username-only entries (e.g. itazura) fall back to the handle
   id <- id[id$name != "", , drop = FALSE]
-  # order by combined ID effort (iNaturalist identifications + specimen determinations),
-  # most to least. id_count is sort-only metadata (never displayed, like email); blanks last.
+  # plant-only identifiers sort AFTER everyone else (the bulk of the work is bees);
+  # within each group, order by combined ID effort most->least. id_count is sort-only
+  # metadata (never displayed, like email); blanks last. "both" stays in the bee group.
   cnt <- if ("id_count" %in% names(id)) suppressWarnings(as.integer(id$id_count)) else rep(NA_integer_, nrow(id))
   cnt[is.na(cnt)] <- -1L
-  id[order(-cnt, tolower(sq(id$last_name)), tolower(id$name)), , drop = FALSE]
+  plant_last <- as.integer(tolower(sq(id$taxa_identified)) == "plant")
+  id[order(plant_last, -cnt, tolower(sq(id$last_name)), tolower(id$name)), , drop = FALSE]
 } else id[0, , drop = FALSE]
 
 # ---- render helpers ----------------------------------------------------------
