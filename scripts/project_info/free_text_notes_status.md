@@ -1,7 +1,7 @@
 # Free-text observation notes — optional (opt-in each run)
 
 The brain (`finding_project_info.R`) flags un-triaged free-text observation notes to
-`data/project_info/review/review_inat_unknown_notes.csv`. Reviewing/using them is
+`data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv`. Reviewing/using them is
 **optional**. On an interactive run, `run_data_cleaning_pipeline.R` **stage 3b** asks:
 
 > "Review the observation notes now, or proceed without them? (y = review / N = skip)"

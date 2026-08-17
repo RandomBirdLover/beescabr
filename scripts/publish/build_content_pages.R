@@ -11,14 +11,14 @@
 suppressPackageStartupMessages(library(dplyr))
 
 DOCS <- "docs"
-PHOTO_DIR <- "data/project_info/research_team_photos"   # gitignored; raw headshots embedded into the page
+PHOTO_DIR <- "data/project_info/rosters/research_team_roster/research_team_photos"   # gitignored; raw headshots embedded into the page
 AVATAR_PX <- 640                                         # downscale longest side before embedding (headroom for zoomed crops)
 rd <- function(p) if (file.exists(p)) read.csv(p, check.names = FALSE, stringsAsFactors = FALSE) else NULL
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 sq  <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
 
 # ---- survey team (surveyor_roster.csv) ---------------------------------------
-r <- rd("data/project_info/surveyor_roster.csv")
+r <- rd("data/project_info/rosters/surveyor_roster.csv")
 r$first_name <- sq(r$first_name); r$last_name <- sq(r$last_name)
 r <- r[r$first_name != "" | r$last_name != "", ]
 r$name <- trimws(paste(r$first_name, r$last_name))
@@ -57,7 +57,7 @@ yr_span <- { y <- suppressWarnings(as.integer(r$year)); y <- y[!is.na(y)]
 taxa_label <- function(x) { x <- tolower(trimws(x %||% "")); ifelse(is.na(x), "",
   ifelse(x == "bee", "bees", ifelse(x == "plant", "plants", ifelse(x == "both", "bees & plants", x)))) }
 `%||%` <- function(a, b) if (is.null(a)) b else a
-id <- rd("data/project_info/identifier_roster.csv")
+id <- rd("data/project_info/rosters/identifier_roster.csv")
 ids <- if (!is.null(id) && nrow(id)) {
   id$name <- trimws(paste(sq(id$first_name), sq(id$last_name)))
   id$name <- ifelse(id$name == "" & sq(id$inaturalist_username) != "", sq(id$inaturalist_username), id$name)  # username-only entries (e.g. itazura) fall back to the handle
@@ -146,7 +146,7 @@ if (nrow(ids)) {
   id_html <- paste0(id_html,
     '\n<p class="thanks">And to the rest of the iNaturalist community who have helped identify our bees, thank you.</p>')
 } else {
-  id_html <- '<p class="pending">The specialists who identified specimens and confirmed photo records are being compiled, and will be credited here. (Fill <code>data/project_info/identifier_roster.csv</code>.)</p>'
+  id_html <- '<p class="pending">The specialists who identified specimens and confirmed photo records are being compiled, and will be credited here. (Fill <code>data/project_info/rosters/identifier_roster.csv</code>.)</p>'
 }
 
 partners <- list(
@@ -204,7 +204,7 @@ css <- '
 '
 
 # ---- main research team (research_team_roster.csv) --------------------------
-rt <- rd("data/project_info/research_team_roster.csv")
+rt <- rd("data/project_info/rosters/research_team_roster/research_team_roster.csv")
 if (!is.null(rt) && nrow(rt)) { rt$name <- trimws(paste(sq(rt$first_name), sq(rt$last_name))); rt <- rt[rt$name != "", , drop = FALSE] } else rt <- NULL
 research_section <- if (!is.null(rt) && nrow(rt)) {
   has_photo  <- "photo" %in% names(rt)

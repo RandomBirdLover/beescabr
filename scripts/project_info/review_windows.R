@@ -30,7 +30,7 @@
 
 library(dplyr); library(readr)
 
-RW_PATH <- "data/project_info/review/review_beeple_survey_windows.csv"
+RW_PATH <- "data/project_info/inaturalist_project_key_setup/review/review_beeple_survey_windows.csv"
 
 .rw_blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
 # a window still needs a ruling if its decision is blank OR "unsure"
@@ -125,7 +125,7 @@ review_windows <- function(path = RW_PATH, prompt_fn = readline, write = TRUE, m
 # Your ruling persists in the file's `decision` column and is applied on the next brain
 # run; blank/unsure ties resurface, ruled ones don't.
 # =============================================================
-RTT_PATH <- "data/project_info/review/review_transect_overlap.csv"
+RTT_PATH <- "data/project_info/inaturalist_project_key_setup/review/review_transect_overlap.csv"
 
 # a tie still needs a ruling if its decision is blank OR "unsure"
 .rtt_todo <- function(dec) .rw_blank(dec) | tolower(trimws(as.character(dec))) == "unsure"

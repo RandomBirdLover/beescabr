@@ -24,12 +24,12 @@
 #   (only status=="keep" & surveyor_type=="beeple" obs are resolved).
 #
 # Pure tag counting -- no shapefiles. Outputs: mistags -> data/observations/review/ (per-obs
-# fixes); ties -> data/project_info/review/ (the ruling that sets the survey-record transect).
+# fixes); ties -> data/project_info/inaturalist_project_key_setup/review/ (the ruling that sets the survey-record transect).
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(tibble); library(readr)}))
 
 ST_MISTAG_OUT <- "data/observations/review/review_mistagged_transects.csv"
-ST_TIES_OUT   <- "data/project_info/review/review_transect_overlap.csv"
+ST_TIES_OUT   <- "data/project_info/inaturalist_project_key_setup/review/review_transect_overlap.csv"
 
 st_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))

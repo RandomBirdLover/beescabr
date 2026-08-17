@@ -56,7 +56,7 @@ fpi_survey_dates <- function(membership, windows, roster,
 
   # ---- INTERNS: read from the curated intern-survey-day LOG (master_intern_survey_log.csv) ----
   # Interns' survey days (BOTH lethal net days AND non-lethal iNat days) live in a curated
-  # INPUT file -- data/project_info/sources/master_intern_survey_log.csv -- as the source=="intern-log"
+  # INPUT file -- data/project_info/survey_date_sources/master_intern_survey_log.csv -- as the source=="intern-log"
   # rows. The brain reads them UNCHANGED and rebuilds only the beeple rows around them; the
   # master is pure generated output. Interns are PAID, so an authoritative date should always
   # exist -- add / fix intern surveys by editing master_intern_survey_log.csv (NOT the master, which is

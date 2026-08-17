@@ -29,8 +29,8 @@
 library(dplyr); library(readr); library(stringr)
 
 CW_PATH    <- "data/project_info/master_crosswalk.csv"
-UNK_TAGS   <- "data/project_info/review/review_inat_unknown_tags.csv"
-UNK_FIELDS <- "data/project_info/review/review_inat_unknown_fields.csv"
+UNK_TAGS   <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_tags.csv"
+UNK_FIELDS <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_fields.csv"
 
 # paren-aware split: don't break on ";" inside "(...)" -- some field NAMES embed
 # their allowed values, e.g. "soil type (sandy; loam; clay)" is ONE variant.

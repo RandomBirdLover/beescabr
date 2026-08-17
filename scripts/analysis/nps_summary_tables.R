@@ -46,7 +46,7 @@ psf$year_i <- suppressWarnings(as.integer(psf$year))
 pmethod  <- str_squish(tolower(psf$method))                                    # trip method: lethal / non-lethal
 
 rost <- read.csv(if (!is.null(PATHS$surveyor_roster)) PATHS$surveyor_roster else
-                 "data/project_info/surveyor_roster.csv", stringsAsFactors = FALSE, check.names = FALSE)
+                 "data/project_info/rosters/surveyor_roster.csv", stringsAsFactors = FALSE, check.names = FALSE)
 person   <- str_squish(tolower(paste(rost$first_name, rost$last_name)))        # canonical people key: full name, deduped across years
 rrole    <- str_squish(tolower(rost$role))
 ndistinct <- function(mask) length(unique(person[mask & person != "" & !is.na(person)]))

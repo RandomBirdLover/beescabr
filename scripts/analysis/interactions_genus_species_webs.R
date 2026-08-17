@@ -268,8 +268,8 @@ g <- ggplot(ov, aes(x = x, y = bee_genus)) +
   geom_col(width = 0.72, fill = BEE_TEAL[[5]]) +
   geom_text(aes(label = lab), hjust = -0.12, size = 3.0, colour = BEE_INK$secondary) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.30))) +
-  labs(title = "Which Bee Genera Have Specialist Species?",
-       subtitle = sprintf("%d genera have species that partition different plants. Higher H2' = specialists divide the flora; lower = generalists overlap.", nrow(ov)),
+  labs(title = "Which Bee Genera Divide the Flora Most Among Their Species?",
+       subtitle = sprintf("%d genera have species that partition different plants. Higher H2' = the species divide the flora more; lower = they overlap more.", nrow(ov)),
        caption = paste(Filter(nzchar, c(
          str_wrap(scope_cap(sprintf("all records, whole park; %d of %d testable genera partition plants significantly (p<0.05)",
                                     nrow(ov), n_tested),
@@ -278,7 +278,7 @@ g <- ggplot(ov, aes(x = x, y = bee_genus)) +
                             control = "flight season + method (matched-cell null)",
                             sig = bee_test("within-genus H2' + stratified (restricted) permutation test"), width = 100), 100),
          str_wrap(paste(Filter(nzchar, c(gen_note, untest_note)), collapse = "  "), 100))), collapse = "\n"),
-       x = "species specialization within the genus", y = "bee genus") +
+       x = "how much the genus's species divide the flora (H2')", y = "bee genus") +
   theme_beescabr(11) +
   theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
         panel.grid.major.y = element_blank())

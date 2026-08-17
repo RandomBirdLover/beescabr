@@ -22,7 +22,7 @@ BLRM_DIR        <- "data/observations/review/review_location"
 BLRM_MAPS_DIR   <- file.path(BLRM_DIR, "by_surveyors")   # the per-surveyor maps live here; CSVs + instructions stay at the top of review_location/
 BLRM_BEE_CSV    <- file.path(BLRM_DIR, "cabr_inat_bee_location_review.csv")
 BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "cabr_inat_plant_location_review.csv")
-BLRM_ROSTER     <- "data/project_info/surveyor_roster.csv"
+BLRM_ROSTER     <- "data/project_info/rosters/surveyor_roster.csv"
 BLRM_MASTER     <- "data/project_info/master_per_survey_info.csv"
 BLRM_TRANSECTS  <- "data/spatial/transects/cabr_bee_transects.shp"
 BLRM_BOUNDARY   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"

@@ -21,11 +21,11 @@
 # INPUTS
 #   data/observations/cache/export_flat.rds                 (bee obs; plant export added later)
 #   data/project_info/master_crosswalk.csv  (tag/field crosswalk)
-#   data/project_info/surveyor_roster.csv    (roster)
-#   data/project_info/sources/beeple_calendar_windows/beeple_calendar_windows.csv (from finding_beeple_calendar.R, stage 2d)
+#   data/project_info/rosters/surveyor_roster.csv    (roster)
+#   data/project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv (from finding_beeple_calendar.R, stage 2d)
 #   data/spatial/boundaries/cabr/cabr_survey_box.shp
 #
-# The intern schedule is a CURATED INPUT file -- data/project_info/sources/master_intern_survey_log.csv
+# The intern schedule is a CURATED INPUT file -- data/project_info/survey_date_sources/master_intern_survey_log.csv
 # (FPI_INTERN_LOG) -- holding the `source == "intern-log"` rows for interns (BOTH lethal net
 # days AND non-lethal iNat days). Each run READS those rows from the log and rebuilds the
 # beeple rows around them; the master is pure generated OUTPUT. This replaced the old design
@@ -36,9 +36,9 @@
 # OUTPUTS
 #   data/observations/cabr_inat_raw.csv  <- NEW: the per-obs lookup
 #   data/project_info/master_per_survey_info.csv                      <- built upon in place
-#   data/project_info/review/review_inat_unknown_tags.csv        <- unrecognized hashtags
-#   data/project_info/review/review_inat_unknown_fields.csv      <- unrecognized obs-field names
-#   data/project_info/review/review_inat_unknown_notes.csv       <- notes carrying survey keywords
+#   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_tags.csv        <- unrecognized hashtags
+#   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_fields.csv      <- unrecognized obs-field names
+#   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv       <- notes carrying survey keywords
 #
 # Run: source("scripts/project_info/finding_project_info.R"); finding_project_info()
 # =============================================================
@@ -67,20 +67,20 @@ FPI_EXPORTS   <- list(
   list(path = "data/observations/cache/export_flat_plant.rds", kind = "plant")
 )
 FPI_CROSSWALK <- "data/project_info/master_crosswalk.csv"
-FPI_ROSTER    <- "data/project_info/surveyor_roster.csv"
-FPI_WINDOWS   <- "data/project_info/sources/beeple_calendar_windows/beeple_calendar_windows.csv"
+FPI_ROSTER    <- "data/project_info/rosters/surveyor_roster.csv"
+FPI_WINDOWS   <- "data/project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv"
 FPI_BOUNDARY  <- "data/spatial/boundaries/cabr/cabr_survey_box.shp"
 FPI_TRANSECTS <- "data/spatial/transects/cabr_bee_transects.shp"  # rescue: on-transect untagged obs
 
 FPI_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"  # the per-obs lookup
 FPI_SURVEY_DATES   <- "data/project_info/master_per_survey_info.csv"
-FPI_INTERN_LOG     <- "data/project_info/sources/master_intern_survey_log.csv"  # curated intern survey-day log (SOURCE OF TRUTH -- edit intern days HERE, not in the generated master)
-FPI_REVIEW         <- "data/project_info/review/review_beeple_survey_windows.csv"   # beeple windows to rule on (persistent)
+FPI_INTERN_LOG     <- "data/project_info/survey_date_sources/master_intern_survey_log.csv"  # curated intern survey-day log (SOURCE OF TRUTH -- edit intern days HERE, not in the generated master)
+FPI_REVIEW         <- "data/project_info/inaturalist_project_key_setup/review/review_beeple_survey_windows.csv"   # beeple windows to rule on (persistent)
 FPI_MISTAGS        <- "data/observations/review/review_mistagged_transects.csv"  # stray transect tags outvoted by the day's majority
-FPI_TIES           <- "data/project_info/review/review_transect_overlap.csv"  # equal-split days to rule (review_transect_ties)
-FPI_UNKNOWN_TAGS   <- "data/project_info/review/review_inat_unknown_tags.csv"    # unknown hashtags
-FPI_UNKNOWN_FIELDS <- "data/project_info/review/review_inat_unknown_fields.csv"  # unknown obs-field NAMES
-FPI_UNKNOWN_NOTES  <- "data/project_info/review/review_inat_unknown_notes.csv"   # notes w/ survey keywords
+FPI_TIES           <- "data/project_info/inaturalist_project_key_setup/review/review_transect_overlap.csv"  # equal-split days to rule (review_transect_ties)
+FPI_UNKNOWN_TAGS   <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_tags.csv"    # unknown hashtags
+FPI_UNKNOWN_FIELDS <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_fields.csv"  # unknown obs-field NAMES
+FPI_UNKNOWN_NOTES  <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv"   # notes w/ survey keywords
 SD_COLUMNS <- c("year", "role", "source", "date",
                 "transects", "surveyors", "inat_username", "method", "technique",
                 "confirmed", "confirmed_by", "n_obs", "n_speci", "n_days", "note")

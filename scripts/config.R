@@ -169,7 +169,7 @@ PATHS <- list(
   # canonical people list (one row per person-year, full name + role + method) and is
   # the SOLE authority for WHO surveyed -- count distinct people from here.
   per_survey = "data/project_info/master_per_survey_info.csv",
-  surveyor_roster = "data/project_info/surveyor_roster.csv"
+  surveyor_roster = "data/project_info/rosters/surveyor_roster.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the

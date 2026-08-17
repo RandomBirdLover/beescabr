@@ -202,7 +202,7 @@ main <- function() {
 
   # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows.csv from the PDFs ----
   # Re-parses every "YYYY Cabrillo Bee Survey Calendar.pdf" in
-  # data/project_info/sources/beeple_calendar_windows/ each run, so a newly-added year
+  # data/project_info/survey_date_sources/beeple_calendar_windows/ each run, so a newly-added year
   # (e.g. 2027) is picked up automatically. The brain reads the resulting windows CSV.
   # Wrapped so a missing pdftools / malformed PDF warns and keeps the existing CSV
   # rather than killing the run.
@@ -488,7 +488,7 @@ bx_analysis_files <- function() {
   item("data/observations/inat_clean/cabr_inat_plant_clean.csv")
   grp("survey record")
   item("data/project_info/master_per_survey_info.csv")
-  item("data/project_info/surveyor_roster.csv")
+  item("data/project_info/rosters/surveyor_roster.csv")
   grp("reference / lookups")
   item("data/reference/sd_bee_taxonomy_lookup.csv")
   item("data/reference/cabr_plant_taxonomy_lookup.csv")

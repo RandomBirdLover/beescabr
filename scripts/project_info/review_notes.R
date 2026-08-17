@@ -22,10 +22,10 @@
 #   <Enter>  accept the highlighted (*) guess      u  unsure -> park as "ambiguous"
 #   s        skip (stays un-reviewed, returns)      q  save & quit      ?  help
 #
-# Input:   data/project_info/review/review_inat_unknown_notes.csv   (brain output)
-# Output:  data/project_info/review/notes_reviewed.csv                (persistent, per obs_id)
+# Input:   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv   (brain output)
+# Output:  data/project_info/inaturalist_project_key_setup/review/notes_reviewed.csv                (persistent, per obs_id)
 #   Non-interactive preview only:
-#          data/project_info/review/notes_auto_suggestions.csv        (guesses, un-reviewed)
+#          data/project_info/inaturalist_project_key_setup/review/notes_auto_suggestions.csv        (guesses, un-reviewed)
 #
 # Run: source("scripts/project_info/review_notes.R"); review_notes()
 #      BEESCABR_NONINTERACTIVE=1 Rscript -e 'source(...); review_notes()'  # preview guesses
@@ -33,9 +33,9 @@
 
 library(dplyr); library(readr); library(stringr)
 
-NOTES_IN       <- "data/project_info/review/review_inat_unknown_notes.csv"
-NOTES_REVIEWED <- "data/project_info/review/notes_reviewed.csv"
-NOTES_SUGGEST  <- "data/project_info/review/notes_auto_suggestions.csv"
+NOTES_IN       <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv"
+NOTES_REVIEWED <- "data/project_info/inaturalist_project_key_setup/review/notes_reviewed.csv"
+NOTES_SUGGEST  <- "data/project_info/inaturalist_project_key_setup/review/notes_auto_suggestions.csv"
 
 # The categories a note can be filed under. 1/2/3 are what you type; a note the
 # guesser can't place (or you mark 'u') lands in "ambiguous".

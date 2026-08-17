@@ -24,8 +24,8 @@ library(purrr)
 
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
-CALENDAR_DIR <- "data/project_info/sources/beeple_calendar_windows"
-WINDOWS_OUT  <- "data/project_info/sources/beeple_calendar_windows/beeple_calendar_windows.csv"
+CALENDAR_DIR <- "data/project_info/survey_date_sources/beeple_calendar_windows"
+WINDOWS_OUT  <- "data/project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv"
 
 MONTHS <- c(January=1, February=2, March=3, April=4, May=5, June=6,
             July=7, August=8, September=9, October=10, November=11, December=12)

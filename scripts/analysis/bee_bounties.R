@@ -228,6 +228,27 @@ genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
     paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm),
            paste(sprintf('<div style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
   }, character(1)), collapse = "")
+# .taxa_block -- FAMILY header > GENUS label > the SPECIES needed under it, each with its own map-color
+# dot (so a dot on the map maps to a name). Genus-level targets (whole genus missing) show one "any
+# species" leaf. This makes the legend the actual checklist of taxa to find, not just the genera.
+.taxa_block <- function(tx) {
+  fams <- intersect(BEE_FAMILY_ORDER, unique(tx$fam))
+  paste(vapply(fams, function(fm) {
+    gtx <- tx[tx$fam == fm, , drop = FALSE]
+    fam_hdr <- sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>',
+                       BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm)
+    body <- paste(vapply(unique(gtx$genus), function(gn) {
+      rows <- gtx[gtx$genus == gn, , drop = FALSE]
+      leaves <- paste(mapply(function(col, taxon) {
+        lab <- if (grepl(" ", taxon)) sprintf('<i style="color:%s">%s</i>', BEE_HTML[["ink"]], sub(paste0("^", gn, "\\s+"), "", taxon))
+               else sprintf('<span style="color:%s">any species</span>', BEE_HTML[["sub"]])
+        sprintf('<div style="margin:1px 0 1px 24px">%s%s</div>', .dot(col), lab)
+      }, rows$tcol, rows$taxon), collapse = "")
+      paste0(sprintf('<div style="margin:6px 0 1px 12px;font-style:italic;font-size:11px;color:%s">%s</div>', BEE_HTML[["ink"]], gn), leaves)
+    }, character(1)), collapse = "")
+    paste0(fam_hdr, body)
+  }, character(1)), collapse = "")
+}
 .tran_block  <- function(tks) paste(vapply(tks, function(t) sprintf(
     '<div style="margin:3px 0;white-space:nowrap"><span style="display:inline-block;width:18px;height:3px;border-radius:2px;background:%s;vertical-align:middle;margin-right:8px"></span>%s</div>',
     unname(BEE_TRANSECT[t]), t), character(1)), collapse = "")
@@ -287,12 +308,12 @@ ib_glg <- ib_taxo %>% group_by(fam, genus) %>% summarise(col = tcol[ceiling(dply
   arrange(match(fam, BEE_FAMILY_ORDER), genus)
 # both maps: TRANSECT key stacked ABOVE the TARGET-GENERA key (a thin rule between them)
 tks <- if (is.null(tran_ln)) character(0) else { u <- unique(tran_ln$transect); u[order(match(u, names(BEE_TRANSECT)))] }
-.legend_stacked <- function(fams, glg) .legend_wrap(
+.legend_stacked <- function(tx) .legend_wrap(
   if (length(tks)) paste0(.col_title("Transects"), .tran_block(tks),
     sprintf('<div style="height:1px;background:%s;margin:9px 0 4px"></div>', BEE_HTML[["scope_rule"]])) else "",
-  .col_title("Target genera"), .genus_block(fams, glg))
-genus_html    <- .legend_stacked(fam_present, genus_leg)    # m1 (collect map)
-ib_genus_html <- .legend_stacked(ib_fam_present, ib_glg)    # m2 (photograph map)
+  .col_title("Targets"), .taxa_block(tx))
+genus_html    <- .legend_stacked(taxo)      # m1 (collect map): genus -> species checklist
+ib_genus_html <- .legend_stacked(ib_taxo)   # m2 (photograph map)
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
 TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "Esri.WorldTopoMap"

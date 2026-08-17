@@ -41,7 +41,7 @@ local({
 })
 
 CPN_CW       <- "data/project_info/master_crosswalk.csv"
-CPN_WORKLIST <- "data/project_info/review/review_plant_names.csv"
+CPN_WORKLIST <- "data/project_info/inaturalist_project_key_setup/review/review_plant_names.csv"
 
 pcn_norm <- function(x) tolower(gsub("\\s+", " ", trimws(as.character(x))))
 

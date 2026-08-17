@@ -187,7 +187,7 @@ deduped. **The roster is the sole authority for *who*; the effort log is for
 | File | Path | Role | Edit by hand? |
 | --- | --- | --- | --- |
 | `surveyor_roster.csv` | `data/project_info/` | Canonical people list, one row per person-year (full name, role, method). **Authority for headcounts.** | ✅ Yes |
-| `master_intern_survey_log.csv` | `data/project_info/sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
+| `master_intern_survey_log.csv` | `data/project_info/survey_date_sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
 | `master_per_survey_info.csv` | `data/project_info/` | **Generated output** — rebuilt from the two files above by `finding_project_info.R`. Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
 
 **What to edit when**

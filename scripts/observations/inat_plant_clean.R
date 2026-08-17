@@ -18,7 +18,7 @@
 # INPUTS   data/observations/cabr_inat_raw.csv                 (brain per-obs lookup; kind=="plant")
 #          data/observations/cache/export_flat_plant.rds       (taxonomy + coords + fields/tags)
 #          data/project_info/master_crosswalk.csv              (flowering field variants)
-#          data/project_info/surveyor_roster.csv               (surveyor usernames -> scope)
+#          data/project_info/rosters/surveyor_roster.csv               (surveyor usernames -> scope)
 #          data/spatial/transects/cabr_bee_transects.shp       (off-transect test)
 #          data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp (walk-in)
 # OUTPUT   data/observations/inat_clean/cabr_inat_plant_clean.csv
@@ -31,7 +31,7 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 IPC_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"
 IPC_EXPORT         <- "data/observations/cache/export_flat_plant.rds"
 IPC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
-IPC_ROSTER         <- "data/project_info/surveyor_roster.csv"
+IPC_ROSTER         <- "data/project_info/rosters/surveyor_roster.csv"
 IPC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_plant_clean.csv"
