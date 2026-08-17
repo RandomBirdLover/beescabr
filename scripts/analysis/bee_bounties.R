@@ -228,27 +228,6 @@ genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
     paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm),
            paste(sprintf('<div class="bx-grow" data-genus="%s" style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', gg$genus, .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
   }, character(1)), collapse = "")
-# .taxa_block -- FAMILY header > GENUS label > the SPECIES needed under it, each with its own map-color
-# dot (so a dot on the map maps to a name). Genus-level targets (whole genus missing) show one "any
-# species" leaf. This makes the legend the actual checklist of taxa to find, not just the genera.
-.taxa_block <- function(tx) {
-  fams <- intersect(BEE_FAMILY_ORDER, unique(tx$fam))
-  paste(vapply(fams, function(fm) {
-    gtx <- tx[tx$fam == fm, , drop = FALSE]
-    fam_hdr <- sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>',
-                       BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm)
-    body <- paste(vapply(unique(gtx$genus), function(gn) {
-      rows <- gtx[gtx$genus == gn, , drop = FALSE]
-      leaves <- paste(mapply(function(col, taxon) {
-        lab <- if (grepl(" ", taxon)) sprintf('<i style="color:%s">%s</i>', BEE_HTML[["ink"]], sub(paste0("^", gn, "\\s+"), "", taxon))
-               else sprintf('<span style="color:%s">any species</span>', BEE_HTML[["sub"]])
-        sprintf('<div style="margin:1px 0 1px 24px">%s%s</div>', .dot(col), lab)
-      }, rows$tcol, rows$taxon), collapse = "")
-      paste0(sprintf('<div style="margin:6px 0 1px 12px;font-style:italic;font-size:11px;color:%s">%s</div>', BEE_HTML[["ink"]], gn), leaves)
-    }, character(1)), collapse = "")
-    paste0(fam_hdr, body)
-  }, character(1)), collapse = "")
-}
 .tran_block  <- function(tks) paste(vapply(tks, function(t) sprintf(
     '<div style="margin:3px 0;white-space:nowrap"><span style="display:inline-block;width:18px;height:3px;border-radius:2px;background:%s;vertical-align:middle;margin-right:8px"></span>%s</div>',
     unname(BEE_TRANSECT[t]), t), character(1)), collapse = "")
@@ -338,6 +317,10 @@ foc_json <- jsonlite::toJSON(setNames(as.list(foc$gcol), foc$taxon), auto_unbox 
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
 TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "Esri.WorldTopoMap"
+# short one-line basemap credit (matches the explorer) -- the provider default is a long source list
+# that wraps onto the bottom-left legend at narrow windows.
+.ATTR_ESRI  <- leaflet::providerTileOptions(attribution = "Tiles &copy; Esri")
+.ATTR_CARTO <- leaflet::providerTileOptions(attribution = "&copy; OpenStreetMap &copy; CARTO")
 # official title overlay (top-left corner) -- white card w/ NPS eyebrow + teal head, matching the tables
 .map_title <- function(head, sub) paste0(
   '<div style="', .CARD, ';padding:9px 15px;max-width:430px">',
@@ -360,9 +343,9 @@ title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7",
   leaflet::addPolygons(data = park_bnd, fill = FALSE, color = "#ffffff", weight = 3, opacity = 0.95, group = "park boundary")
 
 m1 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
-  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%
-  leaflet::addProviderTiles(TILE_SAT, group = "Satellite") %>%
-  leaflet::addProviderTiles(TILE_STR, group = "Street") %>%
+  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic", options = .ATTR_ESRI) %>%
+  leaflet::addProviderTiles(TILE_SAT, group = "Satellite", options = .ATTR_ESRI) %>%
+  leaflet::addProviderTiles(TILE_STR, group = "Street", options = .ATTR_CARTO) %>%
   .add_boundary()
 if (!is.null(tran_ln))   # transect lines as CONTEXT here (the collect-targets are real GPS points, drawn on top)
   m1 <- m1 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9,
@@ -388,9 +371,9 @@ m1 <- htmlwidgets::prependContent(m1, htmltools::tags$style(htmltools::HTML(BEE_
 # m2: one layer for the transects -- the real shapefile line, colored by transect, carrying a SINGLE
 # popup (its species to photograph) and a permanent name label. No more twin corridor/marker popups.
 m2 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
-  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic") %>%
-  leaflet::addProviderTiles(TILE_SAT, group = "Satellite") %>%
-  leaflet::addProviderTiles(TILE_STR, group = "Street") %>%
+  leaflet::addProviderTiles(TILE_TOPO, group = "Topographic", options = .ATTR_ESRI) %>%
+  leaflet::addProviderTiles(TILE_SAT, group = "Satellite", options = .ATTR_ESRI) %>%
+  leaflet::addProviderTiles(TILE_STR, group = "Street", options = .ATTR_CARTO) %>%
   .add_boundary()
 if (!is.null(tran_ln))
   m2 <- m2 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9, popup = ~popup,

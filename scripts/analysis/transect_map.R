@@ -62,9 +62,10 @@ north <- paste0('<div id="bx-north" style="', CARD, ';padding:5px 9px 6px;text-a
 
 # ---- 3. the map: topographic base (like the original) + satellite/street toggle ----
 m <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
-  leaflet::addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
-  leaflet::addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
-  leaflet::addProviderTiles("CartoDB.Positron",  group = "Street")
+  # short one-line basemap credit (the provider default is a long source list that wraps onto the legend)
+  leaflet::addProviderTiles("Esri.WorldTopoMap", group = "Topographic", options = leaflet::providerTileOptions(attribution = "Tiles &copy; Esri")) %>%
+  leaflet::addProviderTiles("Esri.WorldImagery", group = "Satellite", options = leaflet::providerTileOptions(attribution = "Tiles &copy; Esri")) %>%
+  leaflet::addProviderTiles("CartoDB.Positron",  group = "Street", options = leaflet::providerTileOptions(attribution = "&copy; OpenStreetMap &copy; CARTO"))
 if (!is.null(park))
   m <- m %>% leaflet::addPolygons(data = park, fillColor = BEE_HTML_GREEN[["light"]], fillOpacity = 0.18,
       color = BEE_HTML_GREEN[["deep"]], weight = 1.5, opacity = 0.7, group = "park boundary")
