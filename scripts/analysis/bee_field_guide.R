@@ -81,13 +81,7 @@ where_call <- function(d) {
   if (length(tr) >= 0.5 * nrow(d) && length(tr) > 0) {           # transect bee
     tt <- sort(table(tr), decreasing = TRUE); tt <- tt[tt / sum(tt) >= 0.15]
     paste(sprintf("%s (%d%%)", names(tt), round(100 * as.integer(tt) / length(tr))), collapse = ", ")
-  } else {                                                       # off-transect -> centre + buffer
-    ok <- !is.na(d$lat) & !is.na(d$lon)
-    if (!any(ok)) return("off-transect (no coordinates)")
-    cla <- median(d$lat[ok]); clo <- median(d$lon[ok])
-    buf <- ceiling(stats::quantile(hav(cla, clo, d$lat[ok], d$lon[ok]), 0.8, names = FALSE) / 50) * 50
-    sprintf("off-transect - centre %.4f, %.4f (+/-%dm)", cla, clo, as.integer(buf))
-  }
+  } else ""                                                      # off-transect: no location shown here (see the occurrence map for pins)
 }
 mode_chr <- function(x) { x <- x[has(x)]; if (!length(x)) return("") ; names(sort(table(x), decreasing = TRUE))[1] }
 

@@ -199,6 +199,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .rng input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%%;background:#fff;border:2px solid #3f8f4f;cursor:pointer;pointer-events:auto}
   .rng input[type=range]::-moz-range-thumb{width:15px;height:15px;border:2px solid #3f8f4f;border-radius:50%%;background:#fff;cursor:pointer;pointer-events:auto}
   .legrow{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;color:#333;margin:4px 0}
+  .legnote{font-size:9px;color:#8a8880;font-style:italic;line-height:1.3;margin:1px 0 2px 20px}
   .lswatch{display:inline-block;width:20px;border-top:3px solid #888;flex:none}
   .cswatch{display:inline-block;width:12px;height:12px;border-radius:50%%;border:2px solid #57564f;flex:none}
   .count{margin-top:9px;font-size:11px;color:#6b6a66}
@@ -274,7 +275,7 @@ function draw(){
       : r.cx ? "<i>"+esc(r.cx)+"</i> <span style=\\"color:#888\\">complex</span>"
       : r.sub ? "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(subgenus <i>"+esc(r.sub)+"</i>)</span>"
       : "<i>"+esc(r.g)+"</i> <span style=\\"color:#888\\">(genus only)</span>";
-    var pop = name+"<br>Transect: <b>"+esc(r.t)+"</b> &middot; "+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
+    var pop = name+"<br>"+(r.m==="net"?"specimen":"photo")+(r.y?" &middot; "+r.y:"")+
               (r.u?"<br><a href=\\""+esc(r.u)+"\\" target=\\"_blank\\">View on iNaturalist &rarr;</a>":"");
     var tx=r.s? r.g+" "+r.s : r.g, col=TCOLS[tx]||GREY;
     // record type by marker STYLE: specimen (net) = open circle, iNaturalist (photo) = filled. Color = genus/species.
@@ -332,6 +333,7 @@ panel.onAdd=function(){
       "<label>Record type</label>"+
       "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
       "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
+      "<div class=legnote>Specimen locations may be approximate.</div>"+
     "</div>";
   return d;
 };
