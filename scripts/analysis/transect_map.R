@@ -52,10 +52,10 @@ leg_row <- function(i) sprintf(
   '<div style="margin:6px 0;white-space:nowrap"><span style="display:inline-block;width:28px;height:4px;border-radius:2px;background:%s;vertical-align:middle;margin-right:10px"></span>%s <span style="color:%s">(%s) \u00b7 %d m</span></div>',
   tran$col[i], tran$name[i], BEE_HTML[["sub"]], tran$code[i], tran$len_m[i])
 legend <- paste0('<div style="', CARD, ';padding:11px 14px;font-size:12.5px">',
-  sprintf('<div style="font-weight:700;font-size:13px;color:%s;margin-bottom:5px">CABR Bee Transects</div>', BEE_HTML_GREEN[["deep"]]),
+  sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:0 0 6px">Transects</div>', BEE_HTML_GREEN[["deep"]]),
   paste(vapply(ord, leg_row, character(1)), collapse = ""), '</div>')
 
-north <- paste0('<div style="', CARD, ';padding:5px 9px 6px;text-align:center;line-height:1.05">',
+north <- paste0('<div id="bx-north" style="', CARD, ';padding:5px 9px 6px;text-align:center;line-height:1.05">',
   sprintf('<div style="font-weight:700;font-size:11px;color:%s;margin-bottom:1px">N</div>', BEE_HTML_GREEN[["deep"]]),
   sprintf('<svg width="14" height="16" viewBox="0 0 14 16"><polygon points="7,0 12.5,15.5 7,11.5 1.5,15.5" fill="%s"/></svg>', BEE_INK[["primary"]]),
   '</div>')
@@ -84,7 +84,8 @@ m <- m %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", "transects"),
       options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
-  htmlwidgets::onRender("function(el, x) { L.control.zoom({ position: 'topright' }).addTo(this); }")
+  htmlwidgets::onRender(BEE_MAP_CTRLROW_JS)                 # zoom/basemap/north/scale -> one bottom-centre row
+m <- htmlwidgets::prependContent(m, htmltools::tags$style(htmltools::HTML(BEE_MAP_CTRLROW_CSS)))
 
 # ---- 4. save one self-contained HTML (like every other map in the project) ----
 .sc <- requireNamespace("rmarkdown", quietly = TRUE) && isTRUE(try(rmarkdown::pandoc_available(), silent = TRUE))

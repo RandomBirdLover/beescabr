@@ -223,7 +223,7 @@ genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
 #   .genus_block -- FAMILY (uppercase roman header + hue accent bar) > GENUS (indented italic + dot)
 #   .tran_block  -- transect rows, each a short line swatch in its transect hue
 #   .legend_wrap -- the shared white card around whatever columns get passed
-.col_title   <- function(t) sprintf('<div style="font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:%s;margin:0 0 5px">%s</div>', BEE_HTML_GREEN[["mid"]], t)
+.col_title   <- function(t) sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:0 0 5px">%s</div>', BEE_HTML_GREEN[["deep"]], t)
 .genus_block <- function(fams, glg) paste(vapply(fams, function(fm) { gg <- glg[glg$fam == fm, ]
     paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm),
            paste(sprintf('<div style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
@@ -288,7 +288,7 @@ ib_glg <- ib_taxo %>% group_by(fam, genus) %>% summarise(col = tcol[ceiling(dply
 # both maps: TRANSECT key stacked ABOVE the TARGET-GENERA key (a thin rule between them)
 tks <- if (is.null(tran_ln)) character(0) else { u <- unique(tran_ln$transect); u[order(match(u, names(BEE_TRANSECT)))] }
 .legend_stacked <- function(fams, glg) .legend_wrap(
-  if (length(tks)) paste0(.col_title("Transect"), .tran_block(tks),
+  if (length(tks)) paste0(.col_title("Transects"), .tran_block(tks),
     sprintf('<div style="height:1px;background:%s;margin:9px 0 4px"></div>', BEE_HTML[["scope_rule"]])) else "",
   .col_title("Target genera"), .genus_block(fams, glg))
 genus_html    <- .legend_stacked(fam_present, genus_leg)    # m1 (collect map)
@@ -304,11 +304,11 @@ TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "E
   sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">%s</div>', BEE_HTML[["sub"]], sub), '</div>')
 title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!")
 title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!")
-# zoom moved OFF the top-left (default) so the title card owns that corner; re-added TOP-RIGHT so it
-# stacks directly under the Satellite/Street + layers box.
-.zoom_tr <- "function(el, x) { L.control.zoom({ position: 'topright' }).addTo(this); }"
-# north arrow (top-right card), matching the transect map
-.north <- paste0('<div style="', .CARD, ';padding:5px 9px 6px;text-align:center;line-height:1.05">',
+# adds zoom, then relocates zoom/basemap/north/scale into ONE bottom-centre row (shared helper, so every
+# interactive map -- explorer, transect, both bounties -- carries the identical control strip).
+.zoom_tr <- BEE_MAP_CTRLROW_JS
+# north arrow (moved into the bottom control row by .zoom_tr; must carry id="bx-north")
+.north <- paste0('<div id="bx-north" style="', .CARD, ';padding:5px 9px 6px;text-align:center;line-height:1.05">',
   sprintf('<div style="font-weight:700;font-size:11px;color:%s;margin-bottom:1px">N</div>', BEE_HTML_GREEN[["deep"]]),
   sprintf('<svg width="14" height="16" viewBox="0 0 14 16"><polygon points="7,0 12.5,15.5 7,11.5 1.5,15.5" fill="%s"/></svg>', BEE_INK[["primary"]]),
   '</div>')
@@ -341,6 +341,7 @@ m1 <- m1 %>%
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
       options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
   htmlwidgets::onRender(.zoom_tr)
+m1 <- htmlwidgets::prependContent(m1, htmltools::tags$style(htmltools::HTML(BEE_MAP_CTRLROW_CSS)))
 
 # m2: one layer for the transects -- the real shapefile line, colored by transect, carrying a SINGLE
 # popup (its species to photograph) and a permanent name label. No more twin corridor/marker popups.
@@ -366,6 +367,7 @@ m2 <- m2 %>%
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects"),
       options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
   htmlwidgets::onRender(.zoom_tr)
+m2 <- htmlwidgets::prependContent(m2, htmltools::tags$style(htmltools::HTML(BEE_MAP_CTRLROW_CSS)))
 # self-contained single file when pandoc is available (matches every other HTML in the project);
 # fall back to a lib/ folder only if pandoc is missing, so the pipeline never hard-fails.
 .sc <- requireNamespace("rmarkdown", quietly = TRUE) && isTRUE(try(rmarkdown::pandoc_available(), silent = TRUE))

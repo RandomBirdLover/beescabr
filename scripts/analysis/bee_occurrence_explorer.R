@@ -184,7 +184,14 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .panel{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:#ffffff;border:1px solid #dddddd;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);
     padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100vh - 200px);overflow-y:auto}
-  .titlebox{max-height:none;overflow:visible}
+  .titlebox{max-height:none;overflow:visible;padding:9px 15px}
+  .titlebox h1{white-space:nowrap}
+  /* map controls live in one horizontal strip, bottom-left (zoom, basemap, north, scale) */
+  .leaflet-bottom.leaflet-left{left:50%%;right:auto;transform:translateX(-50%%);display:flex;flex-direction:row-reverse;align-items:flex-end}
+  .leaflet-bottom.leaflet-left .leaflet-control{margin:0 0 14px 12px;float:none;clear:none}
+  /* the transect/record legend owns the top-right, tucked under the back-to-main pill */
+  .leaflet-top.leaflet-right .legright{margin-top:52px}
+  .genrow.ghide,.famrow.ghide{display:none}
   #taxphoto{width:100%%;max-height:190px;object-fit:cover;border-radius:7px;display:block}
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
@@ -208,7 +215,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .leaflet-popup-content i{color:#111}
   .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
   .gclist{margin-bottom:2px}
-  .panel.genusbox{max-height:calc(100vh - 380px);display:flex;flex-direction:column;overflow:hidden}
+  .panel.genusbox{max-height:calc(100vh - 392px);display:flex;flex-direction:column;overflow:hidden}
   .panel.photobox{width:210px}
   .panel.northbox{width:auto;padding:5px 9px 6px;text-align:center;line-height:1.05}
   .panel.genusbox>*{flex:0 0 auto}
@@ -245,8 +252,8 @@ var map=L.map("map",{preferCanvas:true,zoomControl:false});
 var topo=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles &copy; Esri"}).addTo(map);
 var sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles &copy; Esri"});
 var street=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OpenStreetMap &copy; CARTO"});
-L.control.zoom({position:"topright"}).addTo(map);
-L.control.layers({"Topographic":topo,"Satellite":sat,"Street":street},null,{position:"topright"}).addTo(map);
+L.control.zoom({position:"bottomleft"}).addTo(map);
+L.control.layers({"Topographic":topo,"Satellite":sat,"Street":street},null,{position:"bottomleft",collapsed:true}).addTo(map);
 // park boundary + transect lines (context)
 if(BOUNDARY){L.geoJSON(BOUNDARY,{style:{color:"#fff",weight:3,opacity:.95,fill:false}}).addTo(map);}
 if(TRANSECTS){L.geoJSON(TRANSECTS,{style:function(f){var t=(f.properties.Name||f.properties.transect||"").toUpperCase();if(t.indexOf("TP")===0)t="TP";return {color:COLS[t]||"#888",weight:4,opacity:.9};}}).addTo(map);}
@@ -307,10 +314,12 @@ function renderPhen(mo){
 var genera=uniqSorted(recs.map(function(r){return r.g;}));
 var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
 var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
+var G2FAM={};                                            // genus name -> its family (for the collapse filter)
 var gcol=LEGEND.map(function(f){                          // genus color key: family -> genus -> subgenus/complex
-  var s="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
+  var s="<div class=famrow data-fam="+esc(f.family)+" style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
   f.genera.forEach(function(g){
-    s+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
+    G2FAM[g.n]=f.family;
+    s+="<div class=genrow data-g="+esc(g.n)+"><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
     if(g.sub) s+="<div class=taxrow data-g="+esc(g.n)+"><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
     if(g.cx)  s+="<div class=\\"taxrow cx\\" data-g="+esc(g.n)+"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
   });
@@ -345,7 +354,7 @@ genusbox.onAdd=function(){
 var legright=L.control({position:"topright"});
 legright.onAdd=function(){
   var d=L.DomUtil.create("div","panel legright"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
-  d.innerHTML="<label>Transect lines</label>"+trLeg+
+  d.innerHTML="<label>Transects</label>"+trLeg+
     "<label>Record type</label>"+
     "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
     "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>";
@@ -358,8 +367,8 @@ photobox.onAdd=function(){
   d.innerHTML="<img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div>";
   return d;
 };
-// ---- north arrow (top-right card, matching the other maps) ----
-var northbox=L.control({position:"topright"});
+// ---- north arrow (part of the bottom control row) ----
+var northbox=L.control({position:"bottomleft"});
 northbox.onAdd=function(){
   var d=L.DomUtil.create("div","panel northbox"); L.DomEvent.disableClickPropagation(d);
   d.innerHTML="<div style=\\"font-weight:700;font-size:11px;color:#1c5728;margin-bottom:1px\\">N</div>"+
@@ -378,7 +387,7 @@ genusbox.addTo(map);
 northbox.addTo(map);
 legright.addTo(map);
 photobox.addTo(map);
-L.control.scale({position:"bottomright",imperial:false,maxWidth:150}).addTo(map);
+L.control.scale({position:"bottomleft",imperial:false,maxWidth:150}).addTo(map);
 // phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
 var phen=L.control({position:"bottomright"});
 phen.onAdd=function(){
@@ -443,7 +452,15 @@ function showPhoto(){
     w.style.display="block"; }
   else w.style.display="none";
 }
-function legendGenus(){var g=selG.value,rows=document.querySelectorAll(".taxrow"),i;for(i=0;i<rows.length;i++)rows[i].classList.toggle("on",g!=="*"&&rows[i].getAttribute("data-g")===g);}
+function legendGenus(){                                   // show every genus (grouped by family) until one is picked, then just that genus
+  var g=selG.value, all=(g==="*"), fam=all?null:G2FAM[g], i, el;
+  var fr=document.querySelectorAll(".famrow");
+  for(i=0;i<fr.length;i++){el=fr[i];el.classList.toggle("ghide",!all&&el.getAttribute("data-fam")!==fam);}
+  var gr=document.querySelectorAll(".genrow");
+  for(i=0;i<gr.length;i++){el=gr[i];el.classList.toggle("ghide",!all&&el.getAttribute("data-g")!==g);}
+  var tr=document.querySelectorAll(".taxrow");
+  for(i=0;i<tr.length;i++){el=tr[i];el.classList.toggle("on",!all&&el.getAttribute("data-g")===g);}
+}
 selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showPhoto();legendGenus();draw();});
 selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();draw();});
 selCx.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
@@ -464,7 +481,10 @@ document.getElementById("allyr").addEventListener("click",function(){ yrLo.value
 yrShow();
 // fit to the data + first draw
 var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return r.lon;});
-map.fitBounds([[Math.min.apply(null,lat0),Math.min.apply(null,lon0)],[Math.max.apply(null,lat0),Math.max.apply(null,lon0)]],{padding:[20,20]});
+// open centered on the records at a fixed zoom (~300 m on the scale bar), matching the bounty maps
+var cLat=(Math.min.apply(null,lat0)+Math.max.apply(null,lat0))/2,
+    cLon=(Math.min.apply(null,lon0)+Math.max.apply(null,lon0))/2;
+map.setView([cLat,cLon],16);
 draw();
 </script></body></html>')
 

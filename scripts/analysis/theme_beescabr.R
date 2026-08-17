@@ -365,3 +365,31 @@ bee_caption_base <- function(..., cex = 0.6, line0 = 0.3) {
     graphics::mtext(lines[i], side = 1, outer = TRUE, adj = 0,
                     line = line0 + (i - 1) * 0.85, cex = cex, col = BEE_INK$secondary)
 }
+
+# ---- shared leaflet-map control strip -------------------------------------
+# Every interactive map consolidates zoom + basemap + north + scale into ONE
+# horizontal row centred along the bottom edge (matching the occurrence
+# explorer), instead of scattering them across the corners. The R/leaflet maps
+# add the four controls normally, then this onRender hook moves their DOM into
+# a single bottom-centre container. The north card must carry id="bx-north".
+BEE_MAP_CTRLROW_CSS <- paste0(
+  ".bx-ctrlrow{position:absolute;left:50%;bottom:0;transform:translateX(-50%);",
+  "z-index:1000;pointer-events:none;display:flex;flex-direction:row;align-items:flex-end}",
+  ".bx-ctrlrow>*{pointer-events:auto;position:relative;margin:0 6px 14px !important;",
+  "float:none !important;clear:none !important}")
+BEE_MAP_CTRLROW_JS <- paste0(
+  "function(el, x) {",
+  "  var map = this;",
+  "  L.control.zoom({ position: 'topright' }).addTo(map);",           # add zoom, then relocate below
+  "  var cc = el.querySelector('.leaflet-control-container');",
+  "  if (!cc) return;",
+  "  var row = L.DomUtil.create('div', 'bx-ctrlrow', cc);",
+  "  var north = el.querySelector('#bx-north');",
+  "  var items = [",
+  "    el.querySelector('.leaflet-control-zoom'),",
+  "    el.querySelector('.leaflet-control-layers'),",
+  "    north ? north.closest('.leaflet-control') : null,",
+  "    el.querySelector('.leaflet-control-scale')",
+  "  ];",
+  "  items.forEach(function(c){ if (c) row.appendChild(c); });",
+  "}")
