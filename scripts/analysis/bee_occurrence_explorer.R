@@ -182,7 +182,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
 <style>
   html,body{margin:0;height:100%%}#map{position:absolute;inset:0}
   .panel{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(20,50,26,.12),0 8px 24px rgba(20,50,26,.14);
+    background:#ffffff;border:1px solid #dddddd;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);
     padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100vh - 200px);overflow-y:auto}
   .titlebox{max-height:none;overflow:visible}
   #taxphoto{width:100%%;max-height:190px;object-fit:cover;border-radius:7px;display:block}
@@ -208,11 +208,10 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .leaflet-popup-content i{color:#111}
   .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
   .gclist{margin-bottom:2px}
-  .panel.ctrl{display:flex;flex-direction:column;overflow:hidden}
-  .panel.ctrl>*{flex:0 0 auto}
-  .panel.ctrl>.leg{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  .leg>*{flex:0 0 auto}
-  .leg>.gclist{flex:0 1 auto;min-height:0;overflow-y:auto}
+  .panel.genusbox{max-height:calc(100vh - 460px);display:flex;flex-direction:column;overflow:hidden}
+  .panel.genusbox>label{flex:0 0 auto}
+  .panel.genusbox>.gclist{flex:0 1 auto;min-height:0;overflow-y:auto}
+  .panel.legright{width:auto}
   .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
   .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:2px}
   .genrow i{font-style:italic}
@@ -302,22 +301,23 @@ function renderPhen(mo){
     return "<span class=\\"phbar"+pk+"\\" style=\\"height:"+(v?Math.max(Math.round(v/mx*100),6):0)+"%\\" title=\\""+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i]+": "+v+"\\"></span>";
   }).join("");
 }
-// ---- filter panel ----
+// ---- legend pieces (built once; shared by the cards below) ----
+var genera=uniqSorted(recs.map(function(r){return r.g;}));
+var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
+var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
+var gcol=LEGEND.map(function(f){                          // genus color key: family -> genus -> subgenus/complex
+  var s="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
+  f.genera.forEach(function(g){
+    s+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
+    if(g.sub) s+="<div class=taxrow data-g="+esc(g.n)+"><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
+    if(g.cx)  s+="<div class=\\"taxrow cx\\" data-g="+esc(g.n)+"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
+  });
+  return s;
+}).join("");
+// ---- filter panel (top-left, under the title card) ----
 var panel=L.control({position:"topleft"});
 panel.onAdd=function(){
-  var d=L.DomUtil.create("div","panel ctrl"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
-  var genera=uniqSorted(recs.map(function(r){return r.g;}));
-  var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
-  var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
-  var gcol=LEGEND.map(function(f){                          // genus color key: family -> genus -> subgenus/complex
-    var s="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
-    f.genera.forEach(function(g){
-      s+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
-      if(g.sub) s+="<div class=taxrow data-g="+esc(g.n)+"><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
-      if(g.cx)  s+="<div class=\\"taxrow cx\\" data-g="+esc(g.n)+"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
-    });
-    return s;
-  }).join("");
+  var d=L.DomUtil.create("div","panel"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
   d.innerHTML=
     "<label>Genus</label><select id=selG>"+gopt+"</select>"+
     "<div id=subwrap style=\\"display:none\\"><label>Subgenus</label><select id=selSub><option value=\\"*\\">All subgenera</option></select></div>"+
@@ -329,15 +329,25 @@ panel.onAdd=function(){
       "<input type=range id=yrLo min="+YMIN+" max="+YMAX+" value="+YMIN+">"+
       "<input type=range id=yrHi min="+YMIN+" max="+YMAX+" value="+YMAX+"></div>"+
     "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
-    "<div class=leg>"+
-      "<div class=count id=count></div>"+
-      "<label>Genus colors</label><div class=gclist>"+gcol+"</div>"+
-      "<label>Transect lines</label>"+trLeg+
-      "<label>Record type</label>"+
-      "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
-      "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
-      "<div class=legnote>Specimen locations may be approximate.</div>"+
-    "</div>";
+    "<div class=count id=count></div>";
+  return d;
+};
+// ---- genus-colors legend (its own card on the LEFT, under the filters) ----
+var genusbox=L.control({position:"topleft"});
+genusbox.onAdd=function(){
+  var d=L.DomUtil.create("div","panel genusbox"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+  d.innerHTML="<label>Genus colors</label><div class=gclist>"+gcol+"</div>";
+  return d;
+};
+// ---- transect + record-type legend (its own card on the RIGHT) ----
+var legright=L.control({position:"topright"});
+legright.onAdd=function(){
+  var d=L.DomUtil.create("div","panel legright"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+  d.innerHTML="<label>Transect lines</label>"+trLeg+
+    "<label>Record type</label>"+
+    "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
+    "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
+    "<div class=legnote>Specimen locations may be approximate.</div>";
   return d;
 };
 // title card (its own box above the control panel, matching the other maps)
@@ -348,6 +358,8 @@ titlebox.onAdd=function(){var d=L.DomUtil.create("div","panel titlebox"); L.DomE
   return d;};
 titlebox.addTo(map);
 panel.addTo(map);
+genusbox.addTo(map);
+legright.addTo(map);
 // phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
 var phen=L.control({position:"bottomright"});
 phen.onAdd=function(){
