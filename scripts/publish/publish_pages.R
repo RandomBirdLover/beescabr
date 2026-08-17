@@ -201,7 +201,8 @@ BACKLINK <- paste0(
   'background:rgba(22,48,43,.92);color:#fff;font:600 13px/1.1 -apple-system,BlinkMacSystemFont,',
   '"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:none;',
   'box-shadow:0 2px 8px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2)}',
-  '.bx-backlink:hover{background:rgba(28,92,40,.96)}</style>',
+  '.bx-backlink:hover{background:rgba(28,92,40,.96)}',
+  '.leaflet-bottom.leaflet-left{margin-bottom:52px}</style>',   # lift bottom-left map legends clear of the pill
   '<a href="./index.html" class="bx-backlink">&larr; Back to main page</a><!--/bx-back-->')
 
 inject_backlink <- function(path) {

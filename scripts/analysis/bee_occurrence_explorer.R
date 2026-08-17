@@ -183,7 +183,8 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   html,body{margin:0;height:100%%}#map{position:absolute;inset:0}
   .panel{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(20,50,26,.12),0 8px 24px rgba(20,50,26,.14);
-    padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100vh - 16px);overflow-y:auto}
+    padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100vh - 200px);overflow-y:auto}
+  .titlebox{max-height:none;overflow:visible}
   #taxphoto{width:100%%;max-height:190px;object-fit:cover;border-radius:7px;display:block}
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
@@ -206,7 +207,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .leaflet-popup-content{font:12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   .leaflet-popup-content i{color:#111}
   .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
-  .gclist{max-height:34vh;overflow-y:auto;margin-bottom:2px}
+  .gclist{margin-bottom:2px}
   .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
   .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:2px}
   .genrow i{font-style:italic}
@@ -313,9 +314,6 @@ panel.onAdd=function(){
     return s;
   }).join("");
   d.innerHTML=
-    "<div class=eyebrow>Cabrillo National Monument</div>"+
-    "<h1>Bee Occurrence Explorer</h1>"+
-    "<p class=sub>Pick a genus to see where each bee has been recorded. Many bees are not identified all the way to species, so narrow by subgenus or complex when those appear.</p>"+
     "<label>Genus</label><select id=selG>"+gopt+"</select>"+
     "<div id=subwrap style=\\"display:none\\"><label>Subgenus</label><select id=selSub><option value=\\"*\\">All subgenera</option></select></div>"+
     "<div id=cxwrap style=\\"display:none\\"><label>Complex</label><select id=selCx><option value=\\"*\\">All complexes</option></select></div>"+
@@ -337,6 +335,13 @@ panel.onAdd=function(){
     "</div>";
   return d;
 };
+// title card (its own box above the control panel, matching the other maps)
+var titlebox=L.control({position:"topleft"});
+titlebox.onAdd=function(){var d=L.DomUtil.create("div","panel titlebox"); L.DomEvent.disableClickPropagation(d);
+  d.innerHTML="<div class=eyebrow>Cabrillo National Monument</div><h1>Bee Occurrence Explorer</h1>"+
+    "<p class=sub>Pick a genus to see where each bee has been recorded. Many bees are not identified all the way to species, so narrow by subgenus or complex when those appear.</p>";
+  return d;};
+titlebox.addTo(map);
 panel.addTo(map);
 // phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
 var phen=L.control({position:"bottomright"});
