@@ -184,6 +184,8 @@ css <- '
   .chip-sub{display:block;font-size:.78rem;color:var(--muted);margin-top:.15rem}
   .grid-team{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   .chip-person{display:flex;align-items:flex-start;gap:.7rem}
+  .chip-person .chip-name{display:block}
+  .chip-person .inat{margin-left:0}
   .avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;flex:none;border:1px solid var(--border)}
   .avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .avatar-blank{display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent-deep);font-weight:700;font-size:.9rem}
