@@ -10,6 +10,14 @@ An R pipeline that ingests iNaturalist bee observations into a DuckDB cache
 and builds tiered species checklists + a cleaned observation table for
 Cabrillo National Monument / San Diego County.
 
+## Git: never commit or push
+
+Do **not** run `git commit` or `git push` (or any command that creates commits
+or writes to a remote) on the user's behalf. The user handles all commits and
+pushes themselves. Make and save file changes as asked, then stop — leave the
+staging, committing, and pushing to them. If a task seems to call for a commit,
+describe what you changed and let the user commit it.
+
 ## Golden rule: test-first (red/green), always
 
 For **every new function or behavior change**, follow this loop. Do not write

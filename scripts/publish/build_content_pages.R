@@ -178,6 +178,7 @@ css <- '
   h2{font-size:1.05rem;letter-spacing:.02em;color:var(--accent-deep);margin:0 0 .3rem}
   .sec-note{color:var(--muted);font-size:.9rem;margin:0 0 1rem}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.6rem}
+  .idlist{display:flex;flex-direction:column;gap:.6rem}
   .chip{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;box-shadow:var(--shadow)}
   .chip-name{font-weight:600}
   .chip .inat{margin-left:.35rem;font-size:.82rem;text-decoration:none;color:var(--accent)}
@@ -250,7 +251,7 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
   <section>
     <h2>Identification Team</h2>
     <p class="sec-note">The specialists who put names to the bees and plants!</p>
-    %s
+    <div class="idlist">%s</div>
   </section>
   <section>
     <h2>Partners</h2>
