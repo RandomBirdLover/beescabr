@@ -336,6 +336,7 @@ m1 <- m1 %>%
   leaflet::addControl(html = genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title1, position = "topleft") %>%
   leaflet::addControl(html = .north, position = "topright") %>%
+  leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE, maxWidth = 150)) %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
@@ -360,6 +361,7 @@ m2 <- m2 %>%
   leaflet::addControl(html = ib_genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title2, position = "topleft") %>%
   leaflet::addControl(html = .north, position = "topright") %>%
+  leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE, maxWidth = 150)) %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects"),
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%

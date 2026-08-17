@@ -378,6 +378,7 @@ genusbox.addTo(map);
 northbox.addTo(map);
 legright.addTo(map);
 photobox.addTo(map);
+L.control.scale({position:"bottomright",imperial:false,maxWidth:150}).addTo(map);
 // phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
 var phen=L.control({position:"bottomright"});
 phen.onAdd=function(){
