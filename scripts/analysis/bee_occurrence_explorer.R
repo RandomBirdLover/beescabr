@@ -208,8 +208,9 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .leaflet-popup-content i{color:#111}
   .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
   .gclist{margin-bottom:2px}
-  .panel.genusbox{max-height:calc(100vh - 460px);display:flex;flex-direction:column;overflow:hidden}
-  .panel.genusbox>label{flex:0 0 auto}
+  .panel.genusbox{max-height:calc(100vh - 380px);display:flex;flex-direction:column;overflow:hidden}
+  .panel.photobox{width:210px}
+  .panel.genusbox>*{flex:0 0 auto}
   .panel.genusbox>.gclist{flex:0 1 auto;min-height:0;overflow-y:auto}
   .panel.legright{width:auto}
   .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
@@ -328,7 +329,6 @@ panel.onAdd=function(){
     "<div class=rng><div class=track></div><div class=trackfill id=yrfill></div>"+
       "<input type=range id=yrLo min="+YMIN+" max="+YMAX+" value="+YMIN+">"+
       "<input type=range id=yrHi min="+YMIN+" max="+YMAX+" value="+YMAX+"></div>"+
-    "<div id=photowrap style=\\"display:none;margin-top:10px\\"><img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div></div>"+
     "<div class=count id=count></div>";
   return d;
 };
@@ -336,7 +336,8 @@ panel.onAdd=function(){
 var genusbox=L.control({position:"topleft"});
 genusbox.onAdd=function(){
   var d=L.DomUtil.create("div","panel genusbox"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
-  d.innerHTML="<label>Genus colors</label><div class=gclist>"+gcol+"</div>";
+  d.innerHTML="<label>Genus colors</label><div class=gclist>"+gcol+"</div>"+
+    "<div class=legnote>Specimen locations may be approximate.</div>";
   return d;
 };
 // ---- transect + record-type legend (its own card on the RIGHT) ----
@@ -346,8 +347,14 @@ legright.onAdd=function(){
   d.innerHTML="<label>Transect lines</label>"+trLeg+
     "<label>Record type</label>"+
     "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
-    "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>"+
-    "<div class=legnote>Specimen locations may be approximate.</div>";
+    "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>";
+  return d;
+};
+// ---- taxon photo (its own card, bottom-right; shown only when a taxon is picked) ----
+var photobox=L.control({position:"bottomright"});
+photobox.onAdd=function(){
+  var d=L.DomUtil.create("div","panel photobox"); d.id="photowrap"; d.style.display="none"; L.DomEvent.disableClickPropagation(d);
+  d.innerHTML="<img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div>";
   return d;
 };
 // title card (its own box above the control panel, matching the other maps)
@@ -360,6 +367,7 @@ titlebox.addTo(map);
 panel.addTo(map);
 genusbox.addTo(map);
 legright.addTo(map);
+photobox.addTo(map);
 // phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
 var phen=L.control({position:"bottomright"});
 phen.onAdd=function(){
