@@ -299,20 +299,30 @@ ib_genus_html <- .legend_stacked(ib_fam_present, ib_glg)    # m2 (photograph map
 # legend's target key to the picked species, offer "Show all" to reset. m1 draws real GPS points, so
 # each species is its own leaflet group (group = ~taxon) that the JS below can dim/restore. TAXA maps
 # taxon -> its dot color. The control-row helper runs first, then this wires the marker clicks.
-foc <- sb_tgt %>% distinct(taxon, gcol)
-foc_json <- jsonlite::toJSON(setNames(as.list(foc$gcol), foc$taxon), auto_unbox = TRUE)
+# per-taxon payload for the drill-down: color (c), iNat-photo count (n, = findability), and whether the
+# record is genus-level (g) -- photographed only to genus, so it lists as "Genus sp." not a binomial.
+foc <- sb_tgt %>%
+  mutate(is_genus = is.na(species_key) | species_key == "") %>%
+  group_by(taxon) %>%
+  summarise(gcol = dplyr::first(gcol), n = dplyr::n(),
+            is_genus = dplyr::first(is_genus), .groups = "drop")
+foc_json <- jsonlite::toJSON(setNames(lapply(seq_len(nrow(foc)), function(i)
+  list(c = foc$gcol[i], n = foc$n[i], g = foc$is_genus[i])), foc$taxon), auto_unbox = TRUE)
 .filter_rest <- paste0(
   "var leg=el.querySelector('#bx-tgt');var legDefault='';el.classList.add('bx-filterable');",
   "function dot(c){return '<span style=\"display:inline-block;width:12px;height:12px;border-radius:50%;background:'+c+';margin-right:8px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.14)\"></span>';}",
   "function gof(t){var i=t.indexOf(' ');return i<0?t:t.substring(0,i);}",   # genus of a taxon ('Genus species' -> 'Genus')
   "var groups={};Object.keys(TAXA).forEach(function(t){groups[t]=[];var g=map.layerManager.getLayerGroup(t,false);if(g)g.eachLayer(function(m){if(m.setStyle){groups[t].push(m);m.on('click',function(){focusSpecies(t);});}});});",
   "function setDim(t,dim){groups[t].forEach(function(m){m.setStyle({opacity:dim?0.15:1,fillOpacity:dim?0.06:0.9});});}",
-  "function render(inner){if(leg)leg.innerHTML='<a href=\"#\" class=\"bx-showall\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:#1c5728;text-decoration:underline;margin:0 0 8px\">&larr; Show all species</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#1c5728;margin:0 0 6px\">Showing only</div>'+inner;}",
+  # fixed-width wrapper (~ the default target column) so the hint WRAPS instead of forcing the card wide,
+  # and the per-row count right-aligns to a stable column.
+  "function render(inner){if(leg)leg.innerHTML='<div style=\"width:264px\"><a href=\"#\" class=\"bx-showall\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:#1c5728;text-decoration:underline;margin:0 0 8px\">&larr; Show all species</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#1c5728;margin:0 0 6px\">Showing only</div>'+inner+'</div>';}",
   "function focusTaxa(keep,inner){Object.keys(groups).forEach(function(tt){setDim(tt,!keep[tt]);});render(inner);}",
-  "function focusSpecies(t){var k={};k[t]=1;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\">'+dot(TAXA[t])+'<i>'+t+'</i></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>');}",
-  "function focusGenus(g){var k={},n=0;Object.keys(TAXA).forEach(function(t){if(gof(t)===g){k[t]=1;n++;}});if(!n)return;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\"><i>'+g+'</i> <span style=\"color:#6b6a66;font-size:10.5px\">('+n+' species)</span></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click a dot to focus one species.</div>');}",
+  "function nm(t){return TAXA[t].g?('<i>'+t+'</i> sp.'):('<i>'+t+'</i>');}",   # display name: genus-level record -> 'Genus sp.'
+  "function focusSpecies(t){var k={};k[t]=1;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\">'+dot(TAXA[t].c)+'<span>'+nm(t)+'</span></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>');}",
+  "function focusGenus(g){var list=Object.keys(TAXA).filter(function(t){return gof(t)===g;}).sort(function(a,b){return TAXA[b].n-TAXA[a].n;});if(!list.length)return;var k={},rows='';list.forEach(function(t){k[t]=1;rows+='<div class=\"bx-sp\" data-taxon=\"'+t+'\" style=\"display:flex;align-items:center;font-size:11.5px;padding:2px 4px\">'+dot(TAXA[t].c)+'<span style=\"white-space:nowrap\">'+nm(t)+'</span><span style=\"margin-left:auto;padding-left:12px;color:#8a8880;font-size:10px\">'+TAXA[t].n+'</span></div>';});var head='<div style=\"margin:2px 0 5px;white-space:nowrap\"><i>'+g+'</i> <span style=\"color:#6b6a66;font-size:10.5px\">('+list.length+' to net)</span></div>';var hint='<div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.35\">Numbers are iNaturalist photos in the park. Click a target to isolate its dots, or a dot on the map.</div>';focusTaxa(k,head+rows+hint);}",
   "function resetAll(){Object.keys(groups).forEach(function(tt){setDim(tt,false);});if(leg)leg.innerHTML=legDefault;}",
-  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Tip: click a genus below, or a dot on the map, to focus it.</div>');legDefault=leg.innerHTML;leg.addEventListener('click',function(e){var sa=e.target.closest('.bx-showall');if(sa){e.preventDefault();resetAll();return;}var gr=e.target.closest('[data-genus]');if(gr){e.preventDefault();focusGenus(gr.getAttribute('data-genus'));}});}")
+  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Tip: click a genus below, or a dot on the map, to focus it.</div>');legDefault=leg.innerHTML;leg.addEventListener('click',function(e){var sa=e.target.closest('.bx-showall');if(sa){e.preventDefault();resetAll();return;}var sp=e.target.closest('[data-taxon]');if(sp){e.preventDefault();focusSpecies(sp.getAttribute('data-taxon'));return;}var gr=e.target.closest('[data-genus]');if(gr){e.preventDefault();focusGenus(gr.getAttribute('data-genus'));}});}")
 .zoom_filter <- paste0("function(el, x) { (", BEE_MAP_CTRLROW_JS, ").call(this, el, x); var map=this; var TAXA=", foc_json, "; ", .filter_rest, " }")
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
