@@ -187,7 +187,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .titlebox{max-height:none;overflow:visible;padding:9px 15px}
   .titlebox h1{white-space:nowrap}
   /* map controls live in one horizontal strip, bottom-left (zoom, basemap, north, scale) */
-  .leaflet-bottom.leaflet-left{left:auto;right:8px;bottom:22px;transform:none;display:flex;flex-direction:row-reverse;align-items:flex-end}
+  .leaflet-bottom.leaflet-left{left:auto;right:8px;bottom:22px;transform:none;display:flex;flex-direction:row;align-items:flex-end}
   .leaflet-bottom.leaflet-left .leaflet-control{margin:0 0 0 8px;float:none;clear:none}
   /* the transect/record legend owns the top-right, tucked under the back-to-main pill */
   .leaflet-top.leaflet-right .legright{margin-top:52px}

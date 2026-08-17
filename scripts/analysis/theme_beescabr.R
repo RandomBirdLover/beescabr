@@ -385,11 +385,11 @@ BEE_MAP_CTRLROW_JS <- paste0(
   "  if (!cc) return;",
   "  var row = L.DomUtil.create('div', 'bx-ctrlrow', cc);",
   "  var north = el.querySelector('#bx-north');",
-  "  var items = [",
-  "    el.querySelector('.leaflet-control-zoom'),",
-  "    el.querySelector('.leaflet-control-layers'),",
+  "  var items = [",                                                 # left -> right along the row
+  "    el.querySelector('.leaflet-control-scale'),",
   "    north ? north.closest('.leaflet-control') : null,",
-  "    el.querySelector('.leaflet-control-scale')",
+  "    el.querySelector('.leaflet-control-layers'),",
+  "    el.querySelector('.leaflet-control-zoom')",
   "  ];",
   "  items.forEach(function(c){ if (c) row.appendChild(c); });",
   "}")
