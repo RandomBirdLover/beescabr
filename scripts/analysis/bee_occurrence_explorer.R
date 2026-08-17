@@ -210,6 +210,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .gclist{margin-bottom:2px}
   .panel.genusbox{max-height:calc(100vh - 380px);display:flex;flex-direction:column;overflow:hidden}
   .panel.photobox{width:210px}
+  .panel.northbox{width:auto;padding:5px 9px 6px;text-align:center;line-height:1.05}
   .panel.genusbox>*{flex:0 0 auto}
   .panel.genusbox>.gclist{flex:0 1 auto;min-height:0;overflow-y:auto}
   .panel.legright{width:auto}
@@ -357,6 +358,14 @@ photobox.onAdd=function(){
   d.innerHTML="<img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div>";
   return d;
 };
+// ---- north arrow (top-right card, matching the other maps) ----
+var northbox=L.control({position:"topright"});
+northbox.onAdd=function(){
+  var d=L.DomUtil.create("div","panel northbox"); L.DomEvent.disableClickPropagation(d);
+  d.innerHTML="<div style=\\"font-weight:700;font-size:11px;color:#1c5728;margin-bottom:1px\\">N</div>"+
+    "<svg width=14 height=16 viewBox=\\"0 0 14 16\\"><polygon points=\\"7,0 12.5,15.5 7,11.5 1.5,15.5\\" fill=\\"#0b0b0b\\"/></svg>";
+  return d;
+};
 // title card (its own box above the control panel, matching the other maps)
 var titlebox=L.control({position:"topleft"});
 titlebox.onAdd=function(){var d=L.DomUtil.create("div","panel titlebox"); L.DomEvent.disableClickPropagation(d);
@@ -366,6 +375,7 @@ titlebox.onAdd=function(){var d=L.DomUtil.create("div","panel titlebox"); L.DomE
 titlebox.addTo(map);
 panel.addTo(map);
 genusbox.addTo(map);
+northbox.addTo(map);
 legright.addTo(map);
 photobox.addTo(map);
 // phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()

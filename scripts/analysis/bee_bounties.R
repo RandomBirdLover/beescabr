@@ -307,6 +307,11 @@ title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7",
 # zoom moved OFF the top-left (default) so the title card owns that corner; re-added TOP-RIGHT so it
 # stacks directly under the Satellite/Street + layers box.
 .zoom_tr <- "function(el, x) { L.control.zoom({ position: 'topright' }).addTo(this); }"
+# north arrow (top-right card), matching the transect map
+.north <- paste0('<div style="', .CARD, ';padding:5px 9px 6px;text-align:center;line-height:1.05">',
+  sprintf('<div style="font-weight:700;font-size:11px;color:%s;margin-bottom:1px">N</div>', BEE_HTML_GREEN[["deep"]]),
+  sprintf('<svg width="14" height="16" viewBox="0 0 14 16"><polygon points="7,0 12.5,15.5 7,11.5 1.5,15.5" fill="%s"/></svg>', BEE_INK[["primary"]]),
+  '</div>')
 # park-boundary outline (white casing + dark-teal core = crisp on either basemap); no-op if the
 # shapefile failed to load. Same helper on both maps.
 .add_boundary <- function(m) if (is.null(park_bnd)) m else m %>%
@@ -330,6 +335,7 @@ m1 <- m1 %>%
       group = "targets") %>%
   leaflet::addControl(html = genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title1, position = "topleft") %>%
+  leaflet::addControl(html = .north, position = "topright") %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
@@ -345,16 +351,17 @@ m2 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %
 if (!is.null(tran_ln))
   m2 <- m2 %>% leaflet::addPolylines(data = tran_ln, color = ~col, weight = 4, opacity = 0.9, popup = ~popup,
       highlightOptions = leaflet::highlightOptions(weight = 7, opacity = 1, bringToFront = TRUE),
-      group = "transects (click for targets)") %>%
+      group = "transects") %>%
     leaflet::addLabelOnlyMarkers(data = tran_lab, lng = ~lon, lat = ~lat, label = ~transect,   # label at the line midpoint
       labelOptions = leaflet::labelOptions(noHide = TRUE, direction = "top",
               style = list("font-weight" = "700", "background" = "rgba(255,255,255,0.85)", "padding" = "1px 5px")),
-      group = "transects (click for targets)")
+      group = "transects")
 m2 <- m2 %>%
   leaflet::addControl(html = ib_genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title2, position = "topleft") %>%
+  leaflet::addControl(html = .north, position = "topright") %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
-      overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects (click for targets)"),
+      overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects"),
       options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
   htmlwidgets::onRender(.zoom_tr)
 # self-contained single file when pandoc is available (matches every other HTML in the project);
