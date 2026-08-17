@@ -90,3 +90,7 @@ data/secrets/
 
 # rosm/prettymapr downloaded OSM basemap tile cache (regenerated on map render)
 rosm.cache/
+talks/
+
+# local-only talk decks (never commit; the 118MB one exceeds GitHub limits)
+*.pdf
