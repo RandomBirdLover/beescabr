@@ -381,7 +381,11 @@ BEE_MAP_CTRLROW_CSS <- paste0(
   ".leaflet-bottom.leaflet-left .leaflet-control{margin-bottom:24px}",
   # clickable genus rows -- only on maps whose JS opts in with the .bx-filterable class (the collect map)
   ".bx-filterable [data-genus]{cursor:pointer;border-radius:4px}",
-  ".bx-filterable [data-genus]:hover{background:rgba(28,92,40,.09)}")
+  ".bx-filterable [data-genus]:hover{background:rgba(28,92,40,.09)}",
+  # leaflet's built-in '.leaflet .legend i' styles <i> as an 18px icon swatch; our <i> are italic
+  # genus/species NAMES, so reset them to normal inline text (else the name overflows onto the count)
+  ".leaflet .legend i{display:inline !important;width:auto !important;height:auto !important;",
+  "margin:0 !important;opacity:1 !important;vertical-align:baseline !important}")
 BEE_MAP_CTRLROW_JS <- paste0(
   "function(el, x) {",
   "  var map = this;",
