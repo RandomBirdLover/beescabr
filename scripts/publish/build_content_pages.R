@@ -241,7 +241,7 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
   <p>%s</p>
 </div></div>
 <main>
-  <a class="backlink" href="./index.html">&larr; Back to the program</a>
+  <a class="backlink" href="./index.html">&larr; Back to main page</a>
   %s<section>
     <h2>Survey Team</h2>
     <p class="sec-note">The people who walked the transects, photographed bees, and collected specimens (%d people). iNaturalist handles link to their profiles.</p>

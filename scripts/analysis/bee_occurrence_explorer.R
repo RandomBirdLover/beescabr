@@ -209,8 +209,9 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
   .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:2px}
   .genrow i{font-style:italic}
-  .taxrow{font-size:10px;color:#6b6a66;margin:0 0 1px 18px;line-height:1.32}
-  .taxrow.cx{margin-left:32px}
+  .taxrow{display:none;font-size:10px;color:#6b6a66;margin:0 0 1px 28px;line-height:1.32}
+  .taxrow.cx{margin-left:46px}
+  .taxrow.on{display:block}
   .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
   .taxrow i{font-style:italic}
   .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
@@ -305,8 +306,8 @@ panel.onAdd=function(){
     var s="<div class=famrow style=\\"border-left:3px solid "+f.fcol+"\\">"+esc(f.family)+"</div>";
     f.genera.forEach(function(g){
       s+="<div class=genrow><span class=gdot style=\\"background:"+g.c+"\\"></span><i>"+esc(g.n)+"</i></div>";
-      if(g.sub) s+="<div class=taxrow><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
-      if(g.cx)  s+="<div class=\\"taxrow cx\\"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
+      if(g.sub) s+="<div class=taxrow data-g="+esc(g.n)+"><b>subgenus</b><i>"+esc(g.sub)+"</i></div>";
+      if(g.cx)  s+="<div class=\\"taxrow cx\\" data-g="+esc(g.n)+"><b>complex</b><i>"+esc(g.cx)+"</i></div>";
     });
     return s;
   }).join("");
@@ -399,7 +400,8 @@ function showPhoto(){
     w.style.display="block"; }
   else w.style.display="none";
 }
-selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showPhoto();draw();});
+function legendGenus(){var g=selG.value,rows=document.querySelectorAll(".taxrow"),i;for(i=0;i<rows.length;i++)rows[i].classList.toggle("on",g!=="*"&&rows[i].getAttribute("data-g")===g);}
+selG.addEventListener("change",function(){fillSub();fillCx();fillSpecies();showPhoto();legendGenus();draw();});
 selSub.addEventListener("change",function(){fillCx();fillSpecies();showPhoto();draw();});
 selCx.addEventListener("change",function(){fillSpecies();showPhoto();draw();});
 selS.addEventListener("change",pickSpecies);

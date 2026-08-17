@@ -192,6 +192,26 @@ hero_version <- function() {
   "1"
 }
 
+# A small fixed "Back to main page" pill, wrapped in sentinels so re-runs replace
+# rather than stack it. Injected into every copied report page so no page is a
+# dead-end (they are full-screen maps/tables with no header of their own).
+BACKLINK <- paste0(
+  '<!--bx-back--><style>.bx-backlink{position:fixed;bottom:14px;left:14px;z-index:2147483000;',
+  'display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .8rem;border-radius:999px;',
+  'background:rgba(22,48,43,.92);color:#fff;font:600 13px/1.1 -apple-system,BlinkMacSystemFont,',
+  '"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:none;',
+  'box-shadow:0 2px 8px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2)}',
+  '.bx-backlink:hover{background:rgba(28,92,40,.96)}</style>',
+  '<a href="./index.html" class="bx-backlink">&larr; Back to main page</a><!--/bx-back-->')
+
+inject_backlink <- function(path) {
+  html <- paste(readLines(path, warn = FALSE), collapse = "\n")
+  html <- gsub("(?s)<!--bx-back-->.*?<!--/bx-back-->", "", html, perl = TRUE)  # idempotent
+  if (grepl("<body[^>]*>", html)) html <- sub("(<body[^>]*>)", paste0("\\1", BACKLINK), html)
+  else html <- paste0(BACKLINK, html)
+  writeLines(html, path)
+}
+
 # Orchestrator: copy pages, build the content + landing pages, write docs/.
 publish_pages <- function() {
   # locate repo root from the script path so it runs from anywhere (mirrors the
@@ -209,6 +229,7 @@ publish_pages <- function() {
     src <- file.path(SRC_DIR, p$src)
     if (file.exists(src)) {
       file.copy(src, file.path(DOCS_DIR, p$out), overwrite = TRUE)
+      inject_backlink(file.path(DOCS_DIR, p$out))     # add the "Back to main page" pill
       message("published  ", p$out)
       present[[length(present) + 1L]] <- p
     } else {
