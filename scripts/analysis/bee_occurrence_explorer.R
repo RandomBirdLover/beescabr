@@ -208,6 +208,11 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .leaflet-popup-content i{color:#111}
   .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
   .gclist{margin-bottom:2px}
+  .panel.ctrl{display:flex;flex-direction:column;overflow:hidden}
+  .panel.ctrl>*{flex:0 0 auto}
+  .panel.ctrl>.leg{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .leg>*{flex:0 0 auto}
+  .leg>.gclist{flex:0 1 auto;min-height:0;overflow-y:auto}
   .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
   .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:2px}
   .genrow i{font-style:italic}
@@ -300,7 +305,7 @@ function renderPhen(mo){
 // ---- filter panel ----
 var panel=L.control({position:"topleft"});
 panel.onAdd=function(){
-  var d=L.DomUtil.create("div","panel"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+  var d=L.DomUtil.create("div","panel ctrl"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
   var genera=uniqSorted(recs.map(function(r){return r.g;}));
   var gopt="<option value=\\"*\\">All genera</option>"+genera.map(function(g){return "<option>"+esc(g)+"</option>";}).join("");
   var trLeg=["BST","OT","TP","UPMON"].map(function(t){return "<div class=legrow><span class=lswatch style=\\"border-top-color:"+(COLS[t]||"#888")+"\\"></span>"+t+"</div>";}).join("");
