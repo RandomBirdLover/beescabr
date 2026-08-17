@@ -226,7 +226,7 @@ genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
 .col_title   <- function(t) sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:0 0 5px">%s</div>', BEE_HTML_GREEN[["deep"]], t)
 .genus_block <- function(fams, glg) paste(vapply(fams, function(fm) { gg <- glg[glg$fam == fm, ]
     paste0(sprintf('<div style="font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:7px;border-left:3px solid %s">%s</div>', BEE_HTML_GREEN[["deep"]], unname(BEE_FAMILY[fm]), fm),
-           paste(sprintf('<div style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
+           paste(sprintf('<div class="bx-grow" data-genus="%s" style="margin:2px 0 2px 12px">%s<i style="color:%s">%s</i></div>', gg$genus, .dot(gg$col), BEE_HTML[["ink"]], gg$genus), collapse = ""))
   }, character(1)), collapse = "")
 # .taxa_block -- FAMILY header > GENUS label > the SPECIES needed under it, each with its own map-color
 # dot (so a dot on the map maps to a name). Genus-level targets (whole genus missing) show one "any
@@ -323,13 +323,17 @@ ib_genus_html <- .legend_stacked(ib_fam_present, ib_glg)    # m2 (photograph map
 foc <- sb_tgt %>% distinct(taxon, gcol)
 foc_json <- jsonlite::toJSON(setNames(as.list(foc$gcol), foc$taxon), auto_unbox = TRUE)
 .filter_rest <- paste0(
-  "var leg=el.querySelector('#bx-tgt');var legDefault='';",
+  "var leg=el.querySelector('#bx-tgt');var legDefault='';el.classList.add('bx-filterable');",
   "function dot(c){return '<span style=\"display:inline-block;width:12px;height:12px;border-radius:50%;background:'+c+';margin-right:8px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.14)\"></span>';}",
-  "var groups={};Object.keys(TAXA).forEach(function(t){groups[t]=[];var g=map.layerManager.getLayerGroup(t,false);if(g)g.eachLayer(function(m){if(m.setStyle){groups[t].push(m);m.on('click',function(){isolate(t);});}});});",
+  "function gof(t){var i=t.indexOf(' ');return i<0?t:t.substring(0,i);}",   # genus of a taxon ('Genus species' -> 'Genus')
+  "var groups={};Object.keys(TAXA).forEach(function(t){groups[t]=[];var g=map.layerManager.getLayerGroup(t,false);if(g)g.eachLayer(function(m){if(m.setStyle){groups[t].push(m);m.on('click',function(){focusSpecies(t);});}});});",
   "function setDim(t,dim){groups[t].forEach(function(m){m.setStyle({opacity:dim?0.15:1,fillOpacity:dim?0.06:0.9});});}",
-  "function isolate(t){Object.keys(groups).forEach(function(tt){setDim(tt,tt!==t);});if(leg){leg.innerHTML='<a href=\"#\" class=\"bx-showall\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:#1c5728;text-decoration:underline;margin:0 0 8px\">&larr; Show all species</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#1c5728;margin:0 0 6px\">Showing only</div><div style=\"margin:2px 0;font-size:12px;white-space:nowrap\">'+dot(TAXA[t])+'<i>'+t+'</i></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>';var a=leg.querySelector('.bx-showall');if(a)a.addEventListener('click',function(e){e.preventDefault();resetAll();});}}",
+  "function render(inner){if(leg)leg.innerHTML='<a href=\"#\" class=\"bx-showall\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:#1c5728;text-decoration:underline;margin:0 0 8px\">&larr; Show all species</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#1c5728;margin:0 0 6px\">Showing only</div>'+inner;}",
+  "function focusTaxa(keep,inner){Object.keys(groups).forEach(function(tt){setDim(tt,!keep[tt]);});render(inner);}",
+  "function focusSpecies(t){var k={};k[t]=1;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\">'+dot(TAXA[t])+'<i>'+t+'</i></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>');}",
+  "function focusGenus(g){var k={},n=0;Object.keys(TAXA).forEach(function(t){if(gof(t)===g){k[t]=1;n++;}});if(!n)return;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\"><i>'+g+'</i> <span style=\"color:#6b6a66;font-size:10.5px\">('+n+' species)</span></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click a dot to focus one species.</div>');}",
   "function resetAll(){Object.keys(groups).forEach(function(tt){setDim(tt,false);});if(leg)leg.innerHTML=legDefault;}",
-  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Tip: click a dot to show only that species.</div>');legDefault=leg.innerHTML;}")
+  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Tip: click a genus below, or a dot on the map, to focus it.</div>');legDefault=leg.innerHTML;leg.addEventListener('click',function(e){var sa=e.target.closest('.bx-showall');if(sa){e.preventDefault();resetAll();return;}var gr=e.target.closest('[data-genus]');if(gr){e.preventDefault();focusGenus(gr.getAttribute('data-genus'));}});}")
 .zoom_filter <- paste0("function(el, x) { (", BEE_MAP_CTRLROW_JS, ").call(this, el, x); var map=this; var TAXA=", foc_json, "; ", .filter_rest, " }")
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----

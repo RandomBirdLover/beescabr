@@ -378,7 +378,10 @@ BEE_MAP_CTRLROW_CSS <- paste0(
   ".bx-ctrlrow>*{pointer-events:auto;position:relative;margin:0 0 0 8px !important;",
   "float:none !important;clear:none !important}",
   # lift the bottom-left legend clear of the map-credit line so its last row never collides with it
-  ".leaflet-bottom.leaflet-left .leaflet-control{margin-bottom:24px}")
+  ".leaflet-bottom.leaflet-left .leaflet-control{margin-bottom:24px}",
+  # clickable genus rows -- only on maps whose JS opts in with the .bx-filterable class (the collect map)
+  ".bx-filterable [data-genus]{cursor:pointer;border-radius:4px}",
+  ".bx-filterable [data-genus]:hover{background:rgba(28,92,40,.09)}")
 BEE_MAP_CTRLROW_JS <- paste0(
   "function(el, x) {",
   "  var map = this;",
