@@ -308,12 +308,29 @@ ib_glg <- ib_taxo %>% group_by(fam, genus) %>% summarise(col = tcol[ceiling(dply
   arrange(match(fam, BEE_FAMILY_ORDER), genus)
 # both maps: TRANSECT key stacked ABOVE the TARGET-GENERA key (a thin rule between them)
 tks <- if (is.null(tran_ln)) character(0) else { u <- unique(tran_ln$transect); u[order(match(u, names(BEE_TRANSECT)))] }
-.legend_stacked <- function(tx) .legend_wrap(
+.legend_stacked <- function(fams, glg) .legend_wrap(
   if (length(tks)) paste0(.col_title("Transects"), .tran_block(tks),
     sprintf('<div style="height:1px;background:%s;margin:9px 0 4px"></div>', BEE_HTML[["scope_rule"]])) else "",
-  .col_title("Targets"), .taxa_block(tx))
-genus_html    <- .legend_stacked(taxo)      # m1 (collect map): genus -> species checklist
-ib_genus_html <- .legend_stacked(ib_taxo)   # m2 (photograph map)
+  # #bx-tgt is swapped in-place by the collect map's click-to-isolate JS (genus key <-> selected species)
+  '<div id="bx-tgt">', .col_title("Target genera"), .genus_block(fams, glg), '</div>')
+genus_html    <- .legend_stacked(fam_present, genus_leg)    # m1 (collect map)
+ib_genus_html <- .legend_stacked(ib_fam_present, ib_glg)    # m2 (photograph map)
+
+# ---- collect map (m1) click-to-isolate: click a target dot -> dim every other species, swap the
+# legend's target key to the picked species, offer "Show all" to reset. m1 draws real GPS points, so
+# each species is its own leaflet group (group = ~taxon) that the JS below can dim/restore. TAXA maps
+# taxon -> its dot color. The control-row helper runs first, then this wires the marker clicks.
+foc <- sb_tgt %>% distinct(taxon, gcol)
+foc_json <- jsonlite::toJSON(setNames(as.list(foc$gcol), foc$taxon), auto_unbox = TRUE)
+.filter_rest <- paste0(
+  "var leg=el.querySelector('#bx-tgt');var legDefault='';",
+  "function dot(c){return '<span style=\"display:inline-block;width:12px;height:12px;border-radius:50%;background:'+c+';margin-right:8px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.14)\"></span>';}",
+  "var groups={};Object.keys(TAXA).forEach(function(t){groups[t]=[];var g=map.layerManager.getLayerGroup(t,false);if(g)g.eachLayer(function(m){if(m.setStyle){groups[t].push(m);m.on('click',function(){isolate(t);});}});});",
+  "function setDim(t,dim){groups[t].forEach(function(m){m.setStyle({opacity:dim?0.15:1,fillOpacity:dim?0.06:0.9});});}",
+  "function isolate(t){Object.keys(groups).forEach(function(tt){setDim(tt,tt!==t);});if(leg){leg.innerHTML='<a href=\"#\" class=\"bx-showall\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:#1c5728;text-decoration:underline;margin:0 0 8px\">&larr; Show all species</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#1c5728;margin:0 0 6px\">Showing only</div><div style=\"margin:2px 0;font-size:12px\">'+dot(TAXA[t])+'<i>'+t+'</i></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>';var a=leg.querySelector('.bx-showall');if(a)a.addEventListener('click',function(e){e.preventDefault();resetAll();});}}",
+  "function resetAll(){Object.keys(groups).forEach(function(tt){setDim(tt,false);});if(leg)leg.innerHTML=legDefault;}",
+  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Tip: click a dot to show only that species.</div>');legDefault=leg.innerHTML;}")
+.zoom_filter <- paste0("function(el, x) { (", BEE_MAP_CTRLROW_JS, ").call(this, el, x); var map=this; var TAXA=", foc_json, "; ", .filter_rest, " }")
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
 TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "Esri.WorldTopoMap"
@@ -353,15 +370,15 @@ if (!is.null(tran_ln))   # transect lines as CONTEXT here (the collect-targets a
 m1 <- m1 %>%
   leaflet::addCircleMarkers(data = sb_tgt, lng = ~lon, lat = ~lat, radius = 5, color = "white",
       weight = 1, fillColor = ~gcol, fillOpacity = 0.9, popup = ~popup,
-      group = "targets") %>%
+      group = ~taxon) %>%          # one leaflet group per species so click-to-isolate can dim the rest
   leaflet::addControl(html = genus_html, position = "bottomleft") %>%
   leaflet::addControl(html = title1, position = "topleft") %>%
   leaflet::addControl(html = .north, position = "topright") %>%
   leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE, maxWidth = 150)) %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
-      overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
+      overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects"),
       options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
-  htmlwidgets::onRender(.zoom_tr)
+  htmlwidgets::onRender(.zoom_filter)   # control row + click-to-isolate a species
 m1 <- htmlwidgets::prependContent(m1, htmltools::tags$style(htmltools::HTML(BEE_MAP_CTRLROW_CSS)))
 
 # m2: one layer for the transects -- the real shapefile line, colored by transect, carrying a SINGLE
