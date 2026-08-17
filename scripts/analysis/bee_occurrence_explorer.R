@@ -187,12 +187,12 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .titlebox{max-height:none;overflow:visible;padding:9px 15px}
   .titlebox h1{white-space:nowrap}
   /* map controls live in one horizontal strip, bottom-left (zoom, basemap, north, scale) */
-  .leaflet-bottom.leaflet-left{left:50%%;right:auto;transform:translateX(-50%%);display:flex;flex-direction:row-reverse;align-items:flex-end}
-  .leaflet-bottom.leaflet-left .leaflet-control{margin:0 0 14px 12px;float:none;clear:none}
+  .leaflet-bottom.leaflet-left{left:auto;right:8px;bottom:22px;transform:none;display:flex;flex-direction:row-reverse;align-items:flex-end}
+  .leaflet-bottom.leaflet-left .leaflet-control{margin:0 0 0 8px;float:none;clear:none}
   /* the transect/record legend owns the top-right, tucked under the back-to-main pill */
   .leaflet-top.leaflet-right .legright{margin-top:52px}
   .genrow.ghide,.famrow.ghide{display:none}
-  #taxphoto{width:100%%;max-height:190px;object-fit:cover;border-radius:7px;display:block}
+  #taxphoto{width:100%%;max-height:min(190px,calc(100vh - 495px));object-fit:cover;border-radius:7px;display:block}
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
   .panel p.sub{font-size:11.5px;color:#6b6a66;margin:0 0 10px;line-height:1.35}
@@ -360,8 +360,8 @@ legright.onAdd=function(){
     "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>";
   return d;
 };
-// ---- taxon photo (its own card, bottom-right; shown only when a taxon is picked) ----
-var photobox=L.control({position:"bottomright"});
+// ---- taxon photo (top-right, under the transects legend + active months; shown only when a taxon is picked) ----
+var photobox=L.control({position:"topright"});
 photobox.onAdd=function(){
   var d=L.DomUtil.create("div","panel photobox"); d.id="photowrap"; d.style.display="none"; L.DomEvent.disableClickPropagation(d);
   d.innerHTML="<img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div>";
@@ -381,22 +381,24 @@ titlebox.onAdd=function(){var d=L.DomUtil.create("div","panel titlebox"); L.DomE
   d.innerHTML="<div class=eyebrow>Cabrillo National Monument</div><h1>Bee Occurrence Explorer</h1>"+
     "<p class=sub>Pick a genus to see where each bee has been recorded. Many bees are not identified all the way to species, so narrow by subgenus or complex when those appear.</p>";
   return d;};
-titlebox.addTo(map);
-panel.addTo(map);
-genusbox.addTo(map);
-northbox.addTo(map);
-legright.addTo(map);
-photobox.addTo(map);
-L.control.scale({position:"bottomleft",imperial:false,maxWidth:150}).addTo(map);
-// phenology strip (bottom-right): month activity of whatever is currently shown; updated by draw()
-var phen=L.control({position:"bottomright"});
+// phenology strip: month activity of whatever is currently shown; updated by draw().
+// Lives TOP-RIGHT, under the transects legend -- per-taxon info grouped on the right.
+var phen=L.control({position:"topright"});
 phen.onAdd=function(){
   var d=L.DomUtil.create("div","panel phen"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
   d.innerHTML="<label>Active months</label><div class=phbars id=phbars></div>"+
     "<div class=phmon>"+["J","F","M","A","M","J","J","A","S","O","N","D"].map(function(x){return "<span>"+x+"</span>";}).join("")+"</div>";
   return d;
 };
+titlebox.addTo(map);
+panel.addTo(map);
+genusbox.addTo(map);
+northbox.addTo(map);
+// top-right stack, top -> bottom: transects legend, active months, taxon photo
+legright.addTo(map);
 phen.addTo(map);
+photobox.addTo(map);
+L.control.scale({position:"bottomleft",imperial:false,maxWidth:150}).addTo(map);
 var selG=document.getElementById("selG"), selSub=document.getElementById("selSub"),
     selCx=document.getElementById("selCx"), selS=document.getElementById("selS"), selSsp=document.getElementById("selSsp");
 var subwrap=document.getElementById("subwrap"), cxwrap=document.getElementById("cxwrap"), sspwrap=document.getElementById("sspwrap");
@@ -448,7 +450,7 @@ function showPhoto(){
   if(g!=="*")          tries.push([g,          "<i>"+esc(g)+"</i>"]);
   var hit=null; for(var i=0;i<tries.length;i++){ if(PHOTOS[tries[i][0]]){ hit={p:PHOTOS[tries[i][0]],lab:tries[i][1]}; break; } }
   if(hit){ document.getElementById("taxphoto").src=hit.p.u;
-    document.getElementById("taxcredit").innerHTML=hit.lab+" &middot; "+esc(hit.p.c)+" &middot; <a href=\\""+hit.p.l+"\\" target=_blank>iNaturalist</a>";
+    document.getElementById("taxcredit").innerHTML=esc(hit.p.c)+" &middot; <a href=\\""+hit.p.l+"\\" target=_blank>iNaturalist</a>";
     w.style.display="block"; }
   else w.style.display="none";
 }

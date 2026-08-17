@@ -31,3 +31,15 @@ test_that("build_landing_html links the Acknowledgements page and is a full docu
   expect_true(startsWith(h, "<!doctype html>"))
   expect_true(grepl("</html>", h, fixed = TRUE))
 })
+
+test_that("build_landing_html credits the funders with their official links", {
+  h <- build_landing_html(list(), "x", "1")
+  # Southern California Research Learning Center -- major funder -> its NPS RLC page
+  expect_true(grepl("Southern California Research Learning Center", h, fixed = TRUE))
+  expect_true(grepl('href="https://www.nps.gov/rlc/southerncal/index.htm"', h, fixed = TRUE))
+  # Conservation Legacy + Cabrillo National Monument Foundation
+  expect_true(grepl("Conservation Legacy", h, fixed = TRUE))
+  expect_true(grepl('href="https://conservationlegacy.org/"', h, fixed = TRUE))
+  expect_true(grepl("Cabrillo National Monument Foundation", h, fixed = TRUE))
+  expect_true(grepl('href="https://www.cnmf.org/"', h, fixed = TRUE))
+})

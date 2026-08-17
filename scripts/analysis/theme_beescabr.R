@@ -368,14 +368,14 @@ bee_caption_base <- function(..., cex = 0.6, line0 = 0.3) {
 
 # ---- shared leaflet-map control strip -------------------------------------
 # Every interactive map consolidates zoom + basemap + north + scale into ONE
-# horizontal row centred along the bottom edge (matching the occurrence
-# explorer), instead of scattering them across the corners. The R/leaflet maps
-# add the four controls normally, then this onRender hook moves their DOM into
-# a single bottom-centre container. The north card must carry id="bx-north".
+# horizontal row in the bottom-right corner (just above the map credit), matching
+# the occurrence explorer, instead of scattering them across the corners. The
+# R/leaflet maps add the four controls normally, then this onRender hook moves
+# their DOM into a single bottom-right container. North card must carry id="bx-north".
 BEE_MAP_CTRLROW_CSS <- paste0(
-  ".bx-ctrlrow{position:absolute;left:50%;bottom:0;transform:translateX(-50%);",
+  ".bx-ctrlrow{position:absolute;right:8px;bottom:22px;",           # bottom-right, just above the credit line
   "z-index:1000;pointer-events:none;display:flex;flex-direction:row;align-items:flex-end}",
-  ".bx-ctrlrow>*{pointer-events:auto;position:relative;margin:0 6px 14px !important;",
+  ".bx-ctrlrow>*{pointer-events:auto;position:relative;margin:0 0 0 8px !important;",
   "float:none !important;clear:none !important}")
 BEE_MAP_CTRLROW_JS <- paste0(
   "function(el, x) {",

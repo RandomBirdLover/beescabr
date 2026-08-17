@@ -155,6 +155,7 @@ PUBLISH_PAGES <- list(
   <footer>
     <p class="ack"><a href="./acknowledgements.html">Acknowledgements, learn about the team behind this work &rarr;</a></p>
     <p>With gratitude to <a href="https://www.nps.gov/cabr/">Cabrillo National Monument</a> and the <a href="https://www.nps.gov/">National Park Service</a> for their support of this monitoring program, and to the <a href="https://www.inaturalist.org/">iNaturalist</a> community whose shared observations made this work possible.</p>
+    <p>This monitoring program was made possible in large part by funding from the <a href="https://www.nps.gov/rlc/southerncal/index.htm">Southern California Research Learning Center</a> (SCRLC), with support from <a href="https://conservationlegacy.org/">Conservation Legacy</a> and the <a href="https://www.cnmf.org/">Cabrillo National Monument Foundation</a>.</p>
     <p>Generated from the beescabr pipeline by Brandi Sanchez. Data as of {{date}}.</p>
   </footer>
 </body>
@@ -196,7 +197,7 @@ hero_version <- function() {
 # rather than stack it. Injected into every copied report page so no page is a
 # dead-end (they are full-screen maps/tables with no header of their own).
 BACKLINK <- paste0(
-  '<!--bx-back--><style>.bx-backlink{position:fixed;top:16px;right:60px;z-index:2147483000;',
+  '<!--bx-back--><style>.bx-backlink{position:fixed;top:16px;right:16px;z-index:2147483000;',
   'display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .8rem;border-radius:999px;',
   'background:rgba(22,48,43,.92);color:#fff;font:600 13px/1.1 -apple-system,BlinkMacSystemFont,',
   '"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:none;',
