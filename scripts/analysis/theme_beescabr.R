@@ -376,7 +376,9 @@ BEE_MAP_CTRLROW_CSS <- paste0(
   ".bx-ctrlrow{position:absolute;right:8px;bottom:22px;",           # bottom-right, just above the credit line
   "z-index:1000;pointer-events:none;display:flex;flex-direction:row;align-items:flex-end}",
   ".bx-ctrlrow>*{pointer-events:auto;position:relative;margin:0 0 0 8px !important;",
-  "float:none !important;clear:none !important}")
+  "float:none !important;clear:none !important}",
+  # lift the bottom-left legend clear of the map-credit line so its last row never collides with it
+  ".leaflet-bottom.leaflet-left .leaflet-control{margin-bottom:24px}")
 BEE_MAP_CTRLROW_JS <- paste0(
   "function(el, x) {",
   "  var map = this;",
