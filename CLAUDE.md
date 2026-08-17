@@ -2,7 +2,7 @@
 
 Guidance for Claude / coding agents working in this repository. Read this
 before writing code. For a task-oriented guide and the layer map, see
-`docs/PIPELINE_GUIDE.md`.
+`dev-docs/PIPELINE_GUIDE.md`.
 
 ## Project in one line
 

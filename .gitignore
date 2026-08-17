@@ -56,7 +56,10 @@ vignettes/*.pdf
 .Renviron
 
 # pkgdown site
-# internal working docs stay local; only the published GitHub Pages site is tracked
+# internal working notes stay local (never published)
+dev-docs/
+
+# docs/ is the published GitHub Pages site -- ONLY the website is tracked, nothing else
 docs/*
 !docs/*.html
 !docs/.nojekyll
