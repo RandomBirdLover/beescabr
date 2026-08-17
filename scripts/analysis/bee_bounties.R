@@ -339,7 +339,7 @@ m1 <- m1 %>%
   leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE, maxWidth = 150)) %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects", "targets"),
-      options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
+      options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
   htmlwidgets::onRender(.zoom_tr)
 
 # m2: one layer for the transects -- the real shapefile line, colored by transect, carrying a SINGLE
@@ -364,7 +364,7 @@ m2 <- m2 %>%
   leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE, maxWidth = 150)) %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", if (!is.null(tran_ln)) "transects"),
-      options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
+      options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
   htmlwidgets::onRender(.zoom_tr)
 # self-contained single file when pandoc is available (matches every other HTML in the project);
 # fall back to a lib/ folder only if pandoc is missing, so the pipeline never hard-fails.

@@ -83,7 +83,7 @@ m <- m %>%
   leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE, maxWidth = 150)) %>%
   leaflet::addLayersControl(baseGroups = c("Topographic", "Satellite", "Street"),
       overlayGroups = c("park boundary", "transects"),
-      options = leaflet::layersControlOptions(collapsed = FALSE)) %>%
+      options = leaflet::layersControlOptions(collapsed = TRUE)) %>%
   htmlwidgets::onRender("function(el, x) { L.control.zoom({ position: 'topright' }).addTo(this); }")
 
 # ---- 4. save one self-contained HTML (like every other map in the project) ----

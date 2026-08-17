@@ -196,7 +196,7 @@ hero_version <- function() {
 # rather than stack it. Injected into every copied report page so no page is a
 # dead-end (they are full-screen maps/tables with no header of their own).
 BACKLINK <- paste0(
-  '<!--bx-back--><style>.bx-backlink{position:fixed;top:16px;right:158px;z-index:2147483000;',
+  '<!--bx-back--><style>.bx-backlink{position:fixed;top:16px;right:60px;z-index:2147483000;',
   'display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .8rem;border-radius:999px;',
   'background:rgba(22,48,43,.92);color:#fff;font:600 13px/1.1 -apple-system,BlinkMacSystemFont,',
   '"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:none;',
