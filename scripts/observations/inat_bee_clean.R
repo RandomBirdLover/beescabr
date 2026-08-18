@@ -413,10 +413,8 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   bx_cont("spatial: ", format(n_walk, big.mark = ","), " walk-in re-marked NOT survey · ", format(n_bad, big.mark = ","), " pins off-transect → review")
   bx_cont("annotations: ", format(n_fv, big.mark = ","), " obs with flower_visited")
   bx_cont("fix_behavior: ", format(n_noplant, big.mark = ","), " on-flower but no plant · ", format(n_missing, big.mark = ","), " missing all fields · ", format(n_badflow, big.mark = ","), " non-plant/unresolved flower · ", format(n_notgen, big.mark = ","), " flower not to genus (family-level)")
-  bx_out(basename(IBC_FIX_BEHAVIOR))
-  bx_cont("casual add-flower: ", format(nrow(casual_add), big.mark = ","), " casual obs with no behavior → check photo, add a flower")
-  bx_out(basename(IBC_CASUAL_ADD))
-  invisible(list(clean = clean, fix_behavior = fix_behavior, casual_add = casual_add, location_review = location_review))
+  bx_out(basename(IBC_FIX_SURVEY)); bx_out(basename(IBC_FIX_NONSURVEY))
+  invisible(list(clean = clean, fix_behavior = fix_behavior, location_review = location_review))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0)

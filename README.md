@@ -115,10 +115,10 @@ beescabr/
       holway_2026/                 # Dr. Holway's SD County Bee Species Checklist v3, flattened to CSV
     cabr_surveys/
       lethal/                      # all versions of specimen file live here
-        cabr_bee_specimens_record_V1_2026-05-04.xlsx
-        cabr_bee_specimens_record_V2_2026-05-29.xlsx
+        cabr_bee_specimens_record_V1_2026_05_04.xlsx
+        cabr_bee_specimens_record_V2_2026_05_29.xlsx
         ...
-        cabr_bee_specimens_record_V{n}_{YYYY-MM-DD}.xlsx   ← newest = authoritative
+        cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx   ← newest = authoritative
         deposit/                   # permanent specimen transfers
         loans/                     # temporary specimen transfers
       nonlethal/
@@ -232,10 +232,10 @@ Date = download date, YYYY-MM-DD. Drop directly into `data/cabr_surveys/nonletha
 ### Specimen file
 
 ```
-cabr_bee_specimens_record_V{n}_{YYYY-MM-DD}.xlsx
+cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx
 ```
 
-All versions live in `data/cabr_surveys/lethal/`. The pipeline always reads the newest. See **Specimen version management** below.
+All versions live in `data/specimens/records/`. The pipeline always reads the newest. See **Specimen version management** below.
 
 ### Deposit and loan tracking files
 
@@ -258,12 +258,12 @@ Two special cases:
 
 ## Specimen version management
 
-All versions of the specimen Excel file live in `data/cabr_surveys/lethal/`. `read_latest()` picks up the newest automatically.
+All versions of the specimen Excel file live in `data/specimens/records/`. `read_latest()` picks up the newest automatically.
 
 **When you update the specimen file:**
 1. Open the current version in Excel
 2. Make your changes
-3. **Save As** → `cabr_bee_specimens_record_V{n+1}_{YYYY-MM-DD}.xlsx` in the same folder
+3. **Save As** → `cabr_bee_specimens_record_V{n+1}_{YYYY_MM_DD}.xlsx` in the same folder
 4. Add a row to `SPECIMEN_CHANGELOG.md`
 5. Commit and push `SPECIMEN_CHANGELOG.md`
 

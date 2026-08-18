@@ -10,7 +10,8 @@ if (!requireNamespace("pdftools", quietly = TRUE))
 read_latest <- function(folder, pattern) {
   files <- list.files(folder, pattern = pattern, full.names = TRUE)
   if (length(files) == 0) stop("No files matching '", pattern, "' found in ", folder)
-  dates <- as.Date(str_extract(basename(files), "\\d{4}-\\d{2}-\\d{2}"))
+  ds    <- str_extract(basename(files), "\\d{4}[-_]\\d{2}[-_]\\d{2}")  # accept _ or -
+  dates <- as.Date(gsub("_", "-", ds))
   files[which.max(dates)]
 }
 require_columns <- function(df, required, df_name = "data") {
