@@ -173,14 +173,19 @@ colnames(M) <- ifelse(nzchar(norm(pdat$scientific_name)),
                       pdat$scientific_name, paste0("(unnamed ", pdat$taxon_id, ")"))
 
 bee_png(file.path(OUT_DIR, "cabr_bees_not_on_county_checklist.png"),
-    width = 1900, height = 1150, res = 200)
+    width = 2400, height = 1150, res = 200)
 bee_base_par()                                    # house-style fonts + muted axis/title colors
-op <- par(mar = c(4.5, 12, 4.4, 1), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption; top fits title + takeaway
+# wide RIGHT margin hosts the legend OUTSIDE the panel, so a long bar can never run under it
+op <- par(mar = c(4.5, 12, 4.4, 22), oma = c(3.6, 0, 0, 0))  # bottom oma fits the 3-line scope caption; top fits title + takeaway
 bp <- barplot(M, horiz = TRUE, las = 1, col = pal, border = NA, width = 0.8, space = 0.35,
               xlab = "records at Cabrillo (specimens and iNaturalist)",
-              cex.names = 0.8)
+              axisnames = FALSE)
+# taxon names drawn by hand so they render ITALIC (house rule: scientific names italic)
+text(x = par("usr")[1] - 0.012 * diff(par("usr")[1:2]), y = bp, labels = colnames(M),
+     font = 3, cex = 0.8, adj = 1, xpd = NA, col = par("col.axis"))
 mtext("Does Cabrillo have bees the county bee checklist misses?", side = 3, line = 2.4, font = 2, cex = 1.05, col = BEE_INK$primary)
-mtext(sprintf("%d Cabrillo taxa aren't on the county checklist -- candidate county additions, or IDs to verify.", ncol(M)),
+mtext(if (ncol(M) == 1) bquote("1 Cabrillo taxon (" * italic(.(colnames(M))) * ") isn't on the county checklist -- a candidate county addition, or an ID to verify.")
+      else sprintf("%d Cabrillo taxa aren't on the county checklist -- candidate county additions, or IDs to verify.", ncol(M)),
       side = 3, line = 1.0, cex = 0.78, col = BEE_INK$secondary)   # takeaway
 # hatch any taxon NOT resolved to species -- a to-do flag: these still need keying to species
 not_species <- pdat$taxon_rank != "species"
@@ -200,8 +205,11 @@ present <- rowSums(M) > 0
 leg_lab  <- c(ev_lab[present], "specimen, not yet identified to species")
 leg_fill <- c(unname(pal[present]), unname(BEE_EVIDENCE["specimen"]))
 leg_dens <- c(rep(NA, sum(present)), 20)          # NA = solid box; 20 = hatched box
-legend("bottomright", bty = "n", legend = leg_lab, fill = leg_fill,
-       density = leg_dens, angle = 45, border = BEE_INK$muted)
+# anchored OUTSIDE the panel (in the wide right margin), vertically centered -- bars can't reach it
+usr <- par("usr")
+legend(x = usr[2] + 0.015 * (usr[2] - usr[1]), y = mean(usr[3:4]), xjust = 0, yjust = 0.5,
+       xpd = NA, bty = "n", legend = leg_lab, fill = leg_fill,
+       density = leg_dens, angle = 45, border = BEE_INK$muted, cex = 0.8)
 bee_caption_base(scope = "all records; CABR taxa absent from the Holway San Diego County checklist",
                  method = "lethal vs non-lethal", rank = "any (species + coarser)")
 par(op); dev.off()
