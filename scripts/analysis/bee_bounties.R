@@ -231,7 +231,7 @@ genus_leg <- taxo %>% arrange(match(fam, BEE_FAMILY_ORDER), genus) %>%
 .tran_block  <- function(tks) paste(vapply(tks, function(t) sprintf(
     '<div style="margin:3px 0;white-space:nowrap"><span style="display:inline-block;width:18px;height:3px;border-radius:2px;background:%s;vertical-align:middle;margin-right:8px"></span>%s</div>',
     unname(BEE_TRANSECT[t]), t), character(1)), collapse = "")
-.legend_wrap <- function(...) paste0('<div style="', .CARD, ';padding:11px 14px;max-height:76vh;overflow:auto;font-size:12px;line-height:1.4">', ..., '</div>')
+.legend_wrap <- function(...) paste0('<div style="', .CARD, ';padding:11px 14px;max-height:calc(100vh - 320px);overflow:auto;font-size:12px;line-height:1.4">', ..., '</div>')
 # both legends (genus_html for m1, ib_genus_html for m2) are built together in 5b, once the transect
 # data exists -- they share the same stacked TRANSECT-over-TARGET-GENERA layout.
 

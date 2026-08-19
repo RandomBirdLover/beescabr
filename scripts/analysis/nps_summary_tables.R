@@ -205,9 +205,9 @@ cap_part   <- pub_cap("How much surveying went into this project across all year
 cap_bees   <- pub_cap("Every native bee recorded in the park, all years combined. Totals for how they were found (netted as a specimen, or photographed on iNaturalist) and how many genera and species.")
 cap_meth   <- pub_cap("How the bees were recorded, netted specimens versus iNaturalist photos, and by whom.")
 cap_plants <- pub_cap("The plants bees were seen visiting across the park, all years. Total visits, plus how many kinds of plant. Only trustworthy IDs are counted: research-grade iNaturalist records and specimen tags.", SRC_PLANT)
-cap_chk    <- pub_cap("Every bee identified to species, with how many times it was recorded and whether it turned up as a netted specimen, an iNaturalist photo, or both. IUCN is each bee's Red List status. Codes: NE (Not Evaluated), DD (Data Deficient), LC (Least Concern), NT (Near Threatened), VU (Vulnerable), EN (Endangered), CR (Critically Endangered).")
+cap_chk    <- pub_cap("Every bee identified to species, with how many times it was recorded and whether it turned up as a netted specimen, an iNaturalist photo, or both. A low record count does not always mean a species is rare: records that could only be named to genus are not counted toward a species, so the count can understate how present a bee really is. IUCN is each bee's Red List status. Codes: NE (Not Evaluated), DD (Data Deficient), LC (Least Concern), NT (Near Threatened), VU (Vulnerable), EN (Endangered), CR (Critically Endangered).")
 cap_sschk  <- pub_cap("Bees identified all the way down to subspecies, a finer level than species.")
-cap_gchk   <- pub_cap("Every bee genus found, including bees that could only be identified to genus.")
+cap_gchk   <- pub_cap("Every bee genus found, including bees that could only be identified to genus. A low record count does not always mean a genus is rare, since a small number can reflect how little a bee has been recorded as much as true rarity.")
 cap_pchk   <- pub_cap("Every plant genus bees were seen on, with how many bee visits and how many plant species. Only trustworthy IDs are counted: research-grade iNaturalist records and specimen tags.", SRC_PLANT)
 
 # ---- HTML ------------------------------------------------------------------
@@ -284,9 +284,6 @@ df_to_html(part,            cap_part,   "1. Participation", metric_col = TRUE),
 df_to_html(bees_summary,    cap_bees,   "2. Bees found",    metric_col = TRUE),
 df_to_html(methods_tbl,     cap_meth,   "3. Records by method x surveyor type"),
 df_to_html(plants_summary,  cap_plants, "4. Plants found",  metric_col = TRUE),
-# checklist caveat: a low count can mean "hard to ID", not "rare" -- records that couldn't be named to
-# species stay at genus level and aren't counted toward any one species (keep readers from misreading counts).
-'<p class="sub"><b>A low record count does not always mean a bee is rare.</b> Many bees are hard to identify to species from a photo or a specimen. Records that could only be named to genus are not counted toward any single species, so a checklist count can understate how present a bee really is. A small number often reflects how hard a bee is to identify, not how uncommon it is.</p>',
 df_to_html(gen_checklist,   cap_gchk,   "Bee genera checklist",   italic_cols = "genus"),          # broad -> fine: genus,
 df_to_html(checklist,       cap_chk,    "Bee species checklist", italic_cols = c("species", "genus")),   # then species,
 df_to_html(subsp_checklist, cap_sschk,  "Bee subspecies checklist", italic_cols = c("subspecies", "genus")),  # then subspecies
