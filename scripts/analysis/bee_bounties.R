@@ -333,13 +333,20 @@ TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "E
 .ATTR_ESRI  <- leaflet::providerTileOptions(attribution = "Tiles &copy; Esri")
 .ATTR_CARTO <- leaflet::providerTileOptions(attribution = "&copy; OpenStreetMap &copy; CARTO")
 # official title overlay (top-left corner) -- white card w/ NPS eyebrow + teal head, matching the tables
-.map_title <- function(head, sub) paste0(
+.map_title <- function(head, sub, note = NULL) paste0(
   '<div style="', .CARD, ';padding:9px 15px;max-width:430px">',
   sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_HTML_GREEN[["mid"]]),
   sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;line-height:1.18;white-space:nowrap;color:%s">%s</div>', BEE_HTML_GREEN[["deep"]], head),
-  sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">%s</div>', BEE_HTML[["sub"]], sub), '</div>')
-title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!")
-title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!")
+  sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">%s</div>', BEE_HTML[["sub"]], sub),
+  if (!is.null(note)) sprintf('<div style="font-size:10px;color:%s;margin-top:6px;padding-top:6px;border-top:1px solid %s;line-height:1.35">%s</div>', BEE_HTML[["sub"]], BEE_HTML[["border"]], note) else "",
+  '</div>')
+# shared "look widely" disclaimer: the plants/months shown reflect where people have LOOKED, not where the
+# bees truly are -- keep observers from narrowing their search (and biasing future records) to those spots.
+.LOOK_WIDELY <- paste0("<b>Look beyond this map.</b> These plants and months are where people have already found ",
+  "these bees, not the whole picture of where they live. The bees we are still missing are out there on plants ",
+  "and at times no one has checked. So don't just search the spots listed here. Look widely.")
+title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!", .LOOK_WIDELY)
+title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!", .LOOK_WIDELY)
 # adds zoom, then relocates zoom/basemap/north/scale into ONE bottom-centre row (shared helper, so every
 # interactive map -- explorer, transect, both bounties -- carries the identical control strip).
 .zoom_tr <- BEE_MAP_CTRLROW_JS

@@ -284,6 +284,9 @@ df_to_html(part,            cap_part,   "1. Participation", metric_col = TRUE),
 df_to_html(bees_summary,    cap_bees,   "2. Bees found",    metric_col = TRUE),
 df_to_html(methods_tbl,     cap_meth,   "3. Records by method x surveyor type"),
 df_to_html(plants_summary,  cap_plants, "4. Plants found",  metric_col = TRUE),
+# checklist caveat: a low count can mean "hard to ID", not "rare" -- records that couldn't be named to
+# species stay at genus level and aren't counted toward any one species (keep readers from misreading counts).
+'<p class="sub"><b>A low record count does not always mean a bee is rare.</b> Many bees are hard to identify to species from a photo or a specimen. Records that could only be named to genus are not counted toward any single species, so a checklist count can understate how present a bee really is. A small number often reflects how hard a bee is to identify, not how uncommon it is.</p>',
 df_to_html(gen_checklist,   cap_gchk,   "Bee genera checklist",   italic_cols = "genus"),          # broad -> fine: genus,
 df_to_html(checklist,       cap_chk,    "Bee species checklist", italic_cols = c("species", "genus")),   # then species,
 df_to_html(subsp_checklist, cap_sschk,  "Bee subspecies checklist", italic_cols = c("subspecies", "genus")),  # then subspecies

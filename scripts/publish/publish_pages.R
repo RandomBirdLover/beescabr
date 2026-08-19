@@ -156,7 +156,7 @@ PUBLISH_PAGES <- list(
     <p class="ack"><a href="./acknowledgements.html">Acknowledgements, learn about the team behind this work &rarr;</a></p>
     <p>With gratitude to <a href="https://www.nps.gov/cabr/">Cabrillo National Monument</a> and the <a href="https://www.nps.gov/">National Park Service</a> for their support of this monitoring program, and to the <a href="https://www.inaturalist.org/">iNaturalist</a> community whose shared observations made this work possible.</p>
     <p>This monitoring program was made possible in large part by funding from the <a href="https://www.nps.gov/rlc/southerncal/index.htm">Southern California Research Learning Center</a> (SCRLC), with support from <a href="https://conservationlegacy.org/">Conservation Legacy</a> and the <a href="https://www.cnmf.org/">Cabrillo National Monument Foundation</a>.</p>
-    <p>Generated from the beescabr pipeline by Brandi Sanchez. Data as of {{date}}.</p>
+    <p>Generated from the beescabr pipeline by Brandi Sanchez. Based on data available as of {{date}}.</p>
   </footer>
 </body>
 </html>'

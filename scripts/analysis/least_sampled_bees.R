@@ -195,6 +195,8 @@ sprintf('<p class="sub">These %d native bees each have fewer than %d records, ma
         nrow(tbl), THIN_TOTAL, THIN_TOTAL),
 sprintf('<p class="sub">The <b style="color:%s">Coverage</b> column tells you what each one needs. <span class="pill cb">both (thin)</span> means only a few of each method. <span class="pill cp">photo-only</span> means it has been photographed but never netted, so go net a voucher &#128300;. <span class="pill cs">specimen-only</span> means the opposite, so go photograph one &#128247;. The %s icon opens an example observation. Every column&rsquo;s meaning is noted right under its header, and you can click any header to sort.</p>',
         BEE_HTML_GREEN[["deep"]], INAT_ICON),
+'<p class="sub"><b>Some of these bees may be hard to identify, not truly scarce.</b> When a photo or specimen can only be named to genus, it is not counted toward a species here, so a bee can look under-sampled when it is really just hard to tell apart. For those, a clear photo or a voucher an expert can confirm to species helps as much as finding more. So don&rsquo;t read a &ldquo;rare&rdquo; Status here as truly rare.</p>',
+'<p class="sub"><b>Look beyond this list.</b> These plants and months are where people have already found these bees, not the whole picture of where they live. The bees we are still missing are out there on plants and at times no one has checked. So don&rsquo;t just search the spots listed here. Look widely.</p>',
 '<div class="scope"><p class="lead">', esc(scope_str), '</p>',
 sprintf('<p>%s</p>', esc(status_note)),
 iucn_par,
