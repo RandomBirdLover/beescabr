@@ -121,8 +121,9 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
                    legend.justification.inside = c(1, 1))
   else ggplot2::theme(legend.position = c(0.985, 0.985), legend.justification = c(1, 1))
 
+  tile_cache <- "data/spatial/basemap_cache"; dir.create(tile_cache, recursive = TRUE, showWarnings = FALSE)  # keep basemap tiles out of the repo root
   build_map <- function(tiletype) {
-    g <- ggplot() + annotation_map_tile(type = tiletype, zoomin = 0, progress = "none")
+    g <- ggplot() + annotation_map_tile(type = tiletype, zoomin = 0, progress = "none", cachedir = tile_cache)
     if (!is.null(pk3857)) g <- g + geom_sf(data = pk3857, fill = NA, color = BEE_HTML_GREEN[["deep"]], linewidth = 0.6)
     g + geom_sf(data = tr3857, aes(color = code_f), linewidth = 1.4, lineend = "round") +
       geom_sf_label(data = mid3857, aes(label = code), size = 2.9, fontface = "bold", fill = "white",

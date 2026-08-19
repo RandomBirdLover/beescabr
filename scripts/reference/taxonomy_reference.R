@@ -476,6 +476,29 @@ load_specimen_additions <- function(path) {
   a[!is.na(a$rank) & trimws(a$rank) != "", , drop = FALSE]
 }
 
+# drop_phantom_additions(): PURE. Keep a curated specimen-addition only if its taxon STILL has >= 1
+# record in the current cleaned specimen OR iNat table (matched by taxon_id OR scientific_name -- the
+# same rule the verify prompt's evidence check uses). A row whose evidence has vanished (e.g. the
+# specimen was re-ID'd away) is a PHANTOM and is skipped at build time. This does NOT edit
+# specimen_additions.csv, so the row silently reactivates if the bee is collected/photographed again.
+# Missing/empty cleaned tables -> no evidence -> everything drops (never errors).
+drop_phantom_additions <- function(additions, spec_clean = NULL, inat_clean = NULL) {
+  if (is.null(additions) || !nrow(additions)) return(additions)
+  low <- function(x) tolower(trimws(as.character(x)))
+  tid <- suppressWarnings(as.integer(additions$taxon_id))
+  sci <- if ("scientific_name" %in% names(additions)) low(additions$scientific_name) else rep("", nrow(additions))
+  has_ev <- function(df) {                          # per-addition: >= 1 matching row in df?
+    if (is.null(df) || !nrow(df)) return(rep(FALSE, nrow(additions)))
+    d_tid <- if ("taxon_id" %in% names(df)) suppressWarnings(as.integer(df$taxon_id)) else integer(0)
+    d_sci <- if ("scientific_name" %in% names(df)) low(df$scientific_name) else character(0)
+    vapply(seq_len(nrow(additions)), function(i)
+      (!is.na(tid[i]) && length(d_tid) && tid[i] %in% d_tid) ||
+      (nzchar(sci[i]) && length(d_sci) && sci[i] %in% d_sci),
+      logical(1))
+  }
+  additions[has_ev(spec_clean) | has_ev(inat_clean), , drop = FALSE]
+}
+
 # ============================================================================
 # build_bee_taxonomy_lookup(): the reference table is the START of the lookup.
 #

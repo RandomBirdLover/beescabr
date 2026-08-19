@@ -36,6 +36,10 @@ PUBLIC_PAGES <- c(
   "least_sampled_bees.R", "bee_bounties.R", "transect_map.R",
   "bee_occurrence_explorer.R")
 
+# refresh basemap: clear the cached tiles so the static transect map redraws
+# with CURRENT tiles on every publish (interactive Leaflet maps are already live)
+unlink("data/spatial/basemap_cache", recursive = TRUE)
+
 message("==> STAGE 3: regenerating public report HTML")
 ok <- vapply(PUBLIC_PAGES, function(nm) {
   message("    ", nm)

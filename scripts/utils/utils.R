@@ -12,7 +12,9 @@ read_latest <- function(folder, pattern) {
   if (length(files) == 0) stop("No files matching '", pattern, "' found in ", folder)
   ds    <- str_extract(basename(files), "\\d{4}[-_]\\d{2}[-_]\\d{2}")  # accept _ or -
   dates <- as.Date(gsub("_", "-", ds))
-  files[which.max(dates)]
+  ver   <- suppressWarnings(as.integer(gsub("[^0-9]", "", str_extract(basename(files), "[Vv][0-9]+"))))  # version number if present
+  ver[is.na(ver)] <- 0L
+  files[order(dates, ver, decreasing = TRUE)][1]                        # newest date, then highest version number
 }
 require_columns <- function(df, required, df_name = "data") {
   missing <- setdiff(required, names(df))

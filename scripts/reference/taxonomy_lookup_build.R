@@ -171,6 +171,16 @@ build_taxonomy_lookup <- function(con) {
   # fabricating a parent. Runs BEFORE id-resolution so the new species' ids/names get filled by the
   # resolver + your overrides just like everything else. A missing parent is reported, not created.
   .adds <- load_specimen_additions(PATHS$specimen_additions)
+  # Option A: skip curated additions whose taxon no longer has ANY current specimen or iNat evidence
+  # (e.g. a specimen re-ID'd away). specimen_additions.csv stays the master list -- the row silently
+  # reactivates if the bee is collected/photographed again. (drop_phantom_additions, taxonomy_reference.R)
+  .rd_ev <- function(p) tryCatch(if (!is.null(p) && file.exists(p))
+                                   utils::read.csv(p, stringsAsFactors = FALSE, check.names = FALSE) else NULL,
+                                 error = function(e) NULL)
+  .n0 <- nrow(.adds)
+  .adds <- drop_phantom_additions(.adds, .rd_ev(PATHS$specimen_clean), .rd_ev(PATHS$inat_clean))
+  if (nrow(.adds) < .n0)
+    bx_cont("Specimen additions: skipped ", .n0 - nrow(.adds), " phantom(s) with no current specimen/iNat evidence")
   if (nrow(.adds)) {
     .merged <- specimen_additions_to_lookup(bee_taxonomy_lookup, .adds)
     bee_taxonomy_lookup <- .merged$lookup

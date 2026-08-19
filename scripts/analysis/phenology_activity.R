@@ -93,6 +93,7 @@ phenology_ridge <- function(df, file, label, min_records = MIN_RECORDS, scope = 
          x = "month", y = NULL) +
     ggridges::theme_ridges(font_size = 8, grid = TRUE) +
     theme(axis.text.y = element_text(size = 6, face = if (identical(sci, "bee")) "italic" else "plain"),  # bee names whole-italic; plant labels italicised per-part above
+          axis.title.x = element_text(face = "bold", hjust = 0.5),   # center + bold 'month' (theme_ridges right-aligns it by default)
           plot.title  = element_text(face = "bold", hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5),
           plot.caption = element_text(color = BEE_INK$secondary, hjust = 0, size = 8))
