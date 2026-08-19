@@ -169,7 +169,10 @@ PATHS <- list(
   # canonical people list (one row per person-year, full name + role + method) and is
   # the SOLE authority for WHO surveyed -- count distinct people from here.
   per_survey = "data/project_info/master_per_survey_info.csv",
-  surveyor_roster = "data/project_info/rosters/surveyor_roster.csv"
+  surveyor_roster = "data/project_info/rosters/surveyor_roster.csv",
+  # identifier roster: WHO determined each specimen. The raw "determination" code (initials + surname)
+  # maps to a person's iNaturalist username here (read-only; the pipeline never writes this file).
+  identifier_roster = "data/project_info/rosters/identifier_roster.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the

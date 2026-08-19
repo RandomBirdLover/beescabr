@@ -81,7 +81,7 @@ SBC_COLUMN_ORDER <- c("ucsd_id", "sdnhm_id", "observer", "observed_on", "is_surv
                       "flower_visited", "flower_visited_raw", "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation", SBC_BLANK_BOOL, "cabr_bee_lethal_collection",
                       "taxon_id", "taxon_rank", "quality_grade",
                       SBC_TAXONOMY_COLS, "latitude", "longitude", "positional_accuracy",
-                      "url", "sex")
+                      "url", "sex", "determiner")
 
 # TP/TP1 -> TP, etc. (same normalization the iNat side uses).
 .sbc_norm_transect <- function(x) {
@@ -276,6 +276,24 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
                           fix_hint = "the raw .xlsx (find each row by ucsd_id / sdnhm_id)") == "stop")
     stop("Stopping so you can review/fix the flagged rows in the raw .xlsx, then re-run. Review files: ", review_dir)
 
+  # determiner provenance: map the raw "determination" code (initials + surname) to the identifier
+  # roster's iNaturalist username (READ-ONLY -- never writes the roster). Any code the roster does not
+  # cover is left blank on the row and listed in a review file for a human to reconcile.
+  if ("determination" %in% names(df)) {
+    det_roster <- tryCatch(read.csv(PATHS$identifier_roster, stringsAsFactors = FALSE, check.names = FALSE),
+                           error = function(e) NULL)
+    det <- resolve_determiners(df$determination, det_roster)
+    df$determiner <- det$determiner
+    det_bad <- which(det$status %in% c("unknown", "ambiguous"))
+    if (length(det_bad)) {
+      det_rev <- unique(data.frame(ucsd_id = df$ucsd_id[det_bad], sdnhm_id = df$sdnhm_id[det_bad],
+                                   determination = det$code[det_bad], determiner_status = det$status[det_bad],
+                                   stringsAsFactors = FALSE))
+      write_fresh(det_rev, file.path(review_dir, "cabr_specimen_bee_determiner_unmatched.csv"), row.names = FALSE)
+    }
+    bx_cont("determiner: ", sum(!is.na(df$determiner)), " matched to roster",
+            if (length(det_bad)) paste0(" \U00B7 ", length(det_bad), " unmatched") else "")
+  }
   clean <- df |> strip_control_chars() |> select(any_of(SBC_COLUMN_ORDER))
 
   # bake the current IUCN Red List status onto each species (fetched once, cache-backed,

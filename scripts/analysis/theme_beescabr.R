@@ -401,4 +401,5 @@ BEE_MAP_CTRLROW_JS <- paste0(
   "    el.querySelector('.leaflet-control-zoom')",
   "  ];",
   "  items.forEach(function(c){ if (c) row.appendChild(c); });",
+  "  el.querySelectorAll('.leaflet-bottom.leaflet-left .leaflet-control').forEach(function(c){ if (window.L && L.DomEvent) L.DomEvent.disableScrollPropagation(c); });",   # let a tall legend scroll internally instead of the wheel zooming the map
   "}")

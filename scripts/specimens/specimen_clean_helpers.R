@@ -605,3 +605,30 @@ attach_lookup_taxonomy <- function(df, lookup) {
   j <- fill_above_genus_ids(j, lookup)
   j |> select(-.g, -.s, -.ss, -any_of("rank"), -ends_with("_lk"))
 }
+
+# resolve_determiners(): PURE. Map each specimen determination CODE ("initials + surname", e.g.
+# "JL Mullins") to a determiner's iNaturalist username by matching surname + first initial against the
+# identifier roster. Returns a data frame (code, determiner, status): status is "matched", "unknown"
+# (no roster row), "ambiguous" (>1 roster row shares that surname + initial -- a human must resolve), or
+# NA (blank code = no determination recorded). READ-ONLY: never writes the roster. `roster` needs
+# columns first_name, last_name, inaturalist_username. Multi-word surnames in a code fall to "unknown"
+# (flagged, not silently mismatched) since only the last token is read as the surname.
+resolve_determiners <- function(codes, roster) {
+  low  <- function(x) tolower(trimws(as.character(x)))
+  code     <- trimws(as.character(codes))
+  surname  <- sub(".*\\s", "", code)                 # last whitespace-delimited token
+  first_in <- substr(sub("\\s.*", "", code), 1, 1)   # first char of the leading initial(s)
+  r_last <- low(roster$last_name)
+  r_fi   <- substr(low(roster$first_name), 1, 1)
+  r_user <- as.character(roster$inaturalist_username)
+  out <- data.frame(code = code, determiner = NA_character_, status = NA_character_,
+                    stringsAsFactors = FALSE)
+  for (i in seq_along(code)) {
+    if (is.na(code[i]) || !nzchar(code[i])) next      # blank -> no determination; status stays NA
+    hit <- which(r_last == low(surname[i]) & r_fi == low(first_in[i]))
+    if (length(hit) == 1L) { out$determiner[i] <- r_user[hit]; out$status[i] <- "matched" }
+    else if (length(hit) > 1L) out$status[i] <- "ambiguous"
+    else out$status[i] <- "unknown"
+  }
+  out
+}
