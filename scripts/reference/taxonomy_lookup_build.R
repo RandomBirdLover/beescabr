@@ -208,6 +208,9 @@ build_taxonomy_lookup <- function(con) {
   prompt_missing_taxon_ids()
   bee_taxonomy_lookup <- apply_manual_overrides(bee_taxonomy_lookup)
   write_review_worklist()   # the still-open not_found set (after your answers) -> the "look these up" file
+  # re-apply the verified memory: rows appended AFTER build_bee_taxonomy_lookup (the specimen-additions
+  # merge) missed the verified_ids pass, so a taxon you verified would otherwise re-ask every run.
+  bee_taxonomy_lookup <- apply_verified_ids(bee_taxonomy_lookup, verified_ids)
   # in_cabr_specimens is appended last by the specimen-additions merge; move it up beside in_holway.
   if (all(c("in_cabr_specimens", "in_holway") %in% names(bee_taxonomy_lookup)))
     bee_taxonomy_lookup <- dplyr::relocate(bee_taxonomy_lookup, in_cabr_specimens, .after = in_holway)

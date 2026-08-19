@@ -476,6 +476,18 @@ load_specimen_additions <- function(path) {
   a[!is.na(a$rank) & trimws(a$rank) != "", , drop = FALSE]
 }
 
+# apply_verified_ids(): PURE. Flip `verified` TRUE on any lookup row whose taxon_id is in the
+# remembered verified set (verified_taxa.csv). build_bee_taxonomy_lookup applies the memory to its
+# BASE rows, but rows appended later (the specimen-additions merge) miss it -- without this re-apply
+# a verified addition rebuilds as unverified and the pass-2 prompt re-asks it EVERY run.
+apply_verified_ids <- function(lookup, verified_ids) {
+  if (is.null(lookup) || !nrow(lookup) || !"verified" %in% names(lookup)) return(lookup)
+  tid <- suppressWarnings(as.integer(lookup$taxon_id))
+  ids <- suppressWarnings(as.integer(verified_ids))
+  lookup$verified <- as.logical(lookup$verified) | (!is.na(tid) & tid %in% ids)
+  lookup
+}
+
 # drop_phantom_additions(): PURE. Keep a curated specimen-addition only if its taxon STILL has >= 1
 # record in the current cleaned specimen OR iNat table (matched by taxon_id OR scientific_name -- the
 # same rule the verify prompt's evidence check uses). A row whose evidence has vanished (e.g. the
