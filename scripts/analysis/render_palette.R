@@ -9,6 +9,18 @@
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
 OUT <- "data/analysis/bee_themes_pallete"; dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 
+# ---- website design colors, parsed LIVE from their sources so the sheet never goes stale ----
+# landing page CSS variables live in publish_pages.R (:root light set first, dark set second)
+.pp <- readLines("scripts/publish/publish_pages.R", warn = FALSE)
+.vars <- regmatches(.pp, gregexpr("--[a-z0-9-]+ *: *#[0-9a-fA-F]{3,8}", .pp))
+.vars <- unlist(.vars)
+.vn <- sub(" *:.*$", "", .vars); .vh <- sub("^.*: *", "", .vars)
+.first <- !duplicated(.vn)
+LAND_LIGHT <- setNames(.vh[.first],  sub("^--", "", .vn[.first]))
+LAND_DARK  <- setNames(.vh[!.first], sub("^--", "", .vn[!.first]))
+.hero <- regmatches(.pp, regexpr("hero \\{[^}]*background:#[0-9a-fA-F]{6}", .pp))
+HERO_BG <- if (length(.hero <- unlist(.hero))) sub("^.*background:", "", .hero[1]) else "#16302b"
+
 rows <- list(
   list("TRANSECT",       "4 transects (BST/UPMON/TP/OT) -- full",      unname(BEE_TRANSECT),     names(BEE_TRANSECT), TRUE),
   list("TRANSECT light", "raw / lower bar tint (e.g. observed)",       unname(BEE_TRANSECT_LT),  names(BEE_TRANSECT_LT), TRUE),
@@ -22,7 +34,22 @@ rows <- list(
   list("SPECIES",        "per-species palette (focused webs)",         BEE_SPECIES,              rep("",length(BEE_SPECIES)), FALSE),
   list("SEASON",         "blue Nov-Feb; green from end-Feb; orange summer; warm tan fall", BEE_SEASON,            rep("",length(BEE_SEASON)), FALSE),
   list("NPS footprint",  "CABR footprint figures -- own NPS theme",    unname(BEE_NPS),          names(BEE_NPS), TRUE),
-  list("NPS magnitude",  "forest-green ramp (footprint lollipop)",     NPS_SEQ,                  rep("",length(NPS_SEQ)), TRUE)
+  list("NPS magnitude",  "forest-green ramp (footprint lollipop)",     NPS_SEQ,                  rep("",length(NPS_SEQ)), TRUE),
+  # ---- website design (the HTML pages + landing site) ----
+  list("WEBSITE green",  "peridot accent from the hero bee photo",
+       unname(BEE_HTML_GREEN),  names(BEE_HTML_GREEN), TRUE),
+  list("WEBSITE chrome", "table-page surfaces + text (BEE_HTML tokens)",
+       unname(BEE_HTML),        names(BEE_HTML), TRUE),
+  list("TABLE chrome",   "PNG summary tables: zebra stripes + text",
+       unname(BEE_TABLE),       names(BEE_TABLE), TRUE),
+  list("IUCN chip bg",   "Red List badge backgrounds (field guides + checklists)",
+       unname(BEE_IUCN_BG),     toupper(names(BEE_IUCN_BG)), TRUE),
+  list("IUCN chip text", "Red List badge text colors (pairs with the row above)",
+       unname(BEE_IUCN_FG),     toupper(names(BEE_IUCN_FG)), TRUE),
+  list("LANDING light",  "index.html CSS variables (light mode) + the hero band",
+       c(unname(LAND_LIGHT), HERO_BG), c(names(LAND_LIGHT), "hero"), TRUE),
+  list("LANDING dark",   "index.html CSS variables (dark mode)",
+       unname(LAND_DARK),       names(LAND_DARK), TRUE)
 )
 
 n <- length(rows)

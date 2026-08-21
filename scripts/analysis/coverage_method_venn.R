@@ -110,23 +110,36 @@ counts <- function(s) c(lethal_only    = length(setdiff(s$lethal, s$nonlethal)),
                         both           = length(intersect(s$lethal, s$nonlethal)),
                         nonlethal_only = length(setdiff(s$nonlethal, s$lethal)))
 
-# ---- Venn drawing -----------------------------------------------------------
-draw_circle <- function(x, y, r, col) {
-  a <- seq(0, 2 * pi, length.out = 200)
-  polygon(x + r * cos(a), y + r * sin(a), col = col, border = "grey45", lwd = 1.5)
+# ---- Venn drawing (donut-chart style: saturated regions cut apart by white gaps,
+# counts big + bold + white inside each region, colored method headers above) ----
+.arc <- function(x, y, r, a0, a1, n = 240) {
+  a <- seq(a0, a1, length.out = n); cbind(x + r * cos(a), y + r * sin(a))
 }
 venn2 <- function(cc, title) {
   plot.new(); plot.window(xlim = c(0, 10), ylim = c(0, 8), asp = 1)
-  draw_circle(4.1, 3.6, 2.6, adjustcolor(COL_LETHAL,    0.35))
-  draw_circle(5.9, 3.6, 2.6, adjustcolor(COL_NONLETHAL, 0.35))
-  # axis-less figure: ink the counts explicitly (bee_base_par's grey fg is tuned for axis plots)
-  text(2.7, 3.6, cc["lethal_only"],    cex = 1.7, font = 2, col = BEE_INK$primary)
-  text(7.3, 3.6, cc["nonlethal_only"], cex = 1.7, font = 2, col = BEE_INK$primary)
-  text(5.0, 3.6, cc["both"],           cex = 1.7, font = 2, col = BEE_INK$secondary)
-  text(3.0, 7.2, sprintf("Lethal - %d", cc["lethal_only"] + cc["both"]),
-       col = COL_LETHAL, font = 2, cex = 0.95)
-  text(7.0, 7.2, sprintf("Non-lethal - %d", cc["nonlethal_only"] + cc["both"]),
-       col = COL_NONLETHAL, font = 2, cex = 0.95)
+  x1 <- 4.1; x2 <- 5.9; yy <- 3.6; r <- 2.6
+  th  <- acos((x2 - x1) / (2 * r))         # half-angle at the circle intersection points
+  mix <- grDevices::rgb(t(round((grDevices::col2rgb(COL_LETHAL) +
+                                 grDevices::col2rgb(COL_NONLETHAL)) / 2)), maxColorValue = 255)
+  # the three regions as their OWN polygons: left crescent, lens, right crescent
+  left  <- rbind(.arc(x1, yy, r, th, 2 * pi - th),        .arc(x2, yy, r, pi + th, pi - th))
+  lens  <- rbind(.arc(x1, yy, r, -th, th),                .arc(x2, yy, r, pi - th, pi + th))
+  right <- rbind(.arc(x2, yy, r, pi - th, -(pi - th)),    .arc(x1, yy, r, -th, th))
+  polygon(left,  col = COL_LETHAL,    border = "white", lwd = 7)
+  polygon(right, col = COL_NONLETHAL, border = "white", lwd = 7)
+  polygon(lens,  col = mix,           border = "white", lwd = 7)
+  text(2.48, yy + 0.14, cc["lethal_only"],    cex = 2.2, font = 2, col = "white")
+  text(7.52, yy + 0.14, cc["nonlethal_only"], cex = 2.2, font = 2, col = "white")
+  text(5.0, yy + 0.14, cc["both"],           cex = 2.2, font = 2, col = "white")
+  text(2.48, yy - 0.62, "nets\nonly",   cex = 0.6, col = "white")
+  text(7.52, yy - 0.62, "photos\nonly", cex = 0.6, col = "white")
+  text(5.0, yy - 0.66, "both",        cex = 0.62, col = "white")
+  text(2.9, 7.35, "NETS",        col = COL_LETHAL,    font = 2, cex = 1.15)
+  text(2.9, 6.85, sprintf("specimens · %d", cc["lethal_only"] + cc["both"]),
+       col = COL_LETHAL, cex = 0.78)
+  text(7.1, 7.35, "INATURALIST", col = COL_NONLETHAL, font = 2, cex = 1.15)
+  text(7.1, 6.85, sprintf("photos · %d", cc["nonlethal_only"] + cc["both"]),
+       col = COL_NONLETHAL, cex = 0.78)
   title(main = title, line = 0.2)
 }
 
