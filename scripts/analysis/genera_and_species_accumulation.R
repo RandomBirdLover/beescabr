@@ -187,12 +187,51 @@ plot_accumulation_combined <- function(file) {
   legend("bottomright", title = "transect", legend = present,
          col = COLS[present], lwd = 2.8, lty = 1, bty = "n", cex = 0.9,
          text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+  # rank key (house rule: species solid, genera dashed) -- neutral ink, since color = transect
+  legend("bottomright", inset = c(0, 0.30), title = "rank", legend = c("species", "genera"),
+         col = BEE_INK$secondary, lwd = 2.8, lty = c(1, 2), bty = "n", cex = 0.9,
+         text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
   bee_caption_base(scope = "all survey records, per transect (x = number of survey trips)",
                    method = "lethal + non-lethal pooled", rank = "genera & species",
                    sig = bee_test("sample-based species accumulation (specaccum) + Chao2 richness estimator"))
   par(op)
 }
 plot_accumulation_combined(file.path(OUT_REPORT, "bee_taxa_accumulation_by_transect.png"))
+
+# SPLIT figures for the report: the same curves, one figure PER RANK, so each can be
+# read (or dropped into a page) on its own. Shared x/y limits across both figures so
+# they compare directly; genera keep the dashed house mark to match the combined figure.
+plot_accumulation_one_rank <- function(rank_label, key_col, lty, title_txt, sub_txt, file) {
+  sacs <- sacs_for(key_col)
+  if (!length(sacs)) { message("Nothing to plot for ", rank_label); return(invisible()) }
+  both <- unlist(lapply(c("genus_key", "species_key"), sacs_for), recursive = FALSE)
+  xmax <- max(vapply(both, function(s) max(s$sites),    numeric(1)))   # shared limits: the two
+  ymax <- max(vapply(both, function(s) max(s$richness), numeric(1)))   # split figures stay comparable
+  bee_png(file, width = 1900, height = 1250, res = 200); on.exit(dev.off())
+  bee_base_par()
+  op <- par(mar = c(4.2, 4.4, 5.0, 1), oma = c(4.6, 0, 0, 0))
+  plot(NA, xlim = c(0, xmax), ylim = c(0, ymax), xlab = "surveys",
+       ylab = sprintf("number of unique %s", rank_label))
+  for (tr in names(sacs))
+    lines(sacs[[tr]]$sites, sacs[[tr]]$richness, col = COLS[tr], lwd = 2.8, lty = lty)
+  mtext(title_txt, side = 3, line = 3.0, font = 2, cex = 1.05, col = BEE_INK$primary)
+  mtext(sub_txt, side = 3, line = 1.4, cex = 0.78, col = BEE_INK$secondary)
+  legend("bottomright", title = "transect", legend = names(sacs),
+         col = COLS[names(sacs)], lwd = 2.8, lty = lty, bty = "n", cex = 0.9,
+         text.col = BEE_INK$secondary, title.col = BEE_INK$secondary)
+  bee_caption_base(scope = "all survey records, per transect (x = number of survey trips); axes match the combined and companion figures",
+                   method = "lethal + non-lethal pooled", rank = rank_label,
+                   sig = bee_test("sample-based species accumulation (specaccum) + Chao2 richness estimator"))
+  par(op)
+}
+plot_accumulation_one_rank("species", "species_key", 1,
+  "Have we found all the park's bee species yet?",
+  "One curve per transect, methods pooled. Species curves are still climbing, so more surveys keep adding new species.",
+  file.path(OUT_REPORT, "bee_species_accumulation_by_transect.png"))
+plot_accumulation_one_rank("genera", "genus_key", 2,
+  "Have we found all the park's bee genera yet?",
+  "One curve per transect, methods pooled (dashed = genera, matching the combined figure). Genera level off sooner than species.",
+  file.path(OUT_REPORT, "bee_genera_accumulation_by_transect.png"))
 
 # ---- 4b. JOURNAL method comparison: lethal vs non-lethal, SMALL MULTIPLES ----
 # ONE figure: a grid with rank as ROWS (genera top, species bottom) and transect as COLUMNS,
