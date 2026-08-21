@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bee Trends Explorer &#8211; Cabrillo National Monument</title>
+<style>
+html{background:#ece9e2}
+body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#22211e;max-width:1180px;margin:26px auto;background:#ffffff;padding:34px 34px 42px;border:1px solid #e7e4dc;border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06)}
+.org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#3f8f4f;margin:0 0 3px}
+h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;color:#1c5728}
+h1:after{content:"";display:block;width:56px;height:3px;background:#3f8f4f;border-radius:2px;margin:11px 0 2px}
+p.sub{color:#6b6a66;margin:13px 0 4px;font-size:13.5px;max-width:900px}
+.wrap{display:flex;gap:22px;margin-top:18px;align-items:flex-start}
+.side{width:288px;flex:none;max-height:72vh;overflow:auto;border:1px solid #dddddd;border-radius:10px;padding:10px 12px;background:#fffdf9}
+.fam{font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#1c5728;margin:10px 0 3px;padding-left:7px;border-left:3px solid #999}
+.row{display:flex;align-items:center;gap:8px;padding:3px 6px;margin:1px 0;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap}
+.row:hover{background:rgba(28,92,40,.08)}
+.row.on{background:rgba(28,92,40,.13);font-weight:700}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.dot.g{background:#fff !important;border:2.5px dashed transparent;box-sizing:border-box}
+.row i{font-style:italic}
+.row .wg{color:#8a8071;font-size:10.5px;font-style:normal;margin-left:2px}
+.main{flex:1;min-width:0}
+.note{font-size:13px;color:#6b6a66;background:#f2efe8;border-left:3px solid #3f8f4f;padding:9px 13px;border-radius:0 7px 7px 0;margin:0 0 12px}
+#chartbox{border:1px solid #dddddd;border-radius:10px;padding:14px 16px 8px;background:#fffdf9}
+#tname{font-size:18px;font-weight:700;color:#1c5728}
+#tmeta{font-size:12.5px;color:#6b6a66;margin:2px 0 6px}
+svg{width:100%;height:auto;display:block}
+.cap{font-size:11.5px;color:#4a4945;margin-top:14px;line-height:1.5}
+@media (max-width:820px){.wrap{flex-direction:column}.side{width:100%;max-height:38vh}}
+</style></head><body><!--bx-back--><style>.bx-backlink{position:fixed;top:16px;right:16px;z-index:2147483000;display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .8rem;border-radius:999px;background:rgba(22,48,43,.92);color:#fff;font:600 13px/1.1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2)}.bx-backlink:hover{background:rgba(28,92,40,.96)}</style><a href="./index.html" class="bx-backlink">&larr; Back to main page</a><!--/bx-back-->
+<div class="org">Cabrillo National Monument</div>
+<h1>Bee Trends Explorer &#128200;</h1>
+<p class="sub">Pick a bee on the left to see how its share of the park&rsquo;s bee photos has moved from season to season. Share, not raw counts: surveying grew enormously over these years, so counting photos would only measure the surveying. Dividing by everything photographed that season cancels the effort out. Every year is compared over the same March to October season, using photo records only. Solid lines are single species; dashed lines are a whole genus pooled.</p>
+<p class="sub"><b>A share is still not a population count.</b> It shows how this bee is doing relative to the rest of the bee community. Small wiggles are normal, so look for sustained runs, not single-year jumps.</p>
+<div class="note"><b>Not enough data yet.</b> This program has run for six seasons, and six points cannot prove a trend in either direction. Almost nothing here will test as statistically significant, and that is expected. Treat every line as a first look. Each added year of monitoring makes this page more trustworthy.</div>
+<div class="wrap">
+  <div class="side" id="list"></div>
+  <div class="main">
+    <div id="chartbox">
+      <div id="tname"></div>
+      <div id="tmeta"></div>
+      <svg id="chart" viewBox="0 0 860 470" role="img" aria-label="share of bee records by year"></svg>
+    </div>
+    <div class="cap">Scope: iNaturalist photo records only, 2021-2026, whole park, every observer; March-October only, the
+standardized survey season, so every year covers the same months; share = the bee's photos / all bee photos
+that season; taxa with &gt;= 50 in-window records; a share is relative, not a population count; 2026 is partial
+(its season is missing September and October; open point) | Method: non-lethal (photo records) only | Rank:
+bee species and whole genera | Statistical analysis: Spearman rank correlation of annual record share vs year
+(per taxon) | Source: iNaturalist observations, Cabrillo NM (data as of 2026-08-21)</div>
+  </div>
+</div>
+<script>
+var D = {"years":[2021,2022,2023,2024,2025,2026],"totals":[906,708,1239,4198,1532,1141],"partial":2026,"famcol":{"Apidae":"#E5B80B","Halictidae":"#2CA05A","Megachilidae":"#3F6FB5","Andrenidae":"#C43C8E","Colletidae":"#8256B4","Other":"#9C9A93"},"taxa":[{"name":"Anthophora californica","rank":"species","family":"Apidae","total":93,"n":[20,5,17,13,26,12],"share":[2.21,0.71,1.37,0.31,1.7,1.05],"rho":-0.26,"p":0.66},{"name":"Anthophora curta","rank":"species","family":"Apidae","total":71,"n":[15,1,12,42,1,0],"share":[1.66,0.14,0.97,1,0.07,0],"rho":-0.77,"p":0.1},{"name":"Bombus californicus","rank":"species","family":"Apidae","total":135,"n":[0,0,0,108,23,4],"share":[0,0,0,2.57,1.5,0.35],"rho":0.7,"p":0.12},{"name":"Bombus melanopygus","rank":"species","family":"Apidae","total":164,"n":[6,10,22,125,0,1],"share":[0.66,1.41,1.78,2.98,0,0.09],"rho":-0.37,"p":0.5},{"name":"Bombus sonorus","rank":"species","family":"Apidae","total":67,"n":[0,0,59,8,0,0],"share":[0,0,4.76,0.19,0,0],"rho":-0.03,"p":0.95},{"name":"Bombus vosnesenskii","rank":"species","family":"Apidae","total":628,"n":[0,24,91,503,2,8],"share":[0,3.39,7.34,11.98,0.13,0.7],"rho":0.14,"p":0.8},{"name":"Ceratina acantha","rank":"species","family":"Apidae","total":63,"n":[10,4,4,20,21,4],"share":[1.1,0.56,0.32,0.48,1.37,0.35],"rho":-0.2,"p":0.71},{"name":"Xenoglossa pomonae","rank":"species","family":"Apidae","total":62,"n":[0,3,19,35,1,4],"share":[0,0.42,1.53,0.83,0.07,0.35],"rho":0.09,"p":0.92},{"name":"Anthophora","rank":"genus","family":"Apidae","total":218,"n":[36,6,32,103,28,13],"share":[3.97,0.85,2.58,2.45,1.83,1.14],"rho":-0.43,"p":0.42},{"name":"Bombus","rank":"genus","family":"Apidae","total":1031,"n":[6,34,177,774,27,13],"share":[0.66,4.8,14.29,18.44,1.76,1.14],"rho":0.09,"p":0.92},{"name":"Ceratina","rank":"genus","family":"Apidae","total":1006,"n":[119,84,97,378,197,131],"share":[13.13,11.86,7.83,9,12.86,11.48],"rho":-0.31,"p":0.56},{"name":"Diadasia","rank":"genus","family":"Apidae","total":151,"n":[5,8,28,48,34,28],"share":[0.55,1.13,2.26,1.14,2.22,2.45],"rho":0.83,"p":0.06},{"name":"Melissodes","rank":"genus","family":"Apidae","total":475,"n":[92,78,51,142,104,8],"share":[10.15,11.02,4.12,3.38,6.79,0.7],"rho":-0.77,"p":0.1},{"name":"Xenoglossa","rank":"genus","family":"Apidae","total":63,"n":[0,3,19,35,1,5],"share":[0,0.42,1.53,0.83,0.07,0.44],"rho":0.31,"p":0.56},{"name":"Agapostemon melliventris","rank":"species","family":"Halictidae","total":98,"n":[25,15,10,16,25,7],"share":[2.76,2.12,0.81,0.38,1.63,0.61],"rho":-0.71,"p":0.14},{"name":"Agapostemon subtilior","rank":"species","family":"Halictidae","total":692,"n":[113,64,17,344,86,68],"share":[12.47,9.04,1.37,8.19,5.61,5.96],"rho":-0.6,"p":0.24},{"name":"Augochlorella pomoniella","rank":"species","family":"Halictidae","total":1490,"n":[79,91,57,772,264,227],"share":[8.72,12.85,4.6,18.39,17.23,19.89],"rho":0.77,"p":0.1},{"name":"Dufourea australis","rank":"species","family":"Halictidae","total":876,"n":[63,17,243,344,158,51],"share":[6.95,2.4,19.61,8.19,10.31,4.47],"rho":0.14,"p":0.8},{"name":"Halictus ligatus","rank":"species","family":"Halictidae","total":183,"n":[10,4,9,121,33,6],"share":[1.1,0.56,0.73,2.88,2.15,0.53],"rho":-0.09,"p":0.92},{"name":"Lasioglossum sisymbrii","rank":"species","family":"Halictidae","total":96,"n":[2,4,3,40,18,29],"share":[0.22,0.56,0.24,0.95,1.17,2.54],"rho":0.94,"p":0.02},{"name":"Agapostemon","rank":"genus","family":"Halictidae","total":811,"n":[147,82,27,365,113,77],"share":[16.23,11.58,2.18,8.69,7.38,6.75],"rho":-0.66,"p":0.17},{"name":"Augochlorella","rank":"genus","family":"Halictidae","total":1490,"n":[79,91,57,772,264,227],"share":[8.72,12.85,4.6,18.39,17.23,19.89],"rho":0.77,"p":0.1},{"name":"Dufourea","rank":"genus","family":"Halictidae","total":947,"n":[82,18,253,368,168,58],"share":[9.05,2.54,20.42,8.77,10.97,5.08],"rho":-0.03,"p":1},{"name":"Halictus","rank":"genus","family":"Halictidae","total":237,"n":[18,6,11,137,38,27],"share":[1.99,0.85,0.89,3.26,2.48,2.37],"rho":0.6,"p":0.24},{"name":"Lasioglossum","rank":"genus","family":"Halictidae","total":1748,"n":[184,200,241,565,200,358],"share":[20.31,28.25,19.45,13.46,13.05,31.38],"rho":-0.09,"p":0.92},{"name":"Dianthidium","rank":"genus","family":"Megachilidae","total":56,"n":[3,10,14,19,7,3],"share":[0.33,1.41,1.13,0.45,0.46,0.26],"rho":-0.37,"p":0.5},{"name":"Andrena perimelas","rank":"species","family":"Andrenidae","total":50,"n":[0,2,10,9,13,16],"share":[0,0.28,0.81,0.21,0.85,1.4],"rho":0.83,"p":0.06},{"name":"Perdita hirticeps","rank":"species","family":"Andrenidae","total":101,"n":[0,1,13,54,27,6],"share":[0,0.14,1.05,1.29,1.76,0.53],"rho":0.66,"p":0.17},{"name":"Andrena","rank":"genus","family":"Andrenidae","total":251,"n":[23,4,26,25,134,39],"share":[2.54,0.56,2.1,0.6,8.75,3.42],"rho":0.54,"p":0.3},{"name":"Perdita","rank":"genus","family":"Andrenidae","total":257,"n":[23,7,27,100,59,41],"share":[2.54,0.99,2.18,2.38,3.85,3.59],"rho":0.6,"p":0.24},{"name":"Colletes","rank":"genus","family":"Colletidae","total":740,"n":[42,57,159,279,113,90],"share":[4.64,8.05,12.83,6.65,7.38,7.89],"rho":0.14,"p":0.8}]};
+var INK = "#0b0b0b", SUB = "#6b6a66", GRID = "#e4e0d6";
+function famcol(f){ return D.famcol[f] || "#8A8880"; }
+function el(t,a){ var e=document.createElementNS("http://www.w3.org/2000/svg",t);
+  for(var k in a) e.setAttribute(k,a[k]); return e; }
+function fmt(n){ return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); }
+
+// ---- sidebar ----
+var list = document.getElementById("list"), cur = 0;
+function buildList(){
+  var fams = [];
+  D.taxa.forEach(function(t){ if(fams.indexOf(t.family)<0) fams.push(t.family); });
+  fams.forEach(function(f){
+    var h = document.createElement("div"); h.className="fam"; h.textContent=f;
+    h.style.borderLeftColor = famcol(f); list.appendChild(h);
+    D.taxa.forEach(function(t,i){
+      if(t.family!==f) return;
+      var r = document.createElement("div"); r.className="row"; r.dataset.i=i;
+      var d = document.createElement("span");
+      d.className = "dot" + (t.rank==="genus" ? " g" : "");
+      if(t.rank==="genus") d.style.borderColor = famcol(f); else d.style.background = famcol(f);
+      r.appendChild(d);
+      var nm = document.createElement("i"); nm.textContent = t.name; r.appendChild(nm);
+      if(t.rank==="genus"){ var w=document.createElement("span"); w.className="wg"; w.textContent="whole genus"; r.appendChild(w); }
+      r.addEventListener("click", function(){ select(i); });
+      list.appendChild(r);
+    });
+  });
+}
+function select(i){
+  cur = i;
+  var rows = list.querySelectorAll(".row");
+  rows.forEach(function(r){ r.classList.toggle("on", +r.dataset.i===i); });
+  draw(D.taxa[i]);
+}
+
+// ---- chart ----
+function draw(t){
+  var svg = document.getElementById("chart"); svg.innerHTML = "";
+  var W=860,H=470,L=62,R=24,T=18,B=86, iw=W-L-R, ih=H-T-B;
+  var col = famcol(t.family), dash = (t.rank==="genus");
+  document.getElementById("tname").innerHTML =
+    "<i>"+t.name+"</i>" + (t.rank==="genus" ? " <span style='font-weight:400;font-size:13px;color:"+SUB+"'>(whole genus, all records pooled)</span>" : "");
+  var trend = (t.p < 0.05) ? (t.rho > 0 ? "a significant upward trend" : "a significant downward trend")
+                           : "no significant trend";
+  document.getElementById("tmeta").textContent =
+    t.family + " \u00b7 " + fmt(t.total) + " records since " + D.years[0] +
+    " \u00b7 Spearman rho = " + t.rho + ", p = " + t.p + " (" + trend + ")";
+  var ymax = Math.max.apply(null, t.share) * 1.25; if (ymax < 5) ymax = 5;
+  var step = ymax > 16 ? 5 : (ymax > 8 ? 2 : 1);
+  var X = function(j){ return L + iw * (j / (D.years.length - 1)); };
+  var Y = function(v){ return T + ih * (1 - v / ymax); };
+  // gridlines + y ticks
+  for (var v = 0; v <= ymax; v += step){
+    svg.appendChild(el("line",{x1:L,x2:W-R,y1:Y(v),y2:Y(v),stroke:GRID,"stroke-width":1}));
+    var ty = document.createElementNS(svg.namespaceURI,"text");
+    ty.setAttribute("x",L-8); ty.setAttribute("y",Y(v)+4); ty.setAttribute("text-anchor","end");
+    ty.setAttribute("font-size","12.5"); ty.setAttribute("fill",SUB); ty.textContent=v+"%";
+    svg.appendChild(ty);
+  }
+  // x ticks: year + n=
+  D.years.forEach(function(yr,j){
+    var tx = document.createElementNS(svg.namespaceURI,"text");
+    tx.setAttribute("x",X(j)); tx.setAttribute("y",H-B+26); tx.setAttribute("text-anchor","middle");
+    tx.setAttribute("font-size","13.5"); tx.setAttribute("fill",INK); tx.textContent=yr;
+    svg.appendChild(tx);
+    var tn = document.createElementNS(svg.namespaceURI,"text");
+    tn.setAttribute("x",X(j)); tn.setAttribute("y",H-B+43); tn.setAttribute("text-anchor","middle");
+    tn.setAttribute("font-size","11"); tn.setAttribute("fill",SUB); tn.textContent="n="+fmt(D.totals[j]);
+    svg.appendChild(tn);
+  });
+  // axis titles
+  var xt = document.createElementNS(svg.namespaceURI,"text");
+  xt.setAttribute("x",L+iw/2); xt.setAttribute("y",H-14); xt.setAttribute("text-anchor","middle");
+  xt.setAttribute("font-size","13"); xt.setAttribute("fill",SUB);
+  xt.textContent = "year (n = all bee records that year)"; svg.appendChild(xt);
+  var yt = document.createElementNS(svg.namespaceURI,"text");
+  yt.setAttribute("x",16); yt.setAttribute("y",T+ih/2); yt.setAttribute("font-size","13"); yt.setAttribute("fill",SUB);
+  yt.setAttribute("transform","rotate(-90 16 "+(T+ih/2)+")"); yt.setAttribute("text-anchor","middle");
+  yt.textContent = "share of all bee records (%)"; svg.appendChild(yt);
+  // line
+  var pts = t.share.map(function(v,j){ return X(j)+","+Y(v); }).join(" ");
+  var ln = el("polyline",{points:pts,fill:"none",stroke:col,"stroke-width":2.6,
+                          "stroke-linejoin":"round","stroke-linecap":"round"});
+  if (dash) ln.setAttribute("stroke-dasharray","7 6");
+  svg.appendChild(ln);
+  // points + value labels
+  t.share.forEach(function(v,j){
+    var partial = (D.years[j] === D.partial);
+    svg.appendChild(el("circle",{cx:X(j),cy:Y(v),r:4.6,fill:partial?"#fff":col,
+                                 stroke:col,"stroke-width":2.2}));
+    var tv = document.createElementNS(svg.namespaceURI,"text");
+    tv.setAttribute("x",X(j)); tv.setAttribute("y",Y(v)-11); tv.setAttribute("text-anchor","middle");
+    tv.setAttribute("font-size","12.5"); tv.setAttribute("font-weight","700"); tv.setAttribute("fill",INK);
+    tv.textContent = Math.round(v)+"%";
+    svg.appendChild(tv);
+  });
+}
+buildList();
+// open on the most-recorded species (the park favorite)
+var start = 0, best = -1;
+D.taxa.forEach(function(t,i){ if(t.rank==="species" && t.total > best){ best = t.total; start = i; } });
+select(start);
+</script>
+</body></html>
