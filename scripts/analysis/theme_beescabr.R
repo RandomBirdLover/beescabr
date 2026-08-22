@@ -173,6 +173,14 @@ bee_table_css <- function() paste0(
   "thead th:hover{background:", BEE_HTML[["head_hover"]], "}",
   "tbody tr:nth-child(even){background:", BEE_TABLE[["row_even"]], "}",
   "tbody tr:hover{background:", BEE_HTML[["row_hover"]], "}",
+  # SORTED COLUMN: the header you last clicked keeps a green underline + a direction
+  # arrow, and its whole column is tinted so the eye can follow it down a wide table.
+  # Placed after the zebra rule, and "tbody tr td.sortcol" outranks "tr:nth-child(even)".
+  "thead th.sorted{background:", BEE_HTML[["head_hover"]], ";box-shadow:inset 0 -3px 0 ", BEE_HTML_GREEN[["mid"]], "}",
+  "thead th.sorted:after{content:'\\2191';margin-left:5px;font-size:10px;color:", BEE_HTML_GREEN[["mid"]], "}",
+  "thead th.sorted[aria-sort=\"descending\"]:after{content:'\\2193'}",
+  "tbody tr td.sortcol{background:#eef5ef}",   # palest tint of BEE_HTML_GREEN light; must stay readable under the row text
+  "tbody tr:hover td.sortcol{background:transparent}",
   "tbody tr:last-child td{border-bottom:none}",
   "th.num{text-align:right}td.num{text-align:right;font-variant-numeric:tabular-nums}",
   "td.bee i{color:#111}td .cn{display:block;color:", BEE_HTML[["cn"]], ";font-size:11px}",
@@ -180,6 +188,22 @@ bee_table_css <- function() paste0(
   "tr.low{color:", BEE_HTML[["low"]], "}tr.low td.bee i{color:", BEE_HTML[["low"]], "}",
   ".pill{display:inline-block;padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;white-space:nowrap}",
   ".iucn{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700}")
+
+# Marker JS shared by every sortable table (both field guides + least-sampled bees), so
+# the pages cannot drift apart. Each page calls beeMarkSort(header, direction) from inside
+# its own click handler right after it re-orders the rows; the styling lives in
+# bee_table_css above. Emitted WITHOUT apostrophes: the pages embed their JS inside
+# single-quoted R strings, where one apostrophe would terminate the literal.
+bee_sort_mark_js <- function() paste0(
+  "function beeMarkSort(h,dir){",
+  "var t=h.closest(\"table\"); if(!t) return; var i=h.cellIndex;",
+  # clear the previous column FIRST, or a second click leaves two columns highlighted
+  "[].forEach.call(t.tHead.rows[0].cells,function(c){c.classList.remove(\"sorted\");c.removeAttribute(\"aria-sort\");});",
+  "[].forEach.call(t.tBodies[0].rows,function(r){[].forEach.call(r.cells,function(c){c.classList.remove(\"sortcol\");});});",
+  "h.classList.add(\"sorted\");",
+  "h.setAttribute(\"aria-sort\", dir>0?\"ascending\":\"descending\");",
+  "[].forEach.call(t.tBodies[0].rows,function(r){if(r.cells[i])r.cells[i].classList.add(\"sortcol\");});",
+  "}")
 
 # ---- NPS FOOTPRINT theme: the CABR "punches above its weight" figures get their OWN
 # National Park Service look (arrowhead sandstone + forest green). Its GREEN keeps the footprint

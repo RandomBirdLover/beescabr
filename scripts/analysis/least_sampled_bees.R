@@ -209,12 +209,13 @@ iucn_par,
 def_row,
 '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
 '<script>',
+bee_sort_mark_js(),
 'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
 'var t=h.closest("table"),b=t.tBodies[0],rows=[].slice.call(b.rows);h._d=!h._d;var d=h._d?1:-1;',
 'rows.sort(function(x,y){var a=x.cells[i].innerText.trim(),c=y.cells[i].innerText.trim();',
 'var na=parseFloat(a.replace(/[^0-9.\\-]/g,"")),nc=parseFloat(c.replace(/[^0-9.\\-]/g,""));',
 'if(!isNaN(na)&&!isNaN(nc))return(na-nc)*d;return a.localeCompare(c)*d;});',
-'rows.forEach(function(r){b.appendChild(r);});});});',
+'rows.forEach(function(r){b.appendChild(r);});beeMarkSort(h,d);});});',
 '</script></body></html>')
 writeLines(html, file.path(OUT_DIR, "least_sampled_bees.html"))
 

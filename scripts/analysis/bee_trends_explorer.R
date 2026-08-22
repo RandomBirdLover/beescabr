@@ -3,16 +3,13 @@
 # beescabr -- INTERACTIVE year-trend explorer: pick any well-recorded bee and
 # see its share of the park's bee records move year to year.
 #
-# ALL data, by request: photo AND specimen records, every month of every year --
-# no season window, no year floor, no method filter. The one control kept is the
-# SHARE (each bee's records / all bee records that year), since raw counts would
-# track surveying effort, not bees. The trade-offs of showing everything are
-# disclosed on the page: netting ran only 2021-2023, early years have tiny
-# totals (a share of a 12-record year is noise), and no window means early-flying
-# bees (e.g. Bombus vosnesenskii, active in late winter) keep their off-season
-# records. Taxa shown: species and whole genera with >= MIN_RECORDS records
-# (a share on fewer records is noise). The page carries a prominent
-# "not enough data yet" notice: a handful of seasons is a first look, not a conclusion.
+# Metric: each bee's SHARE of the year's bee photos (raw counts would track how much
+# surveying happened, not the bees). Scope is PHOTO records, 2021 onward, EVERY month;
+# see the block above the data load for why each of those three is set the way it is.
+# Taxa shown: species and whole genera with >= MIN_RECORDS records (a share on fewer
+# records is noise). The page carries a prominent "not enough data yet" notice, and
+# calls out 2024 specifically: that season ran ~2x the normal bees-per-survey parkwide,
+# so a line rising into 2024 is usually showing the season, not the bee.
 # Chart convention: species = solid line, whole genus = dashed (the site-wide
 # genus-vs-species mark), colored by family hue.
 #
@@ -25,6 +22,7 @@
 suppressMessages({ library(dplyr); library(stringr); library(jsonlite) })
 if (!exists("PATHS"))     source("scripts/config.R")
 if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")
+if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")   # iNat logo -> taxon photo page
 
 OUT      <- file.path(DIR_REPORT, "phenology/bee_trends_explorer.html")
 MIN_YEAR    <- 2021
@@ -62,11 +60,17 @@ sp_ok <- pool %>% filter(taxon_rank %in% c("species", "subspecies"), species != 
   count(genus, species) %>% filter(n >= MIN_RECORDS)
 gn_ok <- pool %>% count(genus) %>% filter(n >= MIN_RECORDS)
 
+# iNat taxon ids, so each chart header can link its bee to its photos on iNaturalist
+# (a lookup miss falls back to a name search inside inat_photo_link, never a dead link).
+.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
+.tid_of <- function(nm) { id <- .lk$taxon_id[match(nm, .lk$scientific_name)]
+                          if (length(id) && !is.na(id)) as.integer(id) else NULL }
+
 mk_taxon <- function(name, rank, fam, d) {
   cy <- counts_by_year(d)
   ct <- suppressWarnings(cor.test(cy$year, cy$share, method = "spearman"))
   list(name = name, rank = rank, family = fam, total = sum(cy$n),
-       n = cy$n, share = cy$share,
+       n = cy$n, share = cy$share, inat = inat_photo_link(.tid_of(name), name),
        rho = round(unname(ct$estimate), 2), p = round(ct$p.value, 2))
 }
 taxa <- c(
@@ -188,7 +192,7 @@ function draw(t){
   var W=860,H=470,L=62,R=24,T=18,B=86, iw=W-L-R, ih=H-T-B;
   var col = famcol(t.family), dash = (t.rank==="genus");
   document.getElementById("tname").innerHTML =
-    "<i>"+t.name+"</i>" + (t.rank==="genus" ? " <span style=\'font-weight:400;font-size:13px;color:"+SUB+"\'>(whole genus, all records pooled)</span>" : "");
+    "<i>"+t.name+"</i>" + (t.inat || "") + (t.rank==="genus" ? " <span style=\'font-weight:400;font-size:13px;color:"+SUB+"\'>(whole genus, all records pooled)</span>" : "");
   var trend = (t.p < 0.05) ? (t.rho > 0 ? "a significant upward trend" : "a significant downward trend")
                            : "no significant trend";
   document.getElementById("tmeta").textContent =
@@ -232,15 +236,22 @@ function draw(t){
                           "stroke-linejoin":"round","stroke-linecap":"round"});
   if (dash) ln.setAttribute("stroke-dasharray","7 6");
   svg.appendChild(ln);
-  // points + value labels
+  // points + value labels. Two placement rules keep the labels readable:
+  //  * the first and last labels are anchored inward, so neither can run over the
+  //    y-axis tick labels (a centred 9% used to sit on top of the 10% tick).
+  //  * a bee whose whole range is small gets one decimal, so 0.1 and 0.4 do not
+  //    both round to a flat 0% and look identical.
+  var dec = Math.max.apply(null, t.share) < 5 ? 1 : 0, last = t.share.length - 1;
   t.share.forEach(function(v,j){
     var partial = (D.years[j] === D.partial);
     svg.appendChild(el("circle",{cx:X(j),cy:Y(v),r:4.6,fill:partial?"#fff":col,
                                  stroke:col,"stroke-width":2.2}));
+    var anchor = (j===0) ? "start" : (j===last ? "end" : "middle");
+    var dx = 0;
     var tv = document.createElementNS(svg.namespaceURI,"text");
-    tv.setAttribute("x",X(j)); tv.setAttribute("y",Y(v)-11); tv.setAttribute("text-anchor","middle");
+    tv.setAttribute("x",X(j)+dx); tv.setAttribute("y",Y(v)-11); tv.setAttribute("text-anchor",anchor);
     tv.setAttribute("font-size","12.5"); tv.setAttribute("font-weight","700"); tv.setAttribute("fill",INK);
-    tv.textContent = Math.round(v)+"%";
+    tv.textContent = v.toFixed(dec)+"%";
     svg.appendChild(tv);
   });
 }

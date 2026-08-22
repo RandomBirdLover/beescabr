@@ -196,6 +196,7 @@ bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),  
 '</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
 '<script>',
 '(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
+bee_sort_mark_js(),
 'function pv(r,c){var x=r.cells[c];if(!x)return"";var s=x.getAttribute("data-sort");return s!==null?s:x.innerText.trim();}',
 'function isnum(s){return s!==""&&/^-?[0-9,]+(\\.[0-9]+)?%?$/.test(s);}',
 'var NUM=[];for(var c=0;c<NC;c++){var all=true,any=false;for(var r=0;r<ROWS.length;r++){var v=pv(ROWS[r],c);if(v==="")continue;any=true;if(!isnum(v)){all=false;break;}}NUM[c]=any&&all;}',
@@ -204,7 +205,7 @@ bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),  
 'ROWS.sort(function(x,y){var a=pv(x,i),c=pv(y,i);',
 'if(NUM[i])return(parseFloat(a.replace(/[^0-9.\\-]/g,""))-parseFloat(c.replace(/[^0-9.\\-]/g,"")))*d;',
 'return a.localeCompare(c)*d;});',
-'ROWS.forEach(function(r){B.appendChild(r);});});});})();',
+'ROWS.forEach(function(r){B.appendChild(r);});beeMarkSort(h,d);});});})();',
 '</script></body></html>')
 writeLines(html, file.path(OUT_DIR, "bee_field_guide_genus.html"))
 
