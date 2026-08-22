@@ -3,13 +3,16 @@
 # beescabr -- INTERACTIVE year-trend explorer: pick any well-recorded bee and
 # see its share of the park's bee records move year to year.
 #
-# Same controls as common_bee_trends.R: PHOTO records only (one method across all
-# years -- netting ran only 2021-2023), the Mar-Oct standardized survey season
-# (config FAIR_MONTHS) so every year covers the same months, and each bee's SHARE
-# of all bee photos that season (raw counts would track surveying effort, not
-# bees). Taxa shown: species and whole genera with >= MIN_RECORDS in-window
-# records (a share on fewer records is noise). The page carries a prominent
-# "not enough data yet" notice: six seasons is a first look, not a conclusion.
+# ALL data, by request: photo AND specimen records, every month of every year --
+# no season window, no year floor, no method filter. The one control kept is the
+# SHARE (each bee's records / all bee records that year), since raw counts would
+# track surveying effort, not bees. The trade-offs of showing everything are
+# disclosed on the page: netting ran only 2021-2023, early years have tiny
+# totals (a share of a 12-record year is noise), and no window means early-flying
+# bees (e.g. Bombus vosnesenskii, active in late winter) keep their off-season
+# records. Taxa shown: species and whole genera with >= MIN_RECORDS records
+# (a share on fewer records is noise). The page carries a prominent
+# "not enough data yet" notice: a handful of seasons is a first look, not a conclusion.
 # Chart convention: species = solid line, whole genus = dashed (the site-wide
 # genus-vs-species mark), colored by family hue.
 #
@@ -27,15 +30,21 @@ OUT      <- file.path(DIR_REPORT, "phenology/bee_trends_explorer.html")
 MIN_YEAR    <- 2021
 PARTIAL_YR  <- 2026
 MIN_RECORDS <- 50
-SEASON_MONTHS <- FAIR_MONTHS   # Mar-Oct: the standardized survey season, same as the journal figures
 
-# ---- 1. pool every bee record, tag family -----------------------------------
+# ---- 1. pool every bee PHOTO record, all months, MIN_YEAR onward ---------------
+# No season window (2026-08-21): the Mar-Oct window silently dropped the late-winter
+# flight of early bees -- Bombus vosnesenskii queens fly before March, so the window
+# was hiding real records rather than standardising them. Every month now counts.
+# Still photo-only and still 2021+, and both of those are load-bearing:
+#   * PHOTO-ONLY: specimen netting ran 2021-2023 only, so pooling methods would swing
+#     the denominator's composition from 37% netted (2021) to 0% (2024+) -- every
+#     net-friendly bee would show a fake crash, every photogenic one a fake rise.
+#   * 2021+: earlier years are too thin or too lopsided for a share to mean anything
+#     (2020 is 82% September; 2011 holds a single bee record, which would plot as 100%).
 rd <- function(p) read.csv(p, stringsAsFactors = FALSE, check.names = FALSE)
-inat <- rd(PATHS$inat_clean)
-pool <- inat %>%
-  transmute(year  = as.integer(substr(observed_on, 1, 4)),
-            month = as.integer(substr(observed_on, 6, 7)), family, genus, species, taxon_rank) %>%
-  filter(!is.na(year), year >= MIN_YEAR, month %in% SEASON_MONTHS, !is.na(genus), genus != "")
+pool <- rd(PATHS$inat_clean) %>%
+  transmute(year = as.integer(substr(observed_on, 1, 4)), family, genus, species, taxon_rank) %>%
+  filter(!is.na(year), year >= MIN_YEAR, !is.na(genus), genus != "")
 years  <- sort(unique(pool$year))
 totals <- pool %>% count(year, name = "n_total") %>% arrange(year)
 
@@ -74,8 +83,8 @@ ord <- order(vapply(taxa, function(t) fam_rank[t$family] %||% 99, 1),
              vapply(taxa, function(t) t$rank != "species", TRUE),
              vapply(taxa, function(t) t$name, ""))
 taxa <- taxa[ord]
-message(sprintf("Trend explorer: %d taxa (%d species + %d whole genera, >= %d records since %d)",
-                length(taxa), nrow(sp_ok), nrow(gn_ok), MIN_RECORDS, MIN_YEAR))
+message(sprintf("Trend explorer: %d taxa (%d species + %d whole genera, >= %d records; years %d-%d)",
+                length(taxa), nrow(sp_ok), nrow(gn_ok), MIN_RECORDS, min(years), max(years)))
 
 payload <- toJSON(list(
   years = years, totals = totals$n_total, partial = PARTIAL_YR,
@@ -83,7 +92,7 @@ payload <- toJSON(list(
 
 # ---- 3. the page ------------------------------------------------------------
 cap <- scope_cap(
-  scope  = sprintf("iNaturalist photo records only, %d-%d, whole park, every observer; March-October only, the standardized survey season, so every year covers the same months; share = the bee's photos / all bee photos that season; taxa with >= %d in-window records; a share is relative, not a population count; %d is partial (its season is missing September and October; open point)",
+  scope  = sprintf("iNaturalist photo records only, %d-%d, whole park, every observer; every month counts, with no season window, so bees that fly outside the main survey season keep their records; share = the bee's photos / all bee photos that year (raw counts would track effort, not bees); taxa with >= %d records; a share is relative, not a population count; one method throughout (specimen netting ran only 2021-2023, so pooling methods would bias the shares); %d is partial (year still in progress; open point)",
                    MIN_YEAR, PARTIAL_YR, MIN_RECORDS, PARTIAL_YR),
   method = "non-lethal (photo records) only", rank = "bee species and whole genera",
   source = "iNaturalist observations, Cabrillo NM",
@@ -121,9 +130,10 @@ svg{width:100%;height:auto;display:block}
 </style></head><body>
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee Trends Explorer &#128200;</h1>
-<p class="sub">Pick a bee on the left to see how its share of the park&rsquo;s bee photos has moved from season to season. Share, not raw counts: surveying grew enormously over these years, so counting photos would only measure the surveying. Dividing by everything photographed that season cancels the effort out. Every year is compared over the same March to October season, using photo records only. Solid lines are single species; dashed lines are a whole genus pooled.</p>
+<p class="sub">Pick a bee on the left to see how its share of the park&rsquo;s bee photos has moved from year to year. Share, not raw counts: surveying grew enormously over these years, so counting photos would only measure the surveying. Dividing by everything photographed that year cancels most of the effort out. Every month of the year counts here, so bees that fly outside the main survey season keep their records. Solid lines are single species; dashed lines are a whole genus pooled.</p>
 <p class="sub"><b>A share is still not a population count.</b> It shows how this bee is doing relative to the rest of the bee community. Small wiggles are normal, so look for sustained runs, not single-year jumps.</p>
-<div class="note"><b>Not enough data yet.</b> This program has run for six seasons, and six points cannot prove a trend in either direction. Almost nothing here will test as statistically significant, and that is expected. Treat every line as a first look. Each added year of monitoring makes this page more trustworthy.</div>
+<div class="note"><b>Not enough data yet.</b> This program has run for six seasons, and six points cannot prove a trend in either direction. Almost nothing here will test as statistically significant, and that is expected. Watch out for 2024 in particular. That season was unusual across the whole park, with roughly twice as many bees recorded per survey as a normal year, so a line that rises into 2024 is often showing you that season rather than that bee. A steady rise or fall would need to outlast a single remarkable year. Treat every line as a first look. Each added year of monitoring makes this page more trustworthy.</div>
+<p class="sub" style="font-size:12.5px">Where this is headed: with more years, the honest way to measure a trend is a model that lets each transect have its own story while still estimating one shared direction, rather than a single line through everything. That approach is described in Schirmer, Fritze and Scheuerlein (2026), <i>Ecological Indicators</i> 183:114588. Our four fixed transects are already the right structure for it. What we need now is seasons.</p>
 <div class="wrap">
   <div class="side" id="list"></div>
   <div class="main">
