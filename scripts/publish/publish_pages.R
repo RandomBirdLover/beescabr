@@ -21,34 +21,43 @@ DOCS_DIR <- "docs"
 # One manifest drives both the file copy and the landing-page cards.
 # ADD NEW PUBLIC PAGES HERE (src is relative to SRC_DIR; out is the docs/ name).
 PUBLISH_PAGES <- list(
+  list(src = "reference/occurrence_map/bee_occurrence_explorer.html", out = "occurrence_explorer.html",
+       title = "Bee Occurrence Explorer", icon = "\U0001F50E", tag = "Field guide",
+       blurb = "Filter by genus, species, transect, and method to see exactly where each bee has been recorded."),
   list(src = "reference/field_guide/bee_field_guide_species.html", out = "field_guide_species.html",
        title = "Bee Field Guide (Species)", icon = "\U0001F41D", tag = "Field guide",
        blurb = "Every bee species recorded at Cabrillo, with photos, IUCN status, abundance, and forage."),
   list(src = "reference/field_guide/bee_field_guide_genus.html", out = "field_guide_genus.html",
        title = "Bee Field Guide (Genus)", icon = "\U0001F41D", tag = "Field guide",
        blurb = "The same guide grouped by genus for quicker browsing."),
-  list(src = "reference/nps_summary/nps_summary_tables.html", out = "summary_tables.html",
-       title = "Park Summary Tables", icon = "\U0001F4CA", tag = "Summary",
-       blurb = "Headline counts: species, genera, plants, survey effort, and participation."),
   list(src = "coverage/least_sampled/least_sampled_bees.html", out = "least_sampled_bees.html",
        title = "Least-Sampled Bees", icon = "❗", tag = "Priorities",
        blurb = "The bees with the thinnest evidence, where more surveying would help most."),
-  list(src = "reference/transects/cabr_bee_transects_map.html", out = "transects_map.html",
-       title = "Survey Transect Map", icon = "\U0001F5FA\UFE0F", tag = "Map",
-       blurb = "Interactive map of the fixed survey transects at Cabrillo National Monument."),
-  list(src = "reference/occurrence_map/bee_occurrence_explorer.html", out = "occurrence_explorer.html",
-       title = "Bee Occurrence Explorer", icon = "\U0001F50E", tag = "Explore",
-       blurb = "Filter by genus, species, transect, and method to see exactly where each bee has been recorded."),
-  list(src = "phenology/bee_trends_explorer.html", out = "bee_trends.html",
-       title = "Bee Trends Explorer", icon = "\U0001F4C8", tag = "Explore",
-       blurb = "An early look at how each bee's share of the records moves year to year. Six seasons in, so treat every line as a first look, not a conclusion."),
   list(src = "coverage/bee_bounties/specimen_bee_bounty_map.html", out = "specimen_bounty_map.html",
-       title = "Specimen Bee Bounty Map", icon = "\U0001F52C", tag = "Map",
+       title = "Specimen Bee Bounty Map", icon = "\U0001F52C", tag = "Priorities",
        blurb = "Where to net a voucher specimen: gaps the collection still needs."),
   list(src = "coverage/bee_bounties/inaturalist_bee_bounty_map.html", out = "inaturalist_bounty_map.html",
-       title = "iNaturalist Bee Bounty Map", icon = "\U0001F4F7", tag = "Map",
-       blurb = "Where to photograph bees to fill iNaturalist gaps.")
+       title = "iNaturalist Bee Bounty Map", icon = "\U0001F4F7", tag = "Priorities",
+       blurb = "Where to photograph bees to fill iNaturalist gaps."),
+  list(src = "reference/transects/cabr_bee_transects_map.html", out = "transects_map.html",
+       title = "Survey Transect Map", icon = "\U0001F5FA\UFE0F", tag = "Monitoring program",
+       blurb = "Interactive map of the fixed survey transects at Cabrillo National Monument."),
+  list(src = "reference/nps_summary/nps_summary_tables.html", out = "summary_tables.html",
+       title = "Park Summary Tables", icon = "\U0001F4CA", tag = "Monitoring program",
+       blurb = "Headline counts: species, genera, plants, survey effort, and participation."),
+  list(src = "phenology/bee_trends_explorer.html", out = "bee_trends.html",
+       title = "Bee Trends Explorer", icon = "\U0001F4C8", tag = "Monitoring program",
+       blurb = "An early look at how each bee's share of the records moves year to year. Six seasons in, so treat every line as a first look, not a conclusion.")
 )
+
+# Landing cards grouped by section: pages sharing a tag sit together, sections in
+# first-appearance order, manifest order kept within a section -- so new pages can
+# be appended to PUBLISH_PAGES without disordering the landing grid.
+group_pages_by_tag <- function(pages) {
+  if (!length(pages)) return(pages)
+  tags <- vapply(pages, `[[`, "", "tag")
+  pages[order(match(tags, unique(tags)))]
+}
 
 # Fill {{token}} placeholders in a template. gsub(fixed=TRUE) so literal % in the
 # CSS is left alone (sprintf would choke on it).
@@ -249,7 +258,7 @@ publish_pages <- function() {
   message("published  acknowledgements.html")
 
   # ---- landing page (docs/index.html) ----
-  writeLines(build_landing_html(present, landing_date(), hero_version()),
+  writeLines(build_landing_html(group_pages_by_tag(present), landing_date(), hero_version()),
              file.path(DOCS_DIR, "index.html"))
   message("built      index.html")
   message("Done. Review docs/, then commit and push. Enable GitHub Pages: Settings -> Pages -> main /docs.")

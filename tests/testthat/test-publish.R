@@ -22,7 +22,7 @@ test_that("build_landing_html renders one card per page with its fields", {
 test_that("build_landing_html interpolates the date and hero cache-buster", {
   h <- build_landing_html(list(), "2026-08-13", "deadbeef")
   expect_true(grepl("hero.jpg?v=deadbeef", h, fixed = TRUE))
-  expect_true(grepl("Data as of 2026-08-13.", h, fixed = TRUE))
+  expect_true(grepl("Based on data available as of 2026-08-13.", h, fixed = TRUE))
 })
 
 test_that("build_landing_html links the Acknowledgements page and is a full document", {
@@ -42,4 +42,29 @@ test_that("build_landing_html credits the funders with their official links", {
   expect_true(grepl('href="https://conservationlegacy.org/"', h, fixed = TRUE))
   expect_true(grepl("Cabrillo National Monument Foundation", h, fixed = TRUE))
   expect_true(grepl('href="https://www.cnmf.org/"', h, fixed = TRUE))
+})
+
+test_that("group_pages_by_tag groups cards by tag, sections in first-appearance order", {
+  pages <- list(
+    list(out = "a.html", tag = "Field guide"),
+    list(out = "b.html", tag = "Map"),
+    list(out = "c.html", tag = "Explore"),
+    list(out = "d.html", tag = "Map"),
+    list(out = "e.html", tag = "Field guide"))
+  g <- group_pages_by_tag(pages)
+  expect_equal(vapply(g, `[[`, "", "out"), c("a.html", "e.html", "b.html", "d.html", "c.html"))
+  expect_equal(vapply(g, `[[`, "", "tag"),
+               c("Field guide", "Field guide", "Map", "Map", "Explore"))
+})
+
+test_that("group_pages_by_tag keeps within-section manifest order and handles edge cases", {
+  pages <- list(
+    list(out = "1.html", tag = "Map"),
+    list(out = "2.html", tag = "Map"),
+    list(out = "3.html", tag = "Map"))
+  expect_equal(vapply(group_pages_by_tag(pages), `[[`, "", "out"),
+               c("1.html", "2.html", "3.html"))         # stable within a section
+  expect_equal(group_pages_by_tag(list()), list())
+  one <- list(list(out = "x.html", tag = "Summary"))
+  expect_equal(group_pages_by_tag(one), one)
 })
