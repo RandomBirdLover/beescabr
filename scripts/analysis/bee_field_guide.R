@@ -24,6 +24,7 @@ if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # 
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label_species")) source("scripts/analysis/forage_selectivity.R")  # species-level forage preference
 if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")                            # shared scope-caption format
+if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")                    # iNat logo -> taxon photo page
 OUT_DIR       <- file.path(DIR_REPORT, "reference/field_guide")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_CONF      <- 10          # < this many records -> low-confidence flag
@@ -161,16 +162,21 @@ diet_class <- function(s) ifelse(grepl("^Special", s), "sp", ifelse(grepl("^Gene
                           ifelse(grepl("^Moder", s), "mo", "na")))
 pref_class <- function(s) ifelse(grepl("^Selective", s), "pref-sel", ifelse(grepl("^Generalist", s), "pref-gen", "pref-na"))
 st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
+# iNat taxon id per bee (checklist lookup covers specimen-only species too); a miss
+# falls back to a name search on iNat inside inat_photo_link, never a dead link.
+.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
+tbl$inat_tid <- .lk$taxon_id[match(tbl$bee, .lk$scientific_name)]
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$confidence != "ok"
   cs <- if (r$conservation != "") sprintf('<sup class="cs" title="%s">*</sup>', esc(r$conservation)) else ""
   iucn_td <- if (HAVE_IUCN) sprintf('<td class="num"><span class="iucn i-%s" title="%s">%s</span></td>',
                                     tolower(r$iucn), esc(r$iucn_name), esc(r$iucn)) else ""
-  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td>%s<td class="num">%d</td>',
+  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s%s</td>%s<td class="num">%d</td>',
                  '<td data-sort="%d"><span class="pill st-%s">%s</span></td>',
                  '<td data-sort="%d">%s</td><td>%s</td><td class="loc">%s</td>',
                  '<td><span class="pill %s">%s</span></td><td>%s</td><td><span class="pill %s">%s</span></td></tr>'),
           if (low) "low" else "", esc(r$bee), cs,
+          inat_photo_link(r$inat_tid, r$bee),
           if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "",
           iucn_td, r$n_records,
           unname(st_rank[r$status]), r$status, r$status,
@@ -202,6 +208,8 @@ bee_badge_css(BEE_DIET_BG,   BEE_DIET_FG,   function(k) paste0(".pill.", k)),   
 bee_badge_css(BEE_ABUND_BG,  BEE_ABUND_FG,  function(k) paste0(".pill.st-", k)),     # abundance-status pills
 bee_badge_css(BEE_FORAGE_BG, BEE_FORAGE_FG, function(k) paste0(".pill.pref-", k)),   # forage-preference pills
 bee_badge_css(BEE_IUCN_BG,   BEE_IUCN_FG,   function(k) paste0(".iucn.i-", k)),      # IUCN chips
+'a.inat img{opacity:.8}',   # size/margin are inline on the img (single source: inat_taxon_links.R)
+'a.inat:hover img{opacity:1}',
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
 '<h1>A Native Bee Species Field Guide &#128029;</h1>',

@@ -32,6 +32,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R") # iNat logo -> taxon photo page
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/bee_bounties")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -182,8 +183,13 @@ sb_gn <- specimen_bounty$taxon[specimen_bounty$rank == "genus"]
 sb_tgt <- inat_geo %>% filter(species_key %in% sb_sp | genus_key %in% sb_gn) %>%
   mutate(taxon = ifelse(!is.na(species_key) & species_key != "", species_key, genus_key))
 sb_tgt <- dplyr::left_join(sb_tgt, .detail_tbl(inat, unique(sb_tgt$taxon)), by = "taxon")   # aggregate window + flower
+# iNat taxon ids for the logo link in every popup (a lookup miss -> name search, never dead)
+.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
+.tid_of <- function(taxon) .lk$taxon_id[match(taxon, .lk$scientific_name)]
 sb_tgt$popup <- mapply(function(taxon, win, top, url)
-  sprintf('<b><i>%s</i></b><br>%s%s', ifelse(is.na(taxon), "bee", taxon), .detail_html(taxon, win, top),
+  sprintf('<b><i>%s</i></b>%s<br>%s%s', ifelse(is.na(taxon), "bee", taxon),
+          if (is.na(taxon)) "" else inat_photo_link(.tid_of(taxon), taxon),
+          .detail_html(taxon, win, top),
           if (is.na(url) || url == "") "" else sprintf('<br><a href="%s" target="_blank">iNaturalist observation \U2197</a>', url)),
   sb_tgt$taxon, sb_tgt$win, sb_tgt$top, sb_tgt$url)
 # color every collect-target by its FAMILY hue (BEE_FAMILY -- distinct hues), then within a family
@@ -255,8 +261,8 @@ ib_tx <- dplyr::left_join(ib_tx, .detail_tbl(spec, unique(ib_tx$taxon)), by = "t
 tr_list <- ib_tx %>% group_by(transect) %>%
   summarise(nt = dplyr::n_distinct(taxon),
             lst = paste(mapply(function(col, taxon, win, top)
-              sprintf('<div style="margin:5px 0">%s<i>%s</i><div style="margin-left:19px;font-size:10.5px;line-height:1.3">%s</div></div>',
-                      .dot(col), taxon, .detail_html(taxon, win, top)),
+              sprintf('<div style="margin:5px 0">%s<i>%s</i>%s<div style="margin-left:19px;font-size:10.5px;line-height:1.3">%s</div></div>',
+                      .dot(col), taxon, inat_photo_link(.tid_of(taxon), taxon), .detail_html(taxon, win, top)),
               col, taxon, win, top), collapse = ""),
             .groups = "drop")
 

@@ -32,6 +32,7 @@ if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # 
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
 if (!exists("forage_preference_label")) source("scripts/analysis/forage_selectivity.R")  # shared selectivity (likes vs available)
 if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")                     # shared scope-caption format
+if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")             # iNat logo -> taxon photo page
 OUT_DIR       <- file.path(DIR_REPORT, "reference/field_guide")
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)
@@ -144,16 +145,21 @@ status_note <- sprintf("Records and Status count all data. That means netted spe
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
+# iNat taxon id per genus (same checklist lookup the species guide uses); a miss
+# falls back to a name search on iNat inside inat_photo_link, never a dead link.
+.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
+tbl$inat_tid <- .lk$taxon_id[match(tbl$genus, .lk$scientific_name)]
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$status == "rare"
   tag <- if (r$n_species == 0) '<span class="cn">not yet ID&#39;d to species</span>' else ""
   cs  <- if (r$conservation != "") sprintf('<sup class="cs" title="includes at-risk: %s">*</sup>', esc(r$conservation)) else ""
   pref_cls <- if (grepl("^Selective", r$forage_pref)) "pref-sel" else if (grepl("^Generalist", r$forage_pref)) "pref-gen" else "pref-na"
-  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s</td><td class="num">%d</td><td class="num">%d</td>',
+  sprintf(paste0('<tr class="%s"><td class="bee"><i>%s</i>%s%s%s</td><td class="num">%d</td><td class="num">%d</td>',
                  '<td data-sort="%d"><span class="pill st-%s">%s</span></td>',
                  '<td data-sort="%d">%s</td><td>%s</td><td class="loc">%s</td>',
                  '<td>%s</td><td>%s</td><td>%s</td><td class="%s">%s</td></tr>'),
-          if (low) "low" else "", esc(r$genus), cs, tag, r$n_records, r$n_species,
+          if (low) "low" else "", esc(r$genus), cs,
+          inat_photo_link(r$inat_tid, r$genus), tag, r$n_records, r$n_species,
           unname(st_rank[r$status]), r$status, r$status,
           r$peak_doy, esc(r$peak_day), esc(r$active_months), esc(r$where_to_find),
           esc(r$flower_breadth), r$top_flowers_html, r$top_plant_html,
@@ -174,6 +180,8 @@ bee_table_css(),                                                                
 'td.pref-sel{color:#1f6b46;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',   # genus-guide preference cell colors
 bee_badge_css(BEE_DIET_BG,  BEE_DIET_FG,  function(k) paste0(".pill.", k)),      # diet pills (sp/ge/mo/na)
 bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),   # abundance-status pills
+'a.inat img{opacity:.8}',   # size/margin are inline on the img (single source: inat_taxon_links.R)
+'a.inat:hover img{opacity:1}',
 '</style></head><body>',
 '<div class="org">Cabrillo National Monument</div>',
 '<h1>A Native Bee Genus Field Guide &#128029;</h1>',
