@@ -73,24 +73,14 @@ for (g in sort(unique(rec$genus))) if (is.null(gs_list[[g]])) gs_list[[g]] <- ch
 gs_list <- gs_list[sort(names(gs_list))]
 
 # ---- 1b. one REPRESENTATIVE photo per genus + species (from iNaturalist) --------
-# Uses each taxon's iNat "default photo". Only OPENLY-LICENSED photos are kept, and the
-# photographer credit + a link to the iNat taxon page travel with each (attribution required).
+# Only OPENLY-LICENSED photos are kept, and the photographer credit + explicit license
+# label + a link to the iNat taxon page travel with each (attribution required). The
+# taxon's default photo is tried first; if it is closed-license, the taxon's curated
+# photo list is searched for an open one (see explorer_photo_helpers.R).
 # Results (incl. "no open photo") are cached to disk so re-runs don't re-hit the API.
+if (!exists("fetch_taxon_photo")) source("scripts/analysis/explorer_photo_helpers.R")
 PHOTO_CACHE <- "data/observations/cache/taxon_photos.json"
-OPEN_LIC <- c("cc0", "pd", "cc-by", "cc-by-nc", "cc-by-sa", "cc-by-nd", "cc-by-nc-sa", "cc-by-nc-nd")
 photos <- if (file.exists(PHOTO_CACHE)) jsonlite::fromJSON(PHOTO_CACHE, simplifyVector = FALSE) else list()
-fetch_photo <- function(name, rank) {   # -> list(u, c, l) or NULL
-  url <- sprintf("https://api.inaturalist.org/v1/taxa?q=%s&rank=%s&per_page=1",
-                 utils::URLencode(name, reserved = TRUE), rank)
-  res <- tryCatch(jsonlite::fromJSON(url, simplifyVector = FALSE), error = function(e) NULL)
-  Sys.sleep(0.7)                         # be polite to the API
-  if (is.null(res) || length(res$results) == 0) return(NULL)
-  t <- res$results[[1]]; p <- t$default_photo
-  if (tolower(t$name) != tolower(name)) return(NULL)                 # exact-match only
-  if (is.null(p) || is.null(p$license_code) || !(p$license_code %in% OPEN_LIC)) return(NULL)
-  list(u = p$medium_url, c = p$attribution %||% "iNaturalist", l = sprintf("https://www.inaturalist.org/taxa/%s", t$id))
-}
-`%||%` <- function(a, b) if (is.null(a) || is.na(a) || a == "") b else a
 # Every taxon a selection can land on gets a representative photo: genus, each
 # genus+species, each subgenus, and each complex. subgenus/complex cache keys are
 # PREFIXED ("subg "/"cx ") so they can't collide with a genus/species of the same text.
@@ -108,9 +98,9 @@ taxa <- rbind(
 taxa <- taxa[!duplicated(taxa$key), , drop = FALSE]
 to_fetch <- taxa[!taxa$key %in% names(photos), , drop = FALSE]
 if (nrow(to_fetch)) message(sprintf("Fetching %d taxon photos from iNaturalist (cached after; ~%.0fs)...",
-                                     nrow(to_fetch), nrow(to_fetch) * 0.9))
+                                     nrow(to_fetch), nrow(to_fetch) * 1.6))
 for (i in seq_len(nrow(to_fetch))) {
-  ph <- fetch_photo(to_fetch$query[i], to_fetch$rank[i])
+  ph <- fetch_taxon_photo(to_fetch$query[i], to_fetch$rank[i])
   photos[[to_fetch$key[i]]] <- if (is.null(ph)) list(none = TRUE) else ph   # cache negatives too
 }
 dir.create(dirname(PHOTO_CACHE), recursive = TRUE, showWarnings = FALSE)
