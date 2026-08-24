@@ -33,7 +33,7 @@ suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibbl
 #     is ever hand-added to survey_dates (no tag = not a survey day).
 #     NOTE: this catches missing DATES, not a specific missing transect (see PITFALLS).
 #     (Flagging misplaced / mistagged obs is a TODO in the clean scripts -- inat_bee_clean.R /
-#     inat_plant_clean.R; the old qc_misplaced_transect.R is in _to_delete/ for reference.)
+#     inat_plant_clean.R; the old qc_misplaced_transect.R was deleted from the repo.)
 # master_per_survey_info.csv = CONFIRMED surveys only. Returns list(survey_dates, review).
 # ------------------------------------------------------------
 fpi_norm_transect <- function(x) {

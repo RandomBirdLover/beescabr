@@ -5,7 +5,7 @@
 #
 # The old orchestrator (build_all_checklists) built the taxonomy lookup AND the
 # Tier 1 / Tier 2 checklists in one pass. The checklist writes were split off to
-# legacy_checklists.R (REMOVED to _to_delete/; was parked until the new per-source checklist architecture is
+# legacy_checklists.R (DELETED from the repo; was parked until the new per-source checklist architecture is
 # built). This file now builds ONLY the lookup + its internal artifacts.
 #
 # Exposes build_taxonomy_lookup(con): from a populated observation cache builds
@@ -103,7 +103,7 @@ build_taxonomy_lookup <- function(con) {
   # STEP 3: SD County spatial subset. SD County is the widest boundary (it
   # contains Point Loma, which contains CABR), so its checklist holds the most
   # taxa and is the natural base for the San Diego taxonomy lookup. Only this
-  # tier is needed here -- PL / CABR tiers lived in legacy_checklists.R (now in _to_delete/).
+  # tier is needed here -- PL / CABR tiers lived in legacy_checklists.R (since deleted).
   n_missing_coords <- sum(is.na(bees$latitude) | is.na(bees$longitude))
   if (n_missing_coords > 0)
     bx_note(n_missing_coords, " obs missing coords -- excluded.")

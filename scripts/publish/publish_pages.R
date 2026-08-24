@@ -69,7 +69,7 @@ group_pages_by_tag <- function(pages) {
 
 # One landing-page card. Leading newline + indent matches the old heredoc exactly.
 .CARD_TPL <- '
-      <a class="card" href="./{{out}}">
+      <a class="card" href="./{{out}}{{ver}}">
         <div class="card-head"><span class="icon">{{icon}}</span><span class="tag">{{tag}}</span></div>
         <h2>{{title}}</h2>
         <p>{{blurb}}</p>
@@ -177,7 +177,8 @@ group_pages_by_tag <- function(pages) {
 # and the hero cache-buster, return the complete index.html as a string.
 build_landing_html <- function(cards, date, hero_v) {
   cards_html <- paste0(vapply(cards, function(c)
-    .fill(.CARD_TPL, out = c$out, icon = c$icon, tag = c$tag, title = c$title, blurb = c$blurb),
+    .fill(.CARD_TPL, out = c$out, icon = c$icon, tag = c$tag, title = c$title, blurb = c$blurb,
+          ver = if (!is.null(c$v) && nzchar(c$v)) paste0("?v=", c$v) else ""),
     character(1)), collapse = "")
   .fill(.PAGE_TPL, herov = hero_v, cards = cards_html, date = date)
 }
@@ -194,16 +195,18 @@ landing_date <- function() {
   "the latest survey export"
 }
 
-# cache-buster: a short content hash of the hero so browsers re-fetch it whenever
-# the photo changes (same md5-first-8 the shell version used).
-hero_version <- function() {
-  f <- file.path(DOCS_DIR, "hero.jpg")
-  if (file.exists(f)) {
-    h <- unname(tools::md5sum(f))
+# cache-buster: a short content hash of a published file, so browsers re-fetch it
+# whenever the content changes but still cache it while it does not. Used for the
+# hero photo AND for every card link (a bare link let browsers serve a stale page
+# for hours after a republish, which is the recurring "the site looks old" bug).
+page_version <- function(path) {
+  if (file.exists(path)) {
+    h <- unname(tools::md5sum(path))
     if (!is.na(h) && nzchar(h)) return(substr(h, 1, 8))
   }
   "1"
 }
+hero_version <- function() page_version(file.path(DOCS_DIR, "hero.jpg"))
 
 # A small fixed "Back to main page" pill, wrapped in sentinels so re-runs replace
 # rather than stack it. Injected into every copied report page so no page is a
@@ -258,6 +261,7 @@ publish_pages <- function() {
   message("published  acknowledgements.html")
 
   # ---- landing page (docs/index.html) ----
+  present <- lapply(present, function(c) { c$v <- page_version(file.path(DOCS_DIR, c$out)); c })
   writeLines(build_landing_html(group_pages_by_tag(present), landing_date(), hero_version()),
              file.path(DOCS_DIR, "index.html"))
   message("built      index.html")

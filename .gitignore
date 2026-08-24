@@ -1,7 +1,6 @@
-# Python reference implementation (kept local; see CLAUDE.md)
-/py
-
-# Local R / editor / macOS junk (generated at the repo root)
+# Machine-generated junk from R, RStudio, macOS, and Claude Code. None of it is
+# project content: .RData/.Rhistory are whatever happened to be in a local session,
+# and committing them makes every collaborator's diff noisy for no benefit.
 .Rhistory
 .RData
 .RDataTmp
@@ -9,11 +8,29 @@
 .DS_Store
 .claude/
 
-# Everything under data/ stays local: rosters, specimens, cleaned tables,
-# analysis outputs, and the API keys in data/secrets/. Nothing here is published.
+# EVERYTHING under data/ stays local and is never pushed. This is a deliberate
+# protection rule, not housekeeping -- do not narrow it without a good reason:
+#   * PEOPLE   -- data/project_info/rosters/*.csv hold volunteer and identifier
+#                 personal contact details (email, phone). Publishing those would
+#                 expose private information about people who volunteered.
+#   * CREDENTIALS -- data/secrets/ holds live API keys (inat_api.env, iucn_api.env).
+#                 A key pushed to a public repo is compromised the moment it lands.
+#   * PARK DATA -- specimen and observation tables carry precise coordinates for
+#                 bees inside a National Monument, including at-risk species.
+#                 Exact localities for sensitive taxa are not ours to publish.
+# The public site in docs/ is built FROM this data but contains only the aggregated,
+# non-sensitive outputs. If you need the raw data, see DATA_ACCESS.md -- it is shared
+# person to person, not through this repo.
 /data
 
-# Published GitHub Pages site: track ONLY the website files under docs/
+# THE PUBLISHED WEBSITE. This is the one place the rules are inverted: docs/* is
+# ignored by default and specific file types are allow-listed back in with "!".
+# Why: GitHub Pages serves this folder to the public, so only finished web assets
+# belong here (HTML pages, images, and .nojekyll which stops GitHub from trying to
+# process the site with Jekyll). The allow-list means a stray CSV, script, or note
+# dropped into docs/ is ignored rather than silently published. If you add a genuinely
+# new web asset type (a .css or .svg, say), you must add a matching "!" line or it
+# will never be pushed and the live site will look broken.
 docs/*
 !docs/*.html
 !docs/.nojekyll
@@ -22,14 +39,26 @@ docs/*
 !docs/*.webp
 !docs/*.png
 
-# Internal working notes (never published)
-dev-docs/
+# Test suite kept LOCAL (2026-08-24). Nothing here is called by the cleaning,
+# analysis, or publishing pipelines -- see tests/README.md. Tracked copies were
+# removed from the repo; the files still live on this machine.
+/tests
 
-# Local-only talk decks (a >100 MB PDF would break the push)
+# NOTE: dev-docs/ is deliberately TRACKED (since 2026-08-24). It holds the pipeline
+# guide, the manual-inputs list, pitfalls, and the specimen changelog -- the working
+# knowledge a new maintainer needs, and CLAUDE.md points at it by name. It was
+# ignored until now; it was reviewed before publishing and contains no personal
+# contact details, credentials, or species coordinates. Keep it that way.
+
+# PDFs anywhere in the repo: conference decks, downloaded papers, exported reports.
+# GitHub rejects any file over 100 MB, and a talk deck full of photos blows past that
+# and would block the push entirely. Reference papers live in data/reference/source/.
 *.pdf
 
-# Local scratch naming convention (used by the pipeline / README)
-_to_delete/
+# Scratch-file naming convention. Anything a person names _v_something, _check_...,
+# _fresh_..., etc. is a work-in-progress copy, so the pattern keeps half-finished
+# experiments out of the repo automatically. Use these prefixes on purpose when you
+# want a file to stay local.
 _v_*
 _fresh_*
 _final_*

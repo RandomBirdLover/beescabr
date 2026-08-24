@@ -86,7 +86,7 @@ flowchart TD
   prompt in stage 3b, sourced only if you opt in. The calendar parser
   `project_info/finding_beeple_calendar.R` is now **stage 2d** — it rebuilds the beeple
   window table from the PDFs every run, so a new calendar year is picked up automatically.
-- **Removed** (in `_to_delete/`): `triage.R` (dead), `legacy_checklists.R` (old writer),
+- **Removed** (deleted from the repo): `triage.R` (dead), `legacy_checklists.R` (old writer),
   `tier2_merge.R` (`build_specimen_checklist` moved into `checklist_build.R`), `build_plant_export.R`
   (redundant with pipeline stage 2b), `smoke_run.R` (stale), `qc_misplaced_transect.R` (unused —
   its misplaced/mistagged-obs QC is now a TODO in the clean scripts); and the spatial diagnostics
@@ -98,5 +98,3 @@ flowchart TD
   `holway_reference_build.R` gained the **parent roll-up** — an unresolved Holway species inherits its
   nearest on-iNat parent's `taxon_id` + ancestry (same-named complex → subgenus → genus; the complex is
   prompted). Config paths corrected to the reorganized `data/reference/` layout.
-- **Tests** (`tests/testthat/`) source modules through the `src()` helper. One loose end:
-  `test-specimen.R` targets `specimen_clean_helpers.R` (the pure specimen helpers).
