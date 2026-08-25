@@ -1,0 +1,41 @@
+library(testthat)
+library(dplyr)
+
+# pick_taxon_id_by_rank(): from iNat search candidates, pick the id for a taxon at a given rank
+#   ONLY on an unambiguous match -- right rank, matching (diacritic-insensitive) name, and the known
+#   parent id present in the candidate's ancestry. Never guesses; returns NA when unsure.
+
+test_that("pick_taxon_id_by_rank matches rank + diacritic-insensitive name + parent", {
+  src("reference/resolve_missing_ids.R")
+  cands <- list(
+    list(id = 51222L, rank = "subgenus", name = "Schonnherria", ancestor_ids = c(47201L, 51111L)),
+    list(id = 99999L, rank = "species",  name = "Xylocopa splendidula", ancestor_ids = c(51111L)))
+  # search "Schönnherria" (with umlaut) at subgenus, parent genus Xylocopa = 51111 -> matches 51222
+  expect_equal(pick_taxon_id_by_rank(cands, "subgenus", "Schönnherria", parent_id = 51111L), 51222L)
+})
+
+test_that("pick_taxon_id_by_rank returns NA when the rank doesn't match", {
+  src("reference/resolve_missing_ids.R")
+  cands <- list(list(id = 1L, rank = "species", name = "Schonnherria", ancestor_ids = c(51111L)))
+  expect_true(is.na(pick_taxon_id_by_rank(cands, "subgenus", "Schonnherria", parent_id = 51111L)))
+})
+
+test_that("pick_taxon_id_by_rank returns NA when the parent doesn't match (wrong genus)", {
+  src("reference/resolve_missing_ids.R")
+  cands <- list(list(id = 1L, rank = "subgenus", name = "Schonnherria", ancestor_ids = c(48111L)))
+  expect_true(is.na(pick_taxon_id_by_rank(cands, "subgenus", "Schonnherria", parent_id = 51111L)))
+})
+
+test_that("pick_taxon_id_by_rank returns NA when >1 candidate matches (ambiguous -> never guess)", {
+  src("reference/resolve_missing_ids.R")
+  cands <- list(
+    list(id = 1L, rank = "genus", name = "Megandrena", ancestor_ids = c(47222L)),
+    list(id = 2L, rank = "genus", name = "Megandrena", ancestor_ids = c(47222L)))
+  expect_true(is.na(pick_taxon_id_by_rank(cands, "genus", "Megandrena", parent_id = 47222L)))
+})
+
+test_that("pick_taxon_id_by_rank matches a genus with no parent id required", {
+  src("reference/resolve_missing_ids.R")
+  cands <- list(list(id = 55L, rank = "genus", name = "Megandrena", ancestor_ids = c(47222L)))
+  expect_equal(pick_taxon_id_by_rank(cands, "genus", "Megandrena", parent_id = NA), 55L)
+})

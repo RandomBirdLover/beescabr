@@ -34,7 +34,7 @@ on their own from `scripts/reference/`.
 | `reference/` | `data/reference/` | `holway.R`, `holway_reference_build.R` (interactive Holway→iNat resolver, with parent **roll-up** — complex→subgenus→genus), `taxonomy_reference.R`, `verify.R`, `taxonomy_lookup_build.R` (builds `sd_bee_taxonomy_lookup.csv`), `enrich_lookups.R`, plant/taxonomy lookup builders, **plus the online refresh tools `refresh_iucn_status.R` + `refresh_plant_common_names.R`** (run via `BEESCABR_REFRESH=1`, or standalone) |
 | `checklists/` | `data/checklists/` | shared helper `checklist_build.R`, plus **rough-draft** region builders `cabr_bee_checklist.R`, `pl_bee_checklist.R`, `sd_bee_checklist.R` (not sourced until built) |
 | `spatial/` | `data/spatial/` | `spatial_utils.R` — loads/reprojects boundary + transect layers and applies buffers (in-memory; never written) |
-| `analysis/` | — | `native_bee_data_analysis.Rmd` — downstream analysis/report notebook (run by hand) |
+| `analysis/` | — | figure + table scripts, all driven by `scripts/run_all_analysis_pipeline.R` |
 | `utils/` | — | tiny shared helpers (`read_latest`, `write_fresh`, …) |
 
 ## Pipeline stages → scripts → data outputs

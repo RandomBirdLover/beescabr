@@ -19,6 +19,48 @@ Verified on 2026-08-18 by checking, for each file, that no pipeline script write
 
 > The roster (people) and the intern log (dates) are **two separate files that must stay in sync**. New person → edit the roster. New survey date → edit the log. A new intern means editing both.
 
+### How to update participation (people & effort)
+
+The NPS summary participation table counts **people** and **effort** from two
+different files. Keeping them straight matters: a past bug counted people from
+the effort log and inflated the totals, because that log stores netters by first
+name and iNat folks by handle, so one person recurs across trips and cannot be
+deduped. **The roster is the sole authority for *who*; the effort log is for
+*how much*.**
+
+| File | Path | Role | Edit by hand? |
+| --- | --- | --- | --- |
+| `surveyor_roster.csv` | `data/project_info/` | Canonical people list, one row per person-year (full name, role, method). **Authority for headcounts.** | ✅ Yes |
+| `master_intern_survey_log.csv` | `data/project_info/survey_date_sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
+| `master_per_survey_info.csv` | `data/project_info/` | **Generated output** — rebuilt from the two files above by `finding_project_info.R`. Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
+
+**What to edit when**
+
+- **New beeple (community scientist):** add them to `surveyor_roster.csv` only.
+  Their survey dates flow in automatically from their tagged iNaturalist
+  observations.
+- **New intern:** add them to `surveyor_roster.csv` **and** add their net/photo
+  days to `sources/master_intern_survey_log.csv`. Intern days are not all
+  tag-derivable, so the log is their source of truth.
+- **More survey dates for existing interns:** add them to
+  `sources/master_intern_survey_log.csv`, then re-run the pipeline.
+- **Never** edit `master_per_survey_info.csv` directly. Re-run
+  `finding_project_info.R` (or the full pipeline) to rebuild it.
+
+**Gotcha:** the roster (people) and the intern log (dates) are two separate
+manual files that must stay in sync. If you add a new intern's dates to the log
+but forget to add the person to the roster, the effort counts update but the
+headcount does not. Rule of thumb: a new person means edit the roster; a new
+intern date means edit the log; a new intern means edit both.
+
+General public contributors (iNaturalist observers not on the roster) and the
+total-contributor count update automatically from the iNaturalist data. No
+manual entry is needed for those.
+
+---
+
+---
+
 ## 2. Specimens
 
 | File | Path | What it is | How it enters | Update trigger |
@@ -74,11 +116,54 @@ These are hand-maintained files the observation pipeline reads as override truth
 
 ---
 
+## 7. File-naming conventions for the inputs above
+
+### iNat and GBIF exports
+
+```
+inat_native_bees_sdcounty_25_mi_buffer_YYYY-MM-DD.csv
+inat_plants_point_loma_peninsula_YYYY-MM-DD.csv
+gbif_bees_sdcounty_YYYY-MM-DD.csv
+```
+
+`inat_native_bees_sdcounty_25_mi_buffer` is one master export covering all SD County bees except *Apis mellifera* (excluded at ingest time via `without_taxon_id` in `scripts/config.R`). "Native" refers only to this honey-bee exclusion; no other non-native species are filtered. `scripts/checklists/` spatially splits the records into three tiers (SD County / Point Loma / CABR) — the three tier checklists are all derived independently from this one file, not nested.
+
+Date = download date, YYYY-MM-DD. Drop directly into `data/cabr_surveys/nonlethal/inat_bee/`. Scripts auto-detect the newest file via `read_latest()`.
+
+### Specimen file
+
+```
+cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx
+```
+
+All versions live in `data/specimens/records/`. The pipeline always reads the newest. See **Specimen version management** below.
+
+### Deposit and loan tracking files
+
+```
+deposit/cabr_bee_specimen_record_deposit_{taxon}_{recipient}.xlsx
+loans/cabr_bee_loan_{taxon}_{recipient}.xlsx
+```
+
+### Column naming: bare rank names
+
+All pipeline outputs use **bare taxonomic rank names** — `kingdom`, `phylum`, `class`, `order`, `superfamily`, `family`, `subfamily`, `tribe`, `subtribe`, `genus`, `subgenus`, `species`, `subspecies` — not iNat's `taxon_kingdom_name` / `taxon_genus_name` wrapping.
+
+Two special cases:
+- `taxon_id` — kept as-is (not shortened to `id`, which collides with the observation ID column).
+- `taxon_complex_name` → `complex`; `taxon_complex_id` → `complex_taxon_id`. In Tier 2 / Holway-format outputs the `Complex` column is prefixed `"(Complex) "` (e.g. `"(Complex) Diadasia australis"`) so complex-level IDs aren't misread as confirmed species.
+
+**Deliverable exception:** one-off polished outputs (reports, presentations) may use simplified headers on that copy only — do not change the pipeline naming.
+
+---
+
+---
+
 ## Do NOT hand-edit (generated — a script writes these)
 
 Listed because they look like inputs but are rebuilt every run. Editing them is wasted work; change the manual source instead.
 
-- `beeple_calendar_windows.csv` — parsed from the calendar PDFs by `parse_beeple_calendars.py`. Edit the PDFs, not this.
+- `beeple_calendar_windows.csv` — parsed from the calendar PDFs by `scripts/project_info/finding_beeple_calendar.R` (pipeline stage 2d). Edit the PDFs, not this.
 - `cabr_official_native_bee_checklist.csv` — written by `scripts/checklists/cabr_bee_checklist.R`.
 - `holway_v3_combined.csv`, `holway_sd_bee_reference_table_v3.csv` — built from the Holway `.xlsx` source.
 - Everything in `data/reference/generated/`.
@@ -90,3 +175,5 @@ Listed because they look like inputs but are rebuilt every run. Editing them is 
 
 - README says `surveyor_roster.csv` lives in `data/project_info/`; it is actually in `data/project_info/rosters/`.
 - README's iNat/GBIF section says to drop exports in `data/cabr_surveys/nonlethal/inat_bee/`, a folder that no longer exists (same legacy path we just cleaned out of the specimen docs). Either the API is now the real path, or that instruction needs the correct folder.
+
+---

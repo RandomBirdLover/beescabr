@@ -1,0 +1,43 @@
+{
+  "id": 12345678,
+  "uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "observed_on": "2021-04-12",
+  "time_observed_at": "2021-04-12T10:15:00-07:00",
+  "quality_grade": "research",
+  "license_code": "cc-by-nc",
+  "description": "on a coastal bluff",
+  "captive": false,
+  "obscured": false,
+  "geoprivacy": null,
+  "taxon_geoprivacy": null,
+  "place_guess": "Cabrillo National Monument, San Diego, CA",
+  "positional_accuracy": 5,
+  "user": { "id": 774063, "login": "markkjames", "name": "Mark K. James" },
+  "tags": ["CabrilloBee10MinuteSurvey", "Cabrillo2021BeeSurvey", "UPMON"],
+  "geojson": { "type": "Point", "coordinates": [-117.24176, 32.67237] },
+  "taxon": {
+    "id": 632955,
+    "name": "Melissodes robustior",
+    "rank": "species",
+    "preferred_common_name": "a long-horned bee",
+    "iconic_taxon_name": "Insecta"
+  },
+  "ofvs": [
+    {
+      "id": 40518302,
+      "field_id": 3126,
+      "datatype": "taxon",
+      "name": "Interaction->Visited flower of",
+      "value": "77511",
+      "taxon_id": "77511",
+      "taxon": { "id": 77511, "rank": "species", "name": "Isocoma menziesii", "preferred_common_name": "Coastal Goldenbush" }
+    },
+    {
+      "id": 40518304,
+      "field_id": 19447,
+      "datatype": "text",
+      "name": "Bee Survey Transect Name",
+      "value": "TP1"
+    }
+  ]
+}

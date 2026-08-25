@@ -20,12 +20,6 @@ describe what you changed and let the user commit it.
 
 ## Golden rule: test-first (red/green), always
 
-**`tests/` is LOCAL-ONLY (since 2026-08-24).** It is gitignored and no longer part
-of the pushed repo, so a fresh clone will not have it. The rule below still applies
-when working on the machine that has the suite; if `tests/` is absent, say so plainly
-rather than skipping the check silently, and still deliver the test alongside the
-change. Nothing in `tests/` is called by any pipeline — see `tests/README.md`.
-
 For **every new function or behavior change**, follow this loop. Do not write
 implementation code before a failing test exists.
 

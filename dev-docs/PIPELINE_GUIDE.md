@@ -4,10 +4,11 @@ A guide to the API + DuckDB pipeline: what changed, how it's structured, how to
 extend it, and how to direct Claude to change it efficiently. See also
 `CLAUDE.md` (agent rules).
 
-## 1. What changed this session
+## 1. How the pipeline is built
 
-The pipeline was reworked from a CSV-export + monolith design into a cached,
-modular, API-driven one.
+The pipeline is cached, modular and API-driven. It was reworked from an earlier
+CSV-export + monolith design; the notes below explain the shape it has now and
+why each piece exists.
 
 - **Data source: iNaturalist API → DuckDB cache** (the CSV export is retired).
   Observations are pulled once into `data/observations/cache/inat_cache.duckdb`, with a
@@ -19,7 +20,7 @@ modular, API-driven one.
   logic later moved OUT of `inat_bee_clean.R` into the provenance "brain",
   `project_info/finding_project_info.R`; the clean scripts now just look up each
   observation's answer by `obs_id`.
-- **One command.** `scripts/run_pipeline.R` ingests once, then builds
+- **One command.** `scripts/run_data_cleaning_pipeline.R` ingests once, then builds
   checklists and cleans, reading the same fresh cache.
 - **Ingest performance.** Raw API responses go straight to DuckDB, which parses
   + inserts + reports the pagination cursor in C++ — no R-side JSON parse or
@@ -29,7 +30,7 @@ modular, API-driven one.
   bare id string) no longer crashes the read; a safe accessor yields `NA`.
 - **Batched taxonomy.** Taxon resolution uses `/taxa/{ids}` (≤30 ids/request)
   with a throttle, instead of one request per taxon — fixes rate limiting.
-- **Tests.** ~110 testthat assertions; pure logic runs anywhere, DB/network
+- **Tests.** ~860 testthat assertions; pure logic runs anywhere, DB/network
   tests use temp DuckDB + injected fakes and skip when `duckdb` is absent.
 
 ## 2. Project structure
@@ -37,7 +38,7 @@ modular, API-driven one.
 ```
 scripts/
   config.R                       constants: ids, CRS, paths, throttle, field map
-  run_pipeline.R                 single entrypoint (ingest → brain → clean → checklists)
+  run_data_cleaning_pipeline.R   single entrypoint (ingest → brain → clean → checklists)
   utils/utils.R                  shared helpers (read_latest, …)
   observations/
     engine/
@@ -100,9 +101,9 @@ by deleting the RDS.
 ## 3. Running it
 
 ```
-Rscript scripts/run_pipeline.R                          # full run
-BEESCABR_SKIP_INGEST=1 Rscript scripts/run_pipeline.R   # reuse cache only
-BEESCABR_FULL_INGEST=1 Rscript scripts/run_pipeline.R   # re-fetch all obs
+Rscript scripts/run_data_cleaning_pipeline.R                       # full run
+BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R  # reuse cache only
+BEESCABR_FULL_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R  # re-fetch all obs
 Rscript -e 'library(testthat); test_dir("tests/testthat")'   # tests
 ```
 
@@ -157,3 +158,127 @@ Example prompt: *"Add an `updated_since` incremental mode to
 `ingest_inat.R` so we can refresh edited observations. Test-first in
 `test-db.R` with an injected fake `request_text_fn`; confirm the test fails,
 then implement, then run the full suite."*
+
+---
+
+---
+
+## 6. iNaturalist API — what calls what
+
+Two scripts pull from the API rather than the CSV export:
+
+- `scripts/observations/inat_bee_clean.R` — fetches survey observations, tags, and observation fields via `/v1/observations`.
+- `scripts/reference/taxonomy_lookup_build.R` — per-taxon taxonomy/ancestry lookups (~400 calls, ~3–4 min), via the v1 taxa endpoints.
+
+**Endpoint:** `https://api.inaturalist.org/v1/observations`. Read-only; no authentication required. Max `per_page = 200`; `inat_bee_clean.R` pages with an `id_above` cursor. Rate limit: ~1 request/second; scripts include `Sys.sleep(1)`.
+
+**Why the API and not the export:** iNat's CSV export only includes observation fields the *exporter* has personally used — fields attached by other observers are invisible. The API returns every field on every observation (`ofvs`), which is what the crosswalk triage requires.
+
+**Why v1:** v1 is what iNaturalist's own site and apps run on — it is the most stable choice. v2 exists but has returned incomplete results on some queries. iNat's deprecated version is v0 (Rails), not v1.
+
+**If v1 is retired:** swap `/v1/` → `/v2/` and add a `fields` parameter (v2 returns minimal data by default; v1 returns everything). Watch iNaturalist's forum (News & Updates) for any sunset notice.
+
+---
+
+---
+
+## 7. Reviewing unknown tags and fields
+
+Both `inat_bee_clean.R` and `inat_plant_clean.R` triage observations against the crosswalk. Anything unrecognized is ignored, but the console prints an **ACTION NEEDED** block and writes QC files. Check after each run.
+
+### Unknown tags
+
+**`data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv`** (bees) and **`cabr_inat_plant_unknown_tags.csv`** (plants).
+
+This list is normally long and mostly harmless — camera/lens tags (`D500`, `300mm f/4`), species names, photo filenames, `City Nature Challenge`, etc. Ignore those. Scan for one thing only: a tag that looks like a **missed survey tag** — a new typo or new survey year. If you spot one, add it as an `inat_variant` on the matching crosswalk row, re-run, and those observations move from `flag` to `keep`.
+
+This list won't trend to zero and shouldn't.
+
+### Unknown fields
+
+A separate **ACTION NEEDED** block covers unknown observation fields — structured key-value fields (e.g. `Nesting bee`, `on ground?`) with no crosswalk row. Unlike unknown tags, this list **should trend toward zero**: every field observers actually use should eventually have a row telling the script what to do with it.
+
+When you see an unknown field:
+1. Look it up on iNat by field ID or name.
+2. Decide: relevant? Add a row with `type = obs_field`. Not relevant? Add a row with `type = ignore`.
+3. Re-run — it should disappear from the ACTION NEEDED block.
+
+---
+
+---
+
+## 8. Console prompts — standard keys
+
+Every interactive prompt in the pipeline uses one consistent set of keys, so you never have to guess what `Enter` will do. There are two kinds.
+
+**Decision gates — stop, or keep going.** These appear when a run hits something you might want to fix first (duplicate specimen IDs, off-transect survey pins, spell-check flags). They all use the same words:
+
+- Type **`skip`** to continue past the gate (leave it for later), or **`stop`** to halt the run so you can fix it now.
+- Case-insensitive, and common synonyms work: `s` / `continue` / `c` / `go` / `ok` / `y` / `yes` all continue; `x` / `halt` / `fix` / `n` / `no` all stop.
+- A bare **Enter**, or anything the prompt doesn't recognize, **re-asks** instead of guessing — so a stray keystroke can never silently skip a real problem or halt the run.
+
+**Heads-up prompts — nothing to decide.** When a step is only telling you something (e.g. "here are the maps to send your surveyors"), it ends with **"Press Enter to continue"**, and there `Enter` always means continue.
+
+**Item-by-item reviewers** — `review_crosswalk`, `review_windows` (and transect ties), `review_notes`, `review_plant_names`. Each walks one item at a time behind a `>` prompt and prints its own legend on screen. They share the same control keys:
+
+- **`<Enter>`** — accept the highlighted (`*`) suggestion, where one is shown.
+- **`s`** — skip this item for now (it comes back next run).
+- **`q`** — save everything and quit the reviewer.
+- **`?`** — show the key help again.
+
+Each reviewer adds its own action keys on top of those — e.g. windows: `y`/`n`/`u` and `l`=list URLs; crosswalk: `i`=ignore, `n`=new concept, `1,2`=file under concepts; plant names: `a`=add-as-new, or a number to file under a canonical — all listed in that reviewer's on-screen legend.
+
+---
+
+---
+
+## 9. The crosswalk reference (project_tags_fields.csv)
+
+`data/project_info/project_tags_fields.csv` controls `inat_bee_clean.R` and `inat_plant_clean.R`. Adding or editing rows changes script behavior without touching any R code.
+
+### Column reference
+
+| Column | What it holds |
+|--------|---------------|
+| `name` | Human-readable tag or field name |
+| `field_id` | iNat observation field ID(s); blank for tags and derived fields |
+| `category` | Grouping label (Transect, Beeple, Intern, Exclude, Field, Timing-Weather, Derived, Location) |
+| `type` | Controls how the script handles this row — see Type values below |
+| `datatype` | Expected value type: `text`, `taxon`, `numeric`, `time` |
+| `allowed_values` | Pipe-separated valid values; `"fill in"` = auto-fetch from iNat API on next run |
+| `applies_to` | Which export this row applies to: `bee`, `plant`, `both`, or `exclude` |
+| `method_context` | Survey method(s): `non-lethal`, `lethal`, `both`, or `n/a` |
+| `current_location` | Where the script looks for this value: `tag_list`, `obs_field`, `description (notes)`, `tag_list (photo-metadata tags)` |
+| `inat_variants` | Known alternate spellings/capitalizations in raw iNat data |
+| `specimen_plot_variants` | How this tag/field appears in physical plot or specimen sheets |
+| `verified` | `TRUE` = confirmed against real data; `FALSE` = added but not yet spot-checked |
+| `notes` | What this tag/field means and when to use it |
+| `script_rules` | Logic the script applies beyond allowed_values (normalization, derivation heuristics, overrides) |
+
+### Type values
+
+| type | Meaning |
+|------|---------|
+| `tag` | iNat observation tag (free-text label). Script looks in `tag_list`. |
+| `obs_field` | iNat observation field (structured key-value). Script looks in `ofvs` from the API. |
+| `notes_field` | Value extracted from the free-text description/notes field. |
+| `derived` | Computed by the script from other data; not directly from iNat. |
+| `ignore` | **Field exists in iNat data but is not processed. The observation is kept — only this field is skipped.** Use for survey-irrelevant fields (e.g. `Fasciation`, `Leaf aroma`). |
+| `exclude` | **Tag marks an entire observation to be dropped.** The observation is removed, not just the field. Use for non-Cabrillo projects swept in by the SD County pull, or pilot data excluded by the PI. |
+
+`ignore` and `exclude` are deliberately different: `ignore` = keep the obs, skip the field; `exclude` = drop the obs entirely.
+
+---
+
+---
+
+## 10. Complex rank handling
+
+iNaturalist uses **Complex** for cryptic species groups that can't be distinguished from photos (e.g. *Andrena osmioides*, *Diadasia australis*).
+
+- Each taxon has `complex` (complex name) and `complex_taxon_id` columns in the checklist.
+- Complexes are not excluded from richness counts — each unique `taxon_id` counts as one taxon.
+- `complex` is the join key for matching iNat photo observations against museum specimens. Exact `taxon_id` match is preferred; complex-level matches are flagged separately.
+- In Tier 2 / Holway-format outputs, `Complex` values are prefixed `"(Complex) "` (e.g. `"(Complex) Diadasia australis"`) so they aren't misread as confirmed species binomials.
+
+---

@@ -45,7 +45,7 @@ needs a look and remembers what you've cleared.
 
 ## Recording your checks
 
-`data/outputs/reference/verified_taxa.csv` — a simple list you maintain.
+`data/reference/verified_taxa.csv` — a simple list you maintain.
 Columns: `taxon_id, verified`. Once you've confirmed a bee's photo/ID, add its
 `taxon_id` (verified = `Y`). It stops being flagged on the next run.
 
@@ -59,7 +59,7 @@ fixing an ID flows back into your data. The cutoff time is stored in
 
 ## Run order (RStudio)
 
-1. `run_pipeline.R` — ingest + checklists; builds `sd_bee_taxonomy_lookup.csv`
+1. `run_data_cleaning_pipeline.R` — ingest + checklists; builds `sd_bee_taxonomy_lookup.csv`
    and refreshes the cache.
 2. The clean step → `cabr_inat_bee_clean.csv` + `cabr_inat_to_verify.csv`.
 3. Check the photos in the to-verify list; add confirmed `taxon_id`s to

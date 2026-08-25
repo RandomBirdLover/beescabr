@@ -1,7 +1,7 @@
 # Analysis roadmap — stakeholder questions, triaged
 
 Turns the stakeholders' question dump into a buildable plan. Each question is
-restated, tagged with a catalog category (see `data/analysis/README.md`), checked
+restated, tagged with a catalog category (see `ANALYSIS_CATALOG.md`, this folder), checked
 for feasibility against the **actual** cleaned data, and annotated where the
 concept or the inputs need a second look. Duplicates are merged; #5 is already
 built.

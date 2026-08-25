@@ -19,7 +19,7 @@
 #                 bees inside a National Monument, including at-risk species.
 #                 Exact localities for sensitive taxa are not ours to publish.
 # The public site in docs/ is built FROM this data but contains only the aggregated,
-# non-sensitive outputs. If you need the raw data, see DATA_ACCESS.md -- it is shared
+# non-sensitive outputs. If you need the raw data, see dev-docs/DATA_ACCESS.md -- it is shared
 # person to person, not through this repo.
 /data
 
@@ -38,11 +38,6 @@ docs/*
 !docs/*.jpeg
 !docs/*.webp
 !docs/*.png
-
-# Test suite kept LOCAL (2026-08-24). Nothing here is called by the cleaning,
-# analysis, or publishing pipelines -- see tests/README.md. Tracked copies were
-# removed from the repo; the files still live on this machine.
-/tests
 
 # NOTE: dev-docs/ is deliberately TRACKED (since 2026-08-24). It holds the pipeline
 # guide, the manual-inputs list, pitfalls, and the specimen changelog -- the working
