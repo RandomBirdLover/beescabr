@@ -15,16 +15,28 @@ test_that("choosing 1 gives a normal incremental run", {
   expect_equal(f[["BEESCABR_FULL_INGEST"]], "0")
 })
 
-test_that("choosing 2 skips iNaturalist entirely", {
+test_that("choosing 2 pulls bees but skips the plant fetch", {
   f <- ask(function(...) "2")
+  expect_equal(f[["BEESCABR_SKIP_INGEST"]], "0")
+  expect_equal(f[["BEESCABR_SKIP_PLANTS"]], "1")   # the pipeline warns loudly about this
+  expect_equal(f[["BEESCABR_FULL_INGEST"]], "0")
+})
+
+test_that("choosing 3 skips iNaturalist entirely", {
+  f <- ask(function(...) "3")
   expect_equal(f[["BEESCABR_SKIP_INGEST"]], "1")
   expect_equal(f[["BEESCABR_FULL_INGEST"]], "0")
 })
 
-test_that("choosing 3 forces the full rebuild", {
-  f <- ask(function(...) "3")
+test_that("choosing 4 forces the full rebuild", {
+  f <- ask(function(...) "4")
   expect_equal(f[["BEESCABR_SKIP_INGEST"]], "0")
   expect_equal(f[["BEESCABR_FULL_INGEST"]], "1")
+})
+
+test_that("only the bees-only mode leaves plants stale", {
+  for (a in c("1", "3", "4")) expect_equal(ask(function(...) a)[["BEESCABR_SKIP_PLANTS"]], "0")
+  expect_equal(ask(function(...) "2")[["BEESCABR_SKIP_PLANTS"]], "1")
 })
 
 test_that("pressing Enter takes the safe default (normal run)", {
@@ -34,7 +46,7 @@ test_that("pressing Enter takes the safe default (normal run)", {
 })
 
 test_that("an unrecognized answer re-asks rather than guessing", {
-  answers <- c("banana", "9", "2")
+  answers <- c("banana", "9", "3")
   i <- 0
   f <- ask(function(...) { i <<- i + 1; answers[i] })
   expect_equal(i, 3L)                      # asked three times
@@ -44,7 +56,7 @@ test_that("an unrecognized answer re-asks rather than guessing", {
 test_that("every mode sets EVERY flag, so a leftover flag cannot survive", {
   # this is the stuck-flag bug the file header warns about: a FULL_INGEST=1 left
   # over from a previous session silently making every later run a slow rebuild.
-  for (ans in c("1", "2", "3")) {
+  for (ans in c("1", "2", "3", "4")) {
     f <- ask(function(...) ans)
     expect_setequal(names(f), c("BEESCABR_SKIP_INGEST", "BEESCABR_FULL_INGEST",
                                 "BEESCABR_SKIP_PLANTS", "BEESCABR_REFRESH"))
@@ -66,4 +78,26 @@ test_that("a flag set on purpose beforehand skips the prompt", {
                          say = function(...) invisible())
   expect_false(called)
   expect_null(f)
+})
+
+test_that("the full rebuild carries an expertise warning; the others do not", {
+  expect_true(nzchar(paste(INGEST_MODES[["4"]]$warn, collapse = "")))
+  for (k in c("1", "2", "3")) expect_null(INGEST_MODES[[k]]$warn)
+})
+
+test_that("the warning is shown when the full rebuild is chosen", {
+  said <- character(0)
+  ingest_mode_flags(read_fn = function(...) "4", is_interactive = TRUE,
+                    preset = character(0),
+                    say = function(...) said <<- c(said, paste0(...)))
+  expect_true(any(grepl("bee expertise", said, ignore.case = TRUE)))
+  expect_true(any(grepl("renamed|name change", said, ignore.case = TRUE)))
+})
+
+test_that("a normal run shows no expertise warning", {
+  said <- character(0)
+  ingest_mode_flags(read_fn = function(...) "1", is_interactive = TRUE,
+                    preset = character(0),
+                    say = function(...) said <<- c(said, paste0(...)))
+  expect_false(any(grepl("bee expertise", said, ignore.case = TRUE)))
 })

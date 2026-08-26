@@ -14,7 +14,7 @@
 # genus-vs-species mark), colored by family hue.
 #
 # Output: a SINGLE self-contained HTML (no external libs) ->
-#   data/analysis/nps_report_2026/phenology/bee_trends_explorer.html
+#   <DIR_REPORT>/phenology/bee_trends_explorer.html   (DIR_REPORT = the season folder)
 # published to the site by publish_pages.R as bee_trends.html.
 #
 # Run from the repo root:  Rscript scripts/analysis/bee_trends_explorer.R

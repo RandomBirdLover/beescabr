@@ -71,8 +71,23 @@ FAIR_YEARS  <- 2021:2023     # the only years the lethal-netting surveys ran (so
 #   * JOURNAL (fair window)  -- the lethal-vs-non-lethal method paper.
 # SPLIT scripts (same concept, two datasets) write their all-records version under
 # DIR_REPORT and their fair-window version under DIR_JOURNAL.
-DIR_REPORT  <- "data/analysis/nps_report_2026"
-DIR_JOURNAL <- "data/analysis/journal_paper_2026"
+# SEASON YEAR. Each season's deliverables live in their own folder so last year's
+# outputs stay frozen as the record of what was actually reported. This follows the
+# calendar year automatically -- a new season needs NO code edit. To rebuild an older
+# season (or to keep working in 2026 after the new year rolls over), set
+# BEESCABR_SEASON_YEAR=2026 before running.
+beescabr_season_year <- function(override = Sys.getenv("BEESCABR_SEASON_YEAR", ""),
+                                 today = Sys.Date()) {
+  y <- suppressWarnings(as.integer(override))
+  if (!is.na(y) && y > 1900L && y < 2200L) return(y)
+  as.integer(format(today, "%Y"))
+}
+beescabr_report_dir  <- function(year = beescabr_season_year()) sprintf("data/analysis/nps_report_%d", year)
+beescabr_journal_dir <- function(year = beescabr_season_year()) sprintf("data/analysis/journal_paper_%d", year)
+
+BEESCABR_SEASON <- beescabr_season_year()
+DIR_REPORT  <- beescabr_report_dir(BEESCABR_SEASON)
+DIR_JOURNAL <- beescabr_journal_dir(BEESCABR_SEASON)
 
 # ---- DuckDB cache ------------------------------------------------------------
 # One on-disk DuckDB file acts as the cache for BOTH observation objects

@@ -254,6 +254,33 @@ ibc_fix_behavior <- function(clean) {
                     "scientific_name", "flower_visited", "plant_genus", "fix_reason", "action", "url", "is_survey")))
 }
 
+# ---- pins that landed in the water ----------------------------------------
+# A known beeple/intern problem: an observation's GPS lands offshore. Those pins are
+# unusable for anything spatial, and only the observer can fix them on iNaturalist, so
+# they join the same per-surveyor "pins to fix" worklist as other bad pins.
+#
+# TOLERANCE, and why it is not zero: cabr_boundary (NPS) is digitized slightly seaward
+# of the City/County coastline (see dev-docs/spatial_mapping.md), and GPS itself drifts
+# a few metres. A pin standing on the shore can therefore sit just outside a land
+# polygon while being perfectly correct. Only pins more than tol_m beyond the land are
+# called water. Missing coords, or no land layer at all, never flag -- we do not guess.
+IBC_WATER_TOL_M <- 50
+ibc_water_flag <- function(lat, lon, land, tol_m = IBC_WATER_TOL_M) {
+  n <- max(length(lat), length(lon))
+  out <- rep(FALSE, n)
+  if (is.null(land) || !requireNamespace("sf", quietly = TRUE)) return(out)
+  ok <- which(!is.na(lat) & !is.na(lon))
+  if (!length(ok)) return(out)
+  pts <- sf::st_as_sf(data.frame(lat = lat[ok], lon = lon[ok]),
+                      coords = c("lon", "lat"), crs = 4326)
+  # metric CRS so tol_m is genuinely metres (CA Albers, same as PROJECT_CRS)
+  pts_m  <- sf::st_transform(pts, 3310)
+  land_m <- sf::st_transform(sf::st_union(sf::st_geometry(land)), 3310)
+  d <- as.numeric(sf::st_distance(pts_m, land_m))   # 0 when inside the polygon
+  out[ok] <- d > tol_m
+  out
+}
+
 # ---- location-fix worklist ------------------------------------------------
 # ibc_location_review(): PURE. Survey obs flagged location_needs_fix (a GPS pin far from every
 # transect -- likely a bad pin) -> a heads-up worklist so a scientist re-checks the pin on
@@ -262,12 +289,25 @@ ibc_fix_behavior <- function(clean) {
 # (which still has location_needs_fix). NA-safe.
 IBC_LOCATION_COLS <- c("obs_id", "observer", "observed_on", "transect", "taxon_id",
                        "scientific_name", "latitude", "longitude", "url")
-ibc_location_review <- function(df) {
-  if (!"location_needs_fix" %in% names(df))
-    return(df[0, intersect(IBC_LOCATION_COLS, names(df)), drop = FALSE])
-  out <- df[which(as.logical(df$location_needs_fix) %in% TRUE),
-            intersect(IBC_LOCATION_COLS, names(df)), drop = FALSE]
-  if (nrow(out)) out$fix_reason <- "bad_coord: survey pin far from any transect -- check the pin on iNaturalist"
+ibc_location_review <- function(df, land = NULL) {
+  cols <- intersect(IBC_LOCATION_COLS, names(df))
+  has_flag <- "location_needs_fix" %in% names(df)
+  if (!has_flag && is.null(land)) return(df[0, cols, drop = FALSE])
+
+  far   <- if (has_flag) as.logical(df$location_needs_fix) %in% TRUE else rep(FALSE, nrow(df))
+  water <- if (!is.null(land) && all(c("latitude", "longitude") %in% names(df)))
+             ibc_water_flag(df$latitude, df$longitude, land) else rep(FALSE, nrow(df))
+
+  keep <- which(far | water)
+  out  <- df[keep, cols, drop = FALSE]
+  if (nrow(out)) {
+    # water wins when both apply: it is the more specific problem and the pin cannot be
+    # anywhere near a transect if it is offshore.
+    out$fix_reason <- ifelse(
+      water[keep],
+      "in_water: this pin landed in the ocean -- move it to where you actually saw the bee",
+      "bad_coord: survey pin far from any transect -- check the pin on iNaturalist")
+  }
   out
 }
 
@@ -390,7 +430,15 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   drop_flag       <- function(d) d[, setdiff(names(d), "is_survey"), drop = FALSE]
   fix_survey      <- drop_flag(fix_behavior[fix_behavior$is_survey, , drop = FALSE])
   fix_nonsurvey   <- drop_flag(fix_behavior[!fix_behavior$is_survey, , drop = FALSE])
-  location_review <- ibc_location_review(df)
+  # Land layer for the in-water check: the Point Loma peninsula polygon (City open
+  # data, an authoritative coastline). Absent shapefile -> the check simply does not
+  # run and the worklist behaves exactly as it did before.
+  .land <- tryCatch(
+    { f <- "data/spatial/boundaries/point_loma/point_loma_boundary.shp"
+      if (file.exists(f) && requireNamespace("sf", quietly = TRUE))
+        sf::st_transform(sf::st_read(f, quiet = TRUE), 4326) else NULL },
+    error = function(e) NULL)
+  location_review <- ibc_location_review(df, land = .land)
   if (write) {
     dir.create(dirname(out_clean), recursive = TRUE, showWarnings = FALSE)
     write.csv(clean, out_clean, row.names = FALSE, na = "")

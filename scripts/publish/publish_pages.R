@@ -15,7 +15,10 @@
 # (per-surveyor pins-to-fix pages, reviewer drafts) are deliberately excluded.
 # =============================================================
 
-SRC_DIR  <- "data/analysis/nps_report_2026"
+# Follow the season year from config.R so a new season needs no edit here. Set
+# BEESCABR_SEASON_YEAR=2026 to publish an older season.
+if (!exists("DIR_REPORT")) source("scripts/config.R")
+SRC_DIR  <- DIR_REPORT
 DOCS_DIR <- "docs"
 
 # One manifest drives both the file copy and the landing-page cards.

@@ -18,16 +18,32 @@
 
 INGEST_MODES <- list(
   "1" = list(label = "Normal run",
-             blurb = "pull only NEW or edited observations since last time (seconds)",
+             blurb = "BEES + PLANTS: pull only what is new or edited since last time (seconds)",
              flags = c(BEESCABR_SKIP_INGEST = "0", BEESCABR_FULL_INGEST = "0")),
-  "2" = list(label = "Offline run",
-             blurb = "do not contact iNaturalist at all; reuse what is already cached",
+  "2" = list(label = "Bees only",
+             blurb = "BEES ONLY: normal bee pull, plants SKIPPED (leaves plant data stale)",
+             flags = c(BEESCABR_SKIP_INGEST = "0", BEESCABR_FULL_INGEST = "0",
+                       BEESCABR_SKIP_PLANTS = "1")),
+  "3" = list(label = "Offline run",
+             blurb = "BEES + PLANTS: no iNaturalist calls at all, reuse what is cached",
              flags = c(BEESCABR_SKIP_INGEST = "1", BEESCABR_FULL_INGEST = "0")),
-  "3" = list(label = "Full rebuild",
-             blurb = "re-download EVERY observation from scratch (~40+ min; rarely needed)",
-             flags = c(BEESCABR_SKIP_INGEST = "0", BEESCABR_FULL_INGEST = "1"))
+  "4" = list(label = "Full rebuild",
+             blurb = "BEES + PLANTS: re-download everything from scratch (~40+ min, rare)",
+             flags = c(BEESCABR_SKIP_INGEST = "0", BEESCABR_FULL_INGEST = "1"),
+             # A rebuild re-resolves every name against iNaturalist's CURRENT taxonomy,
+             # so taxa that were settled can come back for judgement. Deciding whether a
+             # name is a genuine synonym/rename or a bad ID is not a mechanical call.
+             warn = c(
+               "This needs BEE EXPERTISE, not just patience.",
+               "A rebuild re-resolves every name against iNaturalist's taxonomy as it",
+               "stands TODAY. Names drift: a bee may have been renamed, split, lumped, or",
+               "may simply not exist on iNaturalist under the name in our checklists or on",
+               "a specimen label. You will be asked to judge those cases, and answering",
+               "wrongly writes a wrong name into the checklists.",
+               "If you are unsure, stop and ask someone who knows the bees before running."))
 )
 INGEST_MODE_DEFAULT <- "1"
+INGEST_MODE_TRIES   <- 3    # bad answers before falling back to the default (never loop forever)
 # Every flag the menu owns. All of them are written on every answer, so a value left
 # over from an earlier session in the same R process cannot leak into this run.
 INGEST_MODE_FLAGS <- c("BEESCABR_SKIP_INGEST", "BEESCABR_FULL_INGEST",
@@ -48,19 +64,33 @@ ingest_mode_flags <- function(read_fn = function(prompt) readline(prompt),
   }
   say("")
   say("  How should this run pull iNaturalist data?")
+  say("  (a normal run covers BOTH bees and plants)")
   say("")
   for (k in names(INGEST_MODES))
     say(sprintf("    %s. %-14s %s", k, INGEST_MODES[[k]]$label, INGEST_MODES[[k]]$blurb))
   say("")
 
-  repeat {
-    ans <- trimws(read_fn(sprintf("  Choose 1-%d [%s]: ", length(INGEST_MODES), INGEST_MODE_DEFAULT)))
-    if (!nzchar(ans)) ans <- INGEST_MODE_DEFAULT
-    if (!is.null(INGEST_MODES[[ans]])) break
-    say("  Not one of the choices. Type 1, 2 or 3 (or press Enter for ", INGEST_MODE_DEFAULT, ").")
+  # Bounded, never infinite: a console that keeps returning nonsense (or a caller
+  # feeding a fixed bad answer) must not hang the pipeline -- fall back to the default.
+  ans <- INGEST_MODE_DEFAULT
+  for (attempt in seq_len(INGEST_MODE_TRIES)) {
+    a <- trimws(read_fn(sprintf("  Choose 1-%d [%s]: ", length(INGEST_MODES), INGEST_MODE_DEFAULT)))
+    if (!nzchar(a)) { ans <- INGEST_MODE_DEFAULT; break }
+    if (!is.null(INGEST_MODES[[a]])) { ans <- a; break }
+    if (attempt == INGEST_MODE_TRIES) {
+      say("  Still not a valid choice -- using ", INGEST_MODE_DEFAULT, " (", INGEST_MODES[[INGEST_MODE_DEFAULT]]$label, ").")
+    } else {
+      say("  Not one of the choices. Type 1-", length(INGEST_MODES),
+          " (or press Enter for ", INGEST_MODE_DEFAULT, ").")
+    }
   }
   mode <- INGEST_MODES[[ans]]
   say("  → ", mode$label, ": ", mode$blurb)
+  if (!is.null(mode$warn)) {
+    say("")
+    for (w in mode$warn) say("     ! ", w)
+    say("")
+  }
 
   out <- setNames(rep("0", length(INGEST_MODE_FLAGS)), INGEST_MODE_FLAGS)
   out[names(mode$flags)] <- mode$flags

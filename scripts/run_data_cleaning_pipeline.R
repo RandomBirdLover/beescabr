@@ -95,6 +95,7 @@ BEESCABR_SOURCED_BY_RUNNER <- TRUE
 RUNNING_ALL <- TRUE
 
 source("scripts/utils/ingest_mode.R")   # the run-mode menu (asks instead of requiring flag names)
+source("scripts/utils/refresh_due.R")   # "is the cached IUCN / plant-name reference stale?"   # the run-mode menu (asks instead of requiring flag names)
 source("scripts/config.R")
 source("scripts/utils/utils.R")
 source("scripts/utils/console.R")                # phase banners + key/value reporter + NEEDS-YOU rollup
@@ -151,6 +152,30 @@ main <- function() {
   # this same R process cannot leak into this run. ----
   ingest_mode_apply(ingest_mode_flags())
 
+  # ---- Is the cached reference data (IUCN status, plant common names) stale? Age comes
+  # from each cache's own retrieved_on dates, oldest entry first. Anything past a year is
+  # refreshed AUTOMATICALLY at phase 0 below -- nobody should have to remember a flag once
+  # a year. An offline run cannot, and says so instead. ----
+  .overdue <- refresh_overdue()
+  .offline <- Sys.getenv("BEESCABR_SKIP_INGEST", "0") == "1"
+  if (length(.overdue)) {
+    message("")
+    for (o in .overdue) bx_note("stale reference: ", o$key, " -- ", o$reason)
+    if (.offline) {
+      bx_cont("this is an offline run, so they cannot be refreshed now.")
+      bx_cont("re-run online (menu option 1) and you will be asked about refreshing.")
+      bx_need(sprintf("%d reference cache(s) over a year old", length(.overdue)),
+              "run online to refresh")
+    }
+    message("")
+  }
+  # Ask before spending minutes online. Declining keeps the cache and the run continues
+  # normally -- new taxa are still picked up incrementally, as on every run.
+  .refresh_ok <- if (.offline) FALSE else refresh_confirm(.overdue)
+  if (length(.overdue) && !.offline && !.refresh_ok)
+    bx_need(sprintf("%d reference cache(s) over a year old (you chose not to refresh)",
+                    length(.overdue)), "BEESCABR_REFRESH=1 when ready")
+
   t0 <- Sys.time()
 
   # ---- PRE-FLIGHT: every hand-maintained input must exist BEFORE we spend an hour
@@ -177,9 +202,16 @@ main <- function() {
   # normal run stays offline). Reads the species/genus universe from the existing cleaned tables,
   # so on a first-ever run it is a harmless no-op. Wrapped so an API/network failure never kills
   # the run. See scripts/reference/refresh_{iucn_status,plant_common_names}.R.
-  if (Sys.getenv("BEESCABR_REFRESH", "0") == "1") {
+  # Runs when FORCED (BEESCABR_REFRESH=1) or when a cache has simply aged out. Never on an
+  # offline run -- there is no network to ask. A failure keeps the existing cache and the
+  # run continues: stale reference values beat no run at all.
+  .forced <- Sys.getenv("BEESCABR_REFRESH", "0") == "1"
+  .aged   <- isTRUE(.refresh_ok)          # aged out AND the operator said yes
+  if (.forced || .aged) {
     bx_phase(0, "REFRESH IUCN + PLANT NAMES (online)")
-    bx_kv("Refresh", "forcing a full re-check against the live APIs (BEESCABR_REFRESH=1)…")
+    bx_kv("Refresh", if (.forced) "forcing a full re-check against the live APIs (BEESCABR_REFRESH=1)…"
+                     else sprintf("%d cache(s) past %d days — re-checking against the live APIs…",
+                                  length(.overdue), REFRESH_MAX_AGE_DAYS))
     tryCatch(source("scripts/reference/refresh_iucn_status.R"),
              error = function(e) bx_note("IUCN refresh failed (", conditionMessage(e), ") — kept the existing cache."))
     tryCatch(source("scripts/reference/refresh_plant_common_names.R"),
