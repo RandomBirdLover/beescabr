@@ -21,7 +21,7 @@ Rscript scripts/run_publishing_materials_pipeline.R                     # rebuil
 BEESCABR_DEPLOY=1 Rscript scripts/run_publishing_materials_pipeline.R   # also commit + push docs/ (auto-deploy)
 ```
 
-`docs/` is committed to git; GitHub Pages redeploys on every push. The publish modules live in `scripts/publish/` (the primitive alone is `Rscript scripts/publish/publish_pages.R`), the way cleaning lives in `scripts/observations/` and analysis in `scripts/analysis/`.
+`docs/` is committed to git; GitHub Pages redeploys on every push. The publish modules live in `scripts/publish/` (the primitive alone is `Rscript scripts/publish/publish_pages.R`), the way cleaning lives in `scripts/inat_observations/` and analysis in `scripts/analysis/`.
 
 ---
 

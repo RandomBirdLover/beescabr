@@ -9,8 +9,8 @@ skip_if_no_store <- function() {
 }
 
 open_temp_store <- function() {
-  src("config.R"); src("observations/engine/db/store_conn.R"); src("observations/engine/db/observations_store.R")
-  src("observations/engine/db/taxon_store.R"); src("observations/engine/db/decision_store.R")
+  src("config.R"); src("inat_observations/engine/db/store_conn.R"); src("inat_observations/engine/db/observations_store.R")
+  src("inat_observations/engine/db/taxon_store.R"); src("inat_observations/engine/db/decision_store.R")
   path <- tempfile(fileext = ".duckdb")
   con <- tryCatch(store_connect(path), error = function(e) skip(conditionMessage(e)))
   con
@@ -63,8 +63,8 @@ test_that("decision store records pick and skip", {
 test_that("ingest_observations pages via raw text and DuckDB-side parsing", {
   skip_if_no_store()
   con <- open_temp_store(); on.exit(store_disconnect(con), add = TRUE)
-  src("observations/engine/api/inat_http.R"); src("observations/engine/api/inat_flatten.R"); src("observations/engine/api/inat_cache.R")
-  src("observations/engine/pipelines/ingest_inat.R")
+  src("inat_observations/engine/api/inat_http.R"); src("inat_observations/engine/api/inat_flatten.R"); src("inat_observations/engine/api/inat_cache.R")
+  src("inat_observations/engine/pipelines/ingest_inat.R")
 
   # fake API returns RAW response strings (what inat_request_text yields)
   recs <- lapply(1:5, function(i) list(
@@ -91,8 +91,8 @@ test_that("ingest_observations pages via raw text and DuckDB-side parsing", {
 test_that("read_observations_export caches the flatten and invalidates on change", {
   skip_if_no_store()
   con <- open_temp_store(); on.exit(store_disconnect(con), add = TRUE)
-  src("observations/engine/api/inat_http.R"); src("observations/engine/api/inat_flatten.R"); src("observations/engine/api/inat_cache.R")
-  src("observations/engine/db/observations_store.R"); src("observations/engine/pipelines/read_inat.R")
+  src("inat_observations/engine/api/inat_http.R"); src("inat_observations/engine/api/inat_flatten.R"); src("inat_observations/engine/api/inat_cache.R")
+  src("inat_observations/engine/db/observations_store.R"); src("inat_observations/engine/pipelines/read_inat.R")
 
   page <- function(recs) as.character(jsonlite::toJSON(list(results = recs),
                                                        auto_unbox = TRUE, null = "null"))
@@ -124,7 +124,7 @@ test_that("read_observations_export caches the flatten and invalidates on change
 test_that("resolve_taxonomy caches: second call makes no API request", {
   skip_if_no_store()
   con <- open_temp_store(); on.exit(store_disconnect(con), add = TRUE)
-  src("observations/engine/api/inat_http.R"); src("observations/engine/api/inat_flatten.R"); src("observations/engine/api/inat_cache.R")
+  src("inat_observations/engine/api/inat_http.R"); src("inat_observations/engine/api/inat_flatten.R"); src("inat_observations/engine/api/inat_cache.R")
 
   taxon <- jsonlite::fromJSON(fx("taxon_sample.json"), simplifyVector = FALSE)
   calls <- 0
@@ -146,7 +146,7 @@ test_that("resolve_taxonomy caches: second call makes no API request", {
 test_that("resolve_taxonomy batches many ids into one request (rate-limit fix)", {
   skip_if_no_store()
   con <- open_temp_store(); on.exit(store_disconnect(con), add = TRUE)
-  src("observations/engine/api/inat_http.R"); src("observations/engine/api/inat_flatten.R"); src("observations/engine/api/inat_cache.R")
+  src("inat_observations/engine/api/inat_http.R"); src("inat_observations/engine/api/inat_flatten.R"); src("inat_observations/engine/api/inat_cache.R")
 
   base <- jsonlite::fromJSON(fx("taxon_sample.json"), simplifyVector = FALSE)
   calls <- 0

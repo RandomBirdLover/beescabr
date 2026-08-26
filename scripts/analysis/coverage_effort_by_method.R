@@ -30,7 +30,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 # ---- 1. trips per method from the per-survey log (FAIR WINDOW) ---------------
 # Journal figure -> restrict to the shared fair window (FAIR_MONTHS/FAIR_YEARS in
 # config.R) so non-lethal isn't credited with trips outside the lethal-netting years.
-psf <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else "data/project_info/master_per_survey_info.csv"
+psf <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else PATHS$per_survey
 p <- read.csv(psf, stringsAsFactors = FALSE, check.names = FALSE)
 p$method <- str_squish(tolower(p$method))
 .d  <- as.Date(p$date)

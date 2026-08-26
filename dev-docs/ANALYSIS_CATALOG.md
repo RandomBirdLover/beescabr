@@ -59,11 +59,11 @@ The plant-name resolution landed (2026-07): both cleaned bee tables now carry
 Most runs read from the same cleaned tables (each row = one individual bee, except
 the survey list):
 
-- `data/observations/inat_clean/cabr_inat_bee_clean.csv` — non-lethal (photo) records; now has `plant_genus` / `plant_species`
+- `data/inat_observations/inat_clean/cabr_inat_bee_clean.csv` — non-lethal (photo) records; now has `plant_genus` / `plant_species`
 - `data/specimens/specimens_clean/cabr_specimen_bee_clean.csv` — lethal (net) records; now has `plant_genus` / `plant_species`
 - `data/project_info/master_per_survey_info.csv` — the authoritative survey list
 - `data/checklists/cabr/cabr_official_native_bee_checklist.csv` — has `specimen` / `inat` / `holway` presence flags (drives Q1, Q9)
-- `data/observations/inat_clean/cabr_inat_plant_clean.csv` — non-lethal plant records (Q11)
+- `data/inat_observations/inat_clean/cabr_inat_plant_clean.csv` — non-lethal plant records (Q11)
 
 Conventions: four transects **BST, UPMON, TP, OT**; method routes records
 (*lethal* → specimens, *non-lethal* → iNaturalist); the *species* rank counts only

@@ -788,9 +788,9 @@ build_holway_reference <- function(con, holway_df,
 
 if (.holway_autorun_ok(environment())) {
   source("scripts/config.R")
-  source("scripts/observations/engine/db/store_conn.R"); source("scripts/observations/engine/db/taxon_store.R")
-  source("scripts/observations/engine/db/decision_store.R"); source("scripts/observations/engine/api/inat_http.R")
-  source("scripts/observations/engine/api/inat_flatten.R"); source("scripts/observations/engine/api/inat_cache.R")
+  source("scripts/inat_observations/engine/db/store_conn.R"); source("scripts/inat_observations/engine/db/taxon_store.R")
+  source("scripts/inat_observations/engine/db/decision_store.R"); source("scripts/inat_observations/engine/api/inat_http.R")
+  source("scripts/inat_observations/engine/api/inat_flatten.R"); source("scripts/inat_observations/engine/api/inat_cache.R")
   source("scripts/reference/holway.R")
   source("scripts/reference/manual_overrides.R")
 

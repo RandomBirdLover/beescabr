@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/review_crosswalk.R
+# project_info/qc_review_mastercrosswalk.R
 # beescabr -- interactive review of unknown tags & fields
 # Rewritten 2026-07-14 for the concept-per-row master_crosswalk.csv.
 # Auto-suggest + multi-file + help block added 2026-07-15.
@@ -22,15 +22,15 @@
 # After you finish, re-run finding_project_info() -- everything you filed drops
 # out of the unknown reports because it's now recognized in master_crosswalk.csv.
 #
-# Run: source("scripts/project_info/review_crosswalk.R"); review_unknowns("tags")
+# Run: source("scripts/project_info/review/qc_review_mastercrosswalk.R"); review_unknowns("tags")
 #      then                                        review_unknowns("fields")
 # =============================================================
 
 library(dplyr); library(readr); library(stringr)
 
 CW_PATH    <- "data/project_info/master_crosswalk.csv"
-UNK_TAGS   <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_tags.csv"
-UNK_FIELDS <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_fields.csv"
+UNK_TAGS   <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_tags.csv"
+UNK_FIELDS <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_fields.csv"
 
 # paren-aware split: don't break on ";" inside "(...)" -- some field NAMES embed
 # their allowed values, e.g. "soil type (sandy; loam; clay)" is ONE variant.

@@ -12,7 +12,7 @@
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibble); library(tidyr)}))
 
 # ------------------------------------------------------------
-# master_per_survey_info.csv  +  review_beeple_survey_windows.csv  (tag-first rewrite 2026-07-17)
+# master_per_survey_info.csv  +  qc_review_survey_beeple_date_windows.csv  (tag-first rewrite 2026-07-17)
 # Survey dates for BOTH methods (lethal net + non-lethal iNaturalist) and BOTH roles
 # (intern + beeple):
 #   * INTERNS (lethal net AND non-lethal iNat) -> PRESERVED as-is from master_per_survey_info.csv
@@ -28,7 +28,7 @@ suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibbl
 #   * the beeple CALENDAR is only the PLAN, used to catch MISSING surveys. A planned
 #     window is "covered" if ANY tagged survey (anyone, any transect) lands within
 #     tol_days of it -- people covered shifts and swapped transects. Windows with NO
-#     survey evidence nearby -> review_beeple_survey_windows.csv ("planned, nothing tagged
+#     survey evidence nearby -> qc_review_survey_beeple_date_windows.csv ("planned, nothing tagged
 #     -- did it happen?"). HEADS-UP ONLY: ruling a window does NOT add a survey -- nothing
 #     is ever hand-added to survey_dates (no tag = not a survey day).
 #     NOTE: this catches missing DATES, not a specific missing transect (see PITFALLS).

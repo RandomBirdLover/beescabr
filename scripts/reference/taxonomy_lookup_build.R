@@ -28,7 +28,7 @@
 # species -- NOT Holway + iNat only. STEP 5 below merges them every build.
 #   * WHY  : specimen_bee_clean.R nets real bees the Holway checklist AND the iNat SD obs
 #            both miss (species no one photographed). They surface in
-#            data/specimens/specimens_clean/review/cabr_specimen_bee_taxonomy_flags.csv as
+#            data/specimens/specimens_clean/review/qc_review_specimen_taxonomy_flags.csv as
 #            "genus+species combo not in taxonomy lookup".
 #   * WHERE: a curated specimen_additions.csv, MERGED here at build time (STEP 5 via
 #            load_specimen_additions + specimen_additions_to_lookup). Do NOT hand-edit
@@ -56,14 +56,14 @@ local({
   need("write_fresh",              "utils/utils.R")
   need("decorate_complex",         "utils/utils.R")
   need("require_columns",          "utils/utils.R")
-  need("store_connect",            "observations/engine/db/store_conn.R")
-  need("count_observations",       "observations/engine/db/observations_store.R")
-  need("taxon_cache_get",          "observations/engine/db/taxon_store.R")
-  need("inat_request",             "observations/engine/api/inat_http.R")
-  need("flatten_observation",      "observations/engine/api/inat_flatten.R")
-  need("resolve_taxonomy",         "observations/engine/api/inat_cache.R")
-  need("ingest_observations",      "observations/engine/pipelines/ingest_inat.R")
-  need("read_observations_export", "observations/engine/pipelines/read_inat.R")
+  need("store_connect",            "inat_observations/engine/db/store_conn.R")
+  need("count_observations",       "inat_observations/engine/db/observations_store.R")
+  need("taxon_cache_get",          "inat_observations/engine/db/taxon_store.R")
+  need("inat_request",             "inat_observations/engine/api/inat_http.R")
+  need("flatten_observation",      "inat_observations/engine/api/inat_flatten.R")
+  need("resolve_taxonomy",         "inat_observations/engine/api/inat_cache.R")
+  need("ingest_observations",      "inat_observations/engine/pipelines/ingest_inat.R")
+  need("read_observations_export", "inat_observations/engine/pipelines/read_inat.R")
   need("load_holway",              "reference/holway.R")
   need("build_checklist",          "checklists/checklist_build.R")
   need("build_bee_taxonomy_lookup","reference/taxonomy_reference.R")

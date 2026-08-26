@@ -16,7 +16,7 @@ source_here <- function(rel) {
   if (is.na(hit)) stop("cannot locate scripts/", rel)
   source(hit)
 }
-source_here("observations/engine/api/inat_flatten.R")
+source_here("inat_observations/engine/api/inat_flatten.R")
 
 fx <- function(name) {
   candidates <- c(

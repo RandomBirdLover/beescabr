@@ -14,6 +14,7 @@
 # injected, so the whole loop is unit-tested with fakes (test-specimen-idprompt.R).
 # Depends on: dplyr. Uses inat_fetch_taxa_by_name() for the live search.
 # =============================================================
+if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 suppressWarnings(suppressMessages(library(dplyr)))
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
@@ -239,8 +240,8 @@ seed_additions_from_flags <- function(flags, record, existing = NULL) {
 # Effect: a confirmed taxon enters the lookup on the next build, so its flag stops recurring.
 # I/O is isolated here; the pieces above are pure + unit-tested.
 resolve_specimen_taxa <- function(record_df,
-                                  additions_path = if (exists("PATHS")) PATHS$specimen_additions else "data/reference/curated/specimen_additions.csv",
-                                  flags_path = "data/specimens/specimens_clean/review/cabr_specimen_bee_taxonomy_flags.csv",
+                                  additions_path = if (exists("PATHS")) PATHS$specimen_additions else PATHS$specimen_additions,
+                                  flags_path = "data/specimens/specimens_clean/review/qc_review_specimen_taxonomy_flags.csv",
                                   fetch_fn = NULL, prompt_fn = readline, interactive_ok = TRUE,
                                   write = TRUE, verbose = TRUE) {
   if (!interactive_ok) return(invisible(NULL))

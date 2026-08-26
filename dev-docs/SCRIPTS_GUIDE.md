@@ -27,8 +27,8 @@ on their own from `scripts/reference/`.
 
 | `scripts/` folder | mirrors `data/` | what lives here |
 |---|---|---|
-| `observations/` | `data/observations/` | the iNat ingest **engine**, per-obs cleaning/QC, and `build_field_id_map.R` (pipeline stage 2c) |
-| `observations/engine/` | `data/observations/cache/` | shared machine: `api/` (HTTP, flatten, cache), `db/` (DuckDB stores), `pipelines/` (ingest + export) |
+| `inat_observations/` | `data/inat_observations/` | the iNat ingest **engine**, per-obs cleaning/QC, and `build_field_id_map.R` (pipeline stage 2c) |
+| `inat_observations/engine/` | `data/inat_observations/cache/` | shared machine: `api/` (HTTP, flatten, cache), `db/` (DuckDB stores), `pipelines/` (ingest + export) |
 | `project_info/` | `data/project_info/` | the "brain" (survey membership), survey record, calendar parsing, interactive review |
 | `specimens/` | `data/specimens/` | specimen-record cleaning |
 | `reference/` | `data/reference/` | `holway.R`, `holway_reference_build.R` (interactive Holway→iNat resolver, with parent **roll-up** — complex→subgenus→genus), `taxonomy_reference.R`, `verify.R`, `taxonomy_lookup_build.R` (builds `sd_bee_taxonomy_lookup.csv`), `enrich_lookups.R`, plant/taxonomy lookup builders, **plus the online refresh tools `refresh_iucn_status.R` + `refresh_plant_common_names.R`** (run via `BEESCABR_REFRESH=1`, or standalone) |
@@ -43,19 +43,19 @@ The runner sources modules in this order and calls them from `main()`:
 
 | # | Stage | Scripts (folder) | Produces in `data/` |
 |---|---|---|---|
-| 1–2 | **Ingest + export** | `observations/engine/**` | `observations/cache/inat_cache.duckdb`, `export_flat.rds` |
-| 2b | **Plants** | `observations/engine/pipelines/ingest_plants.R` | `observations/cache/export_flat_plant.rds` |
-| 2c | **Field map** | `observations/build_field_id_map.R` | `observations/reference/inat_field_id_map.csv` |
+| 1–2 | **Ingest + export** | `inat_observations/engine/**` | `inat_observations/cache/inat_cache.duckdb`, `export_flat.rds` |
+| 2b | **Plants** | `inat_observations/engine/pipelines/ingest_plants.R` | `inat_observations/cache/export_flat_plant.rds` |
+| 2c | **Field map** | `inat_observations/build_field_id_map.R` | `inat_observations/reference/inat_field_id_map.csv` |
 | 2d | **Beeple calendars** | `project_info/finding_beeple_calendar.R` | `project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv` |
-| 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `observations/cabr_inat_raw.csv`, `project_info/master_per_survey_info.csv`, the review queues |
-| 3b–3e | **Review** (interactive) | `project_info/review_crosswalk.R`, `project_info/review_windows.R` (+ optional y/N notes review → `project_info/review_notes.R`) | updates `project_info/master_crosswalk.csv` + `*/review/*` |
-| 4 | **Clean** | `observations/inat_bee_clean.R` (live) · `specimens/specimen_bee_clean.R` (stub) | `observations/inat_clean/cabr_inat_bee_clean.csv` (bee; plant + specimen pending) |
+| 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `inat_observations/cabr_inat_raw.csv`, `project_info/master_per_survey_info.csv`, the review queues |
+| 3b–3e | **Review** (interactive) | `project_info/qc_review_mastercrosswalk.R`, `project_info/qc_review_survey_windows.R` (+ optional y/N notes review → `project_info/qc_review_mastercrosswalk_notes.R`) | updates `project_info/master_crosswalk.csv` + `*/review/*` |
+| 4 | **Clean** | `inat_observations/inat_bee_clean.R` (live) · `specimens/specimen_bee_clean.R` (stub) | `inat_observations/inat_clean/cabr_inat_bee_clean.csv` (bee; plant + specimen pending) |
 | 5 | **Reference / taxonomy** (restored) | `reference/taxonomy_lookup_build.R` → `build_taxonomy_lookup()` (non-interactive, wired here). The interactive `reference/holway_reference_build.R` (Holway→iNat resolver, **parent roll-up**) is run **by hand**; helpers `holway.R`, `taxonomy_reference.R`, `verify.R` load via its `need()` block | `reference/holway_sd_bee_reference_table_v3.csv` (by hand), `reference/sd_bee_taxonomy_lookup.csv` |
 | 5+ | **Checklists** *(rough drafts — run LAST, not sourced yet)* | `checklists/cabr_bee_checklist.R`, `pl_bee_checklist.R`, `sd_bee_checklist.R` on shared helper `checklist_build.R` | (pending) `data/checklists/{cabr,point_loma,sd_county}/…_native_bee_checklist.csv` |
 
 ```mermaid
 flowchart TD
-  API[iNaturalist API] --> ENG[observations/engine<br/>ingest → DuckDB cache → export_flat.rds]
+  API[iNaturalist API] --> ENG[inat_observations/engine<br/>ingest → DuckDB cache → export_flat.rds]
   ENG --> BRAIN[project_info/finding_project_info.R<br/>the brain]
   SPEC[(specimen record .xlsx)] --> BRAIN
   CAL[beeple calendar PDFs] --> BRAIN
@@ -73,7 +73,7 @@ flowchart TD
   and reference scripts do no file I/O of their own — they inherit paths from here.
 - **`need()` / `src()`** helpers resolve script paths relative to the **repo root**
   (`file.path("scripts", rel)`), so scripts run from the repo root regardless of folder.
-- **`observations/inat_bee_clean.R`** (stage 4, live): reads the brain's `cabr_inat_raw.csv`,
+- **`inat_observations/inat_bee_clean.R`** (stage 4, live): reads the brain's `cabr_inat_raw.csv`,
   joins coords + `taxon_id` from the export, writes `cabr_inat_bee_clean.csv` (one labeled CABR
   bee table; taxonomy columns are blank until the lookup rebuild). It also uses the transect +
   `access_routes_to_transects/cabr_survey_access_routes.shp` (Humphreys Rd) layers to re-mark
@@ -81,8 +81,8 @@ flowchart TD
   (see `survey_note`). The pin-map that visualises this lives with the road layer as a reference,
   not in the pipeline. `specimens/specimen_bee_clean.R` is still a stub.
 - **No run-by-hand pipeline scripts.** `build_field_id_map.R` is now a pipeline step (stage 2c,
-  in `observations/`); `build_plant_export.R` was retired (its job is stage 2b); `PITFALLS.txt`
-  moved to `docs/`. `review_notes.R` (in `project_info/`) is optional — offered as a y/N
+  in `inat_observations/`); `build_plant_export.R` was retired (its job is stage 2b); `PITFALLS.txt`
+  moved to `docs/`. `qc_review_mastercrosswalk_notes.R` (in `project_info/`) is optional — offered as a y/N
   prompt in stage 3b, sourced only if you opt in. The calendar parser
   `project_info/finding_beeple_calendar.R` is now **stage 2d** — it rebuilds the beeple
   window table from the PDFs every run, so a new calendar year is picked up automatically.

@@ -11,7 +11,7 @@ not use R or GitHub.
 You do not need to download anything. All of the maps, figures, and tables are
 published as a website:
 
-**https://randombirdlover.github.io/**  *(confirm the exact link with the project lead)*
+**https://randombirdlover.github.io/beescabr/**
 
 If you only want to view or share the findings, that link is all you need.
 
@@ -82,7 +82,7 @@ beescabr/
 Inside `data/` you will find all of the real inputs and results:
 
 - `data/specimens/` — the netted-bee (specimen) records, including the master spreadsheet.
-- `data/observations/` — the iNaturalist (photographed-bee) records and cleaned tables.
+- `data/inat_observations/` — the iNaturalist (photographed-bee) records and cleaned tables.
 - `data/project_info/` — the survey logs and the team rosters.
 - `data/spatial/` — the park boundary and transect maps.
 - `data/checklists/`, `data/reference/`, `data/analysis/` — species lists, lookups, and finished figures.
@@ -160,6 +160,14 @@ so as long as you do not upload or commit that folder, you are safe.
 
 ## 7. Questions
 
-Contact the project lead, Brandi Sanchez.
+Contact either:
 
-*(Add your preferred contact method here before sharing this file.)*
+- **Brandi Sanchez** — Conservation Legacy, Scientists in Parks, Cabrillo National
+  Monument. Built the pipeline; best for questions about how the code or the
+  cleaned data works.
+- **Taro Katayama** — National Park Service, Cabrillo National Monument. Holds the
+  data and can share the `data/` folder directly.
+
+Either can send you the `data/` folder; it is shared person to person, not through
+this repository.
+

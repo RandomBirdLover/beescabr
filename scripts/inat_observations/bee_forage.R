@@ -17,7 +17,7 @@
 # Dependency-light on purpose (dplyr/readr only, no sf) so the lookup builder can
 # source it cheaply.
 #
-# Run: source("scripts/observations/bee_forage.R"); write_bee_forage()
+# Run: source("scripts/inat_observations/bee_forage.R"); write_bee_forage()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readr) }))
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
@@ -32,13 +32,13 @@ local({
 })
 
 .bf_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
-BF_EXPORT     <- "data/observations/cache/export_flat.rds"
+BF_EXPORT     <- "data/inat_observations/cache/export_flat.rds"
 BF_CROSSWALK  <- "data/project_info/master_crosswalk.csv"
 # the brain's per-obs CABR membership (obs_id + status + kind). REQUIRED: forage
 # must be scoped to bees INSIDE the park, not the whole county export -- an
 # unscoped pull would import plants bees visit anywhere in San Diego.
-BF_MEMBERSHIP <- "data/observations/cabr_inat_raw.csv"
-BF_OUT        <- .bf_path("inat_bee_forage", "data/observations/reference/cabr_inat_bee_forage.csv")
+BF_MEMBERSHIP <- "data/inat_observations/cabr_inat_raw.csv"
+BF_OUT        <- .bf_path("inat_bee_forage", PATHS$inat_bee_forage)
 
 # bee_forage_names(): distinct flower_visited PLANT names + obs counts from the
 # flattened bee export. Mirrors the flower coalesce in ibc_annotations (most-

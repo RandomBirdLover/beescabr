@@ -51,7 +51,7 @@ suppressPackageStartupMessages({
 if (!exists("PATHS")) source("scripts/config.R")   # PATHS$specimen_clean, PATHS$inat_clean
 
 # master_per_survey_info.csv is not in config's PATHS list; name it here.
-PER_SURVEY_INFO <- "data/project_info/master_per_survey_info.csv"
+PER_SURVEY_INFO <- PATHS$per_survey
 
 OUT_JOURNAL     <- file.path(DIR_JOURNAL, "richness/accumulation")  # method small-multiples (fair window)
 OUT_REPORT      <- file.path(DIR_REPORT,  "richness/accumulation")  # per-transect completeness + Chao2 table

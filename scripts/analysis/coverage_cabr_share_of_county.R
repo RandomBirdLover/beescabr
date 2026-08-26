@@ -31,8 +31,8 @@ OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 # scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
 
-CHECKLIST_CABR   <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
-CHECKLIST_HOLWAY <- "data/checklists/sd_county/sd_holway_native_bee_checklist.csv"
+CHECKLIST_CABR   <- PATHS$checklist_cabr_official
+CHECKLIST_HOLWAY <- PATHS$checklist_sd_holway
 CABR_ACRES       <- 160.4      # measured from the NPS official CABR boundary shapefile
 SD_COUNTY_SQMI   <- 4261       # measured from the San Diego County boundary shapefile
 SPECIES_RANKS    <- c("species", "subspecies")

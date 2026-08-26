@@ -11,7 +11,7 @@ CSV-export + monolith design; the notes below explain the shape it has now and
 why each piece exists.
 
 - **Data source: iNaturalist API → DuckDB cache** (the CSV export is retired).
-  Observations are pulled once into `data/observations/cache/inat_cache.duckdb`, with a
+  Observations are pulled once into `data/inat_observations/cache/inat_cache.duckdb`, with a
   spatial `location` geometry column so you can run manual `ST_*` queries. The
   same DuckDB file caches taxon requests.
 - **Monolith split.** The 1,300-line `native_bee_checklist.R` was broken into
@@ -54,10 +54,10 @@ scripts/
       pipelines/read_inat.R      DuckDB → export-shaped data frame (.rds)
     inat_bee_clean.R             bee clean table (looks up membership by obs_id)
     inat_plant_clean.R           plant clean table
-    build_location_review_maps.R per-observer "pins to fix" maps (stage 7d)
+    qc_review_inat_location_maps.R per-observer "pins to fix" maps (stage 7d)
     bee_forage.R                 bee-obs flower_visited plants
     build_field_id_map.R         iNat obs-field id map
-    qc/inat_misid_qc.R           likely-misID review queue
+    qc/qc_review_inat_misid.R           likely-misID review queue
   project_info/                  THE BRAIN + its reviewers
     finding_project_info.R       provenance: membership + unknown tags/fields/notes
     finding_survey_dates.R       master_per_survey_info.csv (per-survey record)
@@ -65,7 +65,7 @@ scripts/
     finding_beeple_calendar.R    beeple calendar PDFs → windows
     resolve_beeple_transects_per_survey.R  majority-transect resolver
     rescue_on_transect_surveys.R   on-transect untagged obs → surveys
-    review_crosswalk.R / review_windows.R / review_notes.R  interactive reviewers
+    qc_review_mastercrosswalk.R / qc_review_survey_windows.R / qc_review_mastercrosswalk_notes.R  interactive reviewers
     collect_plant_names.R        plant-name review
   reference/                     taxonomy + Holway
     holway.R / holway_reference_build.R  Holway backfill + interactive resolver
@@ -92,7 +92,7 @@ survey membership once → `inat_bee_clean` / `inat_plant_clean` look that up by
 `obs_id` → `reference/*` (taxonomy, Holway), `checklists/*`, and `analysis/*`
 consume the clean tables. Taxonomy is resolved from the taxon cache during the read.
 
-The export-shaped frame is **memoized** to `data/observations/cache/export_flat.rds`, keyed
+The export-shaped frame is **memoized** to `data/inat_observations/cache/export_flat.rds`, keyed
 by a content fingerprint of the observation + taxon caches. Re-runs that don't
 change those inputs skip the (slow) flatten entirely; the two consumers in one
 run share the in-memory copy. Force a rebuild with `BEESCABR_REFRESH_FLAT=1` or
@@ -115,9 +115,9 @@ Tuning: `INAT_THROTTLE_SEC` (pause between API calls) and `commit_every` /
 The repo is TDD (see `CLAUDE.md`). To add a function — say a new obs-field
 transform:
 
-1. Decide the layer. A pure transform → `observations/engine/api/inat_flatten.R`
+1. Decide the layer. A pure transform → `inat_observations/engine/api/inat_flatten.R`
    or a `reference/*` / `checklists/*` file. Cache/DB behavior →
-   `observations/engine/db/*` or `observations/engine/api/inat_cache.R`. Survey /
+   `inat_observations/engine/db/*` or `inat_observations/engine/api/inat_cache.R`. Survey /
    tag / membership logic → the brain, `project_info/finding_project_info.R`.
 2. **Write the test first** in the matching `tests/testthat/test-<module>.R`,
    with normal and edge cases. Run it and confirm it **fails**.
@@ -136,7 +136,7 @@ fails after your change, understand why before "fixing" the test.
 This codebase is structured so an agent can make surgical changes. When asking
 Claude to work here:
 
-- **Name the module and its test file.** "In `observations/engine/api/inat_flatten.R`,
+- **Name the module and its test file.** "In `inat_observations/engine/api/inat_flatten.R`,
   add X; put tests in `test-flatten.R`" beats "add X somewhere."
 - **Ask for test-first explicitly** (it's the default per `CLAUDE.md`, but
   restating reinforces it): "write the failing test first, confirm red, then
@@ -167,7 +167,7 @@ then implement, then run the full suite."*
 
 Two scripts pull from the API rather than the CSV export:
 
-- `scripts/observations/inat_bee_clean.R` — fetches survey observations, tags, and observation fields via `/v1/observations`.
+- `scripts/inat_observations/inat_bee_clean.R` — fetches survey observations, tags, and observation fields via `/v1/observations`.
 - `scripts/reference/taxonomy_lookup_build.R` — per-taxon taxonomy/ancestry lookups (~400 calls, ~3–4 min), via the v1 taxa endpoints.
 
 **Endpoint:** `https://api.inaturalist.org/v1/observations`. Read-only; no authentication required. Max `per_page = 200`; `inat_bee_clean.R` pages with an `id_above` cursor. Rate limit: ~1 request/second; scripts include `Sys.sleep(1)`.
@@ -188,7 +188,7 @@ Both `inat_bee_clean.R` and `inat_plant_clean.R` triage observations against the
 
 ### Unknown tags
 
-**`data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv`** (bees) and **`cabr_inat_plant_unknown_tags.csv`** (plants).
+**`data/inat_observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv`** (bees) and **`cabr_inat_plant_unknown_tags.csv`** (plants).
 
 This list is normally long and mostly harmless — camera/lens tags (`D500`, `300mm f/4`), species names, photo filenames, `City Nature Challenge`, etc. Ignore those. Scan for one thing only: a tag that looks like a **missed survey tag** — a new typo or new survey year. If you spot one, add it as an `inat_variant` on the matching crosswalk row, re-run, and those observations move from `flag` to `keep`.
 

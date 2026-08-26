@@ -4,7 +4,7 @@ library(dplyr)
 # misID QC: flag species-level iNat bee obs that are non-research-grade, unvouchered by a
 # specimen, AND absent from Holway -> a review queue for a human to verify. Advisory only.
 
-src("observations/qc/inat_misid_qc.R")
+src("inat_observations/review/qc_review_inat_misid.R")
 
 test_that("imq_norm / imq_binom normalize + roll to binomial", {
   expect_equal(imq_norm("  Bombus   VOSNESENSKII "), "bombus vosnesenskii")

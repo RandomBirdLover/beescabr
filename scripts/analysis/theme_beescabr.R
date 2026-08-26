@@ -283,7 +283,7 @@ BEE_LOW_N_NOTE  <- sprintf("* fewer than %d records -- too few to claim a real p
 # scope_cap() definitions. Pass only what applies; `sig` is dropped when no test ran.
 # `asof` is read from the ingest-state file (real provenance -- auto-updates on the next data pull).
 BEE_SOURCE <- "iNaturalist observations + specimen vouchers, Cabrillo NM"
-bee_data_asof <- function(path = "data/observations/cache/last_ingest.txt") {
+bee_data_asof <- function(path = "data/inat_observations/cache/last_ingest.txt") {
   d <- tryCatch(readLines(path, warn = FALSE)[1], error = function(e) NA_character_)
   if (is.na(d) || !nzchar(d)) "date n/a" else substr(d, 1, 10)   # ISO timestamp -> YYYY-MM-DD
 }

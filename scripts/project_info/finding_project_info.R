@@ -19,7 +19,7 @@
 #   * in_cabr         -> the real CABR boundary (a LABEL; nothing is dropped).
 #
 # INPUTS
-#   data/observations/cache/export_flat.rds                 (bee obs; plant export added later)
+#   data/inat_observations/cache/export_flat.rds                 (bee obs; plant export added later)
 #   data/project_info/master_crosswalk.csv  (tag/field crosswalk)
 #   data/project_info/rosters/surveyor_roster.csv    (roster)
 #   data/project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv (from finding_beeple_calendar.R, stage 2d)
@@ -34,15 +34,16 @@
 # date -- fell through every crack). Edit intern dates in master_intern_survey_log.csv, NOT the master.
 #
 # OUTPUTS
-#   data/observations/cabr_inat_raw.csv  <- NEW: the per-obs lookup
+#   data/inat_observations/cabr_inat_raw.csv  <- NEW: the per-obs lookup
 #   data/project_info/master_per_survey_info.csv                      <- built upon in place
-#   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_tags.csv        <- unrecognized hashtags
-#   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_fields.csv      <- unrecognized obs-field names
-#   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv       <- notes carrying survey keywords
+#   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_tags.csv        <- unrecognized hashtags
+#   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_fields.csv      <- unrecognized obs-field names
+#   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_notes.csv       <- notes carrying survey keywords
 #
 # Run: source("scripts/project_info/finding_project_info.R"); finding_project_info()
 # =============================================================
 
+if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 library(dplyr)
 library(stringr)
 library(tidyr)
@@ -63,24 +64,24 @@ if (file.exists("scripts/project_info/rescue_on_transect_surveys.R")) source("sc
 # logic, tagged by `kind`. The plant export is built by ingest_plants.R; it's
 # safe to list before the first plant pull -- an absent path is skipped below.
 FPI_EXPORTS   <- list(
-  list(path = "data/observations/cache/export_flat.rds",       kind = "bee"),
-  list(path = "data/observations/cache/export_flat_plant.rds", kind = "plant")
+  list(path = "data/inat_observations/cache/export_flat.rds",       kind = "bee"),
+  list(path = "data/inat_observations/cache/export_flat_plant.rds", kind = "plant")
 )
 FPI_CROSSWALK <- "data/project_info/master_crosswalk.csv"
-FPI_ROSTER    <- "data/project_info/rosters/surveyor_roster.csv"
+FPI_ROSTER    <- PATHS$surveyor_roster
 FPI_WINDOWS   <- "data/project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv"
 FPI_BOUNDARY  <- "data/spatial/boundaries/cabr/cabr_survey_box.shp"
 FPI_TRANSECTS <- "data/spatial/transects/cabr_bee_transects.shp"  # rescue: on-transect untagged obs
 
-FPI_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"  # the per-obs lookup
-FPI_SURVEY_DATES   <- "data/project_info/master_per_survey_info.csv"
+FPI_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"  # the per-obs lookup
+FPI_SURVEY_DATES   <- PATHS$per_survey
 FPI_INTERN_LOG     <- "data/project_info/survey_date_sources/master_intern_survey_log.csv"  # curated intern survey-day log (SOURCE OF TRUTH -- edit intern days HERE, not in the generated master)
-FPI_REVIEW         <- "data/project_info/inaturalist_project_key_setup/review/review_beeple_survey_windows.csv"   # beeple windows to rule on (persistent)
-FPI_MISTAGS        <- "data/observations/review/review_mistagged_transects.csv"  # stray transect tags outvoted by the day's majority
-FPI_TIES           <- "data/project_info/inaturalist_project_key_setup/review/review_transect_overlap.csv"  # equal-split days to rule (review_transect_ties)
-FPI_UNKNOWN_TAGS   <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_tags.csv"    # unknown hashtags
-FPI_UNKNOWN_FIELDS <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_fields.csv"  # unknown obs-field NAMES
-FPI_UNKNOWN_NOTES  <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv"   # notes w/ survey keywords
+FPI_REVIEW         <- "data/project_info/review/qc_review_survey_beeple_date_windows.csv"   # beeple windows to rule on (persistent)
+FPI_MISTAGS        <- "data/inat_observations/review/qc_review_inat_mistagged_transects.csv"  # stray transect tags outvoted by the day's majority
+FPI_TIES           <- "data/project_info/review/qc_review_survey_transect_overlap.csv"  # equal-split days to rule (review_transect_ties)
+FPI_UNKNOWN_TAGS   <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_tags.csv"    # unknown hashtags
+FPI_UNKNOWN_FIELDS <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_fields.csv"  # unknown obs-field NAMES
+FPI_UNKNOWN_NOTES  <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_notes.csv"   # notes w/ survey keywords
 SD_COLUMNS <- c("year", "role", "source", "date",
                 "transects", "surveyors", "inat_username", "method", "technique",
                 "confirmed", "confirmed_by", "n_obs", "n_speci", "n_days", "note")
@@ -210,7 +211,7 @@ fpi_unknown_fields <- function(df, crosswalk, our_users) {
   }) |> filter(n_our > 0) |> arrange(desc(n_our), desc(n_obs))
 
   # attach real iNat field IDs if the map has been built (build_field_id_map.R)
-  idmap_path <- "data/observations/reference/inat_field_id_map.csv"
+  idmap_path <- "data/inat_observations/reference/inat_field_id_map.csv"
   if (nrow(res) && file.exists(idmap_path)) {
     idmap <- read_csv(idmap_path, show_col_types = FALSE) |>
       transmute(k = tolower(trimws(field_name)), inat_field_id)

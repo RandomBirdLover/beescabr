@@ -8,6 +8,7 @@
 #
 # About + Get-involved pages will join this file once their copy is written.
 # =============================================================
+if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 suppressPackageStartupMessages(library(dplyr))
 
 DOCS <- "docs"
@@ -18,7 +19,7 @@ esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub
 sq  <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
 
 # ---- survey team (surveyor_roster.csv) ---------------------------------------
-r <- rd("data/project_info/rosters/surveyor_roster.csv")
+r <- rd(PATHS$surveyor_roster)
 r$first_name <- sq(r$first_name); r$last_name <- sq(r$last_name)
 r <- r[r$first_name != "" | r$last_name != "", ]
 r$name <- trimws(paste(r$first_name, r$last_name))
@@ -30,7 +31,7 @@ team <- r %>% group_by(name) %>%
 # order the survey team by total records submitted (iNat observations + specimens),
 # tallied from the MASTER per-survey doc (not the clean sheets, so intern net-survey
 # specimens are attributed to the individual interns who ran them).
-mp <- rd("data/project_info/master_per_survey_info.csv")
+mp <- rd(PATHS$per_survey)
 num0 <- function(x) { x <- suppressWarnings(as.numeric(x)); ifelse(is.na(x), 0, x) }
 mp$rec <- num0(mp$n_obs) + num0(mp$n_speci)
 uu <- tolower(team$user); has <- nzchar(uu) & !is.na(uu)
@@ -57,7 +58,7 @@ yr_span <- { y <- suppressWarnings(as.integer(r$year)); y <- y[!is.na(y)]
 taxa_label <- function(x) { x <- tolower(trimws(x %||% "")); ifelse(is.na(x), "",
   ifelse(x == "bee", "bees", ifelse(x == "plant", "plants", ifelse(x == "both", "bees & plants", x)))) }
 `%||%` <- function(a, b) if (is.null(a)) b else a
-id <- rd("data/project_info/rosters/identifier_roster.csv")
+id <- rd(PATHS$identifier_roster)
 ids <- if (!is.null(id) && nrow(id)) {
   id$name <- trimws(paste(sq(id$first_name), sq(id$last_name)))
   id$name <- ifelse(id$name == "" & sq(id$inaturalist_username) != "", sq(id$inaturalist_username), id$name)  # username-only entries (e.g. itazura) fall back to the handle

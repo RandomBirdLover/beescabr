@@ -4,14 +4,14 @@
 # confirm authenticated access. A browser window opens the first time -- sign in and click
 # "Authorize". Fill data/secrets/inat_api.env (client id / secret / redirect uri) first.
 #
-#   source("scripts/observations/authorize_inat.R")
+#   source("scripts/inat_observations/authorize_inat.R")
 #
 # It prints (1) who you're signed in as and (2) the coordinate fields on a few obscured
 # records, so we can see the exact private-coordinate shape before wiring it into the pull.
 # =============================================================
 
 source("scripts/config.R")
-source("scripts/observations/engine/api/inat_auth.R")
+source("scripts/inat_observations/engine/api/inat_auth.R")
 
 if (!inat_auth_enabled())
   stop("Fill INAT_CLIENT_ID / INAT_CLIENT_SECRET / INAT_REDIRECT_URI in ", INAT_SECRETS_FILE, " first.")

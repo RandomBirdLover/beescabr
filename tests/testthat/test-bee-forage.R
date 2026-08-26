@@ -6,7 +6,7 @@ library(dplyr)
 # the crosswalk flower-field coalesce. Non-plants (e.g. a butterfly mis-tagged in the
 # flower field) pass through here; they're dropped later by the plant resolver.
 
-src("observations/bee_forage.R")
+src("inat_observations/bee_forage.R")
 
 .mk_export <- function(path) {
   ex <- data.frame(

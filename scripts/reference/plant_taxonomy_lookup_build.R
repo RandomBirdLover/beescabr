@@ -48,13 +48,13 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 |
 PLANT_BASIC_RANKS <- c("kingdom", "phylum", "class", "order", "family", "genus", "species")
 
 .plt_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
-PLT_ALL_TAXA     <- .plt_path("plant_all_taxa",         "data/observations/reference/cabr_inat_plant_all_taxa.csv")
+PLT_ALL_TAXA     <- .plt_path("plant_all_taxa",         PATHS$plant_all_taxa)
 PLT_CROSSWALK    <- "data/project_info/master_crosswalk.csv"
-PLT_CACHE        <- .plt_path("plant_name_cache",       "data/reference/generated/plant_name_resolution_cache.csv")
-PLT_LOOKUP_OUT   <- .plt_path("plant_taxonomy_lookup",  "data/reference/cabr_plant_taxonomy_lookup.csv")
-PLT_WORKLIST_OUT <- .plt_path("plant_not_in_park",      "data/reference/generated/cabr_plant_specimen_not_in_park.csv")
-PLT_CONFIRMED    <- .plt_path("plant_park_confirmed",   "data/reference/curated/plant_park_confirmed.csv")
-PLT_FORAGE       <- .plt_path("inat_bee_forage",        "data/observations/reference/cabr_inat_bee_forage.csv")
+PLT_CACHE        <- .plt_path("plant_name_cache",       PATHS$plant_name_cache)
+PLT_LOOKUP_OUT   <- .plt_path("plant_taxonomy_lookup",  PATHS$plant_taxonomy_lookup)
+PLT_WORKLIST_OUT <- .plt_path("plant_not_in_park",      PATHS$plant_not_in_park)
+PLT_CONFIRMED    <- .plt_path("plant_park_confirmed",   PATHS$plant_park_confirmed)
+PLT_FORAGE       <- .plt_path("inat_bee_forage",        PATHS$inat_bee_forage)
 
 PLT_LOOKUP_COLS <- c("taxon_id", "scientific_name", "common_name", "rank",
                      "in_cabr_park_at_all", "in_specimens", "in_observations", "in_bee_forage",
@@ -190,7 +190,7 @@ plt_load_forage <- function(forage_path = PLT_FORAGE) {
 # =============================================================
 plt_resolve_one <- function(name, request_fn = NULL, fetch_by_id_fn = NULL) {
   if (is.null(request_fn) || is.null(fetch_by_id_fn)) {
-    if (!exists("inat_fetch_taxa_by_name")) source("scripts/observations/engine/api/inat_http.R")
+    if (!exists("inat_fetch_taxa_by_name")) source("scripts/inat_observations/engine/api/inat_http.R")
     request_fn     <- request_fn     %||% inat_fetch_taxa_by_name
     fetch_by_id_fn <- fetch_by_id_fn %||% inat_fetch_taxon_by_id
   }
@@ -340,7 +340,7 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
   # just get in_bee_forage = TRUE for provenance.
   forage_names <- if (!is.null(forage_fn)) forage_fn() else {
     if (!file.exists(forage_path)) {
-      if (!exists("write_bee_forage")) try(source("scripts/observations/bee_forage.R"), silent = TRUE)
+      if (!exists("write_bee_forage")) try(source("scripts/inat_observations/bee_forage.R"), silent = TRUE)
       if (exists("write_bee_forage")) try(write_bee_forage(out_path = forage_path, verbose = verbose), silent = TRUE)
     }
     plt_load_forage(forage_path)

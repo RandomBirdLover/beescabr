@@ -17,7 +17,7 @@
 # and the plant lookup + specimen_bee_clean pick up the canonical name on the
 # next run. Non-interactive runs just drop a worklist and move on.
 #
-# Feels like review_crosswalk.R (it reuses cw_append / cw_get_or_add):
+# Feels like qc_review_mastercrosswalk.R (it reuses cw_append / cw_get_or_add):
 #   <Enter>   accept the * suggestion (file under it as a variant)
 #   <number>  file under that canonical (a spelling variant)
 #   a         ADD as a brand-new canonical plant (the name itself)
@@ -37,11 +37,11 @@ local({
   need <- function(sym, file) if (!exists(sym)) source(file.path(sdir, file))
   need("PATHS",             "config.R")
   need("plant_variant_map", "specimens/specimen_clean_helpers.R")
-  need("cw_append",         "project_info/review_crosswalk.R")
+  need("cw_append",         "project_info/review/qc_review_mastercrosswalk.R")
 })
 
 CPN_CW       <- "data/project_info/master_crosswalk.csv"
-CPN_WORKLIST <- "data/project_info/inaturalist_project_key_setup/review/review_plant_names.csv"
+CPN_WORKLIST <- "data/project_info/review/qc_review_mastercrosswalk_plant_names.csv"
 
 pcn_norm <- function(x) tolower(gsub("\\s+", " ", trimws(as.character(x))))
 

@@ -1,5 +1,5 @@
 # =============================================================
-# observations/engine/api/inat_auth.R   (module -- no side effects, defines functions)
+# inat_observations/engine/api/inat_auth.R   (module -- no side effects, defines functions)
 # beescabr -- OAuth 2.0 (authorization-code) sign-in for the iNaturalist API, so a curator
 # of a trusted project (or the owner of obscured records) can pull the TRUE coordinates of
 # sensitive taxa (e.g. Bombus crotchii, obscured plants) that the public API hides.

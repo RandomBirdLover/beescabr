@@ -78,28 +78,28 @@ DIR_JOURNAL <- "data/analysis/journal_paper_2026"
 # One on-disk DuckDB file acts as the cache for BOTH observation objects
 # (with a spatial geometry column) and taxon request objects. This replaces
 # the retired CSV export entirely and the Python taxon_cache.json.
-DB_CACHE_PATH <- "data/observations/cache/inat_cache.duckdb"
+DB_CACHE_PATH <- "data/inat_observations/cache/inat_cache.duckdb"
 
 # Cached flattened export frame (RDS). Flattening ~77k observations from JSON
 # and resolving their taxonomy is slow, so read_observations_export() memoizes
 # the result here and only rebuilds when the observation/taxon cache content
 # changes (a content fingerprint decides). Delete this file or set
 # BEESCABR_REFRESH_FLAT=1 to force a rebuild.
-EXPORT_FLAT_CACHE <- "data/observations/cache/export_flat.rds"
+EXPORT_FLAT_CACHE <- "data/inat_observations/cache/export_flat.rds"
 
 # Records when observations were last ingested, so a refresh can also re-pull
 # observations that were re-identified/edited on iNaturalist since then
 # (updated_since), not just brand-new ones.
-INGEST_STATE_PATH <- "data/observations/cache/last_ingest.txt"
+INGEST_STATE_PATH <- "data/inat_observations/cache/last_ingest.txt"
 
 # ---- PLANT cache (kept SEPARATE from the bee cache) ---------------------------
 # The plant ingest uses its OWN DuckDB file, export RDS, and updated_since state,
 # so its incremental id-cursor never collides with the bee cache and a plant pull
 # never invalidates the (expensive) 77k-bee export fingerprint. Identical schema
 # and code path -- just a different connection + paths (see ingest_plants.R).
-DB_CACHE_PATH_PLANT     <- "data/observations/cache/inat_cache_plant.duckdb"
-EXPORT_FLAT_PLANT_CACHE <- "data/observations/cache/export_flat_plant.rds"
-INGEST_STATE_PATH_PLANT <- "data/observations/cache/last_ingest_plant.txt"
+DB_CACHE_PATH_PLANT     <- "data/inat_observations/cache/inat_cache_plant.duckdb"
+EXPORT_FLAT_PLANT_CACHE <- "data/inat_observations/cache/export_flat_plant.rds"
+INGEST_STATE_PATH_PLANT <- "data/inat_observations/cache/last_ingest_plant.txt"
 
 # ---- Observation-field id map ------------------------------------------------
 # The flatten step builds `field:<lower(name)>` columns generically from the
@@ -135,7 +135,7 @@ PATHS <- list(
   # an iNat implementation detail (it looks identical to a species scientific
   # name and confuses non-scientists), so it's stripped from the public
   # checklists and parked here for the specimen complex-match step to read.
-  complex_map = "data/observations/cache/complex_taxon_id_map.csv",
+  complex_map = "data/inat_observations/cache/complex_taxon_id_map.csv",
   # Built ONCE from Holway's v3 checklist (resolving names -> iNat taxon_ids is
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
@@ -146,20 +146,21 @@ PATHS <- list(
   plant_specimen_overrides = "data/reference/curated/plant_specimen_overrides.csv",      # curated expert corrections for specimen-label plants
   plant_not_in_park = "data/reference/generated/cabr_plant_specimen_not_in_park.csv",       # worklist: specimen-label plants not confirmed in park
   plant_name_cache = "data/reference/generated/plant_name_resolution_cache.csv",           # name -> iNat taxon resolution cache
-  plant_all_taxa = "data/observations/reference/cabr_inat_plant_all_taxa.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
+  plant_all_taxa = "data/inat_observations/reference/cabr_inat_plant_all_taxa.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
   plant_park_confirmed = "data/reference/curated/plant_park_confirmed.csv",               # curated: species the botanist confirms are in the park (e.g. obscured threatened taxa)
-  inat_bee_forage = "data/observations/reference/cabr_inat_bee_forage.csv",       # plants bees were recorded foraging on in-park (bee-obs flower_visited) -- in-park truth
-  checklist_sd_county_inat = "data/checklists/sd_county/sd_county_inat_native_bee_checklist.csv",
-  checklist_point_loma_inat = "data/checklists/point_loma/pl_inat_native_bee_checklist.csv",
-  checklist_cabr_inat = "data/checklists/cabr/cabr_inat_bee_checklist.csv",
-  checklist_sd_county_v2 = "data/checklists/sd_county/sd_county_native_bee_checklist.csv",
-  checklist_point_loma_v2 = "data/checklists/point_loma/pl_native_bee_checklist.csv",
-  checklist_cabr_v2 = "data/checklists/cabr/cabr_combined_native_bee_checklist.csv",
-  checklist_cabr_specimen = "data/checklists/cabr/cabr_specimen_bee_checklist.csv",
-  inat_clean = "data/observations/inat_clean/cabr_inat_bee_clean.csv",
-  inat_plant_clean = "data/observations/inat_clean/cabr_inat_plant_clean.csv",
-  inat_unknown_tags = "data/observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv",
-  inat_to_verify = "data/observations/inat_clean/qc/cabr_inat_to_verify.csv",
+  inat_bee_forage = "data/inat_observations/reference/cabr_inat_bee_forage.csv",       # plants bees were recorded foraging on in-park (bee-obs flower_visited) -- in-park truth
+# Checklists. These names are the CURRENT ones on disk (the earlier
+  # cabr_inat_bee_checklist / *_combined_* / *_v2 keys pointed at filenames that no
+  # longer exist and nothing read them -- removed 2026-08-25).
+  checklist_cabr_official   = "data/checklists/cabr/cabr_official_native_bee_checklist.csv",
+  checklist_cabr_raw_inat   = "data/checklists/cabr/cabr_raw_inat_native_bee_checklist.csv",
+  checklist_cabr_specimen   = "data/checklists/cabr/cabr_specimen_native_bee_checklist.csv",
+  checklist_pl_raw_inat     = "data/checklists/point_loma/pl_raw_inat_native_bee_checklist.csv",
+  checklist_sd_holway       = "data/checklists/sd_county/sd_holway_native_bee_checklist.csv",
+  checklist_sd_raw_inat     = "data/checklists/sd_county/sd_raw_inat_native_bee_checklist.csv",
+  checklist_sd_holway_inat  = "data/checklists/sd_county/sd_holway_and_raw_inat_native_bee_checklist.csv",
+  inat_clean = "data/inat_observations/inat_clean/cabr_inat_bee_clean.csv",
+  inat_plant_clean = "data/inat_observations/inat_clean/cabr_inat_plant_clean.csv",
   specimen_clean = "data/specimens/specimens_clean/cabr_specimen_bee_clean.csv",
   holway_combined = "data/reference/source/holway_2026/holway_v3_combined.csv",
   # Project effort + roster. per_survey is the trip-level log (one row per survey
@@ -196,3 +197,59 @@ TAXONOMY_LEVELS <- c(
   "family", "epifamily", "subfamily", "tribe", "subtribe",
   "genus", "subgenus", "complex", "species", "subspecies"
 )
+
+# ---- What each PATHS entry IS (the contract) ---------------------------------
+# input    -- a human maintains it by hand (or drops it in). MUST exist before a run;
+#             if it is missing the pipeline should stop immediately, not an hour in.
+# output   -- the pipeline writes it. MUST exist after a full run; missing means a
+#             stage silently produced nothing.
+# optional -- a cache or an on-demand reviewer output. Absent is normal.
+#
+# Why this exists: until 2026-08-25, config.R carried seven checklist entries pointing
+# at filenames that had been renamed away. Nothing read them, so nothing complained.
+# check_paths() below makes that impossible to repeat.
+PATH_KIND <- list(
+  # --- inputs: hand-maintained, must exist up front ---
+  surveyor_roster          = "input",
+  identifier_roster        = "input",
+  per_survey               = "input",
+  specimen_additions       = "input",
+  plant_specimen_overrides = "input",
+  plant_park_confirmed     = "input",
+  verified_taxa            = "input",
+  holway_combined          = "input",
+  # --- outputs: the pipeline writes these ---
+  taxonomy_lookup          = "output",
+  holway_reference         = "output",
+  plant_taxonomy_lookup    = "output",
+  plant_all_taxa           = "output",
+  inat_bee_forage          = "output",
+  inat_clean               = "output",
+  inat_plant_clean         = "output",
+  specimen_clean           = "output",
+  checklist_cabr_official  = "output",
+  checklist_cabr_raw_inat  = "output",
+  checklist_cabr_specimen  = "output",
+  checklist_pl_raw_inat    = "output",
+  checklist_sd_holway      = "output",
+  checklist_sd_raw_inat    = "output",
+  checklist_sd_holway_inat = "output",
+  # --- optional: caches + on-demand reviewer worklists ---
+  complex_map              = "optional",
+  plant_not_in_park        = "optional",
+  plant_name_cache         = "optional"
+)
+
+# Report every PATHS entry whose file is missing when the contract says it should be
+# there. Returns a data.frame (0 rows = clean) so a caller can stop, warn, or print.
+# stage = "input" | "output" | NULL (both). paths/kinds are injectable for testing.
+check_paths <- function(paths = PATHS, kinds = PATH_KIND, stage = NULL) {
+  keys <- intersect(names(kinds), names(paths))
+  if (!is.null(stage)) keys <- keys[vapply(keys, function(k) kinds[[k]] == stage, TRUE)]
+  keys <- keys[vapply(keys, function(k) kinds[[k]] != "optional", TRUE)]
+  bad  <- keys[!vapply(keys, function(k) file.exists(paths[[k]]), TRUE)]
+  data.frame(key  = as.character(bad),
+             kind = vapply(bad, function(k) kinds[[k]], ""),
+             path = vapply(bad, function(k) paths[[k]], ""),
+             row.names = NULL, stringsAsFactors = FALSE)
+}

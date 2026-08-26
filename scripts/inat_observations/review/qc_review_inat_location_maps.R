@@ -1,8 +1,8 @@
 # =============================================================
-# observations/build_location_review_maps.R
+# observations/qc_review_inat_location_maps.R
 # beescabr -- builds the LOCATION-REVIEW handoff folder: one self-contained iNaturalist
 # "pins to fix" map per observer, plus the two location_review CSVs and the shared
-# instruction page, all under data/observations/review/review_location/.
+# instruction page, all under data/inat_observations/review/location/.
 #
 # This is the R port of the old map/build_per_user.py. The per-pin survey-log annotation
 # (which transect the log says the observer walked that day) is computed HERE from
@@ -12,21 +12,22 @@
 #
 # Defines build_location_review_maps(write=TRUE). Run AFTER the clean scripts have written
 # the two location_review CSVs and AFTER the brain has written the master. Self-contained
-# output: leaflet.js/css + control images are inlined from scripts/observations/assets/,
+# output: leaflet.js/css + control images are inlined from scripts/inat_observations/assets/,
 # so each HTML opens offline / when emailed.
 #   source(...); build_location_review_maps()
 # =============================================================
+if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(jsonlite); library(sf)}))
 
-BLRM_DIR        <- "data/observations/review/review_location"
-BLRM_MAPS_DIR   <- file.path(BLRM_DIR, "by_surveyors")   # the per-surveyor maps live here; CSVs + instructions stay at the top of review_location/
-BLRM_BEE_CSV    <- file.path(BLRM_DIR, "cabr_inat_bee_location_review.csv")
-BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "cabr_inat_plant_location_review.csv")
-BLRM_ROSTER     <- "data/project_info/rosters/surveyor_roster.csv"
-BLRM_MASTER     <- "data/project_info/master_per_survey_info.csv"
+BLRM_DIR        <- "data/inat_observations/review/location"
+BLRM_MAPS_DIR   <- file.path(BLRM_DIR, "by_surveyors")   # the per-surveyor maps live here; CSVs + instructions stay at the top of review/location/
+BLRM_BEE_CSV    <- file.path(BLRM_DIR, "qc_review_inat_bee_location.csv")
+BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "qc_review_inat_plant_location.csv")
+BLRM_ROSTER     <- PATHS$surveyor_roster
+BLRM_MASTER     <- PATHS$per_survey
 BLRM_TRANSECTS  <- "data/spatial/transects/cabr_bee_transects.shp"
 BLRM_BOUNDARY   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
-BLRM_ASSETS     <- "scripts/observations/assets"
+BLRM_ASSETS     <- "scripts/inat_observations/assets"
 BLRM_TEMPLATE   <- file.path(BLRM_ASSETS, "location_map_template.html")
 BLRM_INSTRUCT   <- file.path(BLRM_ASSETS, "cabr_fix_instructions.html")
 BLRM_LEAFLET    <- file.path(BLRM_ASSETS, "leaflet")

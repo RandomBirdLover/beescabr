@@ -15,21 +15,21 @@
 #     * membership -- every beeple obs re-stamped with its day's resolved `transect` (the raw tag
 #       is kept in `transect_tagged`). finding_survey_dates.R then groups these per surveyor-day,
 #       so the resolved value becomes the `transects` cell in master_per_survey_info.csv.
-#     * mistags    -- outvoted obs -> review_mistagged_transects.csv (obs URL, tagged vs should_be).
-#     * ties       -- no clear majority (looks like two transects in a day) -> review_transect_overlap.csv;
+#     * mistags    -- outvoted obs -> qc_review_inat_mistagged_transects.csv (obs URL, tagged vs should_be).
+#     * ties       -- no clear majority (looks like two transects in a day) -> qc_review_survey_transect_overlap.csv;
 #       rule it in review_transect_ties() ("both" keeps a genuine two-transect day). If you rule any,
 #       the brain re-runs at stage 3f so master_per_survey_info.csv reflects it THIS run.
 #
 #   INTERNS are LEFT ALONE -- they walk a multi-transect route, so their obs keep their own tags
 #   (only status=="keep" & surveyor_type=="beeple" obs are resolved).
 #
-# Pure tag counting -- no shapefiles. Outputs: mistags -> data/observations/review/ (per-obs
-# fixes); ties -> data/project_info/inaturalist_project_key_setup/review/ (the ruling that sets the survey-record transect).
+# Pure tag counting -- no shapefiles. Outputs: mistags -> data/inat_observations/review/ (per-obs
+# fixes); ties -> data/project_info/review/ (the ruling that sets the survey-record transect).
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(tibble); library(readr)}))
 
-ST_MISTAG_OUT <- "data/observations/review/review_mistagged_transects.csv"
-ST_TIES_OUT   <- "data/project_info/inaturalist_project_key_setup/review/review_transect_overlap.csv"
+ST_MISTAG_OUT <- "data/inat_observations/review/qc_review_inat_mistagged_transects.csv"
+ST_TIES_OUT   <- "data/project_info/review/qc_review_survey_transect_overlap.csv"
 
 st_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))

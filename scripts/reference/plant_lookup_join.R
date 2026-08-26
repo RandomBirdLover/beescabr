@@ -56,7 +56,7 @@ plant_name_parts <- function(x) {
 attach_flower_ids <- function(df, lookup_path = NULL) {
   if (is.null(lookup_path))
     lookup_path <- if (exists("PATHS") && !is.null(PATHS$plant_taxonomy_lookup)) PATHS$plant_taxonomy_lookup
-                   else "data/reference/cabr_plant_taxonomy_lookup.csv"
+                   else PATHS$plant_taxonomy_lookup
   if (!"flower_taxon_id" %in% names(df)) df$flower_taxon_id <- NA_character_
   if (!"flower_in_park"  %in% names(df)) df$flower_in_park  <- NA
   # plant_genus + full-binomial plant_species from the flower name (independent of the lookup)

@@ -6,7 +6,7 @@ library(dplyr)
 # output schema stable (every IBC_TAXONOMY_COLS column present, blank when unmatched).
 
 test_that("ibc_fill_taxonomy fills names/ids/taxonomy from the lookup by taxon_id", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   df <- tibble(obs_id = c("a", "b", "c"), taxon_id = c("100", "200", "999"))
   lookup <- tibble(
     taxon_id        = c("100", "200"),
@@ -25,14 +25,14 @@ test_that("ibc_fill_taxonomy fills names/ids/taxonomy from the lookup by taxon_i
 })
 
 test_that("ibc_fill_taxonomy is schema-stable when the lookup is NULL or empty", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   out <- ibc_fill_taxonomy(tibble(obs_id = "a", taxon_id = "100"), NULL)
   expect_true(all(IBC_TAXONOMY_COLS %in% names(out)))
   expect_true(is.na(out$scientific_name))
 })
 
 test_that("ibc_fill_taxonomy replaces stale taxonomy columns without duplicating them", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   df <- tibble(obs_id = "a", taxon_id = "100", scientific_name = "STALE", genus = "STALE")
   lookup <- tibble(taxon_id = "100", scientific_name = "Bombus vosnesenskii", genus = "Bombus")
   out <- ibc_fill_taxonomy(df, lookup)
@@ -41,7 +41,7 @@ test_that("ibc_fill_taxonomy replaces stale taxonomy columns without duplicating
 })
 
 test_that("ibc_fill_taxonomy coerces integer taxon_id keys before joining", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   df <- tibble(obs_id = "a", taxon_id = 100L)                 # integer key on the obs side
   lookup <- tibble(taxon_id = 100L, scientific_name = "Bombus vosnesenskii", genus = "Bombus")
   out <- ibc_fill_taxonomy(df, lookup)
@@ -53,7 +53,7 @@ test_that("ibc_fill_taxonomy coerces integer taxon_id keys before joining", {
 # plant, not the flag). "missing" -> handed back to scientists to annotate.
 
 test_that("ibc_bee_situation prioritizes, and a recorded plant counts as on_flower", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   df <- tibble(
     bee_on_flower  = c(TRUE,  FALSE,                 FALSE, FALSE, FALSE, TRUE),
     flower_visited = c(NA,    "Encelia californica", NA,    NA,    NA,    NA),
@@ -70,7 +70,7 @@ test_that("ibc_bee_situation prioritizes, and a recorded plant counts as on_flow
 })
 
 test_that("ibc_bee_situation counts bee_in_nest as nest and is NA/blank-safe", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   df <- tibble(
     bee_on_flower  = c(NA,    FALSE),
     flower_visited = c("",    NA),          # "" is not a recorded plant
@@ -81,7 +81,7 @@ test_that("ibc_bee_situation counts bee_in_nest as nest and is NA/blank-safe", {
 })
 
 test_that("ibc_bee_situation returns 'missing' when the behavior columns are absent", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   expect_equal(ibc_bee_situation(tibble(obs_id = c("1", "2"))), c("missing", "missing"))
 })
 
@@ -90,13 +90,17 @@ test_that("ibc_bee_situation returns 'missing' when the behavior columns are abs
 # recorded no behavior at all.
 
 test_that("ibc_fix_behavior flags a non-plant flower and a survey obs missing all fields", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   clean <- tibble(
     obs_id          = c("a", "b", "c", "d"),
     is_survey       = c(TRUE, TRUE, FALSE, TRUE),
     bee_situation   = c("on_flower", "missing", "on_flower", "on_flower"),
     flower_visited  = c("Apodemia virgulti", NA, "Encelia californica", "Encelia californica"),
     flower_taxon_id = c(NA, NA, "106", "106"),
+    # plant_genus matters: a flower that resolves to a taxon but carries NO genus is
+    # flagged flower_not_to_genus (the Diadasia-on-"cactus" case). c and d are meant
+    # to be GOOD records, so they must carry a genus.
+    plant_genus     = c(NA, NA, "Encelia", "Encelia"),
     url             = "u")
   fx <- ibc_fix_behavior(clean)
   expect_equal(fx$fix_reason[fx$obs_id == "a"], "flower_not_a_plant_or_unresolved")  # butterfly tag
@@ -106,14 +110,14 @@ test_that("ibc_fix_behavior flags a non-plant flower and a survey obs missing al
 })
 
 test_that("ibc_fix_behavior is column-safe when optional columns are absent", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   expect_equal(nrow(ibc_fix_behavior(tibble(obs_id = c("x", "y")))), 0L)
 })
 
 # location_needs_fix moved OUT of the clean table into a review worklist (ibc_location_review),
 # mirroring the specimen side. The flag must NOT be a clean-table column any more.
 test_that("location_needs_fix is not a clean-table column, and ibc_location_review lists bad pins", {
-  src("observations/inat_bee_clean.R")
+  src("inat_observations/inat_bee_clean.R")
   expect_false("location_needs_fix" %in% IBC_COLUMN_ORDER)      # dropped from the clean schema
   df <- tibble(
     obs_id = c("a", "b", "c"), observer = "x", observed_on = "2024-01-01", transect = "TP",

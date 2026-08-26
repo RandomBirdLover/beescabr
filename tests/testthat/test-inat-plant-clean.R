@@ -7,7 +7,7 @@ library(dplyr)
 #  * ipc_norm_transect collapses transect variants exactly like the bee cleaner
 
 test_that("ipc_flowering pulls the flowering phenology value from the crosswalk field", {
-  src("observations/inat_plant_clean.R")
+  src("inat_observations/inat_plant_clean.R")
   cw <- tempfile(fileext = ".csv")
   readr::write_csv(tibble(name = "flower_flowering",
                           inat_field_variants = "flowering?; flowering",
@@ -21,7 +21,7 @@ test_that("ipc_flowering pulls the flowering phenology value from the crosswalk 
 })
 
 test_that("ipc_flowering returns a blank column when the crosswalk is absent", {
-  src("observations/inat_plant_clean.R")
+  src("inat_observations/inat_plant_clean.R")
   ex <- tibble(id = c("1", "2"), tag_list = c(NA, NA))
   out <- ipc_flowering(ex, tempfile(fileext = ".csv"))   # nonexistent path
   expect_true("flower_flowering" %in% names(out))
@@ -29,7 +29,7 @@ test_that("ipc_flowering returns a blank column when the crosswalk is absent", {
 })
 
 test_that("ipc_taxonomy_from_export maps ranked export columns to the schema + epithet", {
-  src("observations/inat_plant_clean.R")
+  src("inat_observations/inat_plant_clean.R")
   ex <- tibble(id = "1",
                scientific_name = "Encelia californica",
                common_name = "California Brittlebush",
@@ -45,14 +45,14 @@ test_that("ipc_taxonomy_from_export maps ranked export columns to the schema + e
 })
 
 test_that("ipc_norm_transect collapses transect variants like the bee cleaner", {
-  src("observations/inat_plant_clean.R")
+  src("inat_observations/inat_plant_clean.R")
   expect_equal(ipc_norm_transect(c("TP1", "#tp2", "UPMON-A", "OT", "")),
                c("TP", "TP", "UPMON", "OT", NA))
 })
 
 # location_needs_fix moved OUT of the clean plant table into a review worklist (ipc_location_review).
 test_that("location_needs_fix is not a clean plant column, and ipc_location_review lists bad pins", {
-  src("observations/inat_plant_clean.R")
+  src("inat_observations/inat_plant_clean.R")
   expect_false("location_needs_fix" %in% IPC_COLUMN_ORDER)
   df <- tibble(
     obs_id = c("a", "b"), observer = "x", observed_on = "2024-01-01", transect = "TP",

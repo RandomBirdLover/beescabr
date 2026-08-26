@@ -40,7 +40,7 @@ were two separate lists covering the same project).
 ### Pipeline design
 
 - [ ] **Fold survey-tag QC into the inat_bee_clean.R rewrite.** When
-  `observations/inat_bee_clean.R` is rewritten, add back the two cross-checks the
+  `inat_observations/inat_bee_clean.R` is rewritten, add back the two cross-checks the
   retired `survey_tag_qc.R` did (deleted; recoverable from git history):
     1. Missing-tag recovery -- obs by a known surveyor, inside the CABR box, on a
        confirmed survey day, carrying no valid Cabrillo survey tag (forgotten
@@ -50,7 +50,7 @@ were two separate lists covering the same project).
   Rewrite against the CURRENT schema: crosswalk columns are `what_for` /
   `inat_tag_variants` (not `type` / `category` / `inat_variants`), and the brain's
   membership rows use `source == "beeple-window"` (not `"observation"`).
-- [ ] **Notes reviewer (standalone `clean/review_notes.R`).** Built and deployed,
+- [ ] **Notes reviewer (standalone `clean/qc_review_mastercrosswalk_notes.R`).** Built and deployed,
   but deliberately NOT wired into the pipeline -- run it by hand. It walks each
   free-text obs note the brain flagged, one at a time, with a keyword guess
   (survey / metadata / not-survey / ambiguous), and remembers every decision per
@@ -99,7 +99,7 @@ were two separate lists covering the same project).
   holway_sd_bee_reference_table_v3.csv + sd_bee_taxonomy_lookup.csv (esp. that no id-less
   Holway rows disappear). API fallback (`/taxa?q=&rank=`) for any rank with no observed descendant.
 
-- [ ] **Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run silently skips the write and you get stale data. Delete the relevant generated files (under `data/observations/inat_clean/`, `data/checklists/`, `data/analysis/`) before each run until this is fixed.
+- [ ] **Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run silently skips the write and you get stale data. Delete the relevant generated files (under `data/inat_observations/inat_clean/`, `data/checklists/`, `data/analysis/`) before each run until this is fixed.
 - [ ] **Ask Mitchell Nuckols:** does the interactive "did you review tags/fields?" prompt in `inat_bee_clean.R` conflict with how Taro wants to use this? If Taro just wants one button that runs everything and produces outputs (which is what the Rmd suggests), then stopping mid-run for user input breaks that. May need a different approach — e.g. always output the QC files and let the Rmd surface a warning instead of stopping.
 
 ### Spatial / infrastructure
@@ -151,7 +151,7 @@ were two separate lists covering the same project).
   stage 2d). The Python helper has been removed. Whole project is one language.
 - [x] **Wire the plant ingest.** DONE 2026-07-17 -- `engine/pipelines/ingest_plants.R`
   pulls vascular plants (Tracheophyta 211194) for Point Loma (place 132551) into a
-  SEPARATE cache (`data/observations/cache/inat_cache_plant.duckdb`) -> `export_flat_plant.rds`;
+  SEPARATE cache (`data/inat_observations/cache/inat_cache_plant.duckdb`) -> `export_flat_plant.rds`;
   run_pipeline step 2b runs it; `FPI_EXPORTS` has the `kind="plant"` slot (absent
   export guarded). Sandbox-tested: plant obs confirm survey days (e.g. Jorge's
   plant-only days) with the bee results untouched. REMAINING on the first real run:

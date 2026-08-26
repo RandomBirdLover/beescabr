@@ -38,7 +38,7 @@ dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_
 
 # ---- 1. read the per-survey log ---------------------------------------------
 psf_path <- if (!is.null(PATHS$per_survey)) PATHS$per_survey else
-            "data/project_info/master_per_survey_info.csv"
+            PATHS$per_survey
 p <- read.csv(psf_path, stringsAsFactors = FALSE, check.names = FALSE)
 p <- p %>% mutate(
   date  = as.Date(date),

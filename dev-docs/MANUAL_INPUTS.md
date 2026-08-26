@@ -106,12 +106,12 @@ These are hand-maintained files the observation pipeline reads as override truth
 
 | File | Path | What it is |
 |---|---|---|
-| `cabr_inat_misid_review.csv` | `data/observations/review/` | Misidentifications to correct. |
-| `cabr_new_bees_not_on_holway.csv` | `data/observations/review/` | New bees not on the Holway checklist (candidate county additions). |
-| `review_mistagged_transects.csv` | `data/observations/review/` | Records tagged to the wrong transect. |
-| `cabr_inat_bee_fix_behavior_survey.csv` / `…_nonsurvey.csv` | `data/observations/review/` | Behavior/foraging corrections (survey vs non-survey). |
-| `cabr_inat_bee_location_review.csv`, `cabr_inat_plant_location_review.csv` | `data/observations/review/review_location/` | Location fixes for bee / plant observations. |
-| `inat_field_id_map.csv` | `data/observations/reference/` | Maps iNaturalist observation-field IDs. |
+| `qc_review_inat_misid.csv` | `data/inat_observations/review/` | Misidentifications to correct. |
+| `qc_review_inat_new_bees_not_on_holway.csv` | `data/inat_observations/review/` | New bees not on the Holway checklist (candidate county additions). |
+| `qc_review_inat_mistagged_transects.csv` | `data/inat_observations/review/` | Records tagged to the wrong transect. |
+| `qc_review_inat_bee_behavior_survey.csv` / `…_nonsurvey.csv` | `data/inat_observations/review/` | Behavior/foraging corrections (survey vs non-survey). |
+| `qc_review_inat_bee_location.csv`, `qc_review_inat_plant_location.csv` | `data/inat_observations/review/location/` | Location fixes for bee / plant observations. |
+| `inat_field_id_map.csv` | `data/inat_observations/reference/` | Maps iNaturalist observation-field IDs. |
 | `master_crosswalk.csv` | `data/project_info/` | iNaturalist project tags/fields crosswalk (the `project_tags_fields` reference). |
 
 ---
@@ -167,7 +167,7 @@ Listed because they look like inputs but are rebuilt every run. Editing them is 
 - `cabr_official_native_bee_checklist.csv` — written by `scripts/checklists/cabr_bee_checklist.R`.
 - `holway_v3_combined.csv`, `holway_sd_bee_reference_table_v3.csv` — built from the Holway `.xlsx` source.
 - Everything in `data/reference/generated/`.
-- Everything in `data/observations/inat_clean/`.
+- Everything in `data/inat_observations/inat_clean/`.
 - `data/specimens/specimens_clean/cabr_specimen_bee_clean.csv`.
 - Everything in `data/analysis/**` (the figures, tables, and pages the pipeline produces).
 

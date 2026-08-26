@@ -23,8 +23,8 @@
 # Depends on: api/inat_http.R, db/observations_store.R, config.R.
 # =============================================================
 
-if (!exists("inat_request_text"))     source("scripts/observations/engine/api/inat_http.R")
-if (!exists("write_observations_page")) source("scripts/observations/engine/db/observations_store.R")
+if (!exists("inat_request_text"))     source("scripts/inat_observations/engine/api/inat_http.R")
+if (!exists("write_observations_page")) source("scripts/inat_observations/engine/db/observations_store.R")
 if (!exists("TAXON_ANTHOPHILA"))      source("scripts/config.R")
 
 ingest_observations <- function(con,

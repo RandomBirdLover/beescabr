@@ -79,7 +79,7 @@ gs_list <- gs_list[sort(names(gs_list))]
 # photo list is searched for an open one (see explorer_photo_helpers.R).
 # Results (incl. "no open photo") are cached to disk so re-runs don't re-hit the API.
 if (!exists("fetch_taxon_photo")) source("scripts/analysis/explorer_photo_helpers.R")
-PHOTO_CACHE <- "data/observations/cache/taxon_photos.json"
+PHOTO_CACHE <- "data/inat_observations/cache/taxon_photos.json"
 photos <- if (file.exists(PHOTO_CACHE)) jsonlite::fromJSON(PHOTO_CACHE, simplifyVector = FALSE) else list()
 # Every taxon a selection can land on gets a representative photo: genus, each
 # genus+species, each subgenus, and each complex. subgenus/complex cache keys are

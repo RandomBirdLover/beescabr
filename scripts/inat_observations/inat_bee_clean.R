@@ -3,7 +3,7 @@
 # beescabr -- turn the brain's per-obs answer key into an ANALYSIS-ready iNaturalist BEE table.
 #
 # WHAT IT'S FOR
-#   The brain (finding_project_info.R) writes data/observations/cabr_inat_raw.csv: one row per
+#   The brain (finding_project_info.R) writes data/inat_observations/cabr_inat_raw.csv: one row per
 #   iNat bee obs, already stamped (by the master_crosswalk) with a status, whose survey it is, the
 #   resolved transect, and an in_cabr label -- but taxonomy-blind (no taxon_id / names) and with no
 #   coordinates. This script pulls every bee obs INSIDE the CABR survey box (in_cabr == TRUE), labels
@@ -35,28 +35,29 @@
 #   * is_10min / is_metadata are STILL BLANK -- the crosswalk has no NOTE variants yet.
 #   taxon_id is the real identity we compare bees on; taxon_rank rides along from the iNat export.
 #
-# INPUTS   data/observations/cabr_inat_raw.csv                         (the brain's per-obs lookup)
-#          data/observations/cache/export_flat.rds                     (taxon_id + coords + fields/tags)
+# INPUTS   data/inat_observations/cabr_inat_raw.csv                         (the brain's per-obs lookup)
+#          data/inat_observations/cache/export_flat.rds                     (taxon_id + coords + fields/tags)
 #          data/project_info/master_crosswalk.csv                      (field/tag -> annotation concept)
 #          data/spatial/transects/cabr_bee_transects.shp               (off-transect test)
 #          data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp (Humphreys Rd walk-in)
-# OUTPUT   data/observations/inat_clean/cabr_inat_bee_clean.csv        (one labeled CABR table)
+# OUTPUT   data/inat_observations/inat_clean/cabr_inat_bee_clean.csv        (one labeled CABR table)
 #
-# Run: source("scripts/observations/inat_bee_clean.R"); inat_bee_clean()
+# Run: source("scripts/inat_observations/inat_bee_clean.R"); inat_bee_clean()
 # =============================================================
+if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(sf)}))
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
-IBC_MEMBERSHIP     <- "data/observations/cabr_inat_raw.csv"
-IBC_EXPORT         <- "data/observations/cache/export_flat.rds"
+IBC_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"
+IBC_EXPORT         <- "data/inat_observations/cache/export_flat.rds"
 IBC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
 IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
 IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
-IBC_OUT_CLEAN      <- "data/observations/inat_clean/cabr_inat_bee_clean.csv"
-IBC_FIX_SURVEY     <- "data/observations/review/cabr_inat_bee_fix_behavior_survey.csv"     # behavior fields to fix -- SURVEY obs
-IBC_FIX_NONSURVEY  <- "data/observations/review/cabr_inat_bee_fix_behavior_nonsurvey.csv"  # behavior fields to fix -- CASUAL (non-survey) obs
-IBC_LOCATION_REVIEW <- "data/observations/review/review_location/cabr_inat_bee_location_review.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
-IBC_LOOKUP         <- "data/reference/sd_bee_taxonomy_lookup.csv"   # taxon_id -> taxonomy fill
+IBC_OUT_CLEAN      <- PATHS$inat_clean
+IBC_FIX_SURVEY     <- "data/inat_observations/review/qc_review_inat_bee_behavior_survey.csv"     # behavior fields to fix -- SURVEY obs
+IBC_FIX_NONSURVEY  <- "data/inat_observations/review/qc_review_inat_bee_behavior_nonsurvey.csv"  # behavior fields to fix -- CASUAL (non-survey) obs
+IBC_LOCATION_REVIEW <- "data/inat_observations/review/location/qc_review_inat_bee_location.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
+IBC_LOOKUP         <- PATHS$taxonomy_lookup   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
 

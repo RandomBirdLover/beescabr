@@ -31,7 +31,7 @@ tok <- function(v) { t <- unlist(strsplit(as.character(v), "[,;/&]")); t <- str_
 spec <- read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
 inat <- read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
 psf  <- read.csv(if (!is.null(PATHS$per_survey)) PATHS$per_survey else
-                 "data/project_info/master_per_survey_info.csv", stringsAsFactors = FALSE, check.names = FALSE)
+                 PATHS$per_survey, stringsAsFactors = FALSE, check.names = FALSE)
 
 # ---- 1. participation --------------------------------------------------------
 # EFFORT (trips, days, method split) comes from the per-survey trip log; WHO surveyed
@@ -46,7 +46,7 @@ psf$year_i <- suppressWarnings(as.integer(psf$year))
 pmethod  <- str_squish(tolower(psf$method))                                    # trip method: lethal / non-lethal
 
 rost <- read.csv(if (!is.null(PATHS$surveyor_roster)) PATHS$surveyor_roster else
-                 "data/project_info/rosters/surveyor_roster.csv", stringsAsFactors = FALSE, check.names = FALSE)
+                 PATHS$surveyor_roster, stringsAsFactors = FALSE, check.names = FALSE)
 person   <- str_squish(tolower(paste(rost$first_name, rost$last_name)))        # canonical people key: full name, deduped across years
 rrole    <- str_squish(tolower(rost$role))
 ndistinct <- function(mask) length(unique(person[mask & person != "" & !is.na(person)]))

@@ -10,7 +10,16 @@
   stop("cannot locate beescabr root (scripts/ dir)")
 }
 
-src <- function(rel) source(file.path(.beescabr_root(), "scripts", rel))
+# Every pipeline module sources its dependencies with repo-root-relative paths
+# (e.g. source("scripts/config.R")), because the pipeline is always run from the
+# repo root. testthat runs from tests/testthat/, so we source WITH the working
+# directory temporarily set to the root -- otherwise a module that pulls in a
+# sibling fails with "cannot open the connection".
+src <- function(rel) {
+  root <- .beescabr_root()
+  old <- setwd(root); on.exit(setwd(old), add = TRUE)
+  source(file.path("scripts", rel))
+}
 
 fx <- function(name) file.path(.beescabr_root(), "tests", "testthat", "fixtures", name)
 

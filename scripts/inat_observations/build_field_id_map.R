@@ -4,20 +4,20 @@
 # the numeric iNat field_id. This pulls the name -> field_id map back out of the
 # raw observation cache so the crosswalk can carry real IDs.
 #
-# Writes data/observations/reference/inat_field_id_map.csv  (field_name, inat_field_id).
+# Writes data/inat_observations/reference/inat_field_id_map.csv  (field_name, inat_field_id).
 # Run in RStudio (needs the DuckDB cache):
-#   source("scripts/observations/build_field_id_map.R")
+#   source("scripts/inat_observations/build_field_id_map.R")
 # =============================================================
 
 local({
   need <- function(sym, file) if (!exists(sym)) source(file.path("scripts", file))
-  need("store_connect",         "observations/engine/db/store_conn.R")
-  need("read_observations_raw", "observations/engine/db/observations_store.R")
+  need("store_connect",         "inat_observations/engine/db/store_conn.R")
+  need("read_observations_raw", "inat_observations/engine/db/observations_store.R")
 })
 suppressMessages({library(DBI); library(dplyr); library(readr)})
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
-build_field_id_map <- function(out = "data/observations/reference/inat_field_id_map.csv", con = NULL) {
+build_field_id_map <- function(out = "data/inat_observations/reference/inat_field_id_map.csv", con = NULL) {
   own <- is.null(con)
   if (own) { con <- store_connect(); on.exit(store_disconnect(con), add = TRUE) }
 

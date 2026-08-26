@@ -4,8 +4,10 @@ test_that("config defines the API + place constants", {
   src("config.R")
   expect_equal(TAXON_ANTHOPHILA, 630955L)
   expect_equal(TAXON_APIS_MELLIFERA, 47219L)
-  expect_equal(STORE_CRS, 4326L)
-  expect_equal(BEESCABR_PROJECT_CRS, 26946L)
+  expect_equal(PLACE_CABR_MONUMENT, 4715L)
+  expect_equal(FAIR_MONTHS, 3:10)          # the standardized survey season
+  # NOTE: STORE_CRS and BEESCABR_PROJECT_CRS were retired in a refactor; the
+  # working CRS is now PROJECT_CRS, defined in scripts/spatial/spatial_utils.R.
 })
 
 test_that("field-id map keys the specially-handled obs-fields", {

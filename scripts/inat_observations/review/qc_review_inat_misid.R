@@ -1,5 +1,5 @@
 # =============================================================
-# observations/qc/inat_misid_qc.R
+# observations/qc/qc_review_inat_misid.R
 # beescabr -- misID-candidate QC (Q9's per-observation version)
 # Created 2026-07-22
 #
@@ -20,10 +20,10 @@
 # Match: normalized scientific_name, its rolled binomial (so a subspecies matches its
 # vouchered species), OR taxon_id.
 #
-# OUTPUT  data/observations/review/cabr_inat_misid_review.csv
+# OUTPUT  data/inat_observations/review/qc_review_inat_misid.csv
 #   obs_id, observed_on, observer, scientific_name, taxon_rank, quality_grade, reason, url
 #
-# Run: source("scripts/observations/qc/inat_misid_qc.R"); inat_misid_qc()
+# Run: source("scripts/inat_observations/review/qc_review_inat_misid.R"); inat_misid_qc()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readr) }))
 
@@ -39,10 +39,10 @@ local({
 if (!exists("%||%")) `%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
 
 .imq_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
-IMQ_INAT     <- .imq_path("inat_clean",       "data/observations/inat_clean/cabr_inat_bee_clean.csv")
-IMQ_SPECIMEN <- .imq_path("specimen_clean",   "data/specimens/specimens_clean/cabr_specimen_bee_clean.csv")
-IMQ_HOLWAY   <- .imq_path("holway_reference", "data/reference/holway_sd_bee_reference_table_v3.csv")
-IMQ_OUT      <- "data/observations/review/cabr_inat_misid_review.csv"
+IMQ_INAT     <- .imq_path("inat_clean",       PATHS$inat_clean)
+IMQ_SPECIMEN <- .imq_path("specimen_clean",   PATHS$specimen_clean)
+IMQ_HOLWAY   <- .imq_path("holway_reference", PATHS$holway_reference)
+IMQ_OUT      <- "data/inat_observations/review/qc_review_inat_misid.csv"
 IMQ_OUT_COLS <- c("obs_id", "observed_on", "observer", "scientific_name",
                   "taxon_rank", "quality_grade", "reason", "url")
 IMQ_REASON   <- "species-level iNat ID, not research-grade, no specimen voucher + not on Holway -- verify (misID or new record?)"

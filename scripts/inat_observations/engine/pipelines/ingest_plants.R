@@ -17,7 +17,7 @@
 #   NO without_taxon_id -- we want every vascular plant (unlike bees, which
 #   exclude Apis mellifera).
 #
-# Output: data/observations/cache/export_flat_plant.rds -- the second export the brain reads
+# Output: data/inat_observations/cache/export_flat_plant.rds -- the second export the brain reads
 # (FPI_EXPORTS kind="plant"), giving plant obs the same survey-membership +
 # survey-date treatment as bees, plus the raw plant data for flower-resource
 # analysis ("what plants do the bees visit / what's in bloom on survey days").
@@ -26,9 +26,9 @@
 # pipelines/read_inat.R, config.R.
 # =============================================================
 
-if (!exists("store_connect"))              source("scripts/observations/engine/db/store_conn.R")
-if (!exists("ingest_observations"))        source("scripts/observations/engine/pipelines/ingest_inat.R")
-if (!exists("read_observations_export"))   source("scripts/observations/engine/pipelines/read_inat.R")
+if (!exists("store_connect"))              source("scripts/inat_observations/engine/db/store_conn.R")
+if (!exists("ingest_observations"))        source("scripts/inat_observations/engine/pipelines/ingest_inat.R")
+if (!exists("read_observations_export"))   source("scripts/inat_observations/engine/pipelines/read_inat.R")
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 if (!exists("TAXON_TRACHEOPHYTA"))         source("scripts/config.R")
 

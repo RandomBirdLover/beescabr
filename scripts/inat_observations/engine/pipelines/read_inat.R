@@ -19,9 +19,9 @@
 # config.R.
 # =============================================================
 
-if (!exists("read_observations_raw")) source("scripts/observations/engine/db/observations_store.R")
-if (!exists("flatten_observation"))   source("scripts/observations/engine/api/inat_flatten.R")
-if (!exists("resolve_taxonomy"))       source("scripts/observations/engine/api/inat_cache.R")
+if (!exists("read_observations_raw")) source("scripts/inat_observations/engine/db/observations_store.R")
+if (!exists("flatten_observation"))   source("scripts/inat_observations/engine/api/inat_flatten.R")
+if (!exists("resolve_taxonomy"))       source("scripts/inat_observations/engine/api/inat_cache.R")
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 if (!exists("TAXON_RANK_COLUMNS"))     source("scripts/config.R")
 

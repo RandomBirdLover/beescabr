@@ -22,7 +22,7 @@ library(httr2)
 
 if (!exists("INAT_BASE_URL")) source("scripts/config.R")
 # optional OAuth sign-in (adds true coords for records you're trusted with); no-op if unconfigured
-if (!exists("inat_auth_enabled")) source("scripts/observations/engine/api/inat_auth.R")
+if (!exists("inat_auth_enabled")) source("scripts/inat_observations/engine/api/inat_auth.R")
 
 # Build a configured request (UA + timeout + retry) for a path/query.
 .inat_build_request <- function(path, query = list(),

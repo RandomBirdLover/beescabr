@@ -6,7 +6,7 @@
 # The single entrypoint that runs the whole pipeline end to end. Core data first,
 # ALL checklist/taxonomy work LAST:
 #   1.  INGEST   iNat API -> DuckDB cache (once, incremental)
-#   2.  EXPORT   refresh data/observations/cache/export_flat.rds (the brain's input)
+#   2.  EXPORT   refresh data/inat_observations/cache/export_flat.rds (the brain's input)
 #   2b. PLANTS   pull vascular plants -> SEPARATE plant cache -> export_flat_plant.rds
 #                (the brain's second input; survey-day confirm + flower resources)
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
@@ -50,7 +50,14 @@
 #   BEESCABR_SKIP_INGEST=1  -> don't call iNat at all; use whatever is already cached.
 #                              Use when you just want to re-clean/re-export existing data.
 #
-#   BEESCABR_SKIP_PLANTS=1  -> pull bees only, skip the (slower) plant pull.
+#   BEESCABR_SKIP_PLANTS=1  -> RECOVERY HATCH, not a normal run mode. Pulls bees but
+#                             leaves plant data stale, so survey-day confirmation and
+#                             every forage/flower result use OLD plants. Use only when
+#                             the plant pull is broken and you need the bee side now.
+#                             Deliberately absent from the run menu; it warns loudly.
+#                             A plant pull that ERRORS stops the run on purpose -- re-run
+#                             first (most failures are transient); reach for this flag
+#                             only if it keeps failing and you need the bee side now.
 #
 #   BEESCABR_FULL_INGEST=1  -> !! SLOW, RARELY NEEDED !! Wipe the ENTIRE cache and
 #                              re-download every observation from scratch (~40+ min for
@@ -87,31 +94,32 @@ BEESCABR_SOURCED_BY_RUNNER <- TRUE
 # standalone field-guide rebuild -- the analysis run handles that.
 RUNNING_ALL <- TRUE
 
+source("scripts/utils/ingest_mode.R")   # the run-mode menu (asks instead of requiring flag names)
 source("scripts/config.R")
 source("scripts/utils/utils.R")
 source("scripts/utils/console.R")                # phase banners + key/value reporter + NEEDS-YOU rollup
-source("scripts/observations/engine/db/store_conn.R")
-source("scripts/observations/engine/db/observations_store.R")
-source("scripts/observations/engine/db/taxon_store.R")
-source("scripts/observations/engine/db/decision_store.R")
-source("scripts/observations/engine/api/inat_http.R")
-source("scripts/observations/engine/api/inat_flatten.R")
-source("scripts/observations/engine/api/inat_cache.R")
-source("scripts/observations/engine/pipelines/ingest_inat.R")
-source("scripts/observations/engine/pipelines/read_inat.R")
-source("scripts/observations/engine/pipelines/ingest_plants.R")  # plant pull -> separate cache -> export_flat_plant.rds
-source("scripts/observations/build_field_id_map.R")             # defines build_field_id_map() -- stage 2c
+source("scripts/inat_observations/engine/db/store_conn.R")
+source("scripts/inat_observations/engine/db/observations_store.R")
+source("scripts/inat_observations/engine/db/taxon_store.R")
+source("scripts/inat_observations/engine/db/decision_store.R")
+source("scripts/inat_observations/engine/api/inat_http.R")
+source("scripts/inat_observations/engine/api/inat_flatten.R")
+source("scripts/inat_observations/engine/api/inat_cache.R")
+source("scripts/inat_observations/engine/pipelines/ingest_inat.R")
+source("scripts/inat_observations/engine/pipelines/read_inat.R")
+source("scripts/inat_observations/engine/pipelines/ingest_plants.R")  # plant pull -> separate cache -> export_flat_plant.rds
+source("scripts/inat_observations/build_field_id_map.R")             # defines build_field_id_map() -- stage 2c
 # reference/ (holway.R, taxonomy_reference.R, verify.R) is pulled in by taxonomy_lookup_build.R (stage 5).
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
 source("scripts/project_info/finding_beeple_calendar.R")  # defines finding_beeple_calendar() -- stage 2d
 source("scripts/project_info/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
-source("scripts/project_info/review_crosswalk.R")         # interactive review of unknown tags + fields
-source("scripts/project_info/review_windows.R")           # interactive review of survey-date windows
-source("scripts/observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
-source("scripts/observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
-source("scripts/observations/build_location_review_maps.R") # defines build_location_review_maps() -- stage 7d (per-observer maps)
-source("scripts/observations/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
-source("scripts/observations/qc/inat_misid_qc.R")         # defines inat_misid_qc() -- stage 10 (misID review queue)
+source("scripts/project_info/review/qc_review_mastercrosswalk.R")         # interactive review of unknown tags + fields
+source("scripts/project_info/review/qc_review_survey_windows.R")           # interactive review of survey-date windows
+source("scripts/inat_observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
+source("scripts/inat_observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
+source("scripts/inat_observations/review/qc_review_inat_location_maps.R") # defines build_location_review_maps() -- stage 7d (per-observer maps)
+source("scripts/inat_observations/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
+source("scripts/inat_observations/review/qc_review_inat_misid.R")         # defines inat_misid_qc() -- stage 10 (misID review queue)
 # ---- TAXONOMY + SPECIMENS + CHECKLISTS ----
 # Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in
 # the pipeline now (stages 4 + 5); they pull their own deps (holway.R, taxonomy_reference.R,
@@ -137,7 +145,27 @@ source("scripts/checklists/sd_bee_checklist.R")       # defines build_sd_bee_che
 source("scripts/analysis/not_on_holway.R")            # not_on_holway_bees() + format_new_bees() -- stage 11
 
 main <- function() {
+  # ---- ASK, don't make anyone remember flag names. Interactive runs get a plain
+  # menu; scripted runs and deliberately-preset flags skip it untouched. Every flag
+  # is rewritten from the answer, so a value left over from an earlier session in
+  # this same R process cannot leak into this run. ----
+  ingest_mode_apply(ingest_mode_flags())
+
   t0 <- Sys.time()
+
+  # ---- PRE-FLIGHT: every hand-maintained input must exist BEFORE we spend an hour
+  # on the API. PATH_KIND in config.R declares which entries are inputs. ----
+  .missing_in <- check_paths(stage = "input")
+  if (nrow(.missing_in)) {
+    message("")
+    bx_rule()
+    message("  STOPPING: ", nrow(.missing_in), " required input file(s) are missing.")
+    for (i in seq_len(nrow(.missing_in)))
+      message(sprintf("    %-24s %s", .missing_in$key[i], .missing_in$path[i]))
+    message("\n  These are maintained by hand -- see dev-docs/MANUAL_INPUTS.md.")
+    bx_rule()
+    stop("missing required input(s); nothing was run", call. = FALSE)
+  }
   con <- store_connect()
   on.exit(store_disconnect(con), add = TRUE)
 
@@ -178,13 +206,28 @@ main <- function() {
   # flower-resource analysis. Own connection; the bee `con` above is untouched.
   # Gated by the same ingest flags as bees (+ BEESCABR_SKIP_PLANTS to skip only plants).
   if (Sys.getenv("BEESCABR_SKIP_PLANTS", "0") == "1") {
-    bx_kv("Fetch plants", "skipped (BEESCABR_SKIP_PLANTS=1)")
+    # NOT a normal way to run. Bees pull fresh while plants stay stale, so survey-day
+    # confirmation and every forage/flower result rest on old plant data. Deliberately
+    # LOUD -- this is a recovery hatch for a broken plant pull, not a speed option, and
+    # it is not offered in the run menu.
+    bx_kv("Fetch plants", "SKIPPED (BEESCABR_SKIP_PLANTS=1)")
+    bx_note("plant data is now STALE while bee data is fresh -- this run is NOT a")
+    bx_cont("complete refresh. Survey-day confirmation and all forage/flower results")
+    bx_cont("use old plant records. Unset the flag and re-run for a consistent result.")
+    bx_need("Plant pull skipped -- results rest on stale plants", "BEESCABR_SKIP_PLANTS=1")
   } else {
     # Free the bee export frame first: building the plant export (flatten + taxonomy
     # of 40k obs) while the 77k-bee frame was still resident OOM'd R on the first
     # plant run (2026-07-17). The on-disk export_flat.rds is untouched; the later
     # checklist stage re-reads it from disk (cache hit) if it needs it.
     clear_export_cache()
+    # A plant failure STOPS the run, on purpose. Catching it here would keep going and
+    # produce figures, checklists and eventually a published site built on stale plant
+    # data -- and the warning would only ever exist in terminal scrollback, never on the
+    # outputs themselves. Most plant failures are transient (503, timeout), so the right
+    # response is usually just to re-run. If the pull is genuinely broken and the bee
+    # side is needed now, that is a DELIBERATE call: set BEESCABR_SKIP_PLANTS=1, which
+    # warns loudly about exactly what becomes stale. Same reasoning as the bee ingest.
     ingest_plants(
       incremental = Sys.getenv("BEESCABR_FULL_INGEST", "0") != "1",
       do_ingest   = Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1"
@@ -192,10 +235,10 @@ main <- function() {
   }
 
   # ---- 2c. FIELD MAP: refresh the obs-field name -> iNat id map from the cache ----
-  # Keeps data/observations/reference/inat_field_id_map.csv (the crosswalk's stable-id
+  # Keeps data/inat_observations/reference/inat_field_id_map.csv (the crosswalk's stable-id
   # reference) in step with freshly-ingested fields. Cheap DuckDB query; skipped when ingest
   # was skipped and the map already exists. Reuses the bee `con` (2b used its own plant con).
-  FIELD_MAP_PATH <- "data/observations/reference/inat_field_id_map.csv"
+  FIELD_MAP_PATH <- "data/inat_observations/reference/inat_field_id_map.csv"
   if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1" || !file.exists(FIELD_MAP_PATH)) {
     build_field_id_map(con = con)
   }  # else: silently reused (ingest skipped and the map already exists)
@@ -248,7 +291,7 @@ main <- function() {
         "\n[3b-notes] %d free-text note(s) flagged.  Review them now?  [y/N]: ",
         n_notes))))
       if (ans %in% c("y", "yes")) {
-        source("scripts/project_info/review_notes.R")
+        source("scripts/project_info/review/qc_review_mastercrosswalk_notes.R")
         review_notes()
       } else {
         bx_cont("proceeding without notes (reviewer not run)")
@@ -281,7 +324,7 @@ main <- function() {
       bx_kv("Ties", "none to rule")
     }
   } else {
-    bx_kv("Review", "skipped (non-interactive) — run review_crosswalk.R / review_windows.R by hand")
+    bx_kv("Review", "skipped (non-interactive) — run qc_review_mastercrosswalk.R / qc_review_survey_windows.R by hand")
   }
 
   # ---- 4. HOLWAY REFERENCE (interactive: resolves Holway -> iNat; prompts as needed) ----
@@ -365,7 +408,7 @@ main <- function() {
            error = function(e) bx_note("plant-name review failed: ", conditionMessage(e)))
 
   # ---- 7c. OBSERVATION REVIEW: prompt for the iNat obs that need fixing ON iNaturalist ----
-  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + review_mistagged_transects.csv
+  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + qc_review_inat_mistagged_transects.csv
   # (stray transect tag) + the bee/plant location_review files (survey pins far from any transect).
   # Each row carries the observation's url, so you open it and fix it there; the next iNat pull picks
   # up your fix. Non-blocking: surfaces + prompts, then continues.
@@ -373,13 +416,13 @@ main <- function() {
   # stage 7d below, which surfaces them AND builds the per-surveyor maps in one place, so
   # they aren't split across two prompts.)
   tryCatch({
-    obs_rev   <- "data/observations/review"
+    obs_rev   <- "data/inat_observations/review"
     obs_items <- data.frame(
       label = c("bee behavior to fix (survey)", "bee flowers to add (non-survey)", "stray transect tags"),
-      count = c(.n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior_survey.csv")),
-                .n_rows(file.path(obs_rev, "cabr_inat_bee_fix_behavior_nonsurvey.csv")),
-                .n_rows(file.path(obs_rev, "review_mistagged_transects.csv"))),
-      file  = c("cabr_inat_bee_fix_behavior_survey.csv", "cabr_inat_bee_fix_behavior_nonsurvey.csv", "review_mistagged_transects.csv"),
+      count = c(.n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_survey.csv")),
+                .n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_nonsurvey.csv")),
+                .n_rows(file.path(obs_rev, "qc_review_inat_mistagged_transects.csv"))),
+      file  = c("qc_review_inat_bee_behavior_survey.csv", "qc_review_inat_bee_behavior_nonsurvey.csv", "qc_review_inat_mistagged_transects.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
@@ -389,7 +432,7 @@ main <- function() {
   # ---- 7d. LOCATION REVIEW: the off-transect survey pins (bee + plant) that sit >50 m from
   # any transect. This is the SINGLE place they surface: it reports the counts, builds one
   # self-contained iNaturalist "pins to fix" map per surveyor (next to the two location_review
-  # CSVs + the shared instruction page, under review_location/), and prompts you to send them.
+  # CSVs + the shared instruction page, under review/location/), and prompts you to send them.
   # The per-pin survey-log annotation is computed from the master, so tag-only intern days
   # (e.g. 2024-05-05) label correctly. ----
   bx_phase(5, "SURVEYOR MAPS")
@@ -430,7 +473,7 @@ main <- function() {
   # a trusted scientist ID'd it. Unlike stage 10 (species-rank only), this catches complex/genus-rank
   # finds too. Same set the analysis script reports to the park; here it's the "double-check" prompt.
   tryCatch({
-    .chk_cabr <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
+    .chk_cabr <- PATHS$checklist_cabr_official
     if (file.exists(.chk_cabr) && file.exists(PATHS$specimen_clean) && file.exists(PATHS$inat_clean)) {
       .spec_nb <- utils::read.csv(PATHS$specimen_clean, stringsAsFactors = FALSE, check.names = FALSE)
       .inat_nb <- utils::read.csv(PATHS$inat_clean,     stringsAsFactors = FALSE, check.names = FALSE)
@@ -438,11 +481,11 @@ main <- function() {
       .newbees <- .noh[.noh$group %in% c("inat_only", "inat_and_collected"), , drop = FALSE]
       if (nrow(.newbees)) {
         writeLines(format_new_bees(.noh, mode = "review"))
-        dir.create("data/observations/review", showWarnings = FALSE, recursive = TRUE)
+        dir.create("data/inat_observations/review", showWarnings = FALSE, recursive = TRUE)
         write.csv(.newbees[, c("scientific_name", "taxon_rank", "group", "n_inat_records",
                                "n_inat_research_grade", "n_specimen_records", "taxon_id")],
-                  "data/observations/review/cabr_new_bees_not_on_holway.csv", row.names = FALSE, na = "")
-        bx_out("data/observations/review/cabr_new_bees_not_on_holway.csv")
+                  "data/inat_observations/review/qc_review_inat_new_bees_not_on_holway.csv", row.names = FALSE, na = "")
+        bx_out("data/inat_observations/review/qc_review_inat_new_bees_not_on_holway.csv")
       } else bx_kv("New bees", "none — every CABR bee with iNat records is on Holway")
     } else bx_kv("New bees", "skipped (need the CABR checklist + cleaned specimen/iNat tables)")
   }, error = function(e) bx_note("new-bees review failed: ", conditionMessage(e)))
@@ -450,13 +493,13 @@ main <- function() {
   dt <- round(as.numeric(difftime(Sys.time(), t0, units = "mins")), 1)
   # ---- NEEDS-YOU rollup: collect the run's action items from the review artifacts on disk,
   # so a returning user sees everything that wants their attention in ONE place at the end. ----
-  .maps_dir <- "data/observations/review/review_location/by_surveyors"
+  .maps_dir <- "data/inat_observations/review/location/by_surveyors"
   .n_maps <- if (dir.exists(.maps_dir)) length(list.files(.maps_dir, pattern = "^cabr_pins_to_fix_.*\\.html$")) else 0L
-  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), "review_location/by_surveyors/")
+  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), "review/location/by_surveyors/")
   .n_tax <- .n_rows("data/reference/generated/cabr_taxon_ids_needs_review.csv")
   if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax), "cabr_taxon_ids_needs_review.csv")
-  .n_dupe <- .n_rows("data/specimens/specimens_clean/review/cabr_specimen_bee_duplicates.csv")
-  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "cabr_specimen_bee_duplicates.csv")
+  .n_dupe <- .n_rows("data/specimens/specimens_clean/review/qc_review_specimen_duplicates.csv")
+  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "qc_review_specimen_duplicates.csv")
   .n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
   if (.n_notes > 0) bx_need(sprintf("%d obs notes (optional review)", .n_notes), "run review_notes()")
 
@@ -480,21 +523,21 @@ bx_analysis_files <- function() {
   message("")
   message("  FILES FOR ANALYSIS")
   grp("checklists")
-  item("data/checklists/cabr/cabr_official_native_bee_checklist.csv")
-  item("data/checklists/cabr/cabr_raw_inat_native_bee_checklist.csv")
-  item("data/checklists/cabr/cabr_specimen_native_bee_checklist.csv")
+  item(PATHS$checklist_cabr_official)
+  item(PATHS$checklist_cabr_raw_inat)
+  item(PATHS$checklist_cabr_specimen)
   grp("cleaned observations")
-  item("data/observations/inat_clean/cabr_inat_bee_clean.csv")
-  item("data/observations/inat_clean/cabr_inat_plant_clean.csv")
+  item(PATHS$inat_clean)
+  item(PATHS$inat_plant_clean)
   grp("survey record")
-  item("data/project_info/master_per_survey_info.csv")
-  item("data/project_info/rosters/surveyor_roster.csv")
+  item(PATHS$per_survey)
+  item(PATHS$surveyor_roster)
   grp("reference / lookups")
-  item("data/reference/sd_bee_taxonomy_lookup.csv")
-  item("data/reference/cabr_plant_taxonomy_lookup.csv")
-  item("data/reference/holway_sd_bee_reference_table_v3.csv")
+  item(PATHS$taxonomy_lookup)
+  item(PATHS$plant_taxonomy_lookup)
+  item(PATHS$holway_reference)
   grp("specimens")
-  item("data/specimens/specimens_clean/cabr_specimen_bee_clean.csv")
+  item(PATHS$specimen_clean)
   grp("spatial / boundaries")
   item("data/spatial/boundaries/cabr/cabr_survey_box.shp")
   item("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")

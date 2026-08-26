@@ -24,8 +24,8 @@ OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint"); dir.create(OUT_DIR, recu
 BND_COUNTY <- "data/spatial/boundaries/san_diego_county/sd_county_boundary.shp"
 BND_CABR   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
 BND_PL     <- "data/spatial/boundaries/point_loma/point_loma_boundary.shp"
-CHECKLIST_CABR   <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
-CHECKLIST_HOLWAY <- "data/checklists/sd_county/sd_holway_native_bee_checklist.csv"
+CHECKLIST_CABR   <- PATHS$checklist_cabr_official
+CHECKLIST_HOLWAY <- PATHS$checklist_sd_holway
 SPECIES_RANKS <- c("species", "subspecies")
 
 # ---- shares from the checklists ---------------------------------------------

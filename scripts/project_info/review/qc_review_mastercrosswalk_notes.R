@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/review_notes.R
+# project_info/qc_review_mastercrosswalk_notes.R
 # beescabr -- interactive review of free-text observation NOTES
 # Created 2026-07-16.
 #
@@ -8,7 +8,7 @@
 # otherwise notes are left untouched (see scripts/project_info/free_text_notes_status.md).
 # Triaging free text is a human job.
 #
-# Why notes get their OWN reviewer (not review_crosswalk.R):
+# Why notes get their OWN reviewer (not qc_review_mastercrosswalk.R):
 #   Tags and obs-FIELDS are reusable -- once you file "windspeed" as metadata,
 #   every future obs carrying that field is known. NOTES are free text, unique
 #   per observation, so a decision can't be filed as a reusable "variant".
@@ -22,20 +22,20 @@
 #   <Enter>  accept the highlighted (*) guess      u  unsure -> park as "ambiguous"
 #   s        skip (stays un-reviewed, returns)      q  save & quit      ?  help
 #
-# Input:   data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv   (brain output)
-# Output:  data/project_info/inaturalist_project_key_setup/review/notes_reviewed.csv                (persistent, per obs_id)
+# Input:   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_notes.csv   (brain output)
+# Output:  data/project_info/review/qc_review_mastercrosswalk_notes_reviewed.csv                (persistent, per obs_id)
 #   Non-interactive preview only:
-#          data/project_info/inaturalist_project_key_setup/review/notes_auto_suggestions.csv        (guesses, un-reviewed)
+#          data/project_info/review/qc_review_mastercrosswalk_notes_suggestions.csv        (guesses, un-reviewed)
 #
-# Run: source("scripts/project_info/review_notes.R"); review_notes()
+# Run: source("scripts/project_info/review/qc_review_mastercrosswalk_notes.R"); review_notes()
 #      BEESCABR_NONINTERACTIVE=1 Rscript -e 'source(...); review_notes()'  # preview guesses
 # =============================================================
 
 library(dplyr); library(readr); library(stringr)
 
-NOTES_IN       <- "data/project_info/inaturalist_project_key_setup/review/review_inat_unknown_notes.csv"
-NOTES_REVIEWED <- "data/project_info/inaturalist_project_key_setup/review/notes_reviewed.csv"
-NOTES_SUGGEST  <- "data/project_info/inaturalist_project_key_setup/review/notes_auto_suggestions.csv"
+NOTES_IN       <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_notes.csv"
+NOTES_REVIEWED <- "data/project_info/review/qc_review_mastercrosswalk_notes_reviewed.csv"
+NOTES_SUGGEST  <- "data/project_info/review/qc_review_mastercrosswalk_notes_suggestions.csv"
 
 # The categories a note can be filed under. 1/2/3 are what you type; a note the
 # guesser can't place (or you mark 'u') lands in "ambiguous".

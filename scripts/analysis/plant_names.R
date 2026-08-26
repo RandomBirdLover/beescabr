@@ -12,7 +12,7 @@
 #
 # Sources, merged (later wins), so it works offline AND improves when refreshed:
 #   1. data/reference/cabr_plant_taxonomy_lookup.csv  (in-park plant taxonomy; genus rows)
-#   2. data/observations/reference/cabr_inat_plant_all_taxa.csv (all in-park plant taxa)
+#   2. data/inat_observations/reference/cabr_inat_plant_all_taxa.csv (all in-park plant taxa)
 #   3. data/checklists/plants/plant_genus_common.csv  (the refreshable cache written by
 #      scripts/refresh_plant_common_names.R -- fills genera the two local files miss, via
 #      the iNaturalist taxa API). Authoritative: its entries override the local seed.

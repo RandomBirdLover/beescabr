@@ -39,7 +39,7 @@ suppressPackageStartupMessages({
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("holway_id_set")) source("scripts/analysis/not_on_holway.R")  # check the NEWEST helper, so a stale session reloads the updated file
 if (!exists("BEE_EVIDENCE")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-CHECKLIST_CABR <- "data/checklists/cabr/cabr_official_native_bee_checklist.csv"
+CHECKLIST_CABR <- PATHS$checklist_cabr_official
 OUT_DIR        <- file.path(DIR_REPORT, "coverage/checklist_gaps")   # report-only (park's county additions / QC)
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 

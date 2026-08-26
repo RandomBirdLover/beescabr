@@ -40,7 +40,7 @@ needs a look and remembers what you've cleared.
 - `needs_verification` = TRUE when any of genus/subgenus/complex/species/
   subspecies is new to Holway and not yet verified.
 - `new_at_rank` = which level(s) are new (e.g. "genus,species").
-- `cabr_inat_to_verify.csv` (in `data/observations/inat_clean/qc/`) = just the
+- `cabr_inat_to_verify.csv` (in `data/inat_observations/inat_clean/qc/`) = just the
   flagged observations — your worklist.
 
 ## Recording your checks
@@ -54,7 +54,7 @@ Columns: `taxon_id, verified`. Once you've confirmed a bee's photo/ID, add its
 The ingest now also re-pulls observations that were **re-identified or edited
 on iNaturalist since the last run** (not just brand-new ones), so a scientist
 fixing an ID flows back into your data. The cutoff time is stored in
-`data/observations/cache/last_ingest.txt`. To re-pull everything from scratch:
+`data/inat_observations/cache/last_ingest.txt`. To re-pull everything from scratch:
 `BEESCABR_FULL_INGEST=1`.
 
 ## Run order (RStudio)
