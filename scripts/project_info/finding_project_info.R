@@ -38,7 +38,6 @@
 #   data/project_info/master_per_survey_info.csv                      <- built upon in place
 #   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_tags.csv        <- unrecognized hashtags
 #   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_fields.csv      <- unrecognized obs-field names
-#   data/project_info/review/qc_review_mastercrosswalk_inat_unknown_notes.csv       <- notes carrying survey keywords
 #
 # Run: source("scripts/project_info/finding_project_info.R"); finding_project_info()
 # =============================================================
@@ -81,7 +80,6 @@ FPI_MISTAGS        <- "data/inat_observations/review/qc_review_inat_mistagged_tr
 FPI_TIES           <- "data/project_info/review/qc_review_survey_transect_overlap.csv"  # equal-split days to rule (review_transect_ties)
 FPI_UNKNOWN_TAGS   <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_tags.csv"    # unknown hashtags
 FPI_UNKNOWN_FIELDS <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_fields.csv"  # unknown obs-field NAMES
-FPI_UNKNOWN_NOTES  <- "data/project_info/review/qc_review_mastercrosswalk_inat_unknown_notes.csv"   # notes w/ survey keywords
 SD_COLUMNS <- c("year", "role", "source", "date",
                 "transects", "surveyors", "inat_username", "method", "technique",
                 "confirmed", "confirmed_by", "n_obs", "n_speci", "n_days", "note")
@@ -227,17 +225,6 @@ fpi_unknown_fields <- function(df, crosswalk, our_users) {
 # survey keyword (10-min, times, weather, transect, "bee survey"...). These may
 # carry survey info that isn't structured into a tag/field yet.
 # ------------------------------------------------------------
-fpi_unknown_notes <- function(df, our_users) {
-  kw <- "10\\s*-?\\s*min|start time|end time|\\bweather\\b|\\bwind\\b|temperature|transect|bee survey|cabrillo"
-  df |>
-    filter(observer %in% our_users, !is.na(description), description != "") |>
-    mutate(note = str_squish(description), hit = str_extract_all(tolower(note), kw)) |>
-    filter(lengths(hit) > 0) |>
-    transmute(obs_id, observer, observed_on, url,
-              keywords = vapply(hit, function(h) paste(sort(unique(h)), collapse = "; "), character(1)),
-              note = substr(note, 1, 200)) |>
-    arrange(observer, observed_on)
-}
 
 # ------------------------------------------------------------
 # in_cabr via the real boundary (point-in-polygon). Rows with missing coords
@@ -354,7 +341,6 @@ finding_project_info <- function(write = TRUE) {
                                 tolower(tag))) |>
     arrange(desc(cabrillo_ish), desc(n_obs))
   unknown_fields <- fpi_unknown_fields(base, crosswalk, our_users)
-  unknown_notes  <- fpi_unknown_notes(base, our_users)
 
   if (write) {
     dir.create(dirname(FPI_MEMBERSHIP), recursive = TRUE, showWarnings = FALSE)
@@ -365,17 +351,16 @@ finding_project_info <- function(write = TRUE) {
     if (!is.null(ties))    write.csv(ties,    FPI_TIES,    row.names = FALSE, na = "")
     write.csv(unknown_tags,   FPI_UNKNOWN_TAGS,   row.names = FALSE, na = "")
     write.csv(unknown_fields, FPI_UNKNOWN_FIELDS, row.names = FALSE, na = "")
-    write.csv(unknown_notes,  FPI_UNKNOWN_NOTES,  row.names = FALSE, na = "")
     bx_kv("Classified", format(nrow(membership), big.mark = ","), " observations (bees + plants)")
     bx_kv("Surveys", nrow(survey_dates), " confirmed")
-    bx_kv("Review queue", nrow(unknown_tags), " unknown tags · ", nrow(unknown_fields), " fields · ", nrow(unknown_notes), " notes · ", nrow(review_windows), " windows")
+    bx_kv("Review queue", nrow(unknown_tags), " unknown tags · ", nrow(unknown_fields), " fields · ", nrow(review_windows), " windows")
     if (!is.null(mistags)) bx_cont(nrow(mistags), " stray transect tags to fix")
     if (!is.null(ties) && nrow(ties)) bx_cont(nrow(ties), " tie day(s) to rule")
     bx_out("master_per_survey_info.csv, cabr_inat_raw.csv (+ review files)")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  mistags = mistags, ties = ties, unknown_tags = unknown_tags, unknown_fields = unknown_fields,
-                 unknown_notes = unknown_notes))
+                 ))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0) finding_project_info()

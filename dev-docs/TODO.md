@@ -50,15 +50,6 @@ were two separate lists covering the same project).
   Rewrite against the CURRENT schema: crosswalk columns are `what_for` /
   `inat_tag_variants` (not `type` / `category` / `inat_variants`), and the brain's
   membership rows use `source == "beeple-window"` (not `"observation"`).
-- [ ] **Notes reviewer (standalone `clean/qc_review_mastercrosswalk_notes.R`).** Built and deployed,
-  but deliberately NOT wired into the pipeline -- run it by hand. It walks each
-  free-text obs note the brain flagged, one at a time, with a keyword guess
-  (survey / metadata / not-survey / ambiguous), and remembers every decision per
-  `obs_id` in `notes_reviewed.csv` (a reviewed note never comes back). Still to do:
-  tune the keyword buckets (the "metadata" guess over-fires on weather words like
-  "wind" that also appear in personal notes), and decide whether reviewed
-  decisions should feed back into the brain's survey-membership call or stay an
-  advisory side-file.
 - [ ] **Add iNaturalist API authentication (JWT) for private/obscured coords.**
   The pipeline makes anonymous **v1** requests today (public data only), so obscured
   obs stay obscured. To pull true coordinates, authenticate: get a JWT from

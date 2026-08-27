@@ -219,7 +219,7 @@ Every interactive prompt in the pipeline uses one consistent set of keys, so you
 
 **Heads-up prompts — nothing to decide.** When a step is only telling you something (e.g. "here are the maps to send your surveyors"), it ends with **"Press Enter to continue"**, and there `Enter` always means continue.
 
-**Item-by-item reviewers** — `review_crosswalk`, `review_windows` (and transect ties), `review_notes`, `review_plant_names`. Each walks one item at a time behind a `>` prompt and prints its own legend on screen. They share the same control keys:
+**Item-by-item reviewers** — `review_crosswalk`, `review_windows` (and transect ties), 
 
 - **`<Enter>`** — accept the highlighted (`*`) suggestion, where one is shown.
 - **`s`** — skip this item for now (it comes back next run).

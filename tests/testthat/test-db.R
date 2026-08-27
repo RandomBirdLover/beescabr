@@ -80,8 +80,11 @@ test_that("ingest_observations pages via raw text and DuckDB-side parsing", {
   }
 
   # per_page = 2 forces 3 pages; commit_every = 1 commits each page
+  # state_path MUST be injected: its default is repo-root-relative, so a test run
+  # would write a real last_ingest.txt under tests/testthat/ and dirty the repo.
   n <- ingest_observations(con, place_id = 1, taxon_id = 1, without_taxon_id = 1,
                            incremental = FALSE, per_page = 2L, commit_every = 1L, throttle = 0,
+                           state_path = file.path(tempdir(), "last_ingest_test.txt"),
                            request_text_fn = fake_text, sleep_fn = function(...) NULL, verbose = FALSE)
   expect_equal(n, 5L)
   expect_equal(count_observations(con), 5L)

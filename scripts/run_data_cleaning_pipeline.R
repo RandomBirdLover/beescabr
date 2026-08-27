@@ -14,7 +14,7 @@
 #   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
 #                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
 #                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
-#                transect ties. Notes reviewer is standalone. Skipped non-interactive.
+#                transect ties. Skipped non-interactive.
 #   4.  CLEAN    cabr_inat_bee_clean.csv (labeled CABR bee table; walk-in re-marked not-survey)
 #   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
 #                per-source checklists (parked until built)
@@ -314,21 +314,6 @@ main <- function() {
       bx_cont("re-running the brain to apply your crosswalk edits…")
       finding_project_info()
     }
-    # [3b-notes] Free-text notes are OPTIONAL -- ask whether to review them this run.
-    # 'y' sources the reviewer from project_info/ and runs it; anything
-    # else proceeds without notes (the reviewer is never even sourced). Interactive-only.
-    n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
-    if (n_notes > 0) {
-      ans <- tolower(trimws(readline(sprintf(
-        "\n[3b-notes] %d free-text note(s) flagged.  Review them now?  [y/N]: ",
-        n_notes))))
-      if (ans %in% c("y", "yes")) {
-        source("scripts/project_info/review/qc_review_mastercrosswalk_notes.R")
-        review_notes()
-      } else {
-        bx_cont("proceeding without notes (reviewer not run)")
-      }
-    }
 
     # [3d] SURVEY-DATE WINDOWS -- heads-up queue of planned windows with no tagged
     # survey nearby (possible missed surveys). Runs LAST so it sees every tag + field.
@@ -532,8 +517,6 @@ main <- function() {
   if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax), "cabr_taxon_ids_needs_review.csv")
   .n_dupe <- .n_rows("data/specimens/specimens_clean/review/qc_review_specimen_duplicates.csv")
   if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "qc_review_specimen_duplicates.csv")
-  .n_notes <- .n_rows(FPI_UNKNOWN_NOTES)
-  if (.n_notes > 0) bx_need(sprintf("%d obs notes (optional review)", .n_notes), "run review_notes()")
 
   message("")
   bx_rule()

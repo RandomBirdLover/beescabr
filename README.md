@@ -207,7 +207,7 @@ All of them live in `dev-docs/` unless noted.
 | 9 | **analysis_roadmap.md** | Stakeholder questions, triaged into a buildable plan. |
 | 10 | **VERIFICATION_DESIGN.md** · **verification_guide.md** | What the verification workflow is, and how to answer its prompts. |
 | 11 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
-| 12 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** · **FREE_TEXT_NOTES.md** | Notes on the script layout, the test suite, and the optional notes reviewer. |
+| 12 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
 | 13 | **TODO.md** | Open work, by area. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
