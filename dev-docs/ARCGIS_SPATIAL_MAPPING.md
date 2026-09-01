@@ -1,4 +1,4 @@
-# Spatial layers and mapping
+# ArcGIS spatial layers and mapping
 
 > This file is about the **geodata**: where each layer came from and what is known to be
 > wrong with it. How the interactive map *pages* are built and published is in

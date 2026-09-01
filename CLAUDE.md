@@ -116,61 +116,27 @@ Why this matters: iNaturalist renames taxa, the checklists spell some genera
 their own way, and subspecies roll up to the parent species. Ids survive all
 three; strings do not.
 
-## Page layout: the standard order for a table page
+## Page layout
 
-Every table page on the public site follows the same order. This is about the HTML
-pages built by `scripts/analysis/*.R` and published from `docs/`. **Maps are exempt**
-and have their own standard in `dev-docs/WEBSITE_GUIDE.md`, which also covers how a
-page gets published and why two maps are built with R/leaflet and one with raw JS.
+Public table pages follow a fixed slot order: title and byline, a **one-sentence** lead,
+an optional key as a list, **one** caveat box, the table, column keys under the table,
+and provenance last in an "About this data" box. Two rules hold it together: each block
+must look different from its neighbours, and never repeat the scope lead in the note
+below it. Maps are exempt.
 
-1. **Title, then byline.**
-2. **Lead — exactly one sentence.** What this page is and who it is for. If you want
-   to add a second sentence, it belongs in one of the slots below.
-3. **Key — only if the page uses codes, and never as prose.** A `<ul class="cov">`
-   list, one line per term. Omit the slot entirely when there is nothing to look up.
-4. **The one thing to know — a single box.** Each page gets *one* caveat, not a stack
-   of bolded paragraphs. Merge overlapping warnings, and frame it as what the reader
-   can do rather than what the data lacks ("Two ways to help", not "Limitations").
-5. **The table.**
-6. **Column keys, under the table** (`<p class="tkey">`). Anything explaining one
-   column (IUCN codes, the conservation star) goes here. Not in the intro, and not on
-   hover: a phone cannot hover.
-7. **Provenance last** (`<div class="scope scope-foot">`, which prints an "About this
-   data" label). Source, what was pooled, the cut-offs that decide a label, data-as-of.
-
-Two rules that make the order work:
-
-- **Each block must look different from its neighbours** (a sentence, a list, a tinted
-  box). Seven identically styled paragraphs doing three different jobs is what made
-  these pages unreadable: you had to read each one to find out which kind it was.
-- **Do not repeat the scope lead in the note below it.** Every guide had a paragraph
-  restating "pools netted specimens and every iNaturalist photo, all years, whole park"
-  immediately under the sentence that just said it. Say the new thing only.
-
-Provenance goes at the BOTTOM because it is what a reader checks when a number looks
-wrong, not what they need before seeing the table. `bee_table_css()` in
-`theme_beescabr.R` carries `.scope-foot`, `.tkey`, and `.cov`, so a page gets the
-styling by using the classes.
+**The full standard, with the reasoning and the CSS classes, is in
+`dev-docs/WEBSITE_GUIDE.md`. Read it before building or restructuring a page.**
 
 ## Color: `theme_beescabr.R` is the only source
 
-Every color a script draws with comes from `scripts/analysis/theme_beescabr.R`
-(`BEE_HTML`, `BEE_HTML_GREEN`, `BEE_FAMILY`, `BEE_MAP_CHROME`, `BEE_SLIDE`).
 **Never write a hex literal into an analysis, publish, or page-building script.**
+Reference a token (`BEE_HTML[["ink"]]`). If the colour you need does not exist yet, add
+it to the theme with a comment saying what it is for, then reference it. For CSS inside
+a `sprintf()` template or a standalone template string, where `', var, '` would print
+literally, write a `__C_NAME__` token and pass the finished string through
+`beescabr_fill_colors()`.
 
-- Need a color that exists? Reference its token: `BEE_HTML[["ink"]]`.
-- Need one that does not exist yet? **Add it to the theme**, with a comment saying
-  what it is for, then reference it. Do not inline it "just this once".
-- Building a page whose CSS lives inside a `sprintf()` template (the Leaflet pages
-  do this) and cannot interpolate R values? Write a `__C_NAME__` token in the
-  template and fill it after the template is built, the way
-  `bee_occurrence_explorer.R` does. That is still sourcing from the theme.
-- The palette reference swatches live in `data/bee_themes_pallete/`.
-
-Why: hardcoded colors drift. Three different deep greens (`#1c5728`, `#1e5a2b`,
-`#1c5c28`) were in use across pages that were all meant to match, and nothing
-failed, because near-identical greens look fine side by side until someone
-changes the palette and only some of the site moves.
+Why it matters, and the drift it already caused, is in `dev-docs/WEBSITE_GUIDE.md`.
 
 ## Running the pipeline
 

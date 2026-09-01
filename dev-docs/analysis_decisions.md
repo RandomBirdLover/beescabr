@@ -210,7 +210,7 @@ The park's sampling is uneven — heavily weighted to one or two survey years (2
 
 ## Spatial analysis
 
-Moved to **`spatial_mapping.md`** (this folder), which now holds all layer
+Moved to **`ARCGIS_SPATIAL_MAPPING.md`** (this folder), which now holds all layer
 provenance, the coastal discrepancy, and how the layers are used.
 
 ---

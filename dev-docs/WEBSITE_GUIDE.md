@@ -50,14 +50,43 @@ will look broken.**
 
 ## 3. Page layout
 
-Every table page follows the same slot order: title and byline, a one-sentence lead, an
-optional key as a list, one caveat box, the table, column keys under the table, and
-provenance last in an "About this data" box. The full standard, with the reasoning, is in
-**CLAUDE.md** under "Page layout". `bee_table_css()` in `theme_beescabr.R` carries the
-`.scope-foot`, `.tkey`, and `.cov` classes, so a page gets the styling by using them.
+Every table page on the public site follows the same order. This is about the HTML
+pages built by `scripts/analysis/*.R` and published from `docs/`. **Maps are exempt**
+and have their own standard in `dev-docs/WEBSITE_GUIDE.md`, which also covers how a
+page gets published and why two maps are built with R/leaflet and one with raw JS.
 
-Colours never appear as hex literals in a page script. They come from
-`theme_beescabr.R`; see "Color" in CLAUDE.md.
+1. **Title, then byline.**
+2. **Lead — exactly one sentence.** What this page is and who it is for. If you want
+   to add a second sentence, it belongs in one of the slots below.
+3. **Key — only if the page uses codes, and never as prose.** A `<ul class="cov">`
+   list, one line per term. Omit the slot entirely when there is nothing to look up.
+4. **The one thing to know — a single box.** Each page gets *one* caveat, not a stack
+   of bolded paragraphs. Merge overlapping warnings, and frame it as what the reader
+   can do rather than what the data lacks ("Two ways to help", not "Limitations").
+5. **The table.**
+6. **Column keys, under the table** (`<p class="tkey">`). Anything explaining one
+   column (IUCN codes, the conservation star) goes here. Not in the intro, and not on
+   hover: a phone cannot hover.
+7. **Provenance last** (`<div class="scope scope-foot">`, which prints an "About this
+   data" label). Source, what was pooled, the cut-offs that decide a label, data-as-of.
+
+Two rules that make the order work:
+
+- **Each block must look different from its neighbours** (a sentence, a list, a tinted
+  box). Seven identically styled paragraphs doing three different jobs is what made
+  these pages unreadable: you had to read each one to find out which kind it was.
+- **Do not repeat the scope lead in the note below it.** Every guide had a paragraph
+  restating "pools netted specimens and every iNaturalist photo, all years, whole park"
+  immediately under the sentence that just said it. Say the new thing only.
+
+Provenance goes at the BOTTOM because it is what a reader checks when a number looks
+wrong, not what they need before seeing the table. `bee_table_css()` in
+`theme_beescabr.R` carries `.scope-foot`, `.tkey`, and `.cov`, so a page gets the
+styling by using the classes.
+
+`bee_table_css()` in `theme_beescabr.R` carries the `.scope-foot`, `.tkey`, and `.cov`
+classes, so a page gets the styling by using them. Colours never appear as hex literals
+in a page script; they come from `theme_beescabr.R` (see "Color" in CLAUDE.md).
 
 ## 4. Map pages are built differently, on purpose
 
@@ -87,7 +116,30 @@ Maps are exempt from the page-layout standard in section 3. That standard ends w
 provenance at the bottom of the page, and a map has no bottom, so its source line lives
 in the title card instead.
 
-## 5. Checking your work
+## 5. Colour comes only from the theme
+
+`theme_beescabr.R` holds every colour the project draws with: `BEE_HTML`,
+`BEE_HTML_GREEN`, `BEE_FAMILY`, `BEE_PANEL`, `BEE_PREF`, `BEE_BADGE`, `BEE_MAP`,
+`BEE_MAP_CHROME`, `BEE_SITE` / `BEE_SITE_DARK` (the public site in light and dark), and
+`BEE_SLIDE`. The rule for writing code is in CLAUDE.md; this is why it exists.
+
+Hardcoded colours drift silently. Three different deep greens (`#1c5728`, `#1e5a2b`,
+`#1c5c28`) were in use across pages that were all meant to match, and nothing ever failed,
+because near-identical greens look fine side by side. They only diverge visibly when
+somebody changes the palette and half the site moves. Routing all 37 literals through the
+theme changed exactly two pixels' worth of the site: the field guides' headings, which had
+been on the drifted green.
+
+**Two traps when converting a page:**
+
+- **`&#128029;` is a bee emoji, not a colour.** A naive hex pattern matches emoji
+  character entities. Six of the first 43 "colours" found in these scripts were emoji.
+- **Quoting is per-file, not per-project.** Some scripts build HTML with single-quoted
+  strings and some with double-quoted; a `', var, '` splice that works in one prints
+  literally in the other. After converting, grep the built pages for `BEE_` to catch R
+  code that leaked into the output.
+
+## 6. Checking your work
 
 The in-app preview browser renders Leaflet controls differently from a real browser: the
 control row can appear scattered and the zoom animation is dropped. **Do not treat that as

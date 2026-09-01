@@ -49,7 +49,7 @@ Started 2026-08-25.
 - [x] **Fixed 12 stale facts across dev-docs** — dead entrypoints, a done item
       marked open, wrong file paths, a retired Python script.
 - [x] **Merged `PITFALLS.txt` + `data_issues_notes.md`** into `LIMITATIONS.md`.
-- [x] **Created `spatial_mapping.md`** from the 111-line `spatial_utils.R` header;
+- [x] **Created `ARCGIS_SPATIAL_MAPPING.md`** from the 111-line `spatial_utils.R` header;
       script trimmed to 33 lines of what a code reader needs.
 - [x] **`.gitignore` documents WHY** each rule exists — people, credentials, park
       localities.

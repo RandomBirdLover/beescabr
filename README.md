@@ -210,7 +210,7 @@ All of them live in `dev-docs/` unless noted.
 | 7 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
 | 8 | **ANALYSIS_CATALOG.md** | What every analysis output is, one entry per figure/table. |
 | 9 | **analysis_decisions.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
-| 10 | **spatial_mapping.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
+| 10 | **ARCGIS_SPATIAL_MAPPING.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
 | 11 | **analysis_roadmap.md** | Stakeholder questions, triaged into a buildable plan. |
 | 12 | **VERIFICATION_DESIGN.md** · **verification_guide.md** | What the verification workflow is, and how to answer its prompts. |
 | 13 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
