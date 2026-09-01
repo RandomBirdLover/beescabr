@@ -104,6 +104,42 @@ These are gaps baked in at data-entry time; only a change to how data is collect
 - **Casual iNat coordinate precision varies** (`positional_accuracy` up to hundreds of
   m). We drop >250 m for the spatial map; finer work would need better-located records.
 
+## Bees iNaturalist has not published a taxon for
+
+17 taxa on the Holway checklist have a name but no `taxon_id`, because
+**iNaturalist has no published taxon for them** — not because anything is
+broken or unverified. These are real bees; the platform's taxonomy just hasn't
+caught up.
+
+This is already checked and recorded. `reference/resolve_missing_ids.R` searches
+iNaturalist for every named row missing an id, assigns one only on an
+unambiguous match (right rank, name match, correct parent in the ancestry), and
+caches the verdict to `data/reference/generated/resolved_missing_ids.csv` with
+`status = filled / not_found_or_ambiguous`. A wrong id is worse than none, so
+anything unfound stays blank. Reruns read the cache instead of re-hitting the API.
+
+(The cache holds 18 `not_found_or_ambiguous` entries but the built lookup has 17
+id-less rows: *Holcopasites minima* was searched unsuccessfully at one point and
+later resolved by another path. Count the LOOKUP, not the cache.)
+
+| genus | taxa with no iNat taxon |
+|---|---|
+| *Hesperapis* | cactorum, irrasa, malacothamni, mentzeliae, palpalis, timberlakei |
+| *Lasioglossum* | pilosifrons, turgiventre, Z17 |
+| *Protandrena* | atripes, subarmaticeps |
+| *Stelis* | anthocopae, imperialis |
+| *Atoposmia copelandica* | albomarginata, arefacta (subspecies) |
+| *Megachile subnigra* | angelica, subnigra (subspecies) |
+
+**What this means downstream:** these taxa carry no iNat link, so any figure or
+guide that links a bee to its iNaturalist page falls back to a name search for
+them. That is correct behavior, not a bug to chase. They also cannot join to
+iNaturalist observation records, because there are none.
+
+**When to revisit:** at the annual reference refresh. If iNaturalist publishes a
+taxon, the resolver fills it in on the next build with no code change. Delete the
+row from `resolved_missing_ids.csv` to force a fresh lookup early.
+
 ## One-liner for the paper
 
 > Volunteers generated an enormous, valuable dataset, but standardizing and cleaning it

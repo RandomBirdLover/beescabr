@@ -185,7 +185,18 @@ sb_tgt <- inat_geo %>% filter(species_key %in% sb_sp | genus_key %in% sb_gn) %>%
 sb_tgt <- dplyr::left_join(sb_tgt, .detail_tbl(inat, unique(sb_tgt$taxon)), by = "taxon")   # aggregate window + flower
 # iNat taxon ids for the logo link in every popup (a lookup miss -> name search, never dead)
 .lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
-.tid_of <- function(taxon) .lk$taxon_id[match(taxon, .lk$scientific_name)]
+.gid <- .lk[tolower(str_squish(.lk$rank)) == "genus", c("genus", "taxon_id")]
+.lk_nm <- str_squish(.lk$scientific_name); .lk_nm[is.na(.lk_nm) | .lk_nm == ""] <- NA_character_
+# A bounty row is either "Genus species" or a bare genus. Resolve against the lookup's
+# STRUCTURED columns, not its display name -- matching scientific_name used to miss any
+# genus the checklist spells differently (Biastes, Trachusa).
+.tid_of <- function(taxon) {
+  # Blank out empty names on BOTH sides: the lookup carries 56 rows with no
+  # scientific_name, and match("", ...) / match(NA, ...) would silently land on one.
+  tx <- str_squish(taxon); tx[is.na(tx) | tx == ""] <- NA_character_
+  id <- .lk$taxon_id[match(tx, .lk_nm)]
+  ifelse(is.na(id), .gid$taxon_id[match(tx, .gid$genus)], id)
+}
 sb_tgt$popup <- mapply(function(taxon, win, top, url)
   sprintf('<b><i>%s</i></b>%s<br>%s%s', ifelse(is.na(taxon), "bee", taxon),
           if (is.na(taxon)) "" else inat_photo_link(.tid_of(taxon), taxon),

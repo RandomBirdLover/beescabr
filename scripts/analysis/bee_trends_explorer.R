@@ -63,8 +63,16 @@ gn_ok <- pool %>% count(genus) %>% filter(n >= MIN_RECORDS)
 # iNat taxon ids, so each chart header can link its bee to its photos on iNaturalist
 # (a lookup miss falls back to a name search inside inat_photo_link, never a dead link).
 .lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
-.tid_of <- function(nm) { id <- .lk$taxon_id[match(nm, .lk$scientific_name)]
-                          if (length(id) && !is.na(id)) as.integer(id) else NULL }
+.gid <- .lk[tolower(str_squish(.lk$rank)) == "genus", c("genus", "taxon_id")]
+.lk_nm <- str_squish(.lk$scientific_name); .lk_nm[is.na(.lk_nm) | .lk_nm == ""] <- NA_character_
+# Rows are either "Genus species" or a whole genus. Fall back to the lookup's genus
+# rows rather than only its display names, which used to miss Biastes / Trachusa.
+.tid_of <- function(nm) {
+  # An empty name must never match: 56 lookup rows have a blank scientific_name.
+  nm <- str_squish(nm); if (!length(nm) || is.na(nm) || nm == "") return(NULL)
+  id <- .lk$taxon_id[match(nm, .lk_nm)]
+  if (is.na(id)) id <- .gid$taxon_id[match(nm, .gid$genus)]
+  if (length(id) && !is.na(id)) as.integer(id) else NULL }
 
 mk_taxon <- function(name, rank, fam, d) {
   cy <- counts_by_year(d)

@@ -118,3 +118,37 @@ test_that("the message says the existing site was left alone", {
   msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027")
   expect_true(grepl("unchanged|left|untouched", msg, ignore.case = TRUE))
 })
+
+# ---- freshness guard ---------------------------------------------------------
+# The analysis loop is best-effort: a script that fails leaves its PREVIOUS output on
+# disk and the run only prints a tally at the end. Publishing is a separate command, so
+# that tally can scroll away unread and last season's file goes live silently. Compare
+# each page's mtime against the cleaned tables it derives from instead of trusting it.
+test_that("a page older than its source data is reported stale", {
+  out <- c(fresh = 200, stale = 50)
+  expect_equal(publish_stale_pages(out, src_time = 100), "stale")
+})
+
+test_that("a page newer than the data is fine, and ties are not stale", {
+  expect_equal(publish_stale_pages(c(a = 150), src_time = 100), character(0))
+  expect_equal(publish_stale_pages(c(a = 100), src_time = 100), character(0))
+})
+
+test_that("tolerance absorbs same-run clock jitter", {
+  # a page written seconds before the source file in the same run is not stale
+  expect_equal(publish_stale_pages(c(a = 95), src_time = 100, tol_secs = 10), character(0))
+  expect_equal(publish_stale_pages(c(a = 80), src_time = 100, tol_secs = 10), "a")
+})
+
+test_that("missing times and an unknown source time never block publishing", {
+  expect_equal(publish_stale_pages(c(a = NA_real_), src_time = 100), character(0))
+  expect_equal(publish_stale_pages(c(a = 50), src_time = NA_real_), character(0))
+  expect_equal(publish_stale_pages(numeric(0), src_time = 100), character(0))
+})
+
+test_that("the stale message names every stale page and how to fix it", {
+  m <- publish_stale_message(c("bee_plant_matrix.html", "park_summary.html"))
+  expect_true(grepl("bee_plant_matrix.html", m, fixed = TRUE))
+  expect_true(grepl("park_summary.html", m, fixed = TRUE))
+  expect_true(grepl("run_all_analysis_pipeline.R", m, fixed = TRUE))
+})

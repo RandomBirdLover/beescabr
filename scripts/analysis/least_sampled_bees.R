@@ -47,6 +47,7 @@ has <- function(x) !is.na(x) & x != ""
 # ---- 1. pool records, tag method, keep species-level rows -------------------
 grab <- function(df, method) data.frame(
   method      = method,
+  taxon_id    = suppressWarnings(as.integer(df$taxon_id)),   # carried through, never re-derived from a name
   taxon_rank  = tolower(str_squish(df$taxon_rank)),
   genus       = str_squish(df$genus),
   epithet     = tolower(word(str_squish(df$species), -1)),
@@ -151,14 +152,20 @@ esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub
 INAT_ICON <- sprintf('<img src="%s" width="16" height="14" alt="iNaturalist observation" style="vertical-align:-3px">', INAT_LOGO_URL)
 cov_class <- function(s) ifelse(grepl("^both", s), "cb", ifelse(grepl("^photo", s), "cp", "cs"))
 st_rank   <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
-.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)   # iNat taxon ids for the logo links
+.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
+# Species rows carry their id from the records; a GENUS-only row (a bee never pinned to
+# species) needs the genus's own id, which only the lookup's genus rows have.
+.gid <- .lk[tolower(str_squish(.lk$rank)) == "genus", c("genus", "taxon_id")]
+.tid_for <- function(sp, is_gen) if (is_gen) .gid$taxon_id[match(sp, .gid$genus)] else
+  { i <- rec$taxon_id[rec$species == sp & !is.na(rec$taxon_id)]
+    if (length(i)) bee_taxon_id(i, rec$taxon_rank[rec$species == sp & !is.na(rec$taxon_id)]) else NA_integer_ }
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]
   cs   <- if (has(r$conservation)) sprintf('<sup class="cs" title="%s">*</sup>', esc(r$conservation)) else ""
   iucn_td <- if (HAVE_IUCN) sprintf('<td class="num"><span class="iucn i-%s">%s</span></td>',
                                     tolower(ifelse(has(r$iucn), r$iucn, "ne")), esc(ifelse(has(r$iucn), r$iucn, "NE"))) else ""
   bee_td <- sprintf('<td class="bee"><i>%s</i>%s%s%s</td>', esc(r$species), cs,
-                    inat_photo_link(.lk$taxon_id[match(r$species, .lk$scientific_name)], r$species),
+                    inat_photo_link(.tid_for(r$species, isTRUE(r$is_genus)), r$species),
                     if (has(r$common_name)) paste0('<span class="cn">', esc(r$common_name), '</span>') else "")
   fl <- if (has(r$example_url)) sprintf('%s <a href="%s" title="example iNaturalist observation">%s</a>', r$top_flowers_html, esc(r$example_url), INAT_ICON) else r$top_flowers_html
   cov_icon <- if (grepl("^photo", r$coverage))    ' <span class="vneed" title="Photographed but never netted, so a specimen voucher is needed. Go net one.">&#128300;</span>'       # microscope = collect a voucher

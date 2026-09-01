@@ -58,6 +58,7 @@ hav <- function(la1, lo1, la2, lo2) { R <- 6371000; k <- pi / 180
 
 # ---- 1. pool records, keep anything carrying a genus (any ID rank) -----------
 grab <- function(df) data.frame(
+  taxon_id    = suppressWarnings(as.integer(df$taxon_id)),   # carried through, never re-derived from a name
   taxon_rank  = tolower(str_squish(df$taxon_rank)),
   genus       = str_squish(df$genus),
   epithet     = tolower(word(str_squish(df$species), -1)),
@@ -145,10 +146,12 @@ status_note <- sprintf("Records and Status count all data. That means netted spe
 # ---- 3. styled, sortable HTML table -----------------------------------------
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
-# iNat taxon id per genus (same checklist lookup the species guide uses); a miss
-# falls back to a name search on iNat inside inat_photo_link, never a dead link.
+# A GENUS row needs the genus's OWN iNat id. Records carry species/subspecies ids, so
+# the genus id comes from the lookup's genus-rank row -- matched on the genus column,
+# not on an assembled display name (that is what used to miss Biastes and Trachusa).
 .lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
-tbl$inat_tid <- .lk$taxon_id[match(tbl$genus, .lk$scientific_name)]
+.gid <- .lk[tolower(str_squish(.lk$rank)) == "genus", c("genus", "taxon_id")]
+tbl$inat_tid <- .gid$taxon_id[match(tbl$genus, .gid$genus)]
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$status == "rare"
   tag <- if (r$n_species == 0) '<span class="cn">not yet ID&#39;d to species</span>' else ""

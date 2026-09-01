@@ -75,6 +75,39 @@ publish_empty_message <- function(src_dir) paste0(
   "  (To publish an EARLIER season instead, set BEESCABR_SEASON_YEAR, e.g.\n",
   "   BEESCABR_SEASON_YEAR=2026 Rscript scripts/run_publishing_materials_pipeline.R)")
 
+# ---- freshness guard --------------------------------------------------------
+# run_all_analysis_pipeline.R runs all 36 analysis scripts best-effort: one that fails
+# is reported in a tally at the END of the run and the loop continues -- leaving its
+# PREVIOUS output on disk. Publishing is a separate command, so that tally can scroll
+# away unread and last season's page goes live under this season's heading, with nothing
+# on the site to show it. Compare times rather than trusting the tally was read.
+# PURE: takes mtimes (seconds), not paths, so it is testable without touching a clock.
+publish_stale_pages <- function(out_times, src_time, tol_secs = 0) {
+  if (!length(out_times) || is.null(names(out_times))) return(character(0))
+  if (length(src_time) != 1L || is.na(src_time)) return(character(0))   # unknown source: never block
+  stale <- !is.na(out_times) & out_times < (src_time - tol_secs)
+  names(out_times)[stale]
+}
+
+publish_stale_message <- function(stale) paste0(
+  "These pages are OLDER than the cleaned data they are built from:\n",
+  paste0("    - ", stale, collapse = "\n"), "\n\n",
+  "  That usually means the analysis script that writes one of them FAILED on the\n",
+  "  last run, so the file on disk is from an earlier run. Publishing now would put\n",
+  "  outdated numbers on the live site.\n\n",
+  "  Nothing was changed -- docs/ is left untouched and the live site is unchanged.\n\n",
+  "  Re-run the analysis, check the failure tally it prints at the end, then publish:\n",
+  "    Rscript scripts/run_all_analysis_pipeline.R\n",
+  "    Rscript scripts/run_publishing_materials_pipeline.R\n\n",
+  "  (To publish anyway -- you know these pages are fine as they are:\n",
+  "   BEESCABR_ALLOW_STALE=1 Rscript scripts/run_publishing_materials_pipeline.R)")
+
+# mtime in seconds, or NA when the file is absent -- keeps the pure function clock-free.
+publish_mtime <- function(path) {
+  if (!length(path) || is.na(path) || !file.exists(path)) return(NA_real_)
+  as.numeric(file.info(path)$mtime)
+}
+
 # Landing cards grouped by section: pages sharing a tag sit together, sections in
 # first-appearance order, manifest order kept within a section -- so new pages can
 # be appended to PUBLISH_PAGES without disordering the landing grid.
@@ -263,6 +296,27 @@ publish_pages <- function() {
   dir.create(DOCS_DIR, showWarnings = FALSE, recursive = TRUE)
   nojekyll <- file.path(DOCS_DIR, ".nojekyll")            # serve files as-is, no Jekyll processing
   if (!file.exists(nojekyll)) file.create(nojekyll)
+
+  # ---- stale-output guard (runs BEFORE anything is written) ----
+  # Must come before the copy loop: once a page is copied into docs/ the live site has
+  # already changed, so a guard that fires afterwards cannot honestly say it stopped.
+  # run_all_analysis_pipeline.R is best-effort -- a failed script leaves its PREVIOUS
+  # output on disk and only prints a tally at the end, which is easy to miss when
+  # publishing happens later as a separate command.
+  if (!nzchar(Sys.getenv("BEESCABR_ALLOW_STALE"))) {
+    src_time <- suppressWarnings(max(c(publish_mtime(PATHS$inat_clean),
+                                       publish_mtime(PATHS$specimen_clean)), na.rm = TRUE))
+    if (!is.finite(src_time)) src_time <- NA_real_
+    times <- vapply(PUBLISH_PAGES, function(c) publish_mtime(file.path(SRC_DIR, c$src)), 0)
+    names(times) <- vapply(PUBLISH_PAGES, `[[`, "", "out")
+    stale <- publish_stale_pages(times, src_time, tol_secs = 60)
+    if (length(stale)) {
+      message("")
+      message("  STOPPING: ", publish_stale_message(stale))
+      message("")
+      return(invisible(FALSE))
+    }
+  }
 
   # ---- copy each public page into docs/ ----
   present <- list()

@@ -9,21 +9,16 @@ Started 2026-08-25.
 
 ## Blocked on you (I cannot do these)
 
-- [ ] **Answer the scoping question.** What will the supervisor actually do with
-      the repo, and how comfortable are they with R and git? This decides how much
-      of everything below is worth writing.
-      - Will they: run it each season · take over the code · review and archive it?
-      - Are they: comfortable with both · knows R not git · mostly a biologist?
-- [ ] **Roster affiliations** — Patricia, Sofia, Diego, Toby have blank
-      `affiliation` in the rosters.
-- [ ] **`@itazura` has no name** in `identifier_roster.csv` (first and last blank).
-- [ ] **Two placeholders in `DATA_ACCESS.md`** — the public site URL and a contact
-      person/email for someone requesting the data.
-- [ ] **Decide who the data contact is after you leave**, and say so in
-      `DATA_ACCESS.md`. Right now the answer is implicitly "Brandi."
-
-## I can do these once scoped
-
+- [x] **Answer the scoping question.** What will the supervisor actually do with  
+      answered 2026-08-26: Taro Katayama will BOTH run it each season and take over the code; comfortable with R and git.
+- [x] **Roster affiliations** — Patricia, Sofia, Diego, Toby have blank  
+      done -- all 16 identifier rows carry an affiliation.
+- [x] **`@itazura` has no name** in `identifier_roster.csv` (first and last blank).  
+      resolved -- affiliation reads 'Grade school student', so the name is deliberately withheld.
+- [x] **Two placeholders in `DATA_ACCESS.md`** — the public site URL and a contact  
+      done -- site URL verified live, contacts are Brandi Sanchez and Taro Katayama.
+- [x] **Decide who the data contact is after you leave**, and say so in  
+      done -- Taro Katayama holds the data; both contacts listed.
 - [ ] **Rewrite `PIPELINE_GUIDE.md`.** It is numbered 1-10, but sections 6-10 came
       over from the README and it has never had a proper pass. Should read as one
       document written for a new maintainer.
@@ -38,9 +33,8 @@ Started 2026-08-25.
 
 ## Nice to have
 
-- [ ] **Install `testthat`** so the 278 tests can be run without me:
-      `Rscript -e 'install.packages("testthat", repos="https://cloud.r-project.org")'`
-      then `Rscript -e 'library(testthat); test_dir("tests/testthat")'`
+- [x] **Install `testthat`** so the 278 tests can be run without me:  
+      done -- installed; the suite runs at 993 passing.
 - [ ] **Decide whether `data/analysis/` outputs get archived somewhere** the
       supervisor can reach, since `data/` never leaves your machine.
 

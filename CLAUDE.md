@@ -71,6 +71,51 @@ the test first, written to fail.
   or auto-running `main()`.
 - The CSV export is **retired** — never reintroduce `read.csv` of an export.
 
+## Taxon identity: join on `taxon_id`, never on a name string
+
+Two reference tables are the **authority** on what a taxon is:
+
+| what | table (`PATHS` key) | join key |
+|---|---|---|
+| bees | `data/reference/sd_bee_taxonomy_lookup.csv` (`taxonomy_lookup`) | `taxon_id` |
+| plants | `data/reference/cabr_plant_taxonomy_lookup.csv` (`plant_taxonomy_lookup`) | `taxon_id` |
+
+Rules, in order of how often they get broken:
+
+1. **Carry `taxon_id` through, don't look it up again.** The cleaned tables
+   already have the id on every record. If a script selects columns into a
+   working frame, keep `taxon_id` in that select. Building a display name and
+   then matching it back against `scientific_name` is the bug this rule exists
+   to prevent — it silently drops any taxon the two spellings disagree on.
+2. **Join on the id, then fall back to the name.** `match(df$taxon_id,
+   lookup$taxon_id)` first. For rows the id cannot resolve — the 17 taxa below —
+   match `scientific_name` against **the same lookup** and return *its* canonical
+   key. The fallback is what keeps those bees in the analysis; an id-only join
+   drops them. What is banned is matching a name you assembled yourself against
+   a name you assembled yourself, with no reference table in between.
+3. **Never let a missing id become a match.** `match(NA, x)` matches NA **to
+   NA**, and the lookup holds 17 id-less rows — so a plain `match()` relabels
+   every id-less record as whichever of those rows comes first in the file.
+   Filter to `!is.na(taxon_id)` before joining. Same for a blank
+   `scientific_name` on the name path.
+4. **Match a genus on the `genus` column**, using the lookup's genus-rank rows
+   (`rank == "genus"`), not on an assembled name.
+5. **A name is for display; an id is for identity.** Names are fine in titles,
+   labels, and CSV columns a human reads. They are never the join key.
+6. **A blank id is expected for 17 taxa — don't chase it.** They are real bees
+   off the Holway checklist that **iNaturalist has not published a taxon for**
+   (six *Hesperapis*, *Lasioglossum turgiventre* / *pilosifrons* / *Z17*, and
+   others). `reference/resolve_missing_ids.R` already searched for each one and
+   cached the verdict in `data/reference/generated/resolved_missing_ids.csv`
+   (`status = not_found_or_ambiguous`); it assigns an id only on an unambiguous
+   match, because a wrong id is worse than none. See `dev-docs/LIMITATIONS.md`.
+   Count these and say so in the run message; fall back to a name search for a
+   link, never to a name match for a join.
+
+Why this matters: iNaturalist renames taxa, the checklists spell some genera
+their own way, and subspecies roll up to the parent species. Ids survive all
+three; strings do not.
+
 ## Running the pipeline
 
 ```

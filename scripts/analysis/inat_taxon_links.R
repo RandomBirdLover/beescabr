@@ -27,3 +27,27 @@ inat_photo_link <- function(taxon_id, scientific_name) {
                  '<img src="%s" alt="iNaturalist" style="height:13px;width:auto;vertical-align:-2px;margin-left:6px"></a>'),
           inat_taxon_url(taxon_id, scientific_name), scientific_name, INAT_LOGO_URL)
 }
+
+# ---- carry the taxon_id, do not re-derive it ---------------------------------
+# Every cleaned record already carries a taxon_id. Scripts used to drop it during
+# aggregation and then recover it by matching an assembled display name against
+# sd_bee_taxonomy_lookup.csv -- which silently failed whenever the lookup spelled the
+# name differently (e.g. "Anthophora urbana clementina", or genera absent from the
+# checklist like Biastes and Trachusa), quietly downgrading a direct taxon link to a
+# name search. Keep taxon_id in the grab/select step and pass it here instead.
+#
+# Picks ONE id for a group of records: the species-level id wins, because a species
+# row pools its subspecies records and the row represents the species. Failing that,
+# the most common id present. All-missing -> NA, which inat_photo_link turns into the
+# name-search fallback (correct for a genuine data gap, e.g. a record with no id).
+bee_taxon_id <- function(ids, ranks) {
+  if (!length(ids)) return(NA_integer_)
+  ids   <- suppressWarnings(as.integer(ids))
+  ranks <- tolower(trimws(as.character(ranks)))
+  pick <- function(v) { v <- v[!is.na(v)]
+    if (!length(v)) return(NA_integer_)
+    as.integer(names(sort(table(v), decreasing = TRUE))[1]) }
+  sp <- pick(ids[ranks == "species"])
+  if (!is.na(sp)) return(sp)
+  pick(ids)
+}

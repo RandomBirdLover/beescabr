@@ -51,6 +51,7 @@ hav <- function(la1, lo1, la2, lo2) { R <- 6371000; k <- pi / 180
 
 # ---- 1. pool records, keep species-level ------------------------------------
 grab <- function(df) data.frame(
+  taxon_id    = suppressWarnings(as.integer(df$taxon_id)),   # carried through: never re-derive an id from a name
   taxon_rank  = tolower(str_squish(df$taxon_rank)),
   genus       = str_squish(df$genus),
   epithet     = tolower(word(str_squish(df$species), -1)),
@@ -97,6 +98,7 @@ make_row <- function(d, k, rank = "species", lookup = k) {
   data.frame(
     genus          = d$genus[1],
     bee            = k,
+    inat_tid       = bee_taxon_id(d$taxon_id, d$taxon_rank),   # from the records, not a name match
     common_name    = cn,
     n_records      = nrow(d),
     confidence     = if (nrow(d) < MIN_CONF) "low (n<10)" else "ok",
@@ -162,10 +164,8 @@ diet_class <- function(s) ifelse(grepl("^Special", s), "sp", ifelse(grepl("^Gene
                           ifelse(grepl("^Moder", s), "mo", "na")))
 pref_class <- function(s) ifelse(grepl("^Selective", s), "pref-sel", ifelse(grepl("^Generalist", s), "pref-gen", "pref-na"))
 st_rank <- c(rare = 0L, uncommon = 1L, common = 2L)   # hidden sort key so Status sorts by abundance, not alphabetically
-# iNat taxon id per bee (checklist lookup covers specimen-only species too); a miss
-# falls back to a name search on iNat inside inat_photo_link, never a dead link.
-.lk <- read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE)
-tbl$inat_tid <- .lk$taxon_id[match(tbl$bee, .lk$scientific_name)]
+# inat_tid is carried from the records themselves (see bee_taxon_id in
+# inat_taxon_links.R). Only a record with no id at all falls back to a name search.
 rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
   r <- tbl[i, ]; low <- r$confidence != "ok"
   cs <- if (r$conservation != "") sprintf('<sup class="cs" title="%s">*</sup>', esc(r$conservation)) else ""
