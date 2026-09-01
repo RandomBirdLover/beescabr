@@ -4,10 +4,12 @@
 # truth: scripts/analysis/theme_beescabr.R). Regenerated with the rest of the
 # analysis figures; re-run alone after any token change:
 #   Rscript scripts/analysis/render_palette.R
-# Output: data/analysis/bee_themes_pallete/bee_themes_pallete.png
+# Output: dev-docs/bee_themes_pallete.png -- it lives with the docs, not under data/,
+# because data/ is gitignored and the palette swatch is reference material a developer
+# (or Taro) needs to be able to see in the repo.
 # =============================================================
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
-OUT <- "data/analysis/bee_themes_pallete"; dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
+OUT <- "dev-docs"; dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 
 # ---- website design colors, parsed LIVE from their sources so the sheet never goes stale ----
 # landing page CSS variables live in publish_pages.R (:root light set first, dark set second)
