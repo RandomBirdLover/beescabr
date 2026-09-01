@@ -92,3 +92,29 @@ test_that("a card with no version still renders a plain working link", {
   # only the CARD link must be bare; the hero image carries its own ?v= legitimately
   expect_false(grepl('href="./bar.html?v=', h, fixed = TRUE))
 })
+
+# ---- the empty-season guard --------------------------------------------------
+# The landing page is rebuilt from the pages found THIS run, not from what is
+# already in docs/. On 1 January the season folder (nps_report_<year>) does not
+# exist yet, so a publish would find nothing and rebuild the homepage with zero
+# cards -- every page still live, but the front door blank. Refuse instead.
+
+test_that("publishing nothing is refused rather than emptying the homepage", {
+  expect_true(publish_would_empty_site(found = list()))
+})
+
+test_that("a normal publish with pages is allowed", {
+  expect_false(publish_would_empty_site(found = list(list(out = "a.html"))))
+})
+
+test_that("the refusal message names the season and what to run", {
+  msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027")
+  expect_true(grepl("2027", msg, fixed = TRUE))
+  expect_true(grepl("analysis", msg, ignore.case = TRUE))
+  expect_true(grepl("run_all_analysis_pipeline", msg, fixed = TRUE))
+})
+
+test_that("the message says the existing site was left alone", {
+  msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027")
+  expect_true(grepl("unchanged|left|untouched", msg, ignore.case = TRUE))
+})

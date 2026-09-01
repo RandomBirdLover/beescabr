@@ -53,6 +53,28 @@ PUBLISH_PAGES <- list(
        blurb = "An early look at how each bee's share of the records moves year to year. Six seasons in, so treat every line as a first look, not a conclusion.")
 )
 
+# ---- guard: never publish an EMPTY site --------------------------------------
+# The landing page is rebuilt from the pages found on THIS run, not from what is
+# already in docs/. So if the season folder is missing or empty -- which is exactly
+# the state on 1 January, before the new year's analysis has been run -- a publish
+# would copy nothing and then rebuild index.html with zero cards. Every page would
+# still be live, but the front door would be blank.
+#
+# So: found nothing -> change nothing. The existing site keeps working until there is
+# genuinely something new to replace it with.
+publish_would_empty_site <- function(found) length(found) == 0L
+
+publish_empty_message <- function(src_dir) paste0(
+  "No published pages were found in ", src_dir, ".\n",
+  "  That folder is this season's analysis output, and it looks like the analysis\n",
+  "  has not been run for this year yet.\n\n",
+  "  Nothing was changed -- docs/ is left untouched and the live site is unchanged.\n\n",
+  "  Run the \"run_all_analysis_pipeline.R\" first, then publish:\n",
+  "    Rscript scripts/run_all_analysis_pipeline.R\n",
+  "    Rscript scripts/run_publishing_materials_pipeline.R\n\n",
+  "  (To publish an EARLIER season instead, set BEESCABR_SEASON_YEAR, e.g.\n",
+  "   BEESCABR_SEASON_YEAR=2026 Rscript scripts/run_publishing_materials_pipeline.R)")
+
 # Landing cards grouped by section: pages sharing a tag sit together, sections in
 # first-appearance order, manifest order kept within a section -- so new pages can
 # be appended to PUBLISH_PAGES without disordering the landing grid.
@@ -264,6 +286,14 @@ publish_pages <- function() {
   message("published  acknowledgements.html")
 
   # ---- landing page (docs/index.html) ----
+  # Found nothing? Stop before touching index.html (see publish_would_empty_site).
+  if (publish_would_empty_site(present)) {
+    message("")
+    message("  STOPPING: ", publish_empty_message(SRC_DIR))
+    message("")
+    return(invisible(FALSE))
+  }
+
   present <- lapply(present, function(c) { c$v <- page_version(file.path(DOCS_DIR, c$out)); c })
   writeLines(build_landing_html(group_pages_by_tag(present), landing_date(), hero_version()),
              file.path(DOCS_DIR, "index.html"))
