@@ -39,6 +39,23 @@ were two separate lists covering the same project).
 
 ### Pipeline design
 
+- [ ] **Migrate the iNaturalist API from v1 to v2.** Everything currently goes through
+  `https://api.inaturalist.org/v1/` (see `INAT_API_VERSION` in `scripts/config.R`).
+  v2 docs: https://api.inaturalist.org/v2/docs/#/
+  This is a real migration, not a URL swap:
+    * v2 requires an explicit `fields` parameter -- you ask for exactly the fields you
+      want and get nothing else, so `inat_flatten.R` has to be rewritten against the
+      new response shape rather than the v1 shape it assumes today.
+    * Endpoints and some parameter names differ; the ingest loop, the taxon cache, and
+      the observation-field lookups all need re-checking.
+    * Do it behind the existing injectable transport (`request_fn` / `request_text_fn`)
+      so the flatten tests can run against recorded v2 responses before anything live.
+    * Keep v1 working until v2 is proven -- the cache is the system of record, and a
+      half-migrated ingest could write malformed rows into it.
+  Pairs with the JWT authentication item: v2 is also the cleaner path to private
+  coordinates for obscured observations.
+
+
 - [ ] **Fold survey-tag QC into the inat_bee_clean.R rewrite.** When
   `inat_observations/inat_bee_clean.R` is rewritten, add back the two cross-checks the
   retired `survey_tag_qc.R` did (deleted; recoverable from git history):

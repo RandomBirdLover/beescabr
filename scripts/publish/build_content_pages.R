@@ -76,7 +76,7 @@ ids <- if (!is.null(id) && nrow(id)) {
 person_chip <- function(name, user, extra = "") {
   same <- nzchar(user) && tolower(name) == tolower(user)   # username-only person (e.g. itazura): link the name, no @handle
   nm <- if (same) sprintf('<a class="inat" href="https://www.inaturalist.org/people/%s">%s</a>', esc(user), esc(name)) else esc(name)
-  handle <- if (nzchar(user) && !same) sprintf(' <a class="inat" href="https://www.inaturalist.org/people/%s">@%s</a>',
+  handle <- if (nzchar(user) && !same) sprintf('<a class="inat" href="https://www.inaturalist.org/people/%s">@%s</a>',
                                                 esc(user), esc(user)) else ""
   sub <- if (nzchar(extra)) sprintf('<span class="chip-sub">%s</span>', esc(extra)) else ""
   sprintf('<div class="chip"><span class="chip-name">%s</span>%s%s</div>', nm, handle, sub)
@@ -131,7 +131,7 @@ research_chip <- function(first, last, name, user, role, aff, photo, credit = ""
   } else av <- sprintf('<div class="avatar avatar-blank">%s</div>', esc(ini))
   same   <- nzchar(user) && tolower(name) == tolower(user)
   nm     <- if (same) sprintf('<a class="inat" href="https://www.inaturalist.org/people/%s">%s</a>', esc(user), esc(name)) else esc(name)
-  handle <- if (nzchar(user) && !same) sprintf(' <a class="inat" href="https://www.inaturalist.org/people/%s">@%s</a>', esc(user), esc(user)) else ""
+  handle <- if (nzchar(user) && !same) sprintf('<a class="inat" href="https://www.inaturalist.org/people/%s">@%s</a>', esc(user), esc(user)) else ""
   rl     <- if (nzchar(role)) sprintf('<span class="chip-role">%s</span>', esc(role)) else ""   # role as a proper-cased subtitle
   af     <- if (nzchar(aff))  sprintf('<span class="chip-aff">%s</span>', esc(aff))   else ""
   sprintf('<div class="chip chip-person">%s<div class="chip-text"><span class="chip-name">%s</span>%s%s%s</div></div>', av, nm, handle, rl, af)
@@ -181,8 +181,11 @@ css <- '
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.6rem}
   .idlist{display:flex;flex-direction:column;gap:.6rem}
   .chip{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;box-shadow:var(--shadow)}
-  .chip-name{font-weight:600}
-  .chip .inat{margin-left:.35rem;font-size:.82rem;text-decoration:none;color:var(--accent)}
+  .chip-name{font-weight:600;display:block}
+  /* the @handle always sits on its own line under the name, so every card in the
+     grid has the same shape instead of some wrapping and some not */
+  .chip a.inat{display:block;margin-top:.1rem}
+  .chip .inat{margin-left:0;font-size:.82rem;text-decoration:none;color:var(--accent)}
   .chip-sub{display:block;font-size:.78rem;color:var(--muted);margin-top:.15rem}
   .grid-team{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   .chip-person{display:flex;align-items:flex-start;gap:.7rem}

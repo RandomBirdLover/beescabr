@@ -1,6 +1,6 @@
 # =============================================================
 # scripts/reference/refresh_iucn_status.R
-# beescabr -- "force a full IUCN refresh" tool. Runs standalone, OR inside the pipeline
+# beescabr  [IUCN Red List API v4 via rredlist -- see IUCN_API_VERSION in config.R] -- "force a full IUCN refresh" tool. Runs standalone, OR inside the pipeline
 # via BEESCABR_REFRESH=1 (run_data_cleaning_pipeline.R sources it as an optional online pre-step).
 #
 # The IUCN Red List category for every bee species is now baked into the cleaned bee tables

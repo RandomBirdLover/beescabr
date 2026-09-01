@@ -23,8 +23,11 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.6rem}
   .idlist{display:flex;flex-direction:column;gap:.6rem}
   .chip{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;box-shadow:var(--shadow)}
-  .chip-name{font-weight:600}
-  .chip .inat{margin-left:.35rem;font-size:.82rem;text-decoration:none;color:var(--accent)}
+  .chip-name{font-weight:600;display:block}
+  /* the @handle always sits on its own line under the name, so every card in the
+     grid has the same shape instead of some wrapping and some not */
+  .chip a.inat{display:block;margin-top:.1rem}
+  .chip .inat{margin-left:0;font-size:.82rem;text-decoration:none;color:var(--accent)}
   .chip-sub{display:block;font-size:.78rem;color:var(--muted);margin-top:.15rem}
   .grid-team{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
   .chip-person{display:flex;align-items:flex-start;gap:.7rem}
@@ -3574,7 +3577,7 @@ ufdYyCn+1SMMKC7c7pFL5f3du0GHignnKz+akLSEJCAn0uldRumfikwKCQgRH+KxDkyfe7k4
 hvD6TbxOgR6o8ry793aOsv4vxHF90AHGE9mdVKCmFE/V80jib1VyjnlT8vGp8+aiKDB3qgEG
 RQQoNM6ER69WWiDgN3JsGPzQQieW1AJzADJk+Huo3kUOhzzxWo9I0wgieIpFl0H2QqCReNei
 angMcUOHhE+ZsTggCkER2/zRBMVS+dsQgiNAKPV5/lVqTr+NpFHd/uglj/6N1rYX90rCy1Pd
-abMxzMyolWxKuGQk+awFUnSQAf8AooBD/iKxixLPu/o/3UChFIggwR6r/9k="></div><div class="chip-text"><span class="chip-name">Keng-Lou James Hung</span> <a class="inat" href="https://www.inaturalist.org/people/kjhung">@kjhung</a><span class="chip-role">Principal Investigator</span><span class="chip-aff">Department of Chemistry &amp; Biology; Toronto Metropolitan University</span></div></div>
+abMxzMyolWxKuGQk+awFUnSQAf8AooBD/iKxixLPu/o/3UChFIggwR6r/9k="></div><div class="chip-text"><span class="chip-name">Keng-Lou James Hung</span><a class="inat" href="https://www.inaturalist.org/people/kjhung">@kjhung</a><span class="chip-role">Principal Investigator</span><span class="chip-aff">Department of Chemistry &amp; Biology; Toronto Metropolitan University</span></div></div>
 <div class="chip chip-person"><div class="avatar"><img alt="Patricia Simpson" style="object-position:53% 23%;transform-origin:53% 23%;transform:scale(2.05)" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QCwRXhpZgAATU0AKgAAAAgABQESAAMAAAABAAEAAAEa
 AAUAAAABAAAASgEbAAUAAAABAAAAUgEoAAMAAAABAAIAAIdpAAQAAAABAAAAWgAAAAAAAABI
 AAAAAQAAAEgAAAABAAaQAAAHAAAABDAyMjGRAQAHAAAABAECAwCgAAAHAAAABDAxMDCgAgAE
@@ -9556,7 +9559,7 @@ reSyPFLDjK4ychs9sVJc3Wk6Zqd3H4fuJLeydx9m3FjGsx5ZUZsHb6A81Wm5ld3Kk1veWGob
 3it7i9s0JM6I6zox4weTu+oJrZ0rxDrWlX8NxdQWl5a3SlTf2hME8chGdpVwpIPfnrW5ouj6
 s818urSXOpadexmXzyqoYSRkjrkY7cGuS8Q2OiQXNto9hqUv2e4h3yrqETJFvU9RLGOB6nHH
 rWXNpY2aOy1u80B7/wDtDVvDd5c3FxGgaS2laQN5YxklZe/UVk/2h4O/6FPVvzk/+O1paDpn
-2BZIbG5kS22oUCu1zFnnd5ch5K+xGR0rofKuP+fx/wDv21YajP/Z"></div><div class="chip-text"><span class="chip-name">Patricia Simpson</span> <a class="inat" href="https://www.inaturalist.org/people/patsimpson2000">@patsimpson2000</a><span class="chip-role">Science Technician and Volunteer Coordinator</span><span class="chip-aff">California Wildlife Foundation, Cabrillo National Monument</span></div></div>
+2BZIbG5kS22oUCu1zFnnd5ch5K+xGR0rofKuP+fx/wDv21YajP/Z"></div><div class="chip-text"><span class="chip-name">Patricia Simpson</span><a class="inat" href="https://www.inaturalist.org/people/patsimpson2000">@patsimpson2000</a><span class="chip-role">Science Technician and Volunteer Coordinator</span><span class="chip-aff">California Wildlife Foundation, Cabrillo National Monument</span></div></div>
 <div class="chip chip-person"><div class="avatar"><img alt="Jessica Mullins" style="object-position:50% 28%;transform-origin:50% 28%;transform:scale(1.1)" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABLAEsAAD/4QO0RXhpZgAATU0AKgAAAAgACgEGAAMAAAABAAIAAAEP
 AAIAAAASAAAAhgEQAAIAAAAJAAAAmAESAAMAAAABAAEAAAEaAAUAAAABAAAAogEbAAUAAAAB
 AAAAqgEoAAMAAAABAAIAAAExAAIAAAAsAAAAsgEyAAIAAAAUAAAA3odpAAQAAAABAAAA8gAA
@@ -10969,7 +10972,7 @@ JBrWnCzt9H1mWK0ktRG25FQHdIMcd+eKn8VaVFpcelLojkRKssgXHLxn58fhnIrnTu+We19V
 81+aC9leJ2/gzxpLd28mhaqcX9iAD28yP+Fx7EdfevBvEMFv4s1/UvFpmnBtZTa26RttUrF9
 7PqC1R+JINd1PX7GTwxdpbXKWrzNK3O6NjtCnHvWTpseoaLoVxoOpOsl1DlgydJPMOc/XNdF
 SlDmlF6wV7P5aFQbSi18Wh6loOoh4Fye1dlDc7sAGvEfCt6xURufmBwR9K9Vt7gYBBxX5zJW
-bPs4vQ6hZBnPelMowayoZiRk1ZZwVFWiGVb1slfxqlke1TXrcr+P9Ko7hWiM2z//2Q=="></div><div class="chip-text"><span class="chip-name">Jessica Mullins</span> <a class="inat" href="https://www.inaturalist.org/people/jessmullins">@jessmullins</a><span class="chip-role">Entomologist Researcher</span><span class="chip-aff">Department of Biology, Ecology, Behavior and Evolution; University of California, San Diego</span></div></div>
+bPs4vQ6hZBnPelMowayoZiRk1ZZwVFWiGVb1slfxqlke1TXrcr+P9Ko7hWiM2z//2Q=="></div><div class="chip-text"><span class="chip-name">Jessica Mullins</span><a class="inat" href="https://www.inaturalist.org/people/jessmullins">@jessmullins</a><span class="chip-role">Entomologist Researcher</span><span class="chip-aff">Department of Biology, Ecology, Behavior and Evolution; University of California, San Diego</span></div></div>
 <div class="chip chip-person"><div class="avatar"><img alt="Ashley Kim" title="Photo: Ashley Kim" style="object-position:45% 10%;transform-origin:45% 10%;transform:scale(1.3)" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QMmRXhpZgAATU0AKgAAAAgACgEPAAIAAAAGAAAAhgEQ
 AAIAAAAeAAAAjAESAAMAAAABAAEAAAEaAAUAAAABAAAAqgEbAAUAAAABAAAAsgEoAAMAAAAB
 AAIAAAExAAIAAAAFAAAAugE8AAIAAAAHAAAAwIKYAAIAAAAlAAAAyIdpAAQAAAABAAAA7gAA
@@ -14999,7 +15002,7 @@ dq9ChTAxU9RvYtRjFSjrTQKdVEjpQClY6Hy5sVsHlcVk3C7ZM0DNPqtUp0DCrUL7kx3qNxji
 gDBkjKNkVpWOpGI+XLUU6Z5rPZKAOulWC4j3KRmoo5NoCE9K5MSzR8KxAq1DdN/EeaVwsdYr
 Z6VMDkYrFguciryXC96Yiw68Vj3RC5zWhLdIFrldSvcnatAzPvblcnFZqM0j80uDIctViKPn
 IqRmrbYwKl1CUJan34pIFxjNZ2sSgssQ7c0Sdk2JbmQXpQ3GajBzxSbsV5h0E6nLZNS5NVN3
-pUhfigRZFNJqvuNO8ygCbIpucUwmoi5BoAsM46U3eKqsxzRvFAH/2Q=="></div><div class="chip-text"><span class="chip-name">Brandi Sanchez</span> <a class="inat" href="https://www.inaturalist.org/people/randombirdlover">@randombirdlover</a><span class="chip-role">Natural Resource Management Research Assistant</span><span class="chip-aff">Conservation Legacy, Scientists in Parks, Cabrillo National Monument</span></div></div>
+pUhfigRZFNJqvuNO8ygCbIpucUwmoi5BoAsM46U3eKqsxzRvFAH/2Q=="></div><div class="chip-text"><span class="chip-name">Brandi Sanchez</span><a class="inat" href="https://www.inaturalist.org/people/randombirdlover">@randombirdlover</a><span class="chip-role">Natural Resource Management Research Assistant</span><span class="chip-aff">Conservation Legacy, Scientists in Parks, Cabrillo National Monument</span></div></div>
 <div class="chip chip-person"><div class="avatar"><img alt="Taro Katayama" style="object-position:65% 42%;transform-origin:65% 42%" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QMcRXhpZgAATU0AKgAAAAgACAEPAAIAAAAGAAAAbgEQ
 AAIAAAATAAAAdAESAAMAAAABAAEAAAEaAAUAAAABAAAAiAEbAAUAAAABAAAAkAEoAAMAAAAB
 AAIAAAEyAAIAAAAUAAAAmIdpAAQAAAABAAAArAAAAABDYW5vbgBDYW5vbiBFT1MgUmViZWwg
@@ -15916,7 +15919,7 @@ F4YZZNVQm2bGJk5X8SK/OPU5Hj1IvGxUhhyDg19feBpJL/4ezpfMbhfKbiU7x0Prmv0GkuaE
 ZPqfl+Ik6dSdOPS/4H0foet6P4gt1vNLuElVxng1y/jbw9YXr2kpISXz0P8AvYOa+O/g1eXk
 WrSRRTSIgY/KrEDr6A19EXNzcy+MbCOWV3UE8MxI6elaVKfLJpMzhV9pSvJHtMaBI1T+6AKa
 zDtQOtRmvKjSiuh7UqspAW4pd+O9QGitTJiu+TkU0M3aj1pBQMXeaaTzzRUT9BQTcUsKbupr
-dBTD0oC5/9k="></div><div class="chip-text"><span class="chip-name">Taro Katayama</span> <a class="inat" href="https://www.inaturalist.org/people/tarotarotaro">@tarotarotaro</a><span class="chip-role">Biologist</span><span class="chip-aff">National Park Service, Cabrillo National Monument</span></div></div>
+dBTD0oC5/9k="></div><div class="chip-text"><span class="chip-name">Taro Katayama</span><a class="inat" href="https://www.inaturalist.org/people/tarotarotaro">@tarotarotaro</a><span class="chip-role">Biologist</span><span class="chip-aff">National Park Service, Cabrillo National Monument</span></div></div>
 <div class="chip chip-person"><div class="avatar"><img alt="Sam O'Dell" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAA
 AAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAACgKADAAQAAAABAAACgAAAAAD/7QA4UGhvdG9z
 aG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgC
@@ -16844,66 +16847,66 @@ NFlpUFm44RBXxl8JrBItbaRhlQB/Ovveyt0+yJMh4ZRXbRVzgqPU4/XdB81DNaqMEc1wNhqE
 +lXJVwY8cc8V78tuhiz1rj/EPhe21C3YwLtk7EVu422MRul+IIbqNRIc571tNfJAQIDuRutf
 PVzca14SuvJuBvg3YyR2NemaNqi3kO4HhsYpxl3A9Jt4Y8/acAbquSwq+GX8a5i3vpbZhbSH
 IbpXSW0yBeeSa3Rky4qLtytWIwuKrx4zsqyoxwKolscEBzSJkJgU5TRF92gQ9c7eaUA9TSbS
-elSHAUVUQEIANLyRxSMRTgcDFaXAQe9GKGIBxSE8UgP/2Q=="></div><div class="chip-text"><span class="chip-name">Sam O'Dell</span> <a class="inat" href="https://www.inaturalist.org/people/wranglebees">@wranglebees</a><span class="chip-role">Entomologist</span><span class="chip-aff">Department of Biological Sciences; University of Oklahoma</span></div></div></div>
+elSHAUVUQEIANLyRxSMRTgcDFaXAQe9GKGIBxSE8UgP/2Q=="></div><div class="chip-text"><span class="chip-name">Sam O'Dell</span><a class="inat" href="https://www.inaturalist.org/people/wranglebees">@wranglebees</a><span class="chip-role">Entomologist</span><span class="chip-aff">Department of Biological Sciences; University of Oklahoma</span></div></div></div>
     <p class="sec-note photo-credit">Photographs: Ashley Kim (Ashley Kim); Brandi Sanchez (Ashley Kim).</p>
   </section>
   <section>
     <h2>Survey Team</h2>
     <p class="sec-note">The people who walked the transects, photographed bees, and collected specimens (34 people). iNaturalist handles link to their profiles.</p>
-    <div class="grid"><div class="chip"><span class="chip-name">Cindy Pencek</span> <a class="inat" href="https://www.inaturalist.org/people/carrotpeople">@carrotpeople</a></div>
-<div class="chip"><span class="chip-name">Patricia Simpson</span> <a class="inat" href="https://www.inaturalist.org/people/patsimpson2000">@patsimpson2000</a></div>
-<div class="chip"><span class="chip-name">Bonnie Nickel</span> <a class="inat" href="https://www.inaturalist.org/people/bonnienickel">@bonnienickel</a></div>
-<div class="chip"><span class="chip-name">Craig Chaddock</span> <a class="inat" href="https://www.inaturalist.org/people/thumbwave">@thumbwave</a></div>
-<div class="chip"><span class="chip-name">Mark James</span> <a class="inat" href="https://www.inaturalist.org/people/markkjames">@markkjames</a></div>
-<div class="chip"><span class="chip-name">Tom Barnes</span> <a class="inat" href="https://www.inaturalist.org/people/tom_barnes_">@tom_barnes_</a></div>
-<div class="chip"><span class="chip-name">Phil Roullard</span> <a class="inat" href="https://www.inaturalist.org/people/proullard">@proullard</a></div>
-<div class="chip"><span class="chip-name">Ian Hicke</span> <a class="inat" href="https://www.inaturalist.org/people/therealian">@therealian</a></div>
-<div class="chip"><span class="chip-name">Misha Ingraham</span> <a class="inat" href="https://www.inaturalist.org/people/snugglymisha">@snugglymisha</a></div>
-<div class="chip"><span class="chip-name">Megan Hewitt</span> <a class="inat" href="https://www.inaturalist.org/people/rodeoclown">@rodeoclown</a></div>
+    <div class="grid"><div class="chip"><span class="chip-name">Cindy Pencek</span><a class="inat" href="https://www.inaturalist.org/people/carrotpeople">@carrotpeople</a></div>
+<div class="chip"><span class="chip-name">Patricia Simpson</span><a class="inat" href="https://www.inaturalist.org/people/patsimpson2000">@patsimpson2000</a></div>
+<div class="chip"><span class="chip-name">Bonnie Nickel</span><a class="inat" href="https://www.inaturalist.org/people/bonnienickel">@bonnienickel</a></div>
+<div class="chip"><span class="chip-name">Craig Chaddock</span><a class="inat" href="https://www.inaturalist.org/people/thumbwave">@thumbwave</a></div>
+<div class="chip"><span class="chip-name">Mark James</span><a class="inat" href="https://www.inaturalist.org/people/markkjames">@markkjames</a></div>
+<div class="chip"><span class="chip-name">Tom Barnes</span><a class="inat" href="https://www.inaturalist.org/people/tom_barnes_">@tom_barnes_</a></div>
+<div class="chip"><span class="chip-name">Phil Roullard</span><a class="inat" href="https://www.inaturalist.org/people/proullard">@proullard</a></div>
+<div class="chip"><span class="chip-name">Ian Hicke</span><a class="inat" href="https://www.inaturalist.org/people/therealian">@therealian</a></div>
+<div class="chip"><span class="chip-name">Misha Ingraham</span><a class="inat" href="https://www.inaturalist.org/people/snugglymisha">@snugglymisha</a></div>
+<div class="chip"><span class="chip-name">Megan Hewitt</span><a class="inat" href="https://www.inaturalist.org/people/rodeoclown">@rodeoclown</a></div>
 <div class="chip"><span class="chip-name">Xiomara Gaeta</span></div>
-<div class="chip"><span class="chip-name">Jilian Menez</span> <a class="inat" href="https://www.inaturalist.org/people/khoshakh">@khoshakh</a></div>
-<div class="chip"><span class="chip-name">Brandi Sanchez</span> <a class="inat" href="https://www.inaturalist.org/people/randombirdlover">@randombirdlover</a></div>
-<div class="chip"><span class="chip-name">Julia Showalter</span> <a class="inat" href="https://www.inaturalist.org/people/jwanderer6">@jwanderer6</a></div>
-<div class="chip"><span class="chip-name">Sam O'Dell</span> <a class="inat" href="https://www.inaturalist.org/people/wranglebees">@wranglebees</a></div>
+<div class="chip"><span class="chip-name">Jilian Menez</span><a class="inat" href="https://www.inaturalist.org/people/khoshakh">@khoshakh</a></div>
+<div class="chip"><span class="chip-name">Brandi Sanchez</span><a class="inat" href="https://www.inaturalist.org/people/randombirdlover">@randombirdlover</a></div>
+<div class="chip"><span class="chip-name">Julia Showalter</span><a class="inat" href="https://www.inaturalist.org/people/jwanderer6">@jwanderer6</a></div>
+<div class="chip"><span class="chip-name">Sam O'Dell</span><a class="inat" href="https://www.inaturalist.org/people/wranglebees">@wranglebees</a></div>
 <div class="chip"><span class="chip-name">Adrian Zenteno</span></div>
-<div class="chip"><span class="chip-name">Jasmine Hubbard</span> <a class="inat" href="https://www.inaturalist.org/people/jasminehubbard">@jasminehubbard</a></div>
-<div class="chip"><span class="chip-name">Grant Wass</span> <a class="inat" href="https://www.inaturalist.org/people/grant65">@grant65</a></div>
+<div class="chip"><span class="chip-name">Jasmine Hubbard</span><a class="inat" href="https://www.inaturalist.org/people/jasminehubbard">@jasminehubbard</a></div>
+<div class="chip"><span class="chip-name">Grant Wass</span><a class="inat" href="https://www.inaturalist.org/people/grant65">@grant65</a></div>
 <div class="chip"><span class="chip-name">Lydia Duran</span></div>
 <div class="chip"><span class="chip-name">Cassidy Samovar</span></div>
-<div class="chip"><span class="chip-name">Amy Geffre</span> <a class="inat" href="https://www.inaturalist.org/people/littlebeezer">@littlebeezer</a></div>
-<div class="chip"><span class="chip-name">Michael Ready</span> <a class="inat" href="https://www.inaturalist.org/people/mjready">@mjready</a></div>
+<div class="chip"><span class="chip-name">Amy Geffre</span><a class="inat" href="https://www.inaturalist.org/people/littlebeezer">@littlebeezer</a></div>
+<div class="chip"><span class="chip-name">Michael Ready</span><a class="inat" href="https://www.inaturalist.org/people/mjready">@mjready</a></div>
 <div class="chip"><span class="chip-name">Francheska Tenderro</span></div>
 <div class="chip"><span class="chip-name">Min Han</span></div>
-<div class="chip"><span class="chip-name">Julia Keum</span> <a class="inat" href="https://www.inaturalist.org/people/julaliak">@julaliak</a></div>
-<div class="chip"><span class="chip-name">Elena Oey</span> <a class="inat" href="https://www.inaturalist.org/people/u_phantasticus">@u_phantasticus</a></div>
-<div class="chip"><span class="chip-name">Hector Valtierra</span> <a class="inat" href="https://www.inaturalist.org/people/biohexx1">@biohexx1</a></div>
+<div class="chip"><span class="chip-name">Julia Keum</span><a class="inat" href="https://www.inaturalist.org/people/julaliak">@julaliak</a></div>
+<div class="chip"><span class="chip-name">Elena Oey</span><a class="inat" href="https://www.inaturalist.org/people/u_phantasticus">@u_phantasticus</a></div>
+<div class="chip"><span class="chip-name">Hector Valtierra</span><a class="inat" href="https://www.inaturalist.org/people/biohexx1">@biohexx1</a></div>
 <div class="chip"><span class="chip-name">Anahi Mendez Lozano</span></div>
 <div class="chip"><span class="chip-name">Darren Milama</span></div>
-<div class="chip"><span class="chip-name">Luis Cabrera</span> <a class="inat" href="https://www.inaturalist.org/people/luis1682">@luis1682</a></div>
-<div class="chip"><span class="chip-name">Nico Gamboa</span> <a class="inat" href="https://www.inaturalist.org/people/nicog4114">@nicog4114</a></div>
-<div class="chip"><span class="chip-name">Ava Wangen</span> <a class="inat" href="https://www.inaturalist.org/people/avawangen">@avawangen</a></div>
-<div class="chip"><span class="chip-name">Jorge Ayon</span> <a class="inat" href="https://www.inaturalist.org/people/chrysaetos">@chrysaetos</a></div>
-<div class="chip"><span class="chip-name">Winsten Slowswakey</span> <a class="inat" href="https://www.inaturalist.org/people/slowswakey">@slowswakey</a></div></div>
+<div class="chip"><span class="chip-name">Luis Cabrera</span><a class="inat" href="https://www.inaturalist.org/people/luis1682">@luis1682</a></div>
+<div class="chip"><span class="chip-name">Nico Gamboa</span><a class="inat" href="https://www.inaturalist.org/people/nicog4114">@nicog4114</a></div>
+<div class="chip"><span class="chip-name">Ava Wangen</span><a class="inat" href="https://www.inaturalist.org/people/avawangen">@avawangen</a></div>
+<div class="chip"><span class="chip-name">Jorge Ayon</span><a class="inat" href="https://www.inaturalist.org/people/chrysaetos">@chrysaetos</a></div>
+<div class="chip"><span class="chip-name">Winsten Slowswakey</span><a class="inat" href="https://www.inaturalist.org/people/slowswakey">@slowswakey</a></div></div>
   </section>
   <section>
     <h2>Identification Team</h2>
     <p class="sec-note">The specialists who put names to the bees and plants!</p>
-    <div class="idlist"><div class="chip"><span class="chip-name">Jessica Mullins</span> <a class="inat" href="https://www.inaturalist.org/people/jessmullins">@jessmullins</a><span class="chip-sub">Department of Biology, Ecology, Behavior and Evolution; University of California, San Diego · bees</span></div>
-<div class="chip"><span class="chip-name">John Ascher</span> <a class="inat" href="https://www.inaturalist.org/people/johnascher">@johnascher</a><span class="chip-sub">Department of Biological Sciences; National University of Singapore · bees</span></div>
-<div class="chip"><span class="chip-name">Brandi Sanchez</span> <a class="inat" href="https://www.inaturalist.org/people/randombirdlover">@randombirdlover</a><span class="chip-sub">Conservation Legacy, Scientists in Parks, Cabrillo National Monument · bees &amp; plants</span></div>
-<div class="chip"><span class="chip-name">Patricia Simpson</span> <a class="inat" href="https://www.inaturalist.org/people/patsimpson2000">@patsimpson2000</a><span class="chip-sub">California Wildlife Foundation, Cabrillo National Monument · bees &amp; plants</span></div>
-<div class="chip"><span class="chip-name">Keng-Lou James Hung</span> <a class="inat" href="https://www.inaturalist.org/people/kjhung">@kjhung</a><span class="chip-sub">Department of Chemistry &amp; Biology; Toronto Metropolitan University · bees</span></div>
+    <div class="idlist"><div class="chip"><span class="chip-name">Jessica Mullins</span><a class="inat" href="https://www.inaturalist.org/people/jessmullins">@jessmullins</a><span class="chip-sub">Department of Biology, Ecology, Behavior and Evolution; University of California, San Diego · bees</span></div>
+<div class="chip"><span class="chip-name">John Ascher</span><a class="inat" href="https://www.inaturalist.org/people/johnascher">@johnascher</a><span class="chip-sub">Department of Biological Sciences; National University of Singapore · bees</span></div>
+<div class="chip"><span class="chip-name">Brandi Sanchez</span><a class="inat" href="https://www.inaturalist.org/people/randombirdlover">@randombirdlover</a><span class="chip-sub">Conservation Legacy, Scientists in Parks, Cabrillo National Monument · bees &amp; plants</span></div>
+<div class="chip"><span class="chip-name">Patricia Simpson</span><a class="inat" href="https://www.inaturalist.org/people/patsimpson2000">@patsimpson2000</a><span class="chip-sub">California Wildlife Foundation, Cabrillo National Monument · bees &amp; plants</span></div>
+<div class="chip"><span class="chip-name">Keng-Lou James Hung</span><a class="inat" href="https://www.inaturalist.org/people/kjhung">@kjhung</a><span class="chip-sub">Department of Chemistry &amp; Biology; Toronto Metropolitan University · bees</span></div>
 <div class="chip"><span class="chip-name"><a class="inat" href="https://www.inaturalist.org/people/itazura">itazura</a></span><span class="chip-sub">Grade school student · bees</span></div>
-<div class="chip"><span class="chip-name">Sam O'Dell</span> <a class="inat" href="https://www.inaturalist.org/people/wranglebees">@wranglebees</a><span class="chip-sub">Department of Biological Sciences; University of Oklahoma · bees &amp; plants</span></div>
-<div class="chip"><span class="chip-name">Christopher Wilson</span> <a class="inat" href="https://www.inaturalist.org/people/cgwilson">@cgwilson</a><span class="chip-sub">Department of Biological Sciences; University of Arkansas · bees</span></div>
-<div class="chip"><span class="chip-name">Joel Gardner</span> <a class="inat" href="https://www.inaturalist.org/people/chloralictus">@chloralictus</a><span class="chip-sub">Department of Entomology; Washington State University · bees</span></div>
-<div class="chip"><span class="chip-name">Zachary Portman</span> <a class="inat" href="https://www.inaturalist.org/people/zportman">@zportman</a><span class="chip-sub">Department of Entomology; University of Minnesota · bees</span></div>
-<div class="chip"><span class="chip-name">Isabel Hui</span> <a class="inat" href="https://www.inaturalist.org/people/izzyhui">@izzyhui</a><span class="chip-sub">Department of Biology, Ecology, Behavior and Evolution; University of California, San Diego · bees</span></div>
+<div class="chip"><span class="chip-name">Sam O'Dell</span><a class="inat" href="https://www.inaturalist.org/people/wranglebees">@wranglebees</a><span class="chip-sub">Department of Biological Sciences; University of Oklahoma · bees &amp; plants</span></div>
+<div class="chip"><span class="chip-name">Christopher Wilson</span><a class="inat" href="https://www.inaturalist.org/people/cgwilson">@cgwilson</a><span class="chip-sub">Department of Biological Sciences; University of Arkansas · bees</span></div>
+<div class="chip"><span class="chip-name">Joel Gardner</span><a class="inat" href="https://www.inaturalist.org/people/chloralictus">@chloralictus</a><span class="chip-sub">Department of Entomology; Washington State University · bees</span></div>
+<div class="chip"><span class="chip-name">Zachary Portman</span><a class="inat" href="https://www.inaturalist.org/people/zportman">@zportman</a><span class="chip-sub">Department of Entomology; University of Minnesota · bees</span></div>
+<div class="chip"><span class="chip-name">Isabel Hui</span><a class="inat" href="https://www.inaturalist.org/people/izzyhui">@izzyhui</a><span class="chip-sub">Department of Biology, Ecology, Behavior and Evolution; University of California, San Diego · bees</span></div>
 <div class="chip"><span class="chip-name">Diego de Pedro</span><span class="chip-sub">Department of Conservation Biology; Center for Scientific Research and Higher Education at Ensenada · bees</span></div>
-<div class="chip"><span class="chip-name">Douglas Yanega</span> <a class="inat" href="https://www.inaturalist.org/people/dyanega">@dyanega</a><span class="chip-sub">Department of Entomology; University of California, Riverside · bees</span></div>
-<div class="chip"><span class="chip-name">Jon Rebman</span> <a class="inat" href="https://www.inaturalist.org/people/jrebman">@jrebman</a><span class="chip-sub">Department of Botany; San Diego Natural History Museum · plants</span></div>
-<div class="chip"><span class="chip-name">Sofia Campuzano Vallejo</span> <a class="inat" href="https://www.inaturalist.org/people/supremeweeder">@supremeweeder</a><span class="chip-sub">California Wildlife Foundation, Cabrillo National Monument · plants</span></div>
-<div class="chip"><span class="chip-name">Taro Katayama</span> <a class="inat" href="https://www.inaturalist.org/people/tarotarotaro">@tarotarotaro</a><span class="chip-sub">National Park Service, Cabrillo National Monument · plants</span></div>
+<div class="chip"><span class="chip-name">Douglas Yanega</span><a class="inat" href="https://www.inaturalist.org/people/dyanega">@dyanega</a><span class="chip-sub">Department of Entomology; University of California, Riverside · bees</span></div>
+<div class="chip"><span class="chip-name">Jon Rebman</span><a class="inat" href="https://www.inaturalist.org/people/jrebman">@jrebman</a><span class="chip-sub">Department of Botany; San Diego Natural History Museum · plants</span></div>
+<div class="chip"><span class="chip-name">Sofia Campuzano Vallejo</span><a class="inat" href="https://www.inaturalist.org/people/supremeweeder">@supremeweeder</a><span class="chip-sub">California Wildlife Foundation, Cabrillo National Monument · plants</span></div>
+<div class="chip"><span class="chip-name">Taro Katayama</span><a class="inat" href="https://www.inaturalist.org/people/tarotarotaro">@tarotarotaro</a><span class="chip-sub">National Park Service, Cabrillo National Monument · plants</span></div>
 <p class="thanks">And to the rest of the iNaturalist community who have helped identify our bees, thank you.</p></div>
   </section>
   <section>

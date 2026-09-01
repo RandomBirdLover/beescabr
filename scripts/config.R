@@ -13,6 +13,19 @@
 # =============================================================
 
 # ---- iNaturalist API ---------------------------------------------------------
+# ---- EXTERNAL API VERSIONS (single source of truth; quote these in any write-up) ----
+# iNaturalist: REST API v1. Everything the pipeline pulls -- observations, taxa,
+#   observation fields -- goes through https://api.inaturalist.org/v1/. iNat also has a
+#   newer v2, which we do NOT use; a move to v2 would change response shapes and must be
+#   a deliberate migration (see dev-docs/TODO.md).
+# IUCN Red List: API v4, reached through the rredlist R package rather than raw HTTP.
+#   Requires a free token (data/secrets/iucn_api.env or IUCN_REDLIST_KEY). Recorded in
+#   the source column of data/checklists/iucn/iucn_status.csv on every fetch, so each
+#   cached status carries the API version it came from.
+INAT_API_VERSION <- "v1"
+IUCN_API_VERSION <- "v4"
+IUCN_API_CLIENT  <- "rredlist"
+
 INAT_BASE_URL   <- "https://api.inaturalist.org/v1/"
 INAT_USER_AGENT <- "beescabr pipeline (brandirenesanchez16@gmail.com)"
 

@@ -1,6 +1,6 @@
 # =============================================================
 # api/inat_http.R
-# beescabr pipeline -- iNaturalist API transport
+# beescabr  [iNaturalist REST API v1 -- see INAT_API_VERSION in config.R] pipeline -- iNaturalist API transport
 # Rewritten: 2026-07-13 (raw-body path for fast observation ingest)
 #
 # Single responsibility: talk HTTP to the iNat API. User-agent, timeout,

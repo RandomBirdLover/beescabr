@@ -165,6 +165,14 @@ then implement, then run the full suite."*
 
 ## 6. iNaturalist API — what calls what
 
+**API versions this pipeline depends on** (constants live in `scripts/config.R`):
+
+| Service | Version | How we reach it | Notes |
+| --- | --- | --- | --- |
+| iNaturalist | **v1** | direct HTTP, `https://api.inaturalist.org/v1/` | observations, taxa, observation fields. iNat also has a v2 we deliberately do **not** use — moving would change response shapes and needs a planned migration. |
+| IUCN Red List | **v4** | the `rredlist` R package (1.1.1) | needs a free token in `data/secrets/iucn_api.env` or `IUCN_REDLIST_KEY`. Every cached status records its API version in the `source` column of `iucn_status.csv`. |
+
+
 Two scripts pull from the API rather than the CSV export:
 
 - `scripts/inat_observations/inat_bee_clean.R` — fetches survey observations, tags, and observation fields via `/v1/observations`.

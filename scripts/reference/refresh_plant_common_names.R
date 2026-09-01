@@ -1,6 +1,6 @@
 # =============================================================
 # scripts/reference/refresh_plant_common_names.R
-# beescabr -- "force a full plant common-name refresh" tool. Runs standalone, OR inside the
+# beescabr  [iNaturalist REST API v1 -- see INAT_API_VERSION in config.R] -- "force a full plant common-name refresh" tool. Runs standalone, OR inside the
 # pipeline via BEESCABR_REFRESH=1 (run_data_cleaning_pipeline.R sources it as an optional online pre-step).
 #
 # The genus-level common name for every plant a bee was recorded on is now baked into the
