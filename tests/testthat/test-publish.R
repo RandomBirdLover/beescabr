@@ -157,10 +157,21 @@ test_that("the stale message names every stale page and how to fix it", {
 # No page set a favicon, so browsers fell back to whatever icon they had for the
 # github.io host: the site showed a classical-building emoji that belongs to a
 # different page. One bee, injected at publish time so all pages match.
-test_that("the favicon is a bee, inlined so no extra file is served", {
+# It was an inline SVG data URI first. Safari would not render it and kept falling back
+# to the icon it had cached for the github.io host, which was the NPS arrowhead. A PNG
+# is understood by every browser, so the icon is a committed file rather than a data URI.
+test_that("the favicon points at the committed PNG, not an SVG data URI", {
   expect_match(FAVICON, "rel=\"icon\"")
-  expect_match(FAVICON, "data:image/svg", fixed = TRUE)
-  expect_match(FAVICON, "%F0%9F%90%9D", fixed = TRUE)   # the bee, percent-encoded
+  expect_match(FAVICON, "favicon.png", fixed = TRUE)
+  expect_false(grepl("data:image/svg", FAVICON, fixed = TRUE))
+})
+
+test_that("the favicon file exists and is a real PNG", {
+  # testthat runs from tests/testthat/, so resolve against the repo root
+  f <- file.path(.beescabr_root(), "docs", "favicon.png")
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 1000)
+  expect_equal(readBin(f, "raw", 4), as.raw(c(0x89, 0x50, 0x4e, 0x47)))  # PNG magic bytes
 })
 
 test_that("a page with a <head> gets the favicon inside it", {

@@ -284,13 +284,14 @@ BACKLINK <- paste0(
 
 # ---- favicon -------------------------------------------------------------------
 # No page used to set one, so browsers fell back to whatever icon they already had for
-# the github.io host and the tab showed a classical-building emoji from a different site.
-# An emoji drawn as an inline SVG data URI: no extra file to serve, and nothing to keep
-# in sync. Percent-encoded because a data: URI cannot carry raw quotes or a raw emoji.
-FAVICON <- paste0(
-  '<link rel="icon" href="data:image/svg+xml,',
-  '%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E',
-  '%3Ctext%20y=%22.9em%22%20font-size=%2290%22%3E%F0%9F%90%9D%3C/text%3E%3C/svg%3E">')
+# the github.io host, and the tab showed the NPS arrowhead from a different site of the
+# same account. The park's logo is not ours to display, so the site declares its own.
+#
+# A PNG, not an inline SVG data URI: Safari would not render the SVG and kept using the
+# cached host icon, which is the whole problem this is meant to fix. docs/favicon.png is
+# a COMMITTED file (docs/*.png is allow-listed in .gitignore), so publishing needs no
+# emoji font on the machine doing the build. To change the icon, replace that file.
+FAVICON <- '<link rel="icon" type="image/png" href="favicon.png">'
 
 # PURE, so the injection is testable without writing a file. A page with no <head> is
 # returned untouched rather than being handed a stray <link>.
