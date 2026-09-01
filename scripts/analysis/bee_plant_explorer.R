@@ -112,6 +112,9 @@ h1:after{content:"";display:block;width:56px;height:3px;background:', BEE_HTML_G
 p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width:900px}
 .scopebox{font-size:13px;color:', BEE_HTML[["ink"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:16px 0 0}
 .note{font-size:13px;color:', BEE_HTML[["sub"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:14px 0 4px}
+.sidekey{font-size:11px;line-height:1.45;margin:0 0 9px;max-width:none;color:', BEE_HTML[["sub"]], '}
+.scope-foot{margin-top:26px}
+.scope-foot:before{content:"About this data";display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:', BEE_HTML[["cn"]], ';margin-bottom:7px}
 .legend{font-size:12.5px;color:', BEE_HTML[["sub"]], ';margin:14px 0 0;max-width:900px}
 .lg{white-space:nowrap;font-weight:600;color:', BEE_HTML[["ink"]], '}
 .tabs{display:flex;gap:8px;margin:18px 0 0}
@@ -141,14 +144,14 @@ a.inat{text-decoration:none}
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee and Plant Explorer &#127804;</h1>
 <p class="sub">Every flower a bee has been recorded on at the park, readable from either end. <b>By bee</b> lists the plants it was found on. <b>By plant</b> lists the bees recorded visiting it, which is the direction that matters for planting and restoration.</p>
-<div class="scopebox"><b>What is on this page.</b> Every bee recorded on an identified flower, parkwide, all years and months, pooling netted specimens and every iNaturalist photo. That is ', length(bees), ' bee species and ', length(plants), ' plant genera, forming ', nrow(pairs), ' pairs, ', n_thin, ' of them resting on a single record. Plants are grouped at genus level. Bees identified only to genus are left out, because a flower list is only meaningful for a species. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
 <div class="note"><b>These are records, not preferences.</b> A row means somebody photographed or netted that bee on that plant, not that the bee depends on it or favors it. Effort was never even across plants, so a roadside shrub many people walk past collects more records than an uncommon plant that matters just as much to the bee. Check the record count on every row: most are thin, and the typical bee here has records on only two plant genera.</p>
-<p class="legend">In the list, <span class="lg">&#127804;&nbsp;5</span> means that bee was recorded on <b>5 plant genera</b>; under <b>By plant</b>, <span class="lg">&#128029;&nbsp;5</span> means <b>5 bee species</b> were recorded on that plant. In the table, the number is how many records sit behind that one pairing.</p>
 <div class="tabs"><button class="tab on" id="tb-bee" onclick="setMode(0)">By bee</button><button class="tab" id="tb-plant" onclick="setMode(1)">By plant</button></div>
 <div class="wrap">
-  <div class="side"><input id="q" type="search" placeholder="Search" oninput="draw()" autocomplete="off"><div id="list"></div></div>
+  
+  <div class="side"><p class="legend sidekey">In the list, <span class="lg">&#127804;&nbsp;5</span> means that bee was recorded on <b>5 plant genera</b>; under <b>By plant</b>, <span class="lg">&#128029;&nbsp;5</span> means <b>5 bee species</b> were recorded on that plant. In the table, the number is how many records sit behind that one pairing.</p><input id="q" type="search" placeholder="Search" oninput="draw()" autocomplete="off"><div id="list"></div></div>
   <div class="main"><div id="tname"></div><div id="tmeta"></div><div id="panel"></div></div>
 </div>
+<div class="scopebox scope-foot"><b>What is on this page.</b> Every bee recorded on an identified flower, parkwide, all years and months, pooling netted specimens and every iNaturalist photo. That is ', length(bees), ' bee species and ', length(plants), ' plant genera, forming ', nrow(pairs), ' pairs, ', n_thin, ' of them resting on a single record. Plants are grouped at genus level. Bees identified only to genus are left out, because a flower list is only meaningful for a species. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
 <script>
 var D = ', payload, ', mode = 0, sel = null;
 function items(){ return mode ? D.plants : D.bees }

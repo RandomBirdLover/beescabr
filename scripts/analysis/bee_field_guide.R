@@ -197,9 +197,11 @@ note_txt <- if (HAVE_IUCN) {
 } else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
 # Records/Status caveat -- this guide pools ALL data (no survey-only filter), so those two
 # columns reflect detection/photo effort, not a survey-controlled abundance estimate.
-status_note <- sprintf("Records and Status count all data. That means netted specimens plus every iNaturalist photo, including casual public sightings, across all years. So they show how often a species is detected or photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more. Diet is only stated at %d or more records.",
+status_note <- sprintf("Because casual public photos count too, Status shows how often a bee is noticed rather than how many there are. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more. Diet is only stated at %d or more records.",
                         RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN)
-note_txt <- paste(status_note, note_txt)
+# IUCN codes stay OUT of the provenance box; they key one column (see iucn_key below).
+iucn_key <- if (HAVE_IUCN) paste0('<p class="tkey">', esc(note_txt), '</p>') else ""
+note_txt <- status_note
 html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Field Guide (Species)</title>',
 '<style>',
@@ -216,11 +218,13 @@ bee_badge_css(BEE_IUCN_BG,   BEE_IUCN_FG,   function(k) paste0(".iucn.i-", k)), 
 '<div class="byline">by Brandi Sanchez</div>',
 '<p class="sub">One row per bee species, with any named subspecies sorted under its parent. Two columns are easy to mix up. <b style="color:', BEE_HTML_GREEN[["deep"]], '">Most-recorded flowers</b> is where a bee was seen most, which reflects what was blooming and how much people looked. <b style="color:', BEE_HTML_GREEN[["deep"]], '">Forage preference</b> is the stronger signal, because it compares a bee&rsquo;s visits to the rest of the community in the same month, year, and method, so a good bloom year cannot masquerade as a preference. Grey rows have fewer than 10 records, so their peak day and season are rough.</p>',
 '<p class="sub"><b>A Status of &ldquo;rare&rdquo; does not mean a bee is truly rare.</b> Here it usually means the bee is under-sampled, or that its specimen or photo records could not be identified to species.</p>',
-'<div class="scope"><p class="lead">', esc(scope_str), '</p>',
-'<p>', esc(note_txt), '</p></div>',
 '<div class="tbl-wrap"><table id="t"><thead><tr>',
 '<th>Bee</th>', iucn_th, '<th class="num">Records</th><th>Status</th><th>Peak day</th><th>Active months</th><th>Where to find</th><th>Diet</th><th>Most-recorded flowers</th><th>Forage preference</th>',
 '</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
+iucn_key,
+# Provenance below the table, labelled: reference material, not an introduction.
+'<div class="scope scope-foot"><p class="lead">', esc(scope_str), '</p>',
+'<p>', esc(note_txt), '</p></div>',
 '<script>',
 '(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
 bee_sort_mark_js(),

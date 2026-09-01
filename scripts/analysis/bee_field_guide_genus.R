@@ -140,7 +140,7 @@ scope_str <- sprintf("These counts pool netted specimens and every iNaturalist p
                      bee_data_asof())
 # Records/Status caveat -- same wording as the species guide (Diet -> Flower breadth here), since
 # this page also pools ALL data, so those columns reflect detection/photo effort, not abundance.
-status_note <- sprintf("Records and Status count all data. That means netted specimens plus every iNaturalist photo, including casual public sightings, across all years. So they show how often a genus is detected or photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more. Flower breadth is only stated at %d or more records.",
+status_note <- sprintf("Because casual public photos count too, Status shows how often a genus is noticed rather than how many there are. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more. Flower breadth is only stated at %d or more records.",
                        RARE_CUT, RARE_CUT, UNCOMMON_CUT - 1, UNCOMMON_CUT, CLAIM_MIN)
 
 # ---- 3. styled, sortable HTML table -----------------------------------------
@@ -191,12 +191,13 @@ bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),  
 '<div class="byline">by Brandi Sanchez</div>',
 '<p class="sub">A companion to the species guide, one row per bee genus, pooling records at every identification level. <b style="color:', BEE_HTML_GREEN[["deep"]], '">Species ID&rsquo;d</b> counts the distinct species pinned within the genus, and 0 means none yet. As on the species guide, <b style="color:', BEE_HTML_GREEN[["deep"]], '">most-recorded flowers</b> and <b style="color:', BEE_HTML_GREEN[["deep"]], '">most-used plant</b> are where the genus was seen most, reflecting bloom and effort as much as choice, while <b style="color:', BEE_HTML_GREEN[["deep"]], '">forage preference</b> corrects for what was available in the same month, year, and method.</p>',
 '<p class="sub"><b>A Status of &ldquo;rare&rdquo; does not mean a genus is truly rare.</b> Here it usually means the genus is under-sampled, not that it is genuinely scarce.</p>',
-'<div class="scope"><p class="lead">', esc(scope_str), '</p>',
-'<p>', esc(status_note), '</p>',
-'<p><sup class="cs">*</sup> ', esc(CONSERV_LEGEND), '</p></div>',
 '<div class="tbl-wrap"><table id="t"><thead><tr>',
 '<th>Genus</th><th class="num">Records</th><th class="num">Species ID&#39;d</th><th>Status</th><th>Peak day</th><th>Active months</th><th>Where to find</th><th>Flower breadth</th><th>Most-recorded flowers</th><th>Most-used plant</th><th>Forage preference</th>',
 '</tr>', def_row, '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
+# The conservation star is a key for one column, so it prints under the table.
+paste0('<p class="tkey"><sup class="cs">*</sup> ', esc(CONSERV_LEGEND), '</p>'),
+'<div class="scope scope-foot"><p class="lead">', esc(scope_str), '</p>',
+'<p>', esc(status_note), '</p></div>',
 '<script>',
 '(function(){var T=document.getElementById("t"),B=T.tBodies[0],ROWS=[].slice.call(B.rows),NC=T.tHead.rows[0].cells.length;',
 bee_sort_mark_js(),

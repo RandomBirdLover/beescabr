@@ -188,6 +188,17 @@ bee_table_css <- function() paste0(
   # line + secondary notes when the caveats are folded into the same bar).
   ".scope{color:", BEE_HTML[["sub"]], ";margin:14px 0 6px;font-size:12px;background:", BEE_HTML[["head_bg"]], ";border-left:3px solid ", BEE_HTML_GREEN[["mid"]], ";padding:10px 13px;border-radius:0 7px 7px 0;max-width:1100px}",
   ".scope>p{margin:9px 0 0}.scope>p:first-child{margin-top:0}",
+  # .scope-foot: the same box, moved BELOW the table and labelled. Provenance is
+  # reference material you check when questioning a number, not an introduction.
+  ".scope-foot{margin-top:30px}",
+  ".scope-foot:before{content:'About this data';display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:", BEE_HTML[["cn"]], ";margin-bottom:7px}",
+  # .tkey: a one-line key for codes used in a single column, printed under the table
+  # (not on hover, which a phone cannot reach, and not in the intro).
+  ".tkey{font-size:11.5px;color:", BEE_HTML[["cn"]], ";margin:8px 0 0;line-height:1.5;max-width:1100px}",
+  # .cov: definitions set as a list rather than a paragraph, so they can be scanned.
+  ".cov{list-style:none;margin:6px 0 14px;padding:0;max-width:660px}",
+  ".cov li{display:flex;align-items:baseline;gap:9px;margin:5px 0;font-size:13.5px;color:", BEE_HTML[["sub"]], "}",
+  ".cov li .pill{flex:none}",
   ".scope .lead{font-weight:600;color:", BEE_HTML[["scope"]], "}",   # provenance line stays prominent
   "p.note{color:", BEE_HTML[["sub"]], ";margin:14px 0 0;font-size:12px}",
   "sup.cs{color:", BEE_HTML[["cs"]], ";font-weight:700;margin-left:1px}",

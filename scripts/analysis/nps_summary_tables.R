@@ -236,10 +236,12 @@ df_to_html <- function(df, caption, heading, metric_col = FALSE, italic_cols = c
     }, "")
     paste0("<tr>", paste(cells, collapse = ""), "</tr>")
   }, "")
+  # Caption BELOW its table: it explains what the numbers are, which is a question you
+  # ask after seeing them. Each table carries its own, so there is no page-level box.
   paste0('<h2>', esc(heading), '</h2>',
-         '<p class="scope">', esc(caption), '</p>',
          sprintf('<table class="t%s"><thead><tr>', if (ncol(d) <= 3) " compact" else ""), hd, '</tr></thead><tbody>',
-         paste(body, collapse = ""), '</tbody></table>')
+         paste(body, collapse = ""), '</tbody></table>',
+         '<p class="scope">', esc(caption), '</p>')
 }
 
 # headline totals for the intro bar

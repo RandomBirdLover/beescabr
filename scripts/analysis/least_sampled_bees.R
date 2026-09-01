@@ -147,7 +147,7 @@ scope_str <- sprintf("These counts pool netted specimens and every iNaturalist p
                      bee_data_asof())
 # Records/Status caveat -- same wording as the field guides (no Diet line; this page has no diet
 # column). These columns pool ALL data, so they reflect detection/photo effort, not abundance.
-status_note <- sprintf("Total and Status count all data. That means netted specimens plus every iNaturalist photo, including casual public sightings, across all years. So they show how often a species is detected or photographed here, not a survey-controlled abundance. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more.",
+status_note <- sprintf("Because casual public photos count too, Status shows how often a bee is noticed rather than how many there are. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more.",
                        RARE_CUT, RARE_CUT, THIN_TOTAL - 1, THIN_TOTAL)
 
 # ---- 4. styled, sortable HTML table -----------------------------------------
@@ -186,7 +186,11 @@ rows_html <- vapply(seq_len(nrow(tbl)), function(i) {
 }, character(1))
 iucn_th  <- if (HAVE_IUCN) '<th class="num">IUCN</th>' else ""
 iucn_def <- if (HAVE_IUCN) '<td class="num def">Red List</td>' else ""
-iucn_par <- if (HAVE_IUCN) '<p>The IUCN column shows each bee&rsquo;s Red List status. Codes: NE (Not Evaluated), DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4.</p>' else ""
+# IUCN codes: a key for one column, printed under the table (see .tkey in the theme).
+iucn_key <- if (HAVE_IUCN) paste0('<p class="tkey"><b>IUCN Red List codes.</b> ',
+  'NE Not Evaluated &middot; DD Data Deficient &middot; LC Least Concern &middot; ',
+  'NT Near Threatened &middot; VU Vulnerable &middot; EN Endangered &middot; CR Critically Endangered. ',
+  'Source: IUCN Red List API v4.</p>') else ""
 # frozen definition sub-row: one short "what this column means" per column, pinned under the headers
 def_row <- paste0('<tr class="def"><td class="def"></td>', iucn_def,
   '<td class="num def">netted</td><td class="num def">on iNat</td><td class="num def">specimen + photo</td>',
@@ -197,7 +201,12 @@ html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Least-Sampled Native Bees</title><style>',
 bee_table_css(),                                                                   # shared base table chrome (single source -- theme_beescabr.R)
 bee_badge_css(BEE_COVERAGE_BG, BEE_COVERAGE_FG, function(k) paste0(".pill.", k)),   # coverage pills from theme tokens
-bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),      # abundance-status pills (rare/uncommon), shared with the field guide
+bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),
+# Coverage reads as three definitions, so it is set as a list rather than a paragraph:
+# the pill sits on the left and its meaning beside it, scannable without reading it through.
+paste0('.cov{list-style:none;margin:6px 0 14px;padding:0;max-width:660px}',
+       '.cov li{display:flex;align-items:baseline;gap:9px;margin:5px 0;font-size:13.5px;color:', BEE_HTML[["sub"]], '}',
+       '.cov li .pill{flex:none}'),      # abundance-status pills (rare/uncommon), shared with the field guide
 '.vneed{font-size:12px;vertical-align:middle}',
 bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),         # IUCN chips from theme tokens
 'a{color:', BEE_PANEL[["link"]], ';text-decoration:none}',
@@ -205,20 +214,24 @@ bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),     
 '<div class="org">Cabrillo National Monument</div>',
 '<h1>Least-Sampled Native Bees &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-sprintf('<p class="sub">These %d native bees each have fewer than %d records, making them the park&rsquo;s least-sampled and the best targets for more survey effort. Status therefore reads rare or uncommon here, never common (under %d records by definition).</p>',
-        nrow(tbl), THIN_TOTAL, THIN_TOTAL),
-sprintf('<p class="sub">The <b style="color:%s">Coverage</b> column tells you what each one needs. <span class="pill cb">both (thin)</span> means only a few of each method. <span class="pill cp">photo-only</span> means it has been photographed but never netted, so go net a voucher &#128300;. <span class="pill cs">specimen-only</span> means the opposite, so go photograph one &#128247;. The %s icon opens an example observation. Every column&rsquo;s meaning is noted right under its header, and you can click any header to sort.</p>',
+sprintf('<p class="sub">These %d native bees each have fewer than %d records, making them the park&rsquo;s least-sampled and the best targets for more survey effort.</p>',
+        nrow(tbl), THIN_TOTAL),
+sprintf('<p class="sub"><b style="color:%s">Coverage</b> tells you what each bee needs:</p><ul class="cov"><li><span class="pill cb">both (thin)</span> only a few of each method</li><li><span class="pill cp">photo-only</span> photographed, never netted &rarr; net a voucher &#128300;</li><li><span class="pill cs">specimen-only</span> collected, never photographed &rarr; photograph one &#128247;</li></ul><p class="sub">The %s icon opens an example observation.</p>',
         BEE_HTML_GREEN[["deep"]], INAT_ICON),
-'<p class="sub"><b>Hard to identify is not the same as scarce.</b> A photo or specimen named only to genus does not count toward a species here, so a bee can look under-sampled when it is simply hard to tell apart. For those, a clear photo or an expert-confirmed voucher helps as much as finding more.</p>',
-'<p class="sub"><b>Look beyond this list.</b> The plants and months shown are where people have already looked, not the whole picture. The bees we are missing are on plants and at times nobody has checked, so search widely rather than only here.</p>',
-'<div class="scope"><p class="lead">', esc(scope_str), '</p>',
-sprintf('<p>%s</p>', esc(status_note)),
-iucn_par,
-'</div>',
+'<p class="sub"><b>Two ways to help.</b> Some bees are on this list because they are hard to tell apart, not because they are scarce. When a bee can only be identified as far as its genus, it never counts toward a species, so a clear photo or a netted specimen an expert can confirm moves it off this list just as surely as finding a new one. The other way is to look somewhere new. The plants and months listed are only where people have searched so far, so different places and different times of year are worth trying.</p>',
+
 '<div class="tbl-wrap"><table id="t"><thead><tr><th>Bee</th>', iucn_th, '<th class="num">Specimen</th><th class="num">Photo</th><th class="num">Total</th>',
 '<th>Status</th><th>Coverage</th><th>Peak month</th><th>Active window</th><th>Where (transect)</th><th>Top flowers</th></tr>',
 def_row,
 '</thead><tbody>', paste(rows_html, collapse = ""), '</tbody></table></div>',
+# The IUCN codes are a key for ONE column, so they sit under the table rather than in
+# the intro. Printed, not on hover: a phone cannot hover.
+iucn_key,
+# Provenance last, labelled "About this data": it is what you check when a number looks
+# wrong, not what you read before the table.
+'<div class="scope scope-foot"><p class="lead">', esc(scope_str), '</p>',
+sprintf('<p>%s</p>', esc(status_note)),
+'</div>',
 '<script>',
 bee_sort_mark_js(),
 'document.querySelectorAll("#t th").forEach(function(h,i){h.addEventListener("click",function(){',
