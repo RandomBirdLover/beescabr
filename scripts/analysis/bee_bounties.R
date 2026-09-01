@@ -34,6 +34,9 @@ if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R") # iNat logo -> taxon photo page
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/bee_bounties")
+# quote-free aliases: the popup/JS strings below are double-quoted, so a BEE_HTML[["x"]]
+# subscript cannot be spliced into them directly. The palette is still the only source.
+.DEEP <- BEE_HTML_GREEN[["deep"]]; .SUB <- BEE_HTML[["sub"]]; .CN <- BEE_HTML[["cn"]]
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -284,7 +287,7 @@ park_bnd <- read_shp("data/spatial/boundaries/cabr/nps_official/cabr_boundary_np
 tran_ln  <- read_shp("data/spatial/transects/cabr_bee_transects.shp")
 if (!is.null(tran_ln)) {
   tran_ln$transect <- toupper(str_squish(tran_ln$Name))
-  tran_ln$col <- ifelse(tran_ln$transect %in% names(BEE_TRANSECT), unname(BEE_TRANSECT[tran_ln$transect]), "#8A8880")
+  tran_ln$col <- ifelse(tran_ln$transect %in% names(BEE_TRANSECT), unname(BEE_TRANSECT[tran_ln$transect]), BEE_HTML[["cn"]])
   tl <- dplyr::left_join(sf::st_drop_geometry(tran_ln)["transect"], tr_list, by = "transect")   # targets per line
   tran_ln$popup <- ifelse(is.na(tl$lst),
     sprintf('<b>%s transect</b><br><span style="font-size:11px;color:%s">no photograph-targets recorded here</span>',
@@ -334,13 +337,13 @@ foc_json <- jsonlite::toJSON(setNames(lapply(seq_len(nrow(foc)), function(i)
   # fixed-width wrapper (~ the default target column) so the hint WRAPS instead of forcing the card wide,
   # and the per-row count right-aligns to a stable column.
   # back link is context-aware (bt): a genus name -> back to that genus's species list; '__all__' -> all genera.
-  "function render(inner,bl,bt){if(leg)leg.innerHTML='<div style=\"width:264px\"><a href=\"#\" class=\"bx-showall\" data-back=\"'+bt+'\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:#1c5728;text-decoration:underline;margin:0 0 8px\">&larr; '+bl+'</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#1c5728;margin:0 0 6px\">Showing only</div>'+inner+'</div>';}",
+  "function render(inner,bl,bt){if(leg)leg.innerHTML='<div style=\"width:264px\"><a href=\"#\" class=\"bx-showall\" data-back=\"'+bt+'\" style=\"display:inline-block;font-size:10.5px;font-weight:600;color:", .DEEP, ";text-decoration:underline;margin:0 0 8px\">&larr; '+bl+'</a><div style=\"font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:", .DEEP, ";margin:0 0 6px\">Showing only</div>'+inner+'</div>';}",
   "function focusTaxa(keep,inner,bl,bt){Object.keys(groups).forEach(function(tt){setDim(tt,!keep[tt]);});render(inner,bl,bt);}",
   "function nm(t){return TAXA[t].g?('<i>'+t+'</i> sp.'):('<i>'+t+'</i>');}",   # display name: genus-level record -> 'Genus sp.'
-  "function focusSpecies(t){var k={};k[t]=1;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\">'+dot(TAXA[t].c)+'<span>'+nm(t)+'</span></div><div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>','Go back to all species',gof(t));}",
-  "function focusGenus(g){var list=Object.keys(TAXA).filter(function(t){return gof(t)===g;}).sort(function(a,b){return TAXA[b].n-TAXA[a].n;});if(!list.length)return;var k={},rows='';list.forEach(function(t){k[t]=1;rows+='<div class=\"bx-sp\" data-taxon=\"'+t+'\" style=\"display:flex;align-items:center;font-size:11.5px;padding:2px 4px\">'+dot(TAXA[t].c)+'<span style=\"white-space:nowrap\">'+nm(t)+'</span><span style=\"margin-left:auto;padding-left:12px;color:#8a8880;font-size:10px\">'+TAXA[t].n+'</span></div>';});var head='<div style=\"margin:2px 0 5px;white-space:nowrap\"><i>'+g+'</i> <span style=\"color:#6b6a66;font-size:10.5px\">('+list.length+' to net)</span></div>';var hint='<div style=\"margin:7px 0 0;font-size:10px;color:#8a8880;font-style:italic;line-height:1.35\">Numbers are iNaturalist photos in the park. Click a target to isolate its dots, or a dot on the map.</div>';focusTaxa(k,head+rows+hint,'Go back to all genera','__all__');}",
+  "function focusSpecies(t){var k={};k[t]=1;focusTaxa(k,'<div style=\"margin:2px 0;font-size:12px;white-space:nowrap\">'+dot(TAXA[t].c)+'<span>'+nm(t)+'</span></div><div style=\"margin:7px 0 0;font-size:10px;color:", .CN, ";font-style:italic;line-height:1.3\">Click its dot for where &amp; when.</div>','Go back to all species',gof(t));}",
+  "function focusGenus(g){var list=Object.keys(TAXA).filter(function(t){return gof(t)===g;}).sort(function(a,b){return TAXA[b].n-TAXA[a].n;});if(!list.length)return;var k={},rows='';list.forEach(function(t){k[t]=1;rows+='<div class=\"bx-sp\" data-taxon=\"'+t+'\" style=\"display:flex;align-items:center;font-size:11.5px;padding:2px 4px\">'+dot(TAXA[t].c)+'<span style=\"white-space:nowrap\">'+nm(t)+'</span><span style=\"margin-left:auto;padding-left:12px;color:", .CN, ";font-size:10px\">'+TAXA[t].n+'</span></div>';});var head='<div style=\"margin:2px 0 5px;white-space:nowrap\"><i>'+g+'</i> <span style=\"color:", .SUB, ";font-size:10.5px\">('+list.length+' to net)</span></div>';var hint='<div style=\"margin:7px 0 0;font-size:10px;color:", .CN, ";font-style:italic;line-height:1.35\">Numbers are iNaturalist photos in the park. Click a target to isolate its dots, or a dot on the map.</div>';focusTaxa(k,head+rows+hint,'Go back to all genera','__all__');}",
   "function resetAll(){Object.keys(groups).forEach(function(tt){setDim(tt,false);});if(leg)leg.innerHTML=legDefault;}",
-  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:#8a8880;font-style:italic;line-height:1.3\">Tip: click a genus below, or a dot on the map, to focus it.</div>');legDefault=leg.innerHTML;leg.addEventListener('click',function(e){var sa=e.target.closest('.bx-showall');if(sa){e.preventDefault();var bt=sa.getAttribute('data-back');if(bt==='__all__')resetAll();else focusGenus(bt);return;}var sp=e.target.closest('[data-taxon]');if(sp){e.preventDefault();focusSpecies(sp.getAttribute('data-taxon'));return;}var gr=e.target.closest('[data-genus]');if(gr){e.preventDefault();focusGenus(gr.getAttribute('data-genus'));}});}")
+  "if(leg){var ctl=leg.closest('.leaflet-control');if(ctl)L.DomEvent.disableClickPropagation(ctl);leg.insertAdjacentHTML('beforeend','<div style=\"margin-top:8px;font-size:10px;color:", .CN, ";font-style:italic;line-height:1.3\">Tip: click a genus below, or a dot on the map, to focus it.</div>');legDefault=leg.innerHTML;leg.addEventListener('click',function(e){var sa=e.target.closest('.bx-showall');if(sa){e.preventDefault();var bt=sa.getAttribute('data-back');if(bt==='__all__')resetAll();else focusGenus(bt);return;}var sp=e.target.closest('[data-taxon]');if(sp){e.preventDefault();focusSpecies(sp.getAttribute('data-taxon'));return;}var gr=e.target.closest('[data-genus]');if(gr){e.preventDefault();focusGenus(gr.getAttribute('data-genus'));}});}")
 .zoom_filter <- paste0("function(el, x) { (", BEE_MAP_CTRLROW_JS, ").call(this, el, x); var map=this; var TAXA=", foc_json, "; ", .filter_rest, " }")
 
 # ---- build + save the two interactive maps (shared lib/ dir) ----
@@ -375,7 +378,7 @@ title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7",
 # park-boundary outline (white casing + dark-teal core = crisp on either basemap); no-op if the
 # shapefile failed to load. Same helper on both maps.
 .add_boundary <- function(m) if (is.null(park_bnd)) m else m %>%
-  leaflet::addPolygons(data = park_bnd, fill = FALSE, color = "#ffffff", weight = 3, opacity = 0.95, group = "park boundary")
+  leaflet::addPolygons(data = park_bnd, fill = FALSE, color = BEE_HTML[["page"]], weight = 3, opacity = 0.95, group = "park boundary")
 
 m1 <- leaflet::leaflet(options = leaflet::leafletOptions(zoomControl = FALSE)) %>%
   leaflet::addProviderTiles(TILE_TOPO, group = "Topographic", options = .ATTR_ESRI) %>%

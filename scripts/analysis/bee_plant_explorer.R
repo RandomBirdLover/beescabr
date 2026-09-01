@@ -105,7 +105,7 @@ if (!exists("BPE_SOURCED_FOR_HELPERS")) {
 <title>Bee and Plant Explorer &#8211; Cabrillo National Monument</title>
 <style>
 html{background:', BEE_HTML[["page_alt"]], '}
-body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:', BEE_HTML[["ink"]], ';max-width:1180px;margin:26px auto;background:', BEE_HTML[["page"]], ';padding:34px 34px 42px;border:1px solid #e7e4dc;border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06)}
+body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:', BEE_HTML[["ink"]], ';max-width:1180px;margin:26px auto;background:', BEE_HTML[["page"]], ';padding:34px 34px 42px;border:1px solid ', BEE_PANEL[["card_border"]], ';border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06)}
 .org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:', BEE_HTML_GREEN[["mid"]], ';margin:0 0 3px}
 h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;color:', BEE_HTML_GREEN[["deep"]], '}
 h1:after{content:"";display:block;width:56px;height:3px;background:', BEE_HTML_GREEN[["mid"]], ';border-radius:2px;margin:11px 0 2px}
@@ -115,10 +115,10 @@ p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width
 .legend{font-size:12.5px;color:', BEE_HTML[["sub"]], ';margin:14px 0 0;max-width:900px}
 .lg{white-space:nowrap;font-weight:600;color:', BEE_HTML[["ink"]], '}
 .tabs{display:flex;gap:8px;margin:18px 0 0}
-.tab{font:inherit;font-size:13.5px;font-weight:600;padding:8px 15px;border:1px solid ', BEE_HTML[["border"]], ';border-radius:9px 9px 0 0;background:#fffdf9;color:', BEE_HTML[["sub"]], ';cursor:pointer;border-bottom:none}
+.tab{font:inherit;font-size:13.5px;font-weight:600;padding:8px 15px;border:1px solid ', BEE_HTML[["border"]], ';border-radius:9px 9px 0 0;background:', BEE_PANEL[["panel"]], ';color:', BEE_HTML[["sub"]], ';cursor:pointer;border-bottom:none}
 .tab.on{background:', BEE_HTML_GREEN[["mid"]], ';color:#fff;border-color:', BEE_HTML_GREEN[["mid"]], '}
 .wrap{display:flex;gap:22px;align-items:flex-start;border-top:1px solid ', BEE_HTML[["border"]], ';padding-top:16px}
-.side{width:300px;flex:none;max-height:70vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:#fffdf9}
+.side{width:300px;flex:none;max-height:70vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:', BEE_PANEL[["panel"]], '}
 #q{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:7px 9px;margin-bottom:8px;border:1px solid ', BEE_HTML[["border"]], ';border-radius:7px}
 .row{padding:4px 7px;margin:1px 0;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row:hover{background:rgba(28,92,40,.08)}
@@ -133,17 +133,17 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:', BEE_HTM
 th.num,td.num{text-align:right}
 tr:last-child td{border-bottom:none}
 .thin{color:', BEE_HTML[["sub"]], '}
-.badge{display:inline-block;font-size:10.5px;font-weight:700;color:#8a5a00;background:#fdf0d5;border-radius:20px;padding:1px 8px;margin-left:8px;white-space:nowrap}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;color:', BEE_BADGE[["ink"]], ';background:', BEE_BADGE[["bg"]], ';border-radius:20px;padding:1px 8px;margin-left:8px;white-space:nowrap}
 .cap{font-size:11.5px;color:', BEE_HTML[["scope"]], ';margin-top:18px;line-height:1.5}
 a.inat{text-decoration:none}
 @media (max-width:820px){.wrap{flex-direction:column}.side{width:100%;max-height:34vh}}
 </style></head><body>
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee and Plant Explorer &#127804;</h1>
-<p class="sub">Every flower a bee has been recorded on at the park, readable from either end. Pick <b>By bee</b> to see the plants it has been found on, or switch to <b>By plant</b> and pick a plant genus to see which bees have been recorded visiting it. The second direction is the one that matters for planting and restoration.</p>
-<div class="scopebox"><b>What is on this page.</b> Every record of a bee on an identified flower at Cabrillo National Monument, pooling netted specimens and every iNaturalist photo, not just formal survey records, across all years and months and the whole park. That comes to ', length(bees), ' bee species and ', length(plants), ' plant genera, forming ', nrow(pairs), ' recorded bee and plant pairs, ', n_thin, ' of which rest on a single record. Plants are grouped at genus level, and bees identified only to genus are left out, because a flower list is only meaningful for a species. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
-<div class="note"><b>These are records, not preferences.</b> A row means somebody photographed or netted that bee on that plant. It does not mean the bee depends on that plant, or that it favors it over another. Effort was never spread evenly across plants, so a common roadside shrub that many people walk past will collect more records than an uncommon plant that is just as important to the bee. The number of records is shown on every row so you can see how much is behind it, and rows resting on a single record are marked. Most rows here are thin: the typical bee on this page has records on only two plant genera.</p>
-<p class="legend">In the list, <span class="lg">&#127804;&nbsp;5</span> means that bee has been recorded on <b>5 plant genera</b>. Under <b>By plant</b>, <span class="lg">&#128029;&nbsp;5</span> means <b>5 bee species</b> have been recorded on that plant. The number beside each row in the table on the right is how many records sit behind that single pairing.</p>
+<p class="sub">Every flower a bee has been recorded on at the park, readable from either end. <b>By bee</b> lists the plants it was found on. <b>By plant</b> lists the bees recorded visiting it, which is the direction that matters for planting and restoration.</p>
+<div class="scopebox"><b>What is on this page.</b> Every bee recorded on an identified flower, parkwide, all years and months, pooling netted specimens and every iNaturalist photo. That is ', length(bees), ' bee species and ', length(plants), ' plant genera, forming ', nrow(pairs), ' pairs, ', n_thin, ' of them resting on a single record. Plants are grouped at genus level. Bees identified only to genus are left out, because a flower list is only meaningful for a species. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
+<div class="note"><b>These are records, not preferences.</b> A row means somebody photographed or netted that bee on that plant, not that the bee depends on it or favors it. Effort was never even across plants, so a roadside shrub many people walk past collects more records than an uncommon plant that matters just as much to the bee. Check the record count on every row: most are thin, and the typical bee here has records on only two plant genera.</p>
+<p class="legend">In the list, <span class="lg">&#127804;&nbsp;5</span> means that bee was recorded on <b>5 plant genera</b>; under <b>By plant</b>, <span class="lg">&#128029;&nbsp;5</span> means <b>5 bee species</b> were recorded on that plant. In the table, the number is how many records sit behind that one pairing.</p>
 <div class="tabs"><button class="tab on" id="tb-bee" onclick="setMode(0)">By bee</button><button class="tab" id="tb-plant" onclick="setMode(1)">By plant</button></div>
 <div class="wrap">
   <div class="side"><input id="q" type="search" placeholder="Search" oninput="draw()" autocomplete="off"><div id="list"></div></div>

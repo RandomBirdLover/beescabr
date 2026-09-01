@@ -135,6 +135,38 @@ BEE_HTML <- c(page = "#ffffff", page_alt = "#ece9e2", ink = "#22211e", sub = "#6
 # Michael Ready's hero photo. This is the WEB-page look ONLY (field guides + summary + landing site); it is
 # deliberately SEPARATE from BEE_TEAL, which still drives the figure magnitude/evidence ramps. deep = headings
 # (h1/h2/th), mid = eyebrow/underline/scope-rule, light = subtle def-row divider.
+# Page chrome shared by the document-style pages (guides, explorers, summary tables).
+BEE_PANEL <- c(
+  panel       = "#fffdf9",   # inset panel / list background
+  card_border = "#e7e4dc",   # outer card border
+  grid        = "#e4e0d6",   # chart gridlines
+  tag         = "#8a8071",   # small "whole genus" tag text
+  link        = "#3a6b8a",   # inline link
+  empty       = "#c8c6c0")   # an intentionally empty cell
+
+# Forage-preference cells (the field guides): selective, generalist, not applicable.
+BEE_PREF <- c(selective = "#1f6b46", generalist = "#7a6a2e", na = "#a3a099")
+
+# Small pill badges ("one record", "genus only").
+BEE_BADGE <- c(bg = "#fdf0d5", ink = "#8a5a00")
+
+# The PUBLIC SITE (docs/) renders as CSS custom properties. Named BEE_SITE, not BEE_WEB:
+# BEE_WEB below is a different, older thing (interaction-web node colours) in light and dark. It is a
+# deliberately brighter scheme than the document pages, so its greens are its own tokens
+# rather than reuses of BEE_HTML_GREEN. Both modes live here so a palette change moves both.
+BEE_SITE <- c(
+  bg = "#f3f8f1", bg2 = "#e7f2e4", fg = "#1a271b", muted = "#5c6d5b", card = "#ffffff",
+  border = "#d7e6d2", accent = "#3f8f4f", accent_deep = "#1c5c28", accent_soft = "#dcf1e1",
+  head = "#16302b")
+BEE_SITE_DARK <- c(
+  bg = "#0f170e", bg2 = "#0a120a", fg = "#e7efe5", muted = "#93a491", card = "#161f13",
+  border = "#26391f", accent = "#66bd77", accent_deep = "#91dba0", accent_soft = "#152e1a")
+
+# Slide illustrations (rare_bee_plants.R): the drawn bee and the paper behind it.
+BEE_SLIDE <- c(body = "#e8b93b", outline = "#2a2208", wing = "#7d7d7d", paper = "#f5f3ee")
+
+
+
 BEE_HTML_GREEN <- c(deep = "#1c5728", mid = "#3f8f4f", light = "#6ab87a")   # sampled from Brandi's peridot sweat bee (hero photo); light = the bee's own green
 # The shared stylesheet (the rules that go BETWEEN <style> and </style>). A script appends its own
 # bee_badge_css(...) for whichever pill sets it uses. Zebra striping (BEE_TABLE row_even) + sticky,
@@ -188,6 +220,46 @@ bee_table_css <- function() paste0(
   "tr.low{color:", BEE_HTML[["low"]], "}tr.low td.bee i{color:", BEE_HTML[["low"]], "}",
   ".pill{display:inline-block;padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600;white-space:nowrap}",
   ".iucn{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700}")
+
+# Map-page chrome. bee_occurrence_explorer.R is a Leaflet page, so it needs a few tints
+# the document pages never use (a marker outline, a phenology bar, a form-field border).
+# They live here rather than in that file so a palette change reaches the map too.
+BEE_MAP_CHROME <- c(
+  arrow       = "#0b0b0b",   # north-arrow glyph
+  swatch_edge = "#57564f",   # record-type swatch outline / filled-marker stroke
+  label       = "#b0ada4",   # small uppercase rank labels in the taxon rows
+  bar         = "#bcdcc0",   # phenology (active-months) bars
+  field       = "#d4e6d2",   # select + range-track borders
+  rule        = "#e8eee6")   # hairline above the legend
+
+# ---- CSS that cannot interpolate R values -------------------------------------
+# Some pages build their CSS inside a sprintf() template or a standalone template
+# string, where `', var, '` would print literally. Write a __C_NAME__ token in the CSS
+# and pass the finished string through beescabr_fill_colors(). The theme stays the only
+# place a hex literal is written.
+BEE_COLOR_TOKENS <- c(
+  "__C_PAGE__"    = BEE_HTML[["page"]],        "__C_INK__"     = BEE_HTML[["ink"]],
+  "__C_SUB__"     = BEE_HTML[["sub"]],         "__C_CN__"      = BEE_HTML[["cn"]],
+  "__C_BORDER__"  = BEE_HTML[["border"]],      "__C_DEEP__"    = BEE_HTML_GREEN[["deep"]],
+  "__C_MID__"     = BEE_HTML_GREEN[["mid"]],   "__C_ARROW__"   = BEE_MAP_CHROME[["arrow"]],
+  "__C_SWATCH__"  = BEE_MAP_CHROME[["swatch_edge"]], "__C_LABEL__" = BEE_MAP_CHROME[["label"]],
+  "__C_BAR__"     = BEE_MAP_CHROME[["bar"]],   "__C_FIELD__"   = BEE_MAP_CHROME[["field"]],
+  "__C_RULE__"    = BEE_MAP_CHROME[["rule"]],
+  "__W_BG__"      = BEE_SITE[["bg"]],           "__W_BG2__"     = BEE_SITE[["bg2"]],
+  "__W_FG__"      = BEE_SITE[["fg"]],           "__W_MUTED__"   = BEE_SITE[["muted"]],
+  "__W_CARD__"    = BEE_SITE[["card"]],         "__W_BORDER__"  = BEE_SITE[["border"]],
+  "__W_ACCENT__"  = BEE_SITE[["accent"]],       "__W_ACCENTD__" = BEE_SITE[["accent_deep"]],
+  "__W_ACCENTS__" = BEE_SITE[["accent_soft"]],  "__W_HEAD__"    = BEE_SITE[["head"]],
+  "__D_BG__"      = BEE_SITE_DARK[["bg"]],      "__D_BG2__"     = BEE_SITE_DARK[["bg2"]],
+  "__D_FG__"      = BEE_SITE_DARK[["fg"]],      "__D_MUTED__"   = BEE_SITE_DARK[["muted"]],
+  "__D_CARD__"    = BEE_SITE_DARK[["card"]],    "__D_BORDER__"  = BEE_SITE_DARK[["border"]],
+  "__D_ACCENT__"  = BEE_SITE_DARK[["accent"]],  "__D_ACCENTD__" = BEE_SITE_DARK[["accent_deep"]],
+  "__D_ACCENTS__" = BEE_SITE_DARK[["accent_soft"]])
+
+beescabr_fill_colors <- function(x) {
+  for (.k in names(BEE_COLOR_TOKENS)) x <- gsub(.k, BEE_COLOR_TOKENS[[.k]], x, fixed = TRUE)
+  x
+}
 
 # Marker JS shared by every sortable table (both field guides + least-sampled bees), so
 # the pages cannot drift apart. Each page calls beeMarkSort(header, direction) from inside

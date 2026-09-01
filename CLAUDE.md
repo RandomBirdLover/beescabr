@@ -116,6 +116,26 @@ Why this matters: iNaturalist renames taxa, the checklists spell some genera
 their own way, and subspecies roll up to the parent species. Ids survive all
 three; strings do not.
 
+## Color: `theme_beescabr.R` is the only source
+
+Every color a script draws with comes from `scripts/analysis/theme_beescabr.R`
+(`BEE_HTML`, `BEE_HTML_GREEN`, `BEE_FAMILY`, `BEE_MAP_CHROME`, `BEE_SLIDE`).
+**Never write a hex literal into an analysis, publish, or page-building script.**
+
+- Need a color that exists? Reference its token: `BEE_HTML[["ink"]]`.
+- Need one that does not exist yet? **Add it to the theme**, with a comment saying
+  what it is for, then reference it. Do not inline it "just this once".
+- Building a page whose CSS lives inside a `sprintf()` template (the Leaflet pages
+  do this) and cannot interpolate R values? Write a `__C_NAME__` token in the
+  template and fill it after the template is built, the way
+  `bee_occurrence_explorer.R` does. That is still sourcing from the theme.
+- The palette reference swatches live in `data/bee_themes_pallete/`.
+
+Why: hardcoded colors drift. Three different deep greens (`#1c5728`, `#1e5a2b`,
+`#1c5c28`) were in use across pages that were all meant to match, and nothing
+failed, because near-identical greens look fine side by side until someone
+changes the palette and only some of the site moves.
+
 ## Running the pipeline
 
 ```

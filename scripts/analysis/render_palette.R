@@ -19,7 +19,7 @@ OUT <- "data/analysis/bee_themes_pallete"; dir.create(OUT, showWarnings = FALSE,
 LAND_LIGHT <- setNames(.vh[.first],  sub("^--", "", .vn[.first]))
 LAND_DARK  <- setNames(.vh[!.first], sub("^--", "", .vn[!.first]))
 .hero <- regmatches(.pp, regexpr("hero \\{[^}]*background:#[0-9a-fA-F]{6}", .pp))
-HERO_BG <- if (length(.hero <- unlist(.hero))) sub("^.*background:", "", .hero[1]) else "#16302b"
+HERO_BG <- if (length(.hero <- unlist(.hero))) sub("^.*background:", "", .hero[1]) else BEE_SITE[["head"]]
 
 rows <- list(
   list("TRANSECT",       "4 transects (BST/UPMON/TP/OT) -- full",      unname(BEE_TRANSECT),     names(BEE_TRANSECT), TRUE),

@@ -172,7 +172,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
 <style>
   html,body{margin:0;height:100%%}#map{position:absolute;inset:0}
   .panel{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:#ffffff;border:1px solid #dddddd;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);
+    background:__C_PAGE__;border:1px solid __C_BORDER__;border-radius:12px;box-shadow:0 4px 20px rgba(20,20,20,.14);
     padding:12px 14px;width:268px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100vh - 200px);overflow-y:auto}
   .titlebox{max-height:none;overflow:visible;padding:9px 15px}
   .titlebox h1{white-space:nowrap}
@@ -185,28 +185,29 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   #taxphoto{width:100%%;max-height:min(190px,calc(100vh - 495px));object-fit:cover;border-radius:7px;display:block}
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
-  .panel p.sub{font-size:11.5px;color:#6b6a66;margin:0 0 10px;line-height:1.35}
-  .panel p.scope{font-size:11px;color:#6b6a66;margin:0 0 9px;line-height:1.4;border-left:2px solid #3f8f4f;padding-left:8px}
+  .panel p.sub{font-size:11.5px;color:__C_SUB__;margin:0 0 10px;line-height:1.35}
+  .panel p.scope{font-size:11px;color:__C_SUB__;margin:0 0 9px;line-height:1.4;border-left:2px solid __SCOPE_GREEN__;padding-left:8px}
   .panel label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:8px 0 3px}
-  .panel select{width:100%%;padding:5px 7px;border:1px solid #d4e6d2;border-radius:6px;font-size:12.5px;background:#fff;color:#22211e}
-  #yrlab{text-transform:none;font-weight:400;letter-spacing:0;color:#6b6a66;margin-left:5px}
-  .allyr{float:right;text-transform:none;letter-spacing:0;font-weight:600;font-size:9.5px;color:#3f8f4f;cursor:pointer;text-decoration:underline}
+  .panel select{width:100%%;padding:5px 7px;border:1px solid __C_FIELD__;border-radius:6px;font-size:12.5px;background:#fff;color:__C_INK__}
+  #yrlab{text-transform:none;font-weight:400;letter-spacing:0;color:__C_SUB__;margin-left:5px}
+  .allyr{float:right;text-transform:none;letter-spacing:0;font-weight:600;font-size:9.5px;color:__C_MID__;cursor:pointer;text-decoration:underline}
   .rng{position:relative;height:22px;margin-top:1px}
-  .rng .track{position:absolute;top:9px;left:0;right:0;height:4px;border-radius:2px;background:#d4e6d2}
-  .rng .trackfill{position:absolute;top:9px;height:4px;border-radius:2px;background:#3f8f4f}
+  .rng .track{position:absolute;top:9px;left:0;right:0;height:4px;border-radius:2px;background:__C_FIELD__}
+  .rng .trackfill{position:absolute;top:9px;height:4px;border-radius:2px;background:__C_MID__}
   .rng input[type=range]{position:absolute;top:0;left:0;width:100%%;height:22px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
-  .rng input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%%;background:#fff;border:2px solid #3f8f4f;cursor:pointer;pointer-events:auto}
-  .rng input[type=range]::-moz-range-thumb{width:15px;height:15px;border:2px solid #3f8f4f;border-radius:50%%;background:#fff;cursor:pointer;pointer-events:auto}
+  .rng input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%%;background:#fff;border:2px solid __C_MID__;cursor:pointer;pointer-events:auto}
+  .rng input[type=range]::-moz-range-thumb{width:15px;height:15px;border:2px solid __C_MID__;border-radius:50%%;background:#fff;cursor:pointer;pointer-events:auto}
   .legrow{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;color:#333;margin:4px 0}
-  .legnote{font-size:9px;color:#8a8880;font-style:italic;line-height:1.3;margin:1px 0 2px 20px}
+  .legnote{font-size:9px;color:__C_CN__;font-style:italic;line-height:1.3;margin:1px 0 2px 20px}
   .lswatch{display:inline-block;width:20px;border-top:3px solid #888;flex:none}
-  .cswatch{display:inline-block;width:12px;height:12px;border-radius:50%%;border:2px solid #57564f;flex:none}
-  .count{margin-top:9px;font-size:11px;color:#6b6a66}
+  .cswatch{display:inline-block;width:12px;height:12px;border-radius:50%%;border:2px solid __C_SWATCH__;flex:none}
+  .count{margin-top:9px;font-size:11px;color:__C_SUB__}
   .leaflet-popup-content{font:12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   .leaflet-popup-content i{color:#111}
-  .leg{border-top:1px solid #e8eee6;margin-top:12px;padding-top:4px}
+  .leg{border-top:1px solid __C_RULE__;margin-top:12px;padding-top:4px}
   .gclist{margin-bottom:2px}
   .panel.genusbox{max-height:calc(100vh - 392px);display:flex;flex-direction:column;overflow:hidden}
+  /* fallback only: fit_genusbox() below measures the real space left under the panels above it */
   .panel.photobox{width:210px}
   .panel.northbox{width:auto;padding:5px 9px 6px;text-align:center;line-height:1.05}
   .panel.genusbox>*{flex:0 0 auto}
@@ -215,19 +216,19 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .famrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:%s;margin:8px 0 3px;padding-left:2px}
   .genrow{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#333;margin:1px 0;padding-left:2px}
   .genrow i{font-style:italic}
-  .taxrow{display:none;font-size:10px;color:#6b6a66;margin:0 0 1px 28px;line-height:1.32}
+  .taxrow{display:none;font-size:10px;color:__C_SUB__;margin:0 0 1px 28px;line-height:1.32}
   .taxrow.cx{margin-left:46px}
   .taxrow.on{display:block}
-  .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:#b0ada4;margin-right:4px}
+  .taxrow b{font-weight:400;text-transform:uppercase;font-size:8px;letter-spacing:.03em;color:__C_LABEL__;margin-right:4px}
   .taxrow i{font-style:italic}
   .gdot{width:11px;height:11px;border-radius:50%%;flex:none;border:1px solid rgba(0,0,0,.15)}
   .phen{width:190px}
   .phen label{margin-top:0}
   .phbars{display:flex;align-items:flex-end;gap:2px;height:34px;margin-top:2px}
-  .phbar{flex:1;background:#bcdcc0;border-radius:1px 1px 0 0;transition:height .15s}
-  .phbar.pk{background:#3f8f4f}
+  .phbar{flex:1;background:__C_BAR__;border-radius:1px 1px 0 0;transition:height .15s}
+  .phbar.pk{background:__C_MID__}
   .phmon{display:flex;gap:2px;margin-top:3px}
-  .phmon span{flex:1;text-align:center;font-size:8px;color:#8a8880;line-height:1}
+  .phmon span{flex:1;text-align:center;font-size:8px;color:__C_CN__;line-height:1}
 </style></head><body><div id="map"></div>
 <script>
 var COLS=%s, KEYS=%s, DATA=%s, LABELS=%s, PHOTOS=%s, TCOLS=%s, GREY=%s, LEGEND=%s;
@@ -347,7 +348,7 @@ legright.onAdd=function(){
   var d=L.DomUtil.create("div","panel legright"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
   d.innerHTML="<label>Transects</label>"+trLeg+
     "<label>Record type</label>"+
-    "<div class=legrow><span class=cswatch style=\\"background:#57564f\\"></span>iNaturalist (filled)</div>"+
+    "<div class=legrow><span class=cswatch style=\\"background:__C_SWATCH__\\"></span>iNaturalist (filled)</div>"+
     "<div class=legrow><span class=cswatch style=\\"background:#fff\\"></span>specimen (outline)</div>";
   return d;
 };
@@ -355,15 +356,15 @@ legright.onAdd=function(){
 var photobox=L.control({position:"topright"});
 photobox.onAdd=function(){
   var d=L.DomUtil.create("div","panel photobox"); d.id="photowrap"; d.style.display="none"; L.DomEvent.disableClickPropagation(d);
-  d.innerHTML="<img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:#8a8880;margin-top:3px;line-height:1.3\\"></div>";
+  d.innerHTML="<img id=taxphoto style=\\"width:100%%;border-radius:7px;display:block\\" alt=\\"\\"><div id=taxcredit style=\\"font-size:9px;color:__C_CN__;margin-top:3px;line-height:1.3\\"></div>";
   return d;
 };
 // ---- north arrow (part of the bottom control row) ----
 var northbox=L.control({position:"bottomleft"});
 northbox.onAdd=function(){
   var d=L.DomUtil.create("div","panel northbox"); L.DomEvent.disableClickPropagation(d);
-  d.innerHTML="<div style=\\"font-weight:700;font-size:11px;color:#1c5728;margin-bottom:1px\\">N</div>"+
-    "<svg width=14 height=16 viewBox=\\"0 0 14 16\\"><polygon points=\\"7,0 12.5,15.5 7,11.5 1.5,15.5\\" fill=\\"#0b0b0b\\"/></svg>";
+  d.innerHTML="<div style=\\"font-weight:700;font-size:11px;color:__C_DEEP__;margin-bottom:1px\\">N</div>"+
+    "<svg width=14 height=16 viewBox=\\"0 0 14 16\\"><polygon points=\\"7,0 12.5,15.5 7,11.5 1.5,15.5\\" fill=\\"__C_ARROW__\\"/></svg>";
   return d;
 };
 // title card (its own box above the control panel, matching the other maps)
@@ -478,11 +479,38 @@ var lat0=recs.map(function(r){return r.lat;}), lon0=recs.map(function(r){return 
 var cLat=(Math.min.apply(null,lat0)+Math.max.apply(null,lat0))/2,
     cLon=(Math.min.apply(null,lon0)+Math.max.apply(null,lon0))/2;
 map.setView([cLat,cLon],16);
+// The genus legend sits under the title and filter panels in the same corner. Its height
+// used to be a hardcoded calc(100vh - 392px), which silently broke whenever the panels
+// above it changed height (adding a sentence to the title panel pushed it off-screen).
+// Measure the space that is actually left instead, and re-measure on resize.
+function fit_genusbox(){
+  var el=document.querySelector(".panel.genusbox"); if(!el) return;
+  var top=el.getBoundingClientRect().top;
+  el.style.maxHeight=Math.max(120, window.innerHeight - top - 18)+"px";
+}
+window.addEventListener("resize", fit_genusbox);
+fit_genusbox();
+
 draw();
 </script></body></html>')
 
 out <- file.path(OUT_DIR, "bee_occurrence_explorer.html")
 # fill the scope marker now that the sprintf template is built (see the titlebox above)
+# Colors: the CSS lives inside a sprintf template, so it cannot interpolate R values
+# directly without disturbing the argument list. Every color is written as a token and
+# filled here from theme_beescabr.R, so the map follows a palette change like every
+# other page. Values are unchanged -- this is a sourcing fix, not a restyle.
+.COLORS <- c(
+  "__C_PAGE__"   = BEE_HTML[["page"]],       "__C_INK__"    = BEE_HTML[["ink"]],
+  "__C_SUB__"    = BEE_HTML[["sub"]],        "__C_CN__"     = BEE_HTML[["cn"]],
+  "__C_BORDER__" = BEE_HTML[["border"]],     "__C_DEEP__"   = BEE_HTML_GREEN[["deep"]],
+  "__C_MID__"    = BEE_HTML_GREEN[["mid"]],  "__C_ARROW__"  = BEE_MAP_CHROME[["arrow"]],
+  "__C_SWATCH__" = BEE_MAP_CHROME[["swatch_edge"]], "__C_LABEL__" = BEE_MAP_CHROME[["label"]],
+  "__C_BAR__"    = BEE_MAP_CHROME[["bar"]],  "__C_FIELD__"  = BEE_MAP_CHROME[["field"]],
+  "__C_RULE__"   = BEE_MAP_CHROME[["rule"]])
+for (.k in names(.COLORS)) html <- gsub(.k, .COLORS[[.k]], html, fixed = TRUE)
+
+html <- sub("__SCOPE_GREEN__", BEE_HTML_GREEN[["mid"]], html, fixed = TRUE)
 html <- sub("<!--SCOPE-->", sprintf(paste0(
   "<p class=scope>All bee records, photos and netted specimens pooled, that are identified at least ",
   "to genus. A small number of records not identified that far are not mapped. Source: iNaturalist ",

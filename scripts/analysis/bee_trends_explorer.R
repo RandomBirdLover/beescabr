@@ -116,13 +116,13 @@ html <- paste0(
 <title>Bee Trends Explorer &#8211; Cabrillo National Monument</title>
 <style>
 html{background:', BEE_HTML[["page_alt"]], '}
-body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:', BEE_HTML[["ink"]], ';max-width:1180px;margin:26px auto;background:', BEE_HTML[["page"]], ';padding:34px 34px 42px;border:1px solid #e7e4dc;border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06)}
+body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:', BEE_HTML[["ink"]], ';max-width:1180px;margin:26px auto;background:', BEE_HTML[["page"]], ';padding:34px 34px 42px;border:1px solid ', BEE_PANEL[["card_border"]], ';border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06)}
 .org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:', BEE_HTML_GREEN[["mid"]], ';margin:0 0 3px}
 h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;color:', BEE_HTML_GREEN[["deep"]], '}
 h1:after{content:"";display:block;width:56px;height:3px;background:', BEE_HTML_GREEN[["mid"]], ';border-radius:2px;margin:11px 0 2px}
 p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width:900px}
 .wrap{display:flex;gap:22px;margin-top:18px;align-items:flex-start}
-.side{width:288px;flex:none;max-height:72vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:#fffdf9}
+.side{width:288px;flex:none;max-height:72vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:', BEE_PANEL[["panel"]], '}
 .fam{font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:', BEE_HTML_GREEN[["deep"]], ';margin:10px 0 3px;padding-left:7px;border-left:3px solid #999}
 .row{display:flex;align-items:center;gap:8px;padding:3px 6px;margin:1px 0;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap}
 .row:hover{background:rgba(28,92,40,.08)}
@@ -130,11 +130,11 @@ p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width
 .dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 .dot.g{background:#fff !important;border:2.5px dashed transparent;box-sizing:border-box}
 .row i{font-style:italic}
-.row .wg{color:#8a8071;font-size:10.5px;font-style:normal;margin-left:2px}
+.row .wg{color:', BEE_PANEL[["tag"]], ';font-size:10.5px;font-style:normal;margin-left:2px}
 .main{flex:1;min-width:0}
 .scopebox{font-size:13px;color:', BEE_HTML[["ink"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:16px 0 0}
 .note{font-size:13px;color:', BEE_HTML[["sub"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:0 0 12px}
-#chartbox{border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:14px 16px 8px;background:#fffdf9}
+#chartbox{border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:14px 16px 8px;background:', BEE_PANEL[["panel"]], '}
 #tname{font-size:18px;font-weight:700;color:', BEE_HTML_GREEN[["deep"]], '}
 #tmeta{font-size:12.5px;color:', BEE_HTML[["sub"]], ';margin:2px 0 6px}
 svg{width:100%;height:auto;display:block}
@@ -143,9 +143,9 @@ svg{width:100%;height:auto;display:block}
 </style></head><body>
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee Trends Explorer &#128200;</h1>
-<p class="sub">Pick a bee on the left to see how its share of the park&rsquo;s bee photos has moved from year to year. Share, not raw counts: surveying grew enormously over these years, so counting photos would only measure the surveying. Dividing by everything photographed that year cancels most of the effort out. Every month of the year counts here, so bees that fly outside the main survey season keep their records. Solid lines are single species; dashed lines are a whole genus pooled.</p>
-<p class="sub"><b>A share is still not a population count.</b> It shows how this bee is doing relative to the rest of the bee community. Small wiggles are normal, so look for sustained runs, not single-year jumps.</p>
-<div class="note"><b>Not enough data yet.</b> This program has run for six seasons, and six points cannot prove a trend in either direction. Almost nothing here will test as statistically significant, and that is expected. Watch out for 2024 in particular. That season was unusual across the whole park, with roughly twice as many bees recorded per survey as a normal year, so a line that rises into 2024 is often showing you that season rather than that bee. A steady rise or fall would need to outlast a single remarkable year. Treat every line as a first look. Each added year of monitoring makes this page more trustworthy.</div>
+<p class="sub">Pick a bee to see how its share of the park&rsquo;s bee photos has moved year to year. Share rather than raw counts, because surveying grew enormously over these years, so counting photos would mostly measure the surveying. Every month counts, so bees flying outside the survey season keep their records. Solid lines are single species and dashed lines are a whole genus.</p>
+<p class="sub"><b>A share is not a population count.</b> It shows this bee relative to the rest of the bee community, so look for sustained runs rather than single-year jumps.</p>
+<div class="note"><b>Not enough data yet.</b> Six seasons cannot prove a trend in either direction, so almost nothing here will test as statistically significant, and that is expected. Watch 2024 especially. That season recorded roughly twice as many bees per survey parkwide, so a line rising into 2024 is usually showing the season rather than the bee. Treat every line as a first look.</div>
 <p class="sub" style="font-size:12.5px">Where this is headed: with more years, the honest way to measure a trend is a model that lets each transect have its own story while still estimating one shared direction, rather than a single line through everything. That approach is described in Schirmer, Fritze and Scheuerlein (2026), <i>Ecological Indicators</i> 183:114588. Our four fixed transects are already the right structure for it. What we need now is seasons.</p>
 <div class="scopebox"><b>What is on this page.</b> iNaturalist photo records only, ', MIN_YEAR, ' through ', PARTIAL_YR, ', parkwide, from every observer. Photos only because specimen netting ran just 2021 to 2023, so mixing the two methods would make net-friendly bees look like they were disappearing when it was only the netting that stopped. A bee appears here once it has at least ', MIN_RECORDS, ' records. ', PARTIAL_YR, ' is still in progress, so its final point is drawn open. Direction is tested with a Spearman rank correlation of each bee&rsquo;s annual share against year. Source: iNaturalist observations, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
 <div class="tabs-anchor"></div>
@@ -161,8 +161,8 @@ svg{width:100%;height:auto;display:block}
 </div>
 <script>
 var D = ', payload, ';
-var INK = "', BEE_INK$primary, '", SUB = "#6b6a66", GRID = "#e4e0d6";
-function famcol(f){ return D.famcol[f] || "#8A8880"; }
+var INK = "', BEE_INK$primary, '", SUB = "', BEE_HTML[["sub"]], '", GRID = "', BEE_PANEL[["grid"]], '";
+function famcol(f){ return D.famcol[f] || "', BEE_HTML[["cn"]], '"; }
 function el(t,a){ var e=document.createElementNS("http://www.w3.org/2000/svg",t);
   for(var k in a) e.setAttribute(k,a[k]); return e; }
 function fmt(n){ return n.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,","); }

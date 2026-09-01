@@ -252,7 +252,7 @@ html <- paste0(
 # tables, but NOT their sticky/sortable header behavior (these are static reference tables).
 '*{box-sizing:border-box}',
 paste0('html{background:', BEE_HTML[["page_alt"]], '}'),
-paste0("body{font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:", BEE_HTML[["ink"]], ";max-width:940px;margin:26px auto;background:", BEE_HTML[["page"]], ";padding:34px 34px 46px;border:1px solid #e7e4dc;border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06);-webkit-font-smoothing:antialiased}"),
+paste0("body{font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:", BEE_HTML[["ink"]], ";max-width:940px;margin:26px auto;background:", BEE_HTML[["page"]], ";padding:34px 34px 46px;border:1px solid ", BEE_PANEL[["card_border"]], ";border-radius:14px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 14px 40px rgba(20,20,20,.06);-webkit-font-smoothing:antialiased}"),
 paste0('.org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:', BEE_HTML_GREEN[["mid"]], ';margin:0 0 3px}'),
 paste0('h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap;color:', BEE_HTML_GREEN[["deep"]], '}'),
 paste0("h1:after{content:'';display:block;width:56px;height:3px;background:", BEE_HTML_GREEN[["mid"]], ";border-radius:2px;margin:11px 0 2px}"),
@@ -272,7 +272,7 @@ paste0('table.t tbody tr:hover{background:', BEE_HTML[["row_hover"]], '}'),
 'table.t.compact{width:auto;min-width:340px}',
 'table.t.compact td,table.t.compact th{padding-right:30px}',
 paste0('.yes{color:', BEE_HTML_GREEN[["mid"]], ';font-weight:700;font-size:15px}'),
-'.no{color:#c8c6c0}',
+'.no{color:', BEE_PANEL[["empty"]], '}',
 '.iucn{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700}',
 bee_badge_css(BEE_IUCN_BG, BEE_IUCN_FG, function(k) paste0(".iucn.i-", k)),   # IUCN chips (all NE here)
 '</style></head><body>',

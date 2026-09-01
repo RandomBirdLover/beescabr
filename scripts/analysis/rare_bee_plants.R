@@ -231,12 +231,12 @@ petal_expr <- function(g) { cn <- plant_common_name(g)            # petal label:
 # dark stripes, pale wings; sits on the crimson centre node.
 draw_bee <- function(cx = 0, cy = 0, s = 1) {   # s scales the whole bee (bigger centre node -> bigger bee)
   ell <- function(ox, oy, rx, ry) { t <- seq(0, 2*pi, length.out = 60); list(x = cx+s*ox+s*rx*cos(t), y = cy+s*oy+s*ry*sin(t)) }
-  w <- adjustcolor("#F5F3EE", 0.92)
-  wl <- ell(-0.055, 0.11, 0.10, 0.066); polygon(wl$x, wl$y, col = w, border = adjustcolor("#7d7d7d", 0.5))
-  wr <- ell( 0.055, 0.11, 0.10, 0.066); polygon(wr$x, wr$y, col = w, border = adjustcolor("#7d7d7d", 0.5))
-  b  <- ell(0, 0, 0.17, 0.115); polygon(b$x, b$y, col = "#E8B93B", border = "#2a2208", lwd = 1.6)   # gold body
-  for (dx in c(-0.075, -0.005, 0.065)) segments(cx+s*dx, cy-s*0.093, cx+s*dx, cy+s*0.093, col = "#2a2208", lwd = 3.4)  # stripes
-  h <- ell(0.185, 0, 0.055, 0.06); polygon(h$x, h$y, col = "#2a2208", border = NA)   # head
+  w <- adjustcolor(BEE_SLIDE[["paper"]], 0.92)
+  wl <- ell(-0.055, 0.11, 0.10, 0.066); polygon(wl$x, wl$y, col = w, border = adjustcolor(BEE_SLIDE[["wing"]], 0.5))
+  wr <- ell( 0.055, 0.11, 0.10, 0.066); polygon(wr$x, wr$y, col = w, border = adjustcolor(BEE_SLIDE[["wing"]], 0.5))
+  b  <- ell(0, 0, 0.17, 0.115); polygon(b$x, b$y, col = BEE_SLIDE[["body"]], border = BEE_SLIDE[["outline"]], lwd = 1.6)   # gold body
+  for (dx in c(-0.075, -0.005, 0.065)) segments(cx+s*dx, cy-s*0.093, cx+s*dx, cy+s*0.093, col = BEE_SLIDE[["outline"]], lwd = 3.4)  # stripes
+  h <- ell(0.185, 0, 0.055, 0.06); polygon(h$x, h$y, col = BEE_SLIDE[["outline"]], border = NA)   # head
 }
 
 draw_flower <- function(lbl, big = FALSE) {   # big = standalone slide version: wider ring, larger photo-ready petals

@@ -18,6 +18,7 @@
 # Follow the season year from config.R so a new season needs no edit here. Set
 # BEESCABR_SEASON_YEAR=2026 to publish an older season.
 if (!exists("DIR_REPORT")) source("scripts/config.R")
+if (!exists("beescabr_fill_colors")) source("scripts/analysis/theme_beescabr.R")  # palette is the only colour source
 SRC_DIR  <- DIR_REPORT
 DOCS_DIR <- "docs"
 
@@ -129,17 +130,17 @@ group_pages_by_tag <- function(pages) {
 }
 
 # One landing-page card. Leading newline + indent matches the old heredoc exactly.
-.CARD_TPL <- '
+.CARD_TPL <- beescabr_fill_colors('
       <a class="card" href="./{{out}}{{ver}}">
         <div class="card-head"><span class="icon">{{icon}}</span><span class="tag">{{tag}}</span></div>
         <h2>{{title}}</h2>
         <p>{{blurb}}</p>
         <span class="go">Open<span class="arrow">&rarr;</span></span>
-      </a>'
+      </a>')
 
 # Full landing page. {{cards}} / {{herov}} / {{date}} are filled in; everything
 # else is verbatim the page the pipeline has always shipped.
-.PAGE_TPL <- '<!doctype html>
+.PAGE_TPL <- beescabr_fill_colors('<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -147,15 +148,15 @@ group_pages_by_tag <- function(pages) {
 <title>Cabrillo National Monument &mdash; Native Bee Monitoring Program</title>
 <style>
   :root {
-    --bg:#f3f8f1; --bg2:#e7f2e4; --fg:#1a271b; --muted:#5c6d5b;
-    --card:#ffffff; --border:#d7e6d2; --accent:#3f8f4f; --accent-deep:#1c5c28; --accent-soft:#dcf1e1;
+    --bg:__W_BG__; --bg2:__W_BG2__; --fg:__W_FG__; --muted:__W_MUTED__;
+    --card:__W_CARD__; --border:__W_BORDER__; --accent:__W_ACCENT__; --accent-deep:__W_ACCENTD__; --accent-soft:__W_ACCENTS__;
     --shadow:0 1px 2px rgba(24,50,26,.05), 0 8px 24px rgba(24,50,26,.07);
     --shadow-hover:0 2px 6px rgba(24,50,26,.1), 0 16px 40px rgba(24,50,26,.14);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:#0f170e; --bg2:#0a120a; --fg:#e7efe5; --muted:#93a491;
-      --card:#161f13; --border:#26391f; --accent:#66bd77; --accent-deep:#91dba0; --accent-soft:#152e1a;
+      --bg:__D_BG__; --bg2:__D_BG2__; --fg:__D_FG__; --muted:__D_MUTED__;
+      --card:__D_CARD__; --border:__D_BORDER__; --accent:__D_ACCENT__; --accent-deep:__D_ACCENTD__; --accent-soft:__D_ACCENTS__;
       --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
       --shadow-hover:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.5);
     }
@@ -166,7 +167,7 @@ group_pages_by_tag <- function(pages) {
          background-attachment:fixed; min-height:100vh;
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
          -webkit-font-smoothing:antialiased; }
-  .hero { position:relative; overflow:hidden; background:#16302b; border-bottom:1px solid var(--border); }
+  .hero { position:relative; overflow:hidden; background:__W_HEAD__; border-bottom:1px solid var(--border); }
   .hero-bg { position:absolute; inset:0; z-index:0; width:100%; height:100%;
              object-fit:cover; object-position:52% 46%; transform:none; }
   .hero::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
@@ -232,7 +233,7 @@ group_pages_by_tag <- function(pages) {
     <p>Generated from the beescabr pipeline by Brandi Sanchez. Based on data available as of {{date}}.</p>
   </footer>
 </body>
-</html>'
+</html>')
 
 # Pure builder: given the cards to show (list of page specs), the data-as-of date,
 # and the hero cache-buster, return the complete index.html as a string.

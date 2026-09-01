@@ -180,7 +180,7 @@ html <- paste0(
 '<!doctype html><html><head><meta charset="utf-8"><title>Cabrillo National Monument &mdash; Native Bee Field Guide (Genus)</title>',
 '<style>',
 bee_table_css(),                                                                # shared base table chrome (single source -- theme_beescabr.R)
-'td.pref-sel{color:#1f6b46;font-weight:600}td.pref-gen{color:#7a6a2e}td.pref-na{color:#a3a099;font-style:italic}',   # genus-guide preference cell colors
+'td.pref-sel{color:', BEE_PREF[["selective"]], ';font-weight:600}td.pref-gen{color:', BEE_PREF[["generalist"]], '}td.pref-na{color:', BEE_PREF[["na"]], ';font-style:italic}',   # genus-guide preference cell colors
 bee_badge_css(BEE_DIET_BG,  BEE_DIET_FG,  function(k) paste0(".pill.", k)),      # diet pills (sp/ge/mo/na)
 bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),   # abundance-status pills
 'a.inat img{opacity:.8}',   # size/margin are inline on the img (single source: inat_taxon_links.R)
@@ -189,7 +189,7 @@ bee_badge_css(BEE_ABUND_BG, BEE_ABUND_FG, function(k) paste0(".pill.st-", k)),  
 '<div class="org">Cabrillo National Monument</div>',
 '<h1>A Native Bee Genus Field Guide &#128029;</h1>',
 '<div class="byline">by Brandi Sanchez</div>',
-'<p class="sub">A companion to the species guide, with one row per bee genus, pooling all records at every identification level. <b style="color:#1e5a2b">Species ID&rsquo;d</b> counts the distinct species pinned within the genus, and 0 means none yet. Each column&rsquo;s meaning is noted right under its header. As on the species guide, <b style="color:#1e5a2b">most-recorded flowers</b> and <b style="color:#1e5a2b">most-used plant</b> are simply where the genus was seen most, which reflects bloom and effort as much as choice, while <b style="color:#1e5a2b">forage preference</b> corrects for what was available in the same month, year, and sampling method. Because these counts include casual photos too, <b style="color:#1e5a2b">Status</b> reflects how often a genus is recorded here, not true abundance. Click a header to sort.</p>',
+'<p class="sub">A companion to the species guide, one row per bee genus, pooling records at every identification level. <b style="color:', BEE_HTML_GREEN[["deep"]], '">Species ID&rsquo;d</b> counts the distinct species pinned within the genus, and 0 means none yet. As on the species guide, <b style="color:', BEE_HTML_GREEN[["deep"]], '">most-recorded flowers</b> and <b style="color:', BEE_HTML_GREEN[["deep"]], '">most-used plant</b> are where the genus was seen most, reflecting bloom and effort as much as choice, while <b style="color:', BEE_HTML_GREEN[["deep"]], '">forage preference</b> corrects for what was available in the same month, year, and method.</p>',
 '<p class="sub"><b>A Status of &ldquo;rare&rdquo; does not mean a genus is truly rare.</b> Here it usually means the genus is under-sampled, not that it is genuinely scarce.</p>',
 '<div class="scope"><p class="lead">', esc(scope_str), '</p>',
 '<p>', esc(status_note), '</p>',

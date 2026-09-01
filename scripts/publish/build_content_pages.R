@@ -9,6 +9,7 @@
 # About + Get-involved pages will join this file once their copy is written.
 # =============================================================
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
+if (!exists("beescabr_fill_colors")) source("scripts/analysis/theme_beescabr.R")  # palette is the only colour source
 suppressPackageStartupMessages(library(dplyr))
 
 DOCS <- "docs"
@@ -159,16 +160,16 @@ partner_html <- paste(vapply(partners, function(p)
   sprintf('<a class="partner" href="%s">%s</a>', p[2], esc(p[1])), character(1)), collapse = "\n")
 
 # ---- page --------------------------------------------------------------------
-css <- '
-  :root{--bg:#f3f8f1;--bg2:#e7f2e4;--fg:#1a271b;--muted:#5c6d5b;--card:#ffffff;--border:#d7e6d2;
-    --accent:#3f8f4f;--accent-deep:#1c5c28;--accent-soft:#dcf1e1;--shadow:0 1px 2px rgba(24,50,26,.05),0 8px 24px rgba(24,50,26,.07);}
-  @media (prefers-color-scheme:dark){:root{--bg:#0f170e;--bg2:#0a120a;--fg:#e7efe5;--muted:#93a491;--card:#161f13;
-    --border:#26391f;--accent:#66bd77;--accent-deep:#91dba0;--accent-soft:#152e1a;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);}}
+css <- beescabr_fill_colors('
+  :root{--bg:__W_BG__;--bg2:__W_BG2__;--fg:__W_FG__;--muted:__W_MUTED__;--card:__W_CARD__;--border:__W_BORDER__;
+    --accent:__W_ACCENT__;--accent-deep:__W_ACCENTD__;--accent-soft:__W_ACCENTS__;--shadow:0 1px 2px rgba(24,50,26,.05),0 8px 24px rgba(24,50,26,.07);}
+  @media (prefers-color-scheme:dark){:root{--bg:__D_BG__;--bg2:__D_BG2__;--fg:__D_FG__;--muted:__D_MUTED__;--card:__D_CARD__;
+    --border:__D_BORDER__;--accent:__D_ACCENT__;--accent-deep:__D_ACCENTD__;--accent-soft:__D_ACCENTS__;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);}}
   *{box-sizing:border-box}
   body{margin:0;color:var(--fg);line-height:1.55;background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
     background-attachment:fixed;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   a{color:var(--accent-deep)}
-  .head{background:#16302b;border-bottom:1px solid var(--border);padding:3.2rem 1.5rem 2.4rem}
+  .head{background:__W_HEAD__;border-bottom:1px solid var(--border);padding:3.2rem 1.5rem 2.4rem}
   .head-inner{max-width:820px;margin:0 auto}
   .eyebrow{display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#fff;margin:0 0 .7rem;
     padding:.3rem .7rem;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px}
@@ -205,7 +206,7 @@ css <- '
   .partner{background:var(--card);border:1px solid var(--border);border-radius:999px;padding:.5rem 1rem;text-decoration:none;color:var(--fg);font-weight:600;font-size:.92rem;box-shadow:var(--shadow)}
   .backlink{display:inline-block;margin:0 0 1.4rem;color:var(--accent-deep);text-decoration:none;font-size:.9rem}
   footer{max-width:820px;margin:0 auto;padding:0 1.5rem 3.5rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);padding-top:1.5rem}
-'
+')
 
 # ---- main research team (research_team_roster.csv) --------------------------
 rt <- rd("data/project_info/rosters/research_team_roster/research_team_roster.csv")
