@@ -109,6 +109,7 @@ body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica
 .org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:', BEE_HTML_GREEN[["mid"]], ';margin:0 0 3px}
 h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;color:', BEE_HTML_GREEN[["deep"]], '}
 h1:after{content:"";display:block;width:56px;height:3px;background:', BEE_HTML_GREEN[["mid"]], ';border-radius:2px;margin:11px 0 2px}
+.byline{font-size:13px;color:', BEE_HTML[["sub"]], ';margin:7px 0 0;font-style:italic}
 p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width:900px}
 .scopebox{font-size:13px;color:', BEE_HTML[["ink"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:16px 0 0}
 .note{font-size:13px;color:', BEE_HTML[["sub"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:14px 0 4px}
@@ -143,6 +144,7 @@ a.inat{text-decoration:none}
 </style></head><body>
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee and Plant Explorer &#127804;</h1>
+<div class="byline">by Brandi Sanchez</div>
 <p class="sub">Every flower a bee has been recorded on at the park, readable from either end. <b>By bee</b> lists the plants it was found on. <b>By plant</b> lists the bees recorded visiting it, which is the direction that matters for planting and restoration.</p>
 <div class="note"><b>These are records, not preferences.</b> A row means somebody photographed or netted that bee on that plant, not that the bee depends on it or favors it. Effort was never even across plants, so a roadside shrub many people walk past collects more records than an uncommon plant that matters just as much to the bee. Check the record count on every row: most are thin, and the typical bee here has records on only two plant genera.</p>
 <div class="tabs"><button class="tab on" id="tb-bee" onclick="setMode(0)">By bee</button><button class="tab" id="tb-plant" onclick="setMode(1)">By plant</button></div>

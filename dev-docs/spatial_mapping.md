@@ -1,5 +1,9 @@
 # Spatial layers and mapping
 
+> This file is about the **geodata**: where each layer came from and what is known to be
+> wrong with it. How the interactive map *pages* are built and published is in
+> `WEBSITE_GUIDE.md`.
+
 Everything about the boundary and transect geometry this project uses: where each
 shapefile came from, how it was built, which one is the real inclusion geometry,
 and the known coastal discrepancy between them.

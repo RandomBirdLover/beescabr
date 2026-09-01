@@ -45,6 +45,10 @@ title <- paste0('<div style="', CARD, ';padding:9px 15px;max-width:360px">',
   sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap;color:%s">Native Bee Survey Transects</div>', BEE_HTML_GREEN[["deep"]]),
   sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">Four fixed walking transects, sampled 2021\u20132026<br>%s m surveyed in total</div>',
           BEE_HTML[["sub"]], format(sum(tran$len_m), big.mark = ",", trim = TRUE)),
+  # Brief provenance, matching the other maps: where the lines come from, and lengths
+  # are measured off those lines rather than from a field odometer.
+  sprintf('<div style="font-size:10px;color:%s;margin-top:6px;padding-top:6px;border-top:1px solid %s;line-height:1.35">Transect lines from the park&rsquo;s survey layer (data/spatial), with lengths measured along them. Source: Cabrillo National Monument.</div>',
+          BEE_HTML[["sub"]], BEE_HTML[["border"]]),
   '</div>')
 
 ord <- order(tran$name)   # legend ordered by full trail name, like the original

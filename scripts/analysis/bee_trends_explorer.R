@@ -120,6 +120,7 @@ body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica
 .org{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:', BEE_HTML_GREEN[["mid"]], ';margin:0 0 3px}
 h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;color:', BEE_HTML_GREEN[["deep"]], '}
 h1:after{content:"";display:block;width:56px;height:3px;background:', BEE_HTML_GREEN[["mid"]], ';border-radius:2px;margin:11px 0 2px}
+.byline{font-size:13px;color:', BEE_HTML[["sub"]], ';margin:7px 0 0;font-style:italic}
 p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width:900px}
 .wrap{display:flex;gap:22px;margin-top:18px;align-items:flex-start}
 .side{width:288px;flex:none;max-height:72vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:', BEE_PANEL[["panel"]], '}
@@ -145,6 +146,7 @@ svg{width:100%;height:auto;display:block}
 </style></head><body>
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee Trends Explorer &#128200;</h1>
+<div class="byline">by Brandi Sanchez</div>
 <p class="sub">Pick a bee to see how its share of the park&rsquo;s bee photos has moved from year to year. Solid lines are one species, dashed lines a whole genus.</p>
 <div class="note"><b>Six seasons is not a trend.</b> These are shares of each year&rsquo;s photos, not population counts, and six points cannot show a direction either way. Watch 2024 especially, because that season recorded roughly twice as many bees per survey parkwide, so a line rising into 2024 is usually showing the season rather than the bee.</div>
 <div class="tabs-anchor"></div>

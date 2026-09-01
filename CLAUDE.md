@@ -118,9 +118,10 @@ three; strings do not.
 
 ## Page layout: the standard order for a table page
 
-Every table page on the public site follows the same order. Maps are exempt (their
-panels are laid out by Leaflet), and this is about the HTML pages built by
-`scripts/analysis/*.R` and published from `docs/`.
+Every table page on the public site follows the same order. This is about the HTML
+pages built by `scripts/analysis/*.R` and published from `docs/`. **Maps are exempt**
+and have their own standard in `dev-docs/WEBSITE_GUIDE.md`, which also covers how a
+page gets published and why two maps are built with R/leaflet and one with raw JS.
 
 1. **Title, then byline.**
 2. **Lead — exactly one sentence.** What this page is and who it is for. If you want

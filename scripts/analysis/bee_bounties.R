@@ -365,8 +365,12 @@ TILE_SAT <- "Esri.WorldImagery"; TILE_STR <- "CartoDB.Positron"; TILE_TOPO <- "E
 .LOOK_WIDELY <- paste0("<b>Look beyond this map.</b> These plants and months are where people have already found ",
   "these bees, not the whole picture of where they live. The bees we are still missing are out there on plants ",
   "and at times no one has checked. So don't just search the spots listed here. Look widely.")
-title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!", .LOOK_WIDELY)
-title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!", .LOOK_WIDELY)
+# Brief provenance, same idea as the document pages: what was pooled, source, data-as-of.
+.MAP_SCOPE <- paste0("<div style=\"margin-top:5px;opacity:.8\">All bee records, photos and netted specimens pooled. ",
+  "Source: iNaturalist observations and park specimen records, Cabrillo National Monument (data as of ",
+  bee_data_asof(), ").</div>")
+title1 <- .map_title("Bee Bounty: Native Species to Collect\U00A0\U0001F52C", "These bees turn up in iNaturalist photos but aren't in the collection yet. Find one in the field and net it for a voucher!", paste0(.LOOK_WIDELY, .MAP_SCOPE))
+title2 <- .map_title("Bee Bounty: Native Species to Photograph\U00A0\U0001F4F7", "These bees are in the collection but still missing an iNaturalist photo. Pick a transect to see what it needs, then head out and snap one!", paste0(.LOOK_WIDELY, .MAP_SCOPE))
 # adds zoom, then relocates zoom/basemap/north/scale into ONE bottom-centre row (shared helper, so every
 # interactive map -- explorer, transect, both bounties -- carries the identical control strip).
 .zoom_tr <- BEE_MAP_CTRLROW_JS

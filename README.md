@@ -204,17 +204,18 @@ All of them live in `dev-docs/` unless noted.
 | 1 | **README.md** (this file) | What is this, how do I set it up, what do I run? |
 | 2 | **DATA_ACCESS.md** | How do I get the data? It is not in this repo. Written for non-programmers. |
 | 3 | **SEASON_RUNBOOK.md** | It is a new season and I am running this. What do I do, in order? Start here to *operate* the pipeline. |
-| 4 | **MANUAL_INPUTS.md** | Which files must a human maintain by hand, and when? Read before any season. |
-| 5 | **PIPELINE_GUIDE.md** | How is the code laid out, how does data flow, how do I extend it? |
-| 6 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
-| 7 | **ANALYSIS_CATALOG.md** | What every analysis output is, one entry per figure/table. |
-| 8 | **analysis_decisions.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
-| 9 | **spatial_mapping.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
-| 10 | **analysis_roadmap.md** | Stakeholder questions, triaged into a buildable plan. |
-| 11 | **VERIFICATION_DESIGN.md** · **verification_guide.md** | What the verification workflow is, and how to answer its prompts. |
-| 12 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
-| 13 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
-| 14 | **TODO.md** | Open work, by area. |
+| 4 | **WEBSITE_GUIDE.md** | The public site: how a page is built and published, the layout every page follows, and why the maps are built two different ways. |
+| 5 | **MANUAL_INPUTS.md** | Which files must a human maintain by hand, and when? Read before any season. |
+| 6 | **PIPELINE_GUIDE.md** | How is the code laid out, how does data flow, how do I extend it? |
+| 7 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
+| 8 | **ANALYSIS_CATALOG.md** | What every analysis output is, one entry per figure/table. |
+| 9 | **analysis_decisions.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
+| 10 | **spatial_mapping.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
+| 11 | **analysis_roadmap.md** | Stakeholder questions, triaged into a buildable plan. |
+| 12 | **VERIFICATION_DESIGN.md** · **verification_guide.md** | What the verification workflow is, and how to answer its prompts. |
+| 13 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
+| 14 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
+| 15 | **TODO.md** | Open work, by area. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
 
