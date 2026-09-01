@@ -31,7 +31,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 #     species (Anthophora urbana ssp. clementina -> Anthophora urbana), and
 #   * a stale or misspelled name on a record cannot invent a bee -- the id decides.
 # An id absent from the lookup is DROPPED rather than guessed at.
-bpm_pairs <- function(df, lookup, name_col = NULL) {
+bpm_pairs <- function(df, lookup, name_col = NULL, plant_lookup = NULL) {
   empty <- data.frame(bee = character(0), plant = character(0), n = integer(0),
                       stringsAsFactors = FALSE)
   if (!all(c("taxon_id", "taxon_rank", "plant_genus") %in% names(df)) || !nrow(df)) return(empty)
@@ -39,6 +39,19 @@ bpm_pairs <- function(df, lookup, name_col = NULL) {
 
   rank  <- tolower(str_squish(df$taxon_rank))
   plant <- str_squish(df$plant_genus)
+
+  # Some records name the flower only as Angiospermae (subphylum) or Tracheophyta
+  # (phylum): the observer saw a flower but could not identify it. Those are not plant
+  # genera, so they are dropped rather than listed beside real ones. Rank comes from the
+  # PLANT reference table. A plant the table does not list is KEPT -- an unknown genus is
+  # a gap worth seeing, while an above-genus rank is a known non-answer.
+  if (!is.null(plant_lookup) && all(c("scientific_name", "rank") %in% names(plant_lookup))) {
+    above <- c("kingdom", "phylum", "subphylum", "class", "subclass", "order",
+               "suborder", "superfamily", "family", "subfamily", "tribe")
+    bad <- str_squish(plant_lookup$scientific_name)[
+             tolower(str_squish(plant_lookup$rank)) %in% above]
+    plant[plant %in% bad] <- ""
+  }
   # A record is usable if it is a species-level record on a named plant AND can be
   # resolved to a bee at all -- by id, or (for the unpublished taxa) by name.
   nm <- if (!is.null(name_col) && name_col %in% names(df)) str_squish(df[[name_col]]) else rep(NA_character_, nrow(df))
@@ -117,7 +130,8 @@ if (!exists("BPM_SOURCED_FOR_HELPERS")) {
   recs  <- bind_rows(rd(PATHS$inat_clean)     %>% select(all_of(keep_cols)),
                      rd(PATHS$specimen_clean) %>% select(all_of(keep_cols)))
   pairs <- bpm_pairs(recs, read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE),
-                     name_col = "scientific_name")
+                     name_col = "scientific_name",
+                     plant_lookup = read.csv(PATHS$plant_taxonomy_lookup, stringsAsFactors = FALSE))
   mat   <- bpm_matrix(pairs)
   summ  <- bpm_summary(pairs)
 

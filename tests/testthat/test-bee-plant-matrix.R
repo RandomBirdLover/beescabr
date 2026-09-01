@@ -127,3 +127,35 @@ test_that("an id-less record with no name at all is dropped, not mislabeled", {
   expect_false("Protandrena atripes" %in% p$bee)
   expect_false(any(is.na(p$bee)))
 })
+
+# ---- above-genus "plants" are not plants ---------------------------------------
+# Some records identify the flower only as Angiospermae (subphylum) or Tracheophyta
+# (phylum), meaning the observer could not name the plant. Those are not plant genera
+# and must not sit in a genus list, where they read as a real association and inflate
+# the genus count. Rank comes from the PLANT reference table, never from the string.
+pl_lk <- function() data.frame(
+  taxon_id        = c(1L, 2L, 3L, 4L),
+  scientific_name = c("Encelia", "Salvia", "Angiospermae", "Tracheophyta"),
+  genus           = c("Encelia", "Salvia", "", ""),
+  rank            = c("genus", "genus", "subphylum", "phylum"),
+  stringsAsFactors = FALSE)
+
+test_that("above-genus flower identifications are dropped", {
+  d <- recs(); d$plant_genus <- c("Encelia","Angiospermae","Encelia","Encelia","","Tracheophyta")
+  p <- bpm_pairs(d, lk(), plant_lookup = pl_lk())
+  expect_false("Angiospermae" %in% p$plant)
+  expect_false("Tracheophyta" %in% p$plant)
+  expect_true("Encelia" %in% p$plant)
+})
+
+test_that("a plant the reference table does not list is kept, not silently dropped", {
+  # only ABOVE-genus ranks are excluded; an unknown genus is a data gap to keep visible
+  d <- recs(); d$plant_genus <- c("Encelia","Notinlookup","Encelia","Encelia","","Salvia")
+  p <- bpm_pairs(d, lk(), plant_lookup = pl_lk())
+  expect_true("Notinlookup" %in% p$plant)
+})
+
+test_that("without a plant lookup nothing is filtered", {
+  d <- recs(); d$plant_genus <- c("Encelia","Angiospermae","Encelia","Encelia","","Salvia")
+  expect_true("Angiospermae" %in% bpm_pairs(d, lk())$plant)
+})
