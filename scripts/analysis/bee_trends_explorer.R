@@ -132,6 +132,7 @@ p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width
 .row i{font-style:italic}
 .row .wg{color:#8a8071;font-size:10.5px;font-style:normal;margin-left:2px}
 .main{flex:1;min-width:0}
+.scopebox{font-size:13px;color:', BEE_HTML[["ink"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:16px 0 0}
 .note{font-size:13px;color:', BEE_HTML[["sub"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:0 0 12px}
 #chartbox{border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:14px 16px 8px;background:#fffdf9}
 #tname{font-size:18px;font-weight:700;color:', BEE_HTML_GREEN[["deep"]], '}
@@ -146,6 +147,8 @@ svg{width:100%;height:auto;display:block}
 <p class="sub"><b>A share is still not a population count.</b> It shows how this bee is doing relative to the rest of the bee community. Small wiggles are normal, so look for sustained runs, not single-year jumps.</p>
 <div class="note"><b>Not enough data yet.</b> This program has run for six seasons, and six points cannot prove a trend in either direction. Almost nothing here will test as statistically significant, and that is expected. Watch out for 2024 in particular. That season was unusual across the whole park, with roughly twice as many bees recorded per survey as a normal year, so a line that rises into 2024 is often showing you that season rather than that bee. A steady rise or fall would need to outlast a single remarkable year. Treat every line as a first look. Each added year of monitoring makes this page more trustworthy.</div>
 <p class="sub" style="font-size:12.5px">Where this is headed: with more years, the honest way to measure a trend is a model that lets each transect have its own story while still estimating one shared direction, rather than a single line through everything. That approach is described in Schirmer, Fritze and Scheuerlein (2026), <i>Ecological Indicators</i> 183:114588. Our four fixed transects are already the right structure for it. What we need now is seasons.</p>
+<div class="scopebox"><b>What is on this page.</b> iNaturalist photo records only, ', MIN_YEAR, ' through ', PARTIAL_YR, ', parkwide, from every observer. Photos only because specimen netting ran just 2021 to 2023, so mixing the two methods would make net-friendly bees look like they were disappearing when it was only the netting that stopped. A bee appears here once it has at least ', MIN_RECORDS, ' records. ', PARTIAL_YR, ' is still in progress, so its final point is drawn open. Direction is tested with a Spearman rank correlation of each bee&rsquo;s annual share against year. Source: iNaturalist observations, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
+<div class="tabs-anchor"></div>
 <div class="wrap">
   <div class="side" id="list"></div>
   <div class="main">
@@ -154,7 +157,6 @@ svg{width:100%;height:auto;display:block}
       <div id="tmeta"></div>
       <svg id="chart" viewBox="0 0 860 470" role="img" aria-label="share of bee records by year"></svg>
     </div>
-    <div class="cap">', str_replace_all(cap, "([<>&])", function(x) c("<"="&lt;", ">"="&gt;", "&"="&amp;")[x]), '</div>
   </div>
 </div>
 <script>

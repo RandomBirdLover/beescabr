@@ -186,6 +186,7 @@ html <- paste0(sprintf('<!doctype html><html lang="en"><head><meta charset="utf-
   .panel .eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px}
   .panel h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;color:%s}
   .panel p.sub{font-size:11.5px;color:#6b6a66;margin:0 0 10px;line-height:1.35}
+  .panel p.scope{font-size:11px;color:#6b6a66;margin:0 0 9px;line-height:1.4;border-left:2px solid #3f8f4f;padding-left:8px}
   .panel label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:%s;margin:8px 0 3px}
   .panel select{width:100%%;padding:5px 7px;border:1px solid #d4e6d2;border-radius:6px;font-size:12.5px;background:#fff;color:#22211e}
   #yrlab{text-transform:none;font-weight:400;letter-spacing:0;color:#6b6a66;margin-left:5px}
@@ -369,7 +370,7 @@ northbox.onAdd=function(){
 var titlebox=L.control({position:"topleft"});
 titlebox.onAdd=function(){var d=L.DomUtil.create("div","panel titlebox"); L.DomEvent.disableClickPropagation(d);
   d.innerHTML="<div class=eyebrow>Cabrillo National Monument</div><h1>Bee Occurrence Explorer</h1>"+
-    "<p class=sub>Pick a genus to see where each bee has been recorded. Many bees are not identified all the way to species, so narrow by subgenus or complex when those appear.</p>";
+    "<p class=sub>Pick a genus to see where each bee has been recorded. Many bees are not identified all the way to species, so narrow by subgenus or complex when those appear.</p><!--SCOPE-->";
   return d;};
 // phenology strip: month activity of whatever is currently shown; updated by draw().
 // Lives TOP-RIGHT, under the transects legend -- per-taxon info grouped on the right.
@@ -481,5 +482,12 @@ draw();
 </script></body></html>')
 
 out <- file.path(OUT_DIR, "bee_occurrence_explorer.html")
+# fill the scope marker now that the sprintf template is built (see the titlebox above)
+html <- sub("<!--SCOPE-->", sprintf(paste0(
+  "<p class=scope>All bee records, photos and netted specimens pooled, that are identified at least ",
+  "to genus. A small number of records not identified that far are not mapped. Source: iNaturalist ",
+  "observations and park specimen records, Cabrillo National Monument (data as of %s).</p>"),
+  bee_data_asof()), html, fixed = TRUE)
+
 writeLines(html, out)
 message("Wrote ", normalizePath(out), sprintf("  (%s)", format(structure(file.size(out), class = "object_size"), units = "KB")))
