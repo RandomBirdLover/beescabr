@@ -37,12 +37,21 @@ RUNNING_ALL <- TRUE
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
 
 # source each in the global env; a formal-arg closure keeps `nm` safe even if a
-# sourced script reuses common variable names.
-.ok <- lapply(.scripts, function(nm) {
+# sourced script reuses common variable names. run_analysis_script() attributes each
+# script's warnings TO that script (R would otherwise pool them all and print them,
+# nameless, after the run) and fails the script on an unknown-column warning, which
+# always means a real bug rather than a style nit. See scripts/utils/analysis_run.R.
+if (!exists("run_analysis_script")) source("scripts/utils/analysis_run.R")
+.res <- lapply(.scripts, function(nm) {
   message("\n===== ", nm, " =====")
-  tryCatch({ source(file.path("scripts/analysis", nm)); TRUE },
-           error = function(e) { message("  !! FAILED: ", conditionMessage(e)); FALSE })
+  r <- run_analysis_script(nm)
+  if (!r$ok) message("  !! FAILED: ", r$error)
+  if (length(r$warnings))
+    message("  ! ", length(r$warnings), " warning(s): ",
+            paste(unique(r$warnings)[1:min(2, length(unique(r$warnings)))], collapse = " | "))
+  r
 })
+.ok     <- lapply(.res, function(r) r$ok)
 .failed <- .scripts[!unlist(.ok)]
 
 # LAST: roll up every analysis into plain-language <name>_findings.csv tables +
@@ -53,7 +62,6 @@ tryCatch(source("scripts/analysis/findings_summaries.R"),
          error = function(e) message("  !! findings rollup skipped: ", conditionMessage(e)))
 
 message("\n---------------------------------------------")
-message(sprintf("Ran %d analysis scripts; %d failed.", length(.scripts), length(.failed)))
-if (length(.failed)) message("Failed: ", paste(.failed, collapse = ", "))
+message(analysis_tally(.scripts, .res))
 message("Figures + tables are in data/analysis/")
 message("Next stage: publish the public site with  Rscript scripts/run_publishing_materials_pipeline.R")

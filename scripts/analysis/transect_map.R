@@ -127,7 +127,7 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
     if (!is.null(pk3857)) g <- g + geom_sf(data = pk3857, fill = NA, color = BEE_HTML_GREEN[["deep"]], linewidth = 0.6)
     g + geom_sf(data = tr3857, aes(color = code_f), linewidth = 1.4, lineend = "round") +
       geom_sf_label(data = mid3857, aes(label = code), size = 2.9, fontface = "bold", fill = "white",
-                    alpha = 0.82, label.size = 0, label.padding = unit(0.14, "lines"), color = BEE_INK[["primary"]]) +
+                    alpha = 0.82, linewidth = 0, label.padding = unit(0.14, "lines"), color = BEE_INK[["primary"]]) +
       scale_color_manual(values = vals[levels(tr3857$code_f)], labels = labs2[levels(tr3857$code_f)],
                          name = "CABR Bee Transects") +
       coord_sf(xlim = c(ext["xmin"], ext["xmax"]), ylim = c(ext["ymin"], ext["ymax"]), expand = FALSE, crs = 3857) +
