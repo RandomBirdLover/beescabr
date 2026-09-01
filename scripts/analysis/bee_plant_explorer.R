@@ -100,12 +100,12 @@ if (!exists("BPE_SOURCED_FOR_HELPERS")) {
                   length(bees), length(plants), nrow(pairs), n_thin))
 
   cap <- scope_cap(
-    scope = sprintf("all bee records on a named flower, both methods pooled, whole park, every year and month; %d bee species x %d plant genera and %d recorded pairs, of which %d rest on a single record; a pair means the bee was recorded on that plant, not that it prefers or depends on it; plants are counted at GENUS level; bees identified only to genus are not shown, because a plant list is only meaningful for a species",
+    scope = sprintf("All bee records made on an identified flower, parkwide, across every year and month on record. The data comprise %d bee species and %d plant genera, forming %d recorded pairs, of which %d rest on a single record. A pair means the bee was recorded on that plant. It does not mean the bee prefers that plant or depends on it. Plants are summarized at genus level. Bees identified only to genus are excluded, because a plant list is meaningful only for a species.",
                     length(bees), length(plants), nrow(pairs), n_thin),
-    method = "both methods pooled (photo records and specimens)",
-    rank   = "bee species by plant genus",
+    method = "Photo records and specimen records pooled",
+    rank   = "Bee species by plant genus",
     source = "iNaturalist observations and park specimen records, Cabrillo NM",
-    sig    = "Descriptive. No statistical test: these are counts of what was recorded, and survey effort was not equal across plants.")
+    sig    = "Descriptive summary. No statistical test is applied, because these are counts of what was recorded and survey effort was not equal across plants.")
 
   html <- paste0(
 '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
@@ -118,6 +118,7 @@ body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica
 h1{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0;color:', BEE_HTML_GREEN[["deep"]], '}
 h1:after{content:"";display:block;width:56px;height:3px;background:', BEE_HTML_GREEN[["mid"]], ';border-radius:2px;margin:11px 0 2px}
 p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width:900px}
+.scopebox{font-size:13px;color:', BEE_HTML[["ink"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:16px 0 0}
 .note{font-size:13px;color:', BEE_HTML[["sub"]], ';background:', BEE_HTML[["head_bg"]], ';border-left:3px solid ', BEE_HTML_GREEN[["mid"]], ';padding:9px 13px;border-radius:0 7px 7px 0;margin:14px 0 4px}
 .tabs{display:flex;gap:8px;margin:18px 0 0}
 .tab{font:inherit;font-size:13.5px;font-weight:600;padding:8px 15px;border:1px solid ', BEE_HTML[["border"]], ';border-radius:9px 9px 0 0;background:#fffdf9;color:', BEE_HTML[["sub"]], ';cursor:pointer;border-bottom:none}
@@ -128,7 +129,7 @@ p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width
 .row{padding:4px 7px;margin:1px 0;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row:hover{background:rgba(28,92,40,.08)}
 .row.on{background:rgba(28,92,40,.13);font-weight:700}
-.row .c{color:', BEE_HTML[["sub"]], ';font-size:11px;font-style:normal;margin-left:5px}
+.row .c{color:', BEE_HTML[["sub"]], ';font-size:11.5px;font-style:normal;margin-left:9px;white-space:nowrap}
 .main{flex:1;min-width:0}
 #tname{font-size:19px;font-weight:700;color:', BEE_HTML_GREEN[["deep"]], ';white-space:nowrap}
 #tmeta{font-size:12.5px;color:', BEE_HTML[["sub"]], ';margin:3px 0 12px}
@@ -145,7 +146,8 @@ a.inat{text-decoration:none}
 </style></head><body>
 <div class="org">Cabrillo National Monument</div>
 <h1>Bee and Plant Explorer &#127804;</h1>
-<p class="sub">Every flower a bee has been recorded on at the park, readable from either end. Pick a bee to see the plants it has been found on, or switch to <b>By plant</b> and pick a plant genus to see which bees have been recorded visiting it. The second direction is the one that matters for planting and restoration.</p>
+<p class="sub">Every flower a bee has been recorded on at the park, readable from either end. Pick <b>By bee</b> to see the plants it has been found on, or switch to <b>By plant</b> and pick a plant genus to see which bees have been recorded visiting it. The second direction is the one that matters for planting and restoration.</p>
+<div class="scopebox"><b>What is on this page.</b> Every record of a bee on an identified flower at Cabrillo National Monument, pooling netted specimens and every iNaturalist photo, not just formal survey records, across all years and months and the whole park. That comes to ', length(bees), ' bee species and ', length(plants), ' plant genera, forming ', nrow(pairs), ' recorded bee and plant pairs. Plants are grouped at genus level, and bees identified only to genus are left out, because a flower list is only meaningful for a species. Source: iNaturalist photos and netted specimens, Cabrillo National Monument (data as of ', bee_data_asof(), ').</div>
 <div class="note"><b>These are records, not preferences.</b> A row means somebody photographed or netted that bee on that plant. It does not mean the bee depends on that plant, or that it favors it over another. Effort was never spread evenly across plants, so a common roadside shrub that many people walk past will collect more records than an uncommon plant that is just as important to the bee. The number of records is shown on every row so you can see how much is behind it, and rows resting on a single record are marked. Most rows here are thin: the typical bee on this page has records on only two plant genera.</p>
 <div class="tabs"><button class="tab on" id="tb-bee" onclick="setMode(0)">By bee</button><button class="tab" id="tb-plant" onclick="setMode(1)">By plant</button></div>
 <div class="wrap">
@@ -164,7 +166,12 @@ function draw(){
     if (q && keys[i].toLowerCase().indexOf(q) < 0) return;
     var d = document.createElement("div");
     d.className = "row" + (sel === keys[i] ? " on" : "");
-    d.innerHTML = it.label + \'<span class="c">\' + it.rows.length + "</span>";
+    // the icon names WHAT is being counted, so it flips with the direction:
+    // a bee row counts plant genera, a plant row counts bee species.
+    var unit = mode ? "bee species" : "plant " + (it.rows.length === 1 ? "genus" : "genera"),
+        icon = mode ? "&#128029;" : "&#127804;";
+    d.innerHTML = it.label + \'<span class="c" title="\' + it.rows.length + " " + unit +
+                  \'">\' + icon + "&nbsp;" + it.rows.length + "</span>";
     d.onclick = function(){ sel = keys[i]; draw(); show(it) };
     L.appendChild(d);
   });

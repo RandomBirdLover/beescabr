@@ -47,14 +47,19 @@ you to resolve unknown tags, verify new taxa, and confirm specimen IDs. Stages 2
 and 3 are fast and non-interactive; run them alone whenever you have only changed
 plotting or wording.
 
-Useful switches for stage 1:
+Stage 1 opens with a menu, so there is nothing to memorize: choose **1 (Normal
+run)** unless you have a reason not to. The same modes are available as switches
+if you are scripting it:
 
 ```bash
 BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # reuse the cache, no API calls
 BEESCABR_FULL_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # re-fetch everything from scratch
 ```
 
-Full detail: **dev-docs/PIPELINE_GUIDE.md**.
+**Running a season? Start with dev-docs/SEASON_RUNBOOK.md.** It walks the whole
+season end to end, including what to update by hand first and what to do when a
+stage stops. For how the code is laid out instead, see
+**dev-docs/PIPELINE_GUIDE.md**.
 
 ---
 
@@ -198,17 +203,18 @@ All of them live in `dev-docs/` unless noted.
 | --- | --- | --- |
 | 1 | **README.md** (this file) | What is this, how do I set it up, what do I run? |
 | 2 | **DATA_ACCESS.md** | How do I get the data? It is not in this repo. Written for non-programmers. |
-| 3 | **PIPELINE_GUIDE.md** | How is the code laid out, how does data flow, how do I extend it? |
+| 3 | **SEASON_RUNBOOK.md** | It is a new season and I am running this. What do I do, in order? Start here to *operate* the pipeline. |
 | 4 | **MANUAL_INPUTS.md** | Which files must a human maintain by hand, and when? Read before any season. |
-| 5 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
-| 6 | **ANALYSIS_CATALOG.md** | What every analysis output is, one entry per figure/table. |
-| 7 | **analysis_decisions.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
-| 8 | **spatial_mapping.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
-| 9 | **analysis_roadmap.md** | Stakeholder questions, triaged into a buildable plan. |
-| 10 | **VERIFICATION_DESIGN.md** · **verification_guide.md** | What the verification workflow is, and how to answer its prompts. |
-| 11 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
-| 12 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
-| 13 | **TODO.md** | Open work, by area. |
+| 5 | **PIPELINE_GUIDE.md** | How is the code laid out, how does data flow, how do I extend it? |
+| 6 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
+| 7 | **ANALYSIS_CATALOG.md** | What every analysis output is, one entry per figure/table. |
+| 8 | **analysis_decisions.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
+| 9 | **spatial_mapping.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
+| 10 | **analysis_roadmap.md** | Stakeholder questions, triaged into a buildable plan. |
+| 11 | **VERIFICATION_DESIGN.md** · **verification_guide.md** | What the verification workflow is, and how to answer its prompts. |
+| 12 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
+| 13 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
+| 14 | **TODO.md** | Open work, by area. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
 

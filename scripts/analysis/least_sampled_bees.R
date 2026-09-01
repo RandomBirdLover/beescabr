@@ -130,10 +130,14 @@ tbl$iucn <- if (exists("iucn_code_of")) iucn_code_of(tbl$species) else NA_charac
 tbl$conservation <- if (exists("conservation_label")) conservation_label(tbl$species) else ""
 HAVE_IUCN <- exists("iucn_cache_exists") && isTRUE(try(iucn_cache_exists(), silent = TRUE))
 
+# is_genus rides along: the row builder needs it to look a GENUS-only taxon up on the
+# lookup's genus rows. Dropping it here made every row take the species branch silently
+# (`$` on a missing column is NULL, and isTRUE(NULL) is FALSE), which is the reverse
+# lookup CLAUDE.md forbids. It is excluded from the CSV write below, not from the table.
 tbl <- tbl %>% select(species, common_name, net_records, photo_records, total_records,
                       status, coverage, peak_months, active_window, top_transects, top_flowers, top_flowers_html,
-                      iucn, conservation, example_url)
-write.csv(tbl %>% select(-top_flowers_html), file.path(OUT_DIR, "least_sampled_bees.csv"), row.names = FALSE)   # CSV keeps the plain flower list
+                      iucn, conservation, example_url, is_genus)
+write.csv(tbl %>% select(-top_flowers_html, -is_genus), file.path(OUT_DIR, "least_sampled_bees.csv"), row.names = FALSE)   # CSV keeps the plain flower list
 message(sprintf("  coverage: %d both(thin), %d photo-only, %d specimen-only",
                 sum(tbl$coverage == "both (thin)"), sum(tbl$coverage == "photo-only"),
                 sum(tbl$coverage == "specimen-only")))
