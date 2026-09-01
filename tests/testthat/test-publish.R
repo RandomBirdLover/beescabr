@@ -152,3 +152,29 @@ test_that("the stale message names every stale page and how to fix it", {
   expect_true(grepl("park_summary.html", m, fixed = TRUE))
   expect_true(grepl("run_all_analysis_pipeline.R", m, fixed = TRUE))
 })
+
+# ---- favicon ------------------------------------------------------------------
+# No page set a favicon, so browsers fell back to whatever icon they had for the
+# github.io host: the site showed a classical-building emoji that belongs to a
+# different page. One bee, injected at publish time so all pages match.
+test_that("the favicon is a bee, inlined so no extra file is served", {
+  expect_match(FAVICON, "rel=\"icon\"")
+  expect_match(FAVICON, "data:image/svg", fixed = TRUE)
+  expect_match(FAVICON, "%F0%9F%90%9D", fixed = TRUE)   # the bee, percent-encoded
+})
+
+test_that("a page with a <head> gets the favicon inside it", {
+  h <- add_favicon_html("<html><head><title>x</title></head><body>y</body></html>")
+  expect_true(grepl("<head>.*rel=\"icon\".*</head>", h))
+})
+
+test_that("injecting twice does not duplicate it", {
+  h1 <- add_favicon_html("<html><head><title>x</title></head><body>y</body></html>")
+  h2 <- add_favicon_html(h1)
+  expect_equal(lengths(regmatches(h2, gregexpr("rel=\"icon\"", h2))), 1L)
+})
+
+test_that("a page with no <head> is left alone rather than corrupted", {
+  h <- add_favicon_html("<div>fragment</div>")
+  expect_equal(h, "<div>fragment</div>")
+})

@@ -282,6 +282,29 @@ BACKLINK <- paste0(
   '.bx-backlink:hover{background:rgba(28,92,40,.96)}</style>',
   '<a href="./index.html" class="bx-backlink">&larr; Back to main page</a><!--/bx-back-->')
 
+# ---- favicon -------------------------------------------------------------------
+# No page used to set one, so browsers fell back to whatever icon they already had for
+# the github.io host and the tab showed a classical-building emoji from a different site.
+# An emoji drawn as an inline SVG data URI: no extra file to serve, and nothing to keep
+# in sync. Percent-encoded because a data: URI cannot carry raw quotes or a raw emoji.
+FAVICON <- paste0(
+  '<link rel="icon" href="data:image/svg+xml,',
+  '%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E',
+  '%3Ctext%20y=%22.9em%22%20font-size=%2290%22%3E%F0%9F%90%9D%3C/text%3E%3C/svg%3E">')
+
+# PURE, so the injection is testable without writing a file. A page with no <head> is
+# returned untouched rather than being handed a stray <link>.
+add_favicon_html <- function(html) {
+  if (grepl('rel="icon"', html, fixed = TRUE)) return(html)   # idempotent
+  if (!grepl("<head[^>]*>", html)) return(html)
+  sub("(<head[^>]*>)", paste0("\\1", FAVICON), html)
+}
+
+add_favicon <- function(path) {
+  html <- paste(readLines(path, warn = FALSE), collapse = "\n")
+  writeLines(add_favicon_html(html), path)
+}
+
 inject_backlink <- function(path) {
   html <- paste(readLines(path, warn = FALSE), collapse = "\n")
   html <- gsub("(?s)<!--bx-back-->.*?<!--/bx-back-->", "", html, perl = TRUE)  # idempotent
@@ -329,6 +352,7 @@ publish_pages <- function() {
     if (file.exists(src)) {
       file.copy(src, file.path(DOCS_DIR, p$out), overwrite = TRUE)
       inject_backlink(file.path(DOCS_DIR, p$out))     # add the "Back to main page" pill
+      add_favicon(file.path(DOCS_DIR, p$out))        # one bee in every tab
       message("published  ", p$out)
       present[[length(present) + 1L]] <- p
     } else {
@@ -341,6 +365,7 @@ publish_pages <- function() {
   # rosters (self-contained; emails are never output). Sourced in its own
   # environment so its helpers do not leak into this one.
   source(file.path("scripts", "publish", "build_content_pages.R"), local = new.env())
+  add_favicon(file.path(DOCS_DIR, "acknowledgements.html"))
   message("published  acknowledgements.html")
 
   # ---- landing page (docs/index.html) ----
@@ -355,6 +380,7 @@ publish_pages <- function() {
   present <- lapply(present, function(c) { c$v <- page_version(file.path(DOCS_DIR, c$out)); c })
   writeLines(build_landing_html(group_pages_by_tag(present), landing_date(), hero_version()),
              file.path(DOCS_DIR, "index.html"))
+  add_favicon(file.path(DOCS_DIR, "index.html"))
   message("built      index.html")
   message("Done. Review docs/, then commit and push. Enable GitHub Pages: Settings -> Pages -> main /docs.")
 }
