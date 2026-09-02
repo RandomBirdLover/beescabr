@@ -19,6 +19,7 @@
 # BEESCABR_SEASON_YEAR=2026 to publish an older season.
 if (!exists("DIR_REPORT")) source("scripts/config.R")
 if (!exists("beescabr_fill_colors")) source("scripts/analysis/theme_beescabr.R")  # palette is the only colour source
+IUCN_VERSION_FILE <- "data/checklists/iucn/iucn_redlist_version.txt"  # written by the IUCN refresh
 SRC_DIR  <- DIR_REPORT
 DOCS_DIR <- "docs"
 
@@ -230,6 +231,7 @@ group_pages_by_tag <- function(pages) {
     <p class="ack"><a href="./acknowledgements.html">Acknowledgements, learn about the team behind this work &rarr;</a></p>
     <p>With gratitude to <a href="https://www.nps.gov/cabr/">Cabrillo National Monument</a> and the <a href="https://www.nps.gov/">National Park Service</a> for their support of this monitoring program, and to the <a href="https://www.inaturalist.org/">iNaturalist</a> community whose shared observations made this work possible.</p>
     <p>This monitoring program was made possible in large part by funding from the <a href="https://www.nps.gov/rlc/southerncal/index.htm">Southern California Research Learning Center</a> (SCRLC), with support from <a href="https://conservationlegacy.org/">Conservation Legacy</a> and the <a href="https://www.cnmf.org/">Cabrillo National Monument Foundation</a>.</p>
+    <p class="cite">{{inat_cite}}<br>{{iucn_cite}}</p>
     <p>Generated from the beescabr pipeline by Brandi Sanchez. Based on data available as of {{date}}.</p>
   </footer>
 </body>
@@ -242,7 +244,13 @@ build_landing_html <- function(cards, date, hero_v) {
     .fill(.CARD_TPL, out = c$out, icon = c$icon, tag = c$tag, title = c$title, blurb = c$blurb,
           ver = if (!is.null(c$v) && nzchar(c$v)) paste0("?v=", c$v) else ""),
     character(1)), collapse = "")
-  .fill(.PAGE_TPL, herov = hero_v, cards = cards_html, date = date)
+  # Data-source credits. IUCN REQUIRES a citation carrying the Red List version, which the
+  # status refresh records to disk; iNaturalist asks for none, so it is credited instead.
+  # An unknown version prints nothing rather than a citation that could be wrong.
+  if (!exists("iucn_citation")) source("scripts/publish/citations.R")
+  .fill(.PAGE_TPL, herov = hero_v, cards = cards_html, date = date,
+        inat_cite = inat_citation(date),
+        iucn_cite = iucn_citation(citation_read_version(IUCN_VERSION_FILE), date))
 }
 
 # data-as-of date: read the same "data as of YYYY-MM-DD" the summary page prints,
