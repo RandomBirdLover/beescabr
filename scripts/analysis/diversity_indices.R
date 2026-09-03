@@ -30,10 +30,9 @@
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 
-for (pkg in c("vegan", "ggplot2", "ggrepel")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan); library(ggplot2) })
 
 # ---- config -----------------------------------------------------------------

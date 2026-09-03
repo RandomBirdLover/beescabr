@@ -25,21 +25,10 @@
 #   ggpattern        -- hatched/patterned fills: texture as a 2nd channel (e.g. method) so ggplot
 #                       fills stay distinguishable in grayscale / print / for color-blind viewers
 #                       (base-R figures hatch natively via density/angle -- no package needed)
-ANALYSIS_PACKAGES <- c("dplyr", "stringr", "vegan", "igraph", "bipartite", "ggplot2", "ggridges", "sf", "iNEXT", "ggpattern")
-
-for (pkg in ANALYSIS_PACKAGES) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    message("Installing analysis package: ", pkg)
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-  }
-}
-
-# report what is / isn't available so a failed install is obvious
-.installed <- vapply(ANALYSIS_PACKAGES, requireNamespace, logical(1), quietly = TRUE)
-if (all(.installed)) {
-  message("All analysis packages ready: ", paste(ANALYSIS_PACKAGES, collapse = ", "))
-} else {
-  message("STILL MISSING (install by hand): ",
-          paste(ANALYSIS_PACKAGES[!.installed], collapse = ", "))
-}
-rm(.installed)
+# The analysis packages used to be listed again here, and installed on load. That was a
+# second list to keep in sync with config.R (it held 10 of the 36 and had drifted), and it
+# installed software as a side effect of sourcing a utility file. One list, one installer.
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
+message("All ", length(BEESCABR_PACKAGES), " analysis packages ready.")

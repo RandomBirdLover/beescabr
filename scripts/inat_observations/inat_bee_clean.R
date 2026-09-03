@@ -37,9 +37,9 @@
 #
 # INPUTS   data/inat_observations/cabr_inat_raw.csv                         (the brain's per-obs lookup)
 #          data/inat_observations/cache/export_flat.rds                     (taxon_id + coords + fields/tags)
-#          data/project_info/master_crosswalk.csv                      (field/tag -> annotation concept)
-#          data/spatial/transects/cabr_bee_transects.shp               (off-transect test)
-#          data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp (Humphreys Rd walk-in)
+#          data/project_info/crosswalk/master_crosswalk.csv                      (field/tag -> annotation concept)
+#          data/spatial/shapefiles/transects/cabr_bee_transects.shp               (off-transect test)
+#          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (Humphreys Rd walk-in)
 # OUTPUT   data/inat_observations/inat_clean/cabr_inat_bee_clean.csv        (one labeled CABR table)
 #
 # Run: source("scripts/inat_observations/inat_bee_clean.R"); inat_bee_clean()
@@ -50,9 +50,9 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 
 IBC_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"
 IBC_EXPORT         <- "data/inat_observations/cache/export_flat.rds"
-IBC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
-IBC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
-IBC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
+IBC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk.csv"
+IBC_TRANSECTS      <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
+IBC_ROAD           <- "data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- PATHS$inat_clean
 IBC_FIX_SURVEY     <- "data/inat_observations/review/qc_review_inat_bee_behavior_survey.csv"     # behavior fields to fix -- SURVEY obs
 IBC_FIX_NONSURVEY  <- "data/inat_observations/review/qc_review_inat_bee_behavior_nonsurvey.csv"  # behavior fields to fix -- CASUAL (non-survey) obs
@@ -434,7 +434,7 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   # data, an authoritative coastline). Absent shapefile -> the check simply does not
   # run and the worklist behaves exactly as it did before.
   .land <- tryCatch(
-    { f <- "data/spatial/boundaries/point_loma/point_loma_boundary.shp"
+    { f <- "data/spatial/shapefiles/boundaries/point_loma/point_loma_boundary.shp"
       if (file.exists(f) && requireNamespace("sf", quietly = TRUE))
         sf::st_transform(sf::st_read(f, quiet = TRUE), 4326) else NULL },
     error = function(e) NULL)

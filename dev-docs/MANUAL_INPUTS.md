@@ -10,12 +10,10 @@ Verified on 2026-08-18 by checking, for each file, that no pipeline script write
 
 | File | Path | What it is | How it enters | Update trigger |
 |---|---|---|---|---|
-| `surveyor_roster.csv` | `data/project_info/rosters/` | Canonical people list, one row per person-year (full name, role, method, technique, handle). **Sole authority for "who."** | Hand-typed | Any new intern or beeple |
-| `identifier_roster.csv` | `data/project_info/rosters/` | Who identified specimens / photos (the ID-ers). | Hand-typed | New identifier contributes |
-| `research_team_roster.csv` | `data/project_info/rosters/research_team_roster/` | Research-team people for the People page (+ `research_team_photos/` headshots alongside). | Hand-typed + image drop | Team changes |
-| `master_intern_survey_log.csv` | `data/project_info/survey_date_sources/` | Intern net/photo survey **dates** (the intern survey calendar/log). Effort, not identity. | Hand-typed | Each intern survey trip |
-| `master_per_survey_info.csv` | `data/project_info/` | Trip-level effort log, one row per survey. | Hand-typed | Each survey trip |
-| Beeple survey calendars | `data/project_info/survey_date_sources/beeple_calendar_windows/` → `YYYY Cabrillo Bee Survey Calendar.pdf` | Annual beeple survey windows, one PDF per year. | Download / export PDF, drop in | Each new season; then re-run the calendar parser |
+| `people.csv` | `data/project_info/rosters/` | **Every person, one row each.** Identity plus every written form of their name (`inaturalist_username`, `collector_code`, `determiner_code`) and what they do (`surveyor`/`identifier`/`researcher`). **Sole authority for "who."** Replaced `surveyor_roster.csv`, `identifier_roster.csv` and `research_team_roster.csv` on 2026-09-02. | Hand-typed | Anyone new — before their first season |
+| `research_team_photos/` | `data/project_info/rosters/research_team_roster/` | Headshots for the People page. The roster CSV beside them is retired — team rows live in `people.csv` now. | Image drop | Team changes |
+| `master_intern_survey_log.csv` | `data/project_info/surveys/survey_date_sources/` | Intern net/photo survey **dates** (the intern survey calendar/log). Effort, not identity. | Hand-typed | Each intern survey trip |
+| Beeple survey calendars | `data/project_info/surveys/survey_date_sources/beeple_calendar_windows/` → `YYYY Cabrillo Bee Survey Calendar.pdf` | Annual beeple survey windows, one PDF per year. | Download / export PDF, drop in | Each new season; then re-run the calendar parser |
 
 > The roster (people) and the intern log (dates) are **two separate files that must stay in sync**. New person → edit the roster. New survey date → edit the log. A new intern means editing both.
 
@@ -30,9 +28,10 @@ deduped. **The roster is the sole authority for *who*; the effort log is for
 
 | File | Path | Role | Edit by hand? |
 | --- | --- | --- | --- |
-| `surveyor_roster.csv` | `data/project_info/` | Canonical people list, one row per person-year (full name, role, method). **Authority for headcounts.** | ✅ Yes |
-| `master_intern_survey_log.csv` | `data/project_info/survey_date_sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
-| `master_per_survey_info.csv` | `data/project_info/` | **Generated output** — rebuilt from the two files above by `finding_project_info.R`. Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
+| `people.csv` | `data/project_info/rosters/` | Every person, one row each. **Authority for who exists.** | ✅ Yes |
+| `participation.csv` | `data/project_info/rosters/` | **Generated output** — who was in the field, which year, in what capacity. Derived from the survey record, so an assignment nobody showed up to cannot inflate a headcount. | ❌ No — never hand-edit |
+| `master_intern_survey_log.csv` | `data/project_info/surveys/survey_date_sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
+| `master_per_survey_info.csv` | `data/project_info/surveys/` | **Generated output** — rebuilt every run by `finding_project_info.R` from three sources: the intern log above, beeple tags on iNaturalist, and the specimen spreadsheet (netting days the log missed). Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
 
 **What to edit when**
 
@@ -74,9 +73,9 @@ manual entry is needed for those.
 
 | File | Path | What it is | How it enters |
 |---|---|---|---|
-| `cabr_bee_transects.shp` (+ sidecars) | `data/spatial/transects/` | The survey transect lines. | Drawn in GIS |
-| `cabr_survey_access_routes.shp` | `data/spatial/access_routes_to_transects/` | Access routes to the transects. | Drawn in GIS |
-| Boundary shapefiles | `data/spatial/boundaries/cabr/`, `.../point_loma/`, `.../san_diego_county/` | Park / peninsula / county boundaries. | Downloaded from authoritative source |
+| `cabr_bee_transects.shp` (+ sidecars) | `data/spatial/shapefiles/transects/` | The survey transect lines. | Drawn in GIS |
+| `cabr_survey_access_routes.shp` | `data/spatial/shapefiles/access_routes_to_transects/` | Access routes to the transects. | Drawn in GIS |
+| Boundary shapefiles | `data/spatial/shapefiles/boundaries/cabr/`, `.../point_loma/`, `.../san_diego_county/` | Park / peninsula / county boundaries. | Downloaded from authoritative source |
 | `transects.csv` | `data/project_info/` | Non-spatial transect attributes (names, lengths, order). | Hand-typed |
 
 ## 4. External reference data (downloaded, dropped in)
@@ -92,13 +91,13 @@ manual entry is needed for those.
 
 | File | Path | What it is |
 |---|---|---|
-| `manual_taxon_overrides.csv` | `data/reference/curated/` | Hand corrections to taxonomy the automated resolver gets wrong. |
-| `specimen_additions.csv` | `data/reference/curated/` | Specimen-only species merged into the taxonomy lookup. |
-| `plant_park_confirmed.csv` | `data/reference/curated/` | Plants a botanist confirms are actually in the park. |
-| `plant_specimen_overrides.csv` | `data/reference/curated/` | Expert corrections for plants named on specimen labels. |
+| `manual_taxon_overrides.csv` | `data/reference/hand_curated/` | Hand corrections to taxonomy the automated resolver gets wrong. |
+| `specimen_additions.csv` | `data/reference/hand_curated/` | Specimen-only species merged into the taxonomy lookup. |
+| `plant_park_confirmed.csv` | `data/reference/hand_curated/` | Plants a botanist confirms are actually in the park. |
+| `plant_specimen_overrides.csv` | `data/reference/hand_curated/` | Expert corrections for plants named on specimen labels. |
 | `plant_genus_common.csv` | `data/checklists/plants/` | Plant genus → common-name lookup. |
-| `verified_taxa.csv` | `data/reference/` | Taxa you have manually verified. |
-| `rejected_taxa.csv` | `data/reference/` | Taxa you have manually rejected. |
+| `verified_taxa.csv` | `data/reference/hand_curated/` | Taxa you have manually verified. |
+| `rejected_taxa.csv` | `data/reference/hand_curated/` | Taxa you have manually rejected. |
 
 ## 6. iNaturalist QC / review overrides (human-in-the-loop corrections)
 
@@ -118,17 +117,14 @@ These are hand-maintained files the observation pipeline reads as override truth
 
 ## 7. File-naming conventions for the inputs above
 
-### iNat and GBIF exports
+### iNat and GBIF exports — RETIRED, do not drop files in
 
-```
-inat_native_bees_sdcounty_25_mi_buffer_YYYY-MM-DD.csv
-inat_plants_point_loma_peninsula_YYYY-MM-DD.csv
-gbif_bees_sdcounty_YYYY-MM-DD.csv
-```
+These CSV exports are **no longer an input**. Bee and plant records come from the
+iNaturalist API at ingest time (`pipelines/ingest_inat.R`) into the DuckDB cache, and
+CLAUDE.md forbids reintroducing a `read.csv()` of an export.
 
-`inat_native_bees_sdcounty_25_mi_buffer` is one master export covering all SD County bees except *Apis mellifera* (excluded at ingest time via `without_taxon_id` in `scripts/config.R`). "Native" refers only to this honey-bee exclusion; no other non-native species are filtered. `scripts/checklists/` spatially splits the records into three tiers (SD County / Point Loma / CABR) — the three tier checklists are all derived independently from this one file, not nested.
-
-Date = download date, YYYY-MM-DD. Drop directly into `data/cabr_surveys/nonlethal/inat_bee/`. Scripts auto-detect the newest file via `read_latest()`.
+The folder the old instructions named, `data/cabr_surveys/nonlethal/inat_bee/`, no longer
+exists. If you find a downloaded export, it is not wired to anything: nothing reads it.
 
 ### Specimen file
 
@@ -171,9 +167,3 @@ Listed because they look like inputs but are rebuilt every run. Editing them is 
 - `data/specimens/specimens_clean/cabr_specimen_bee_clean.csv`.
 - Everything in `data/analysis/**` (the figures, tables, and pages the pipeline produces).
 
-## Documentation drift worth fixing (found while making this list)
-
-- README says `surveyor_roster.csv` lives in `data/project_info/`; it is actually in `data/project_info/rosters/`.
-- README's iNat/GBIF section says to drop exports in `data/cabr_surveys/nonlethal/inat_bee/`, a folder that no longer exists (same legacy path we just cleaned out of the specimen docs). Either the API is now the real path, or that instruction needs the correct folder.
-
----

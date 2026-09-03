@@ -1,5 +1,23 @@
 # TODO
 
+## iNaturalist API v2 migration (from the official v2 docs)
+
+Facts that shape the work, taken from <https://api.inaturalist.org/v2/docs/>:
+
+- **v2 returns almost nothing by default.** Every endpoint returns a minimal response (often
+  just the UUID) unless you pass a `fields` parameter. Migration is therefore not a URL
+  swap: every call has to declare the fields it needs. RISON is their preferred encoding
+  (`?fields=(species_guess:!t,user:(login:!t))`); `fields=all` exists for exploring.
+- **Auth is the same JWT we already use.** OAuth-authenticated request to
+  `https://www.inaturalist.org/users/api_token`, sent as a Bearer token.
+- **Each JWT expires after 24 hours.** Our cache is per R session, so a run longer than a
+  day would need a refresh.
+- **Rate limits:** 100 requests/minute hard, 60/minute requested, 10,000/day. Blocks may be
+  applied without notice. `INAT_THROTTLE_SEC` is pinned at 1.0s to stay at 60/minute, and
+  a test in `test-config.R` guards it.
+- Obscured coordinates still depend on per-observer trust of the signed-in account, not on
+  the API version.
+
 Open work by area. Merged 2026-08-24 (the README's TODO section and this file
 were two separate lists covering the same project).
 

@@ -10,6 +10,7 @@
 # brain (defaults resolve at call time), not run standalone.
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibble); library(tidyr)}))
+if (!exists("person_name")) source("scripts/utils/people.R")
 
 # ------------------------------------------------------------
 # master_per_survey_info.csv  +  qc_review_survey_beeple_date_windows.csv  (tag-first rewrite 2026-07-17)
@@ -48,6 +49,49 @@ fpi_norm_transect <- function(x) {
   )
 }
 
+# ------------------------------------------------------------
+# Surveyor names. intern-log and inat-tag rows say "First Last"; specimen-record
+# rows are left VERBATIM elsewhere in this file, because that string is the
+# museum label written on the specimen ("S O'Dell") and the label is the record.
+#
+# A first name is not an identity: two people share "Julia" (Keum, a 2024 intern;
+# Showalter, a 2025-26 beeple). So expansion is scoped to the roster YEAR, and a
+# token that does not resolve to exactly one person that year is left exactly as
+# written -- a name a human can see and fix beats a name we guessed.
+# ------------------------------------------------------------
+sd_full_names <- function(x, year, roster) {
+  if (!length(x)) return(x)
+  yr <- rep_len(as.integer(year), length(x))
+  code <- if ("collector_code" %in% names(roster)) roster$collector_code else NA_character_
+  ppl <- roster |>
+    transmute(ryear = as.integer(year), first_name, last_name, code = code,
+              full = person_name(first_name, last_name)) |>
+    filter(!is.na(full)) |>
+    distinct(ryear, full, .keep_all = TRUE)
+  # keys are built per YEAR: "Julia" is Julia Keum in 2024 and Julia Showalter in 2025,
+  # so a roster-wide key would credit a coin flip (person_name_keys drops it entirely).
+  keys <- lapply(split(ppl, ppl$ryear),
+                 function(d) person_name_keys(d$full, d$first_name, d$last_name, d$code))
+  SEP <- "[[:space:]]*[,;&][[:space:]]*"          # "," pairs, "&" pairs, ";" groups
+  # A label sometimes names a GROUP, not a person ("CSBI Interns", 800 of 1,145 specimens).
+  # Which interns were out that day was never written down, so the NAME column says plain
+  # "interns". The label itself survives untouched in specimen_collector.
+  GROUP <- "^(CSBI[[:space:]]+)?Interns$"
+  one <- function(s, y) {
+    if (is.na(s) || !nzchar(trimws(s))) return(s)
+    k <- keys[[as.character(y)]]
+    toks <- strsplit(s, SEP, perl = TRUE)[[1]]
+    seps <- regmatches(s, gregexpr(SEP, s, perl = TRUE))[[1]]   # kept verbatim: they carry meaning
+    if (!is.null(k)) {
+      hit  <- unname(k[tolower(toks)])
+      toks <- ifelse(is.na(hit), toks, hit)                     # no match -> left exactly as written
+    }
+    toks <- ifelse(grepl(GROUP, toks, ignore.case = TRUE), "interns", toks)
+    paste0(toks, c(seps, ""), collapse = "")
+  }
+  vapply(seq_along(x), function(i) one(x[[i]], yr[[i]]), character(1))
+}
+
 fpi_survey_dates <- function(membership, windows, roster,
                              existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW,
                              intern_log_path = FPI_INTERN_LOG,
@@ -56,7 +100,7 @@ fpi_survey_dates <- function(membership, windows, roster,
 
   # ---- INTERNS: read from the curated intern-survey-day LOG (master_intern_survey_log.csv) ----
   # Interns' survey days (BOTH lethal net days AND non-lethal iNat days) live in a curated
-  # INPUT file -- data/project_info/survey_date_sources/master_intern_survey_log.csv -- as the source=="intern-log"
+  # INPUT file -- data/project_info/surveys/survey_date_sources/master_intern_survey_log.csv -- as the source=="intern-log"
   # rows. The brain reads them UNCHANGED and rebuilds only the beeple rows around them; the
   # master is pure generated output. Interns are PAID, so an authoritative date should always
   # exist -- add / fix intern surveys by editing master_intern_survey_log.csv (NOT the master, which is
@@ -78,6 +122,9 @@ fpi_survey_dates <- function(membership, windows, roster,
   }
   interns <- read_intern_log(intern_log_path)                    # curated source of truth (preferred)
   if (!nrow(interns)) interns <- read_intern_log(existing_path)  # fallback: legacy in-master rows
+  # The log is hand-typed and a first name is quick to type, but "Julia" is two people
+  # in different years. Expand against the roster so the master says who it means.
+  if (nrow(interns)) interns$surveyors <- sd_full_names(interns$surveyors, interns$year, roster)
 
   # ---- SPECIMENS: per-date lethal-net specimen counts (from the specimen record) ----
   # finding_specimen_dates() returns the aggregated specimen record (date, n_specimens,
@@ -100,7 +147,13 @@ fpi_survey_dates <- function(membership, windows, roster,
     filter(!date %in% intern_dates) |>                       # specimen days with no intern-log row
     transmute(year = as.integer(format(date, "%Y")), role = "intern",
               source = "specimen-record", date,
-              transects = "UPMON; TP; BST", surveyors = coalesce(collectors, "CSBI Interns"),
+              transects = "UPMON; TP; BST",
+              # Two columns, two jobs. specimen_collector is the label string VERBATIM ("S O'Dell")
+              # so a specimen stays traceable to what is written on its pin -- never rewrite it.
+              # surveyors names the PERSON ("Sam O'Dell"), so one person reads the same in every
+              # row of this file whichever source it came from.
+              surveyors = sd_full_names(coalesce(collectors, "CSBI Interns"), year, roster),
+              specimen_collector = coalesce(collectors, "CSBI Interns"),
               inat_username = NA_character_, method = "lethal", technique = "net",
               confirmed = TRUE, confirmed_by = "specimen",
               n_obs = NA_character_, n_speci = NA_character_,   # n_speci filled by the date join in assembly
@@ -109,14 +162,14 @@ fpi_survey_dates <- function(membership, windows, roster,
 
   # ---- ROSTER lookup: role / method / technique per (username, year), + any-year gate ----
   ros <- roster |>
-    transmute(year = as.integer(year), first_name,
+    transmute(year = as.integer(year), first_name, last_name,
               uname = ifelse(blank(inaturalist_username), NA_character_, trimws(inaturalist_username)),
               role = tolower(trimws(role)),
               method = coalesce(method, "non-lethal"), technique = coalesce(technique, "photo")) |>
     filter(!is.na(uname), uname != "")
   ros_yr  <- ros |> distinct(uname, year, .keep_all = TRUE)              # that-year role/method
   ros_any <- ros |> distinct(uname, .keep_all = TRUE) |>                 # fallback if that year missing
-    transmute(uname, a_first = first_name, a_role = role,
+    transmute(uname, a_first = first_name, a_last = last_name, a_role = role,
               a_method = method, a_technique = technique)
   known_unames <- unique(ros$uname)   # every roster username (any year) -- the "one of ours" gate
 
@@ -143,13 +196,16 @@ fpi_survey_dates <- function(membership, windows, roster,
               transects = { tt <- sort(unique(na.omit(tr)))
                             if (length(tt)) paste(tt, collapse = "; ") else NA_character_ },
               .groups = "drop") |>
-    left_join(ros_yr |> select(uname, year, first_name, role, method, technique),
+    left_join(ros_yr |> select(uname, year, first_name, last_name, role, method, technique),
               by = c("uname", "yr" = "year")) |>
     left_join(ros_any, by = "uname") |>
     transmute(year = yr, role = coalesce(role, a_role, "beeple"),
               source = "inat-tag", date,
-              transects, surveyors = coalesce(first_name, a_first, uname),
-              inat_username = uname,
+              transects,
+              # full name via the USERNAME join -- unambiguous even for a shared first name
+              surveyors = coalesce(person_name(first_name, last_name),
+                                   person_name(a_first, a_last), uname),
+              inat_username = uname, specimen_collector = NA_character_,
               method = coalesce(method, a_method, "non-lethal"),
               technique = coalesce(technique, a_technique, "photo"),
               confirmed = TRUE, confirmed_by = "tag", n_obs, n_days = 1L,

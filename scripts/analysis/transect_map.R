@@ -9,18 +9,19 @@
 # Depends on: sf, leaflet, htmlwidgets (+ config.R, theme_beescabr.R).
 # =============================================================
 
-for (pkg in c("sf", "leaflet", "htmlwidgets"))
-  if (!requireNamespace(pkg, quietly = TRUE)) try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({ library(sf); library(leaflet) })
 if (!exists("PATHS"))        source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
 OUT_DIR <- file.path(DIR_REPORT, "reference/transects")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-# ---- 1. transects + park boundary from the shapefiles (single source: data/spatial/) ----
+# ---- 1. transects + park boundary from the shapefiles (single source: data/spatial/shapefiles/) ----
 read_shp <- function(p) tryCatch(sf::st_read(p, quiet = TRUE), error = function(e) NULL)
-tran <- read_shp("data/spatial/transects/cabr_bee_transects.shp")
-park <- read_shp("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
+tran <- read_shp("data/spatial/shapefiles/transects/cabr_bee_transects.shp")
+park <- read_shp("data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
 stopifnot(!is.null(tran))
 tran$code  <- toupper(trimws(tran$Name))
 tran$len_m <- round(as.numeric(sf::st_length(tran)))          # native CRS (EPSG:26946) is in metres
@@ -47,7 +48,7 @@ title <- paste0('<div style="', CARD, ';padding:9px 15px;max-width:360px">',
           BEE_HTML[["sub"]], format(sum(tran$len_m), big.mark = ",", trim = TRUE)),
   # Brief provenance, matching the other maps: where the lines come from, and lengths
   # are measured off those lines rather than from a field odometer.
-  sprintf('<div style="font-size:10px;color:%s;margin-top:6px;padding-top:6px;border-top:1px solid %s;line-height:1.35">Transect lines from the park&rsquo;s survey layer (data/spatial), with lengths measured along them. Source: Cabrillo National Monument.</div>',
+  sprintf('<div style="font-size:10px;color:%s;margin-top:6px;padding-top:6px;border-top:1px solid %s;line-height:1.35">Transect lines from the park&rsquo;s survey layer (data/spatial/shapefiles), with lengths measured along them. Source: Cabrillo National Monument.</div>',
           BEE_HTML[["sub"]], BEE_HTML[["border"]]),
   '</div>')
 
@@ -125,7 +126,32 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
                    legend.justification.inside = c(1, 1))
   else ggplot2::theme(legend.position = c(0.985, 0.985), legend.justification = c(1, 1))
 
-  tile_cache <- "data/spatial/basemap_cache"; dir.create(tile_cache, recursive = TRUE, showWarnings = FALSE)  # keep basemap tiles out of the repo root
+  # Basemap tiles must land on disk for annotation_map_tile() to read them back. They sit
+  # beside the shapefiles in data/spatial/basemap_tiles/ so everything spatial is together.
+  # Disposable: the publish step clears them first so the static map always redraws with
+  # CURRENT tiles, and within one run the cache saves re-downloading per map variant.
+  tile_cache <- "data/spatial/basemap_tiles"; dir.create(tile_cache, recursive = TRUE, showWarnings = FALSE)
+  # The tile filenames and that URL-shaped subfolder are ggspatial's doing, not ours: it
+  # looks tiles up again by that exact name, so renaming them only forces a re-download.
+  # Leave a note in the folder instead, rewritten each run because publishing wipes it.
+  writeLines(c(
+    "What is this folder?",
+    "",
+    "Downloaded map background images (\"tiles\") for the STATIC transect map PNG.",
+    "Written by scripts/analysis/transect_map.R via the ggspatial package.",
+    "",
+    "Reading the file names: 16_11424_26469.png",
+    "  16     zoom level (higher = closer in)",
+    "  11424  tile column (x), counted east from the far west of the world map",
+    "  26469  tile row (y), counted south from the far north",
+    "Together they name one square of the map. The folder name is the tile server's",
+    "web address with the punctuation removed, which is how ggspatial labels a source.",
+    "",
+    "Safe to delete. It is rebuilt automatically the next time a map is drawn, and the",
+    "publishing pipeline clears it every run so the map always uses current tiles.",
+    "The interactive maps on the website do NOT use these; they load tiles live.",
+    "Source: CartoDB Voyager basemap, (c) OpenStreetMap contributors."),
+    file.path(tile_cache, "WHAT_THESE_FILES_ARE.txt"))  # keep basemap tiles out of the repo root
   build_map <- function(tiletype) {
     g <- ggplot() + annotation_map_tile(type = tiletype, zoomin = 0, progress = "none", cachedir = tile_cache)
     if (!is.null(pk3857)) g <- g + geom_sf(data = pk3857, fill = NA, color = BEE_HTML_GREEN[["deep"]], linewidth = 0.6)

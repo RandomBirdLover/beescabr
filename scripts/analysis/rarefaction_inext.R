@@ -19,18 +19,17 @@
 #
 # NOTE: iNEXT could not be installed in the build sandbox (no CRAN access there),
 # so this script was NOT executed here -- it is written to run on your machine,
-# where install.packages("iNEXT") works. It self-installs iNEXT on first run.
+# where iNEXT is installed. Run scripts/utils/install_requirements.R once per machine.
 #
 # Run from the repo root:  Rscript scripts/analysis/rarefaction_inext.R
 # Depends on: dplyr, stringr, iNEXT, ggplot2 (+ config.R).
 # =============================================================
 
-for (pkg in c("iNEXT", "ggplot2")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 if (!requireNamespace("iNEXT", quietly = TRUE))
-  stop("iNEXT is not installed and could not be installed. Run install.packages('iNEXT') then re-run.")
+  stop("iNEXT is not installed. Run: Rscript scripts/utils/install_requirements.R", call. = FALSE)
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")

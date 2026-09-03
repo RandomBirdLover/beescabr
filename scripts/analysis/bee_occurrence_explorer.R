@@ -15,10 +15,9 @@
 # Depends on: dplyr, stringr, jsonlite, sf (+ config.R, theme_beescabr.R).
 # =============================================================
 
-for (pkg in c("jsonlite", "sf")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 if (!exists("PATHS")) source("scripts/config.R")
@@ -113,8 +112,8 @@ read_shp <- function(p) tryCatch(sf::st_transform(sf::st_read(p, quiet = TRUE), 
 to_geojson <- function(x) { if (is.null(x)) return("null")
   f <- tempfile(fileext = ".geojson"); suppressWarnings(sf::st_write(x, f, quiet = TRUE, delete_dsn = TRUE))
   paste(readLines(f, warn = FALSE), collapse = "") }
-park_bnd <- read_shp("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
-tran_ln  <- read_shp("data/spatial/transects/cabr_bee_transects.shp")
+park_bnd <- read_shp("data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
+tran_ln  <- read_shp("data/spatial/shapefiles/transects/cabr_bee_transects.shp")
 tran_lab <- NULL
 if (!is.null(tran_ln)) {
   mm <- suppressWarnings(sf::st_coordinates(sf::st_centroid(sf::st_geometry(tran_ln))))

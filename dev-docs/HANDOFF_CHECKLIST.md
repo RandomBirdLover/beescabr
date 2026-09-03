@@ -9,6 +9,18 @@ Started 2026-08-25.
 
 ## Blocked on you (I cannot do these)
 
+- [ ] **Do NOT transfer `data/secrets/`.** It holds YOUR iNaturalist app credentials and
+      YOUR IUCN key. The new operator creates their own (see SEASON_RUNBOOK section 1b);
+      the pipeline asks for them on first run. Delete the folder from any copy you hand over.
+- [ ] **Decide what happens to the `beescabr` OAuth app** owned by @randombirdlover. Taro
+      should create his own on the park account (`officialbeescabr`). Yours can then be
+      destroyed at <https://www.inaturalist.org/oauth/applications>.
+- [ ] **Use the PARK account, not a new one.** Coordinate trust on iNaturalist is granted by
+      each observer to a specific account. Surveyors trusted `@randombirdlover` and
+      `@cabrillonationalmonument`. A new account starts with no trust and would return
+      obscured coordinates until every observer granted it separately, which is not
+      realistic. Sign in as `@cabrillonationalmonument`.
+
 - [x] **Answer the scoping question.** What will the supervisor actually do with  
       answered 2026-08-26: Taro Katayama will BOTH run it each season and take over the code; comfortable with R and git.
 - [x] **Roster affiliations** — Patricia, Sofia, Diego, Toby have blank  

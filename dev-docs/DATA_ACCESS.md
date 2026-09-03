@@ -84,7 +84,7 @@ Inside `data/` you will find all of the real inputs and results:
 - `data/specimens/` — the netted-bee (specimen) records, including the master spreadsheet.
 - `data/inat_observations/` — the iNaturalist (photographed-bee) records and cleaned tables.
 - `data/project_info/` — the survey logs and the team rosters.
-- `data/spatial/` — the park boundary and transect maps.
+- `data/spatial/shapefiles/` — the park boundary and transect maps.
 - `data/checklists/`, `data/reference/`, `data/analysis/` — species lists, lookups, and finished figures.
 
 If all you needed was the data and the finished results, you are done here.

@@ -22,6 +22,57 @@
 #   Requires a free token (data/secrets/iucn_api.env or IUCN_REDLIST_KEY). Recorded in
 #   the source column of data/checklists/iucn/iucn_status.csv on every fetch, so each
 #   cached status carries the API version it came from.
+# ---- Packages the pipeline needs ---------------------------------------------
+# THE LIST lives here because config.R is the constants file; INSTALLING lives in
+# scripts/utils/install_requirements.R because config.R is sourced by every script and
+# must not touch the network at load. Run the installer once on a new machine:
+#     Rscript scripts/utils/install_requirements.R
+# The per-script auto-install blocks stay as a safety net; they should rarely fire.
+BEESCABR_PACKAGES <- c(
+  # data wrangling + IO
+  "dplyr", "tidyr", "purrr", "stringr", "stringi", "tibble", "readr", "readxl", "lubridate",
+  # storage + web
+  "duckdb", "DBI", "httr2", "jsonlite",
+  # spatial + maps
+  "sf", "leaflet", "ggspatial", "prettymapr", "htmlwidgets", "htmltools",
+  # figures
+  "ggplot2", "ggrepel", "ggridges", "ggtext", "ggpattern", "cowplot", "gridExtra", "scales",
+  # ecology + stats
+  "vegan", "iNEXT", "bipartite", "igraph",
+  # reference data + docs
+  "rredlist", "pdftools", "rmarkdown",
+  # tests
+  "testthat", "withr")
+
+# beescabr_require(): the per-script dependency guard. CHECKS, never installs.
+#
+# Every script used to carry its own for(pkg in ...) install.packages() block. That
+# duplicated the list (those blocks covered 14 packages while the real set is 36, so they
+# had already drifted), and it meant running one script could silently install software.
+# Now a script calls beescabr_require() and, if anything is missing, stops with the single
+# command that fixes it. Installing is install_requirements.R's job alone.
+#
+# Defaults to the WHOLE list rather than a per-script subset: a subset is another list to
+# keep in sync, and that is exactly the drift this replaced.
+# have_fn / stop_fn are injectable so the failure path is testable.
+beescabr_require <- function(pkgs = BEESCABR_PACKAGES,
+                             have_fn = function(p) requireNamespace(p, quietly = TRUE),
+                             stop_fn = stop) {
+  miss <- pkgs[!vapply(pkgs, have_fn, logical(1))]
+  if (length(miss))
+    stop_fn("beescabr: ", length(miss), " required package(s) missing: ",
+            paste(miss, collapse = ", "), "\n",
+            "  Run this once, then try again:\n",
+            "    Rscript scripts/utils/install_requirements.R",
+            call. = FALSE)
+  invisible(TRUE)
+}
+
+# Not required, but each removes a rough edge. The pipeline runs without them.
+#   askpass / getPass -- hide an API key while it is being typed
+#   ragg              -- better PNG text rendering for the figures
+BEESCABR_PACKAGES_OPTIONAL <- c("askpass", "getPass", "ragg")
+
 INAT_API_VERSION <- "v1"
 IUCN_API_VERSION <- "v4"
 IUCN_API_CLIENT  <- "rredlist"
@@ -32,9 +83,13 @@ INAT_USER_AGENT <- "beescabr pipeline (brandirenesanchez16@gmail.com)"
 # Pause between API calls (seconds). iNat's hard limit is ~100 requests/min
 # and they ask you to keep well under it; with ~0.3-0.5s of network time per
 # request, a 0.5s pause lands around ~70-80 req/min -- fast but courteous.
-# Set to 0 to match the Python script (no pause) at your own rate-limit risk;
-# the transport still backs off exponentially on 429/5xx.
-INAT_THROTTLE_SEC <- 0.5
+# iNaturalist's published limits (v2 API docs): 100 requests/minute is the hard cap, they
+# ASK for 60/minute or lower, and under 10,000/day, warning that they "may institute blocks
+# without notification". 1 second between calls puts us at 60/minute, the rate they ask for.
+# It was 0.5 (120/minute), over even the hard cap. Do not lower it: a block would cost the
+# whole season's ingest, and the pull is not time-critical.
+# The transport still backs off exponentially on 429/5xx.
+INAT_THROTTLE_SEC <- 1.0
 
 # ---- Taxa / place ------------------------------------------------------------
 # Anthophila (all bees). Root taxon for every observation query.
@@ -168,14 +223,17 @@ PATHS <- list(
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
   holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
-  verified_taxa = "data/reference/verified_taxa.csv",
-  specimen_additions = "data/reference/curated/specimen_additions.csv",   # curated specimen-only species merged into the lookup
+  # Your verify/reject decisions. They live in curated/ because a human wrote them:
+  # the pipeline appends to them, it does not derive them.
+  verified_taxa = "data/reference/hand_curated/verified_taxa.csv",
+  rejected_taxa = "data/reference/hand_curated/rejected_taxa.csv",
+  specimen_additions = "data/reference/hand_curated/specimen_additions.csv",   # curated specimen-only species merged into the lookup
   plant_taxonomy_lookup = "data/reference/cabr_plant_taxonomy_lookup.csv",       # basic-rank plant lookup (obs + specimen flowers)
-  plant_specimen_overrides = "data/reference/curated/plant_specimen_overrides.csv",      # curated expert corrections for specimen-label plants
+  plant_specimen_overrides = "data/reference/hand_curated/plant_specimen_overrides.csv",      # curated expert corrections for specimen-label plants
   plant_not_in_park = "data/reference/generated/cabr_plant_specimen_not_in_park.csv",       # worklist: specimen-label plants not confirmed in park
   plant_name_cache = "data/reference/generated/plant_name_resolution_cache.csv",           # name -> iNat taxon resolution cache
   plant_all_taxa = "data/inat_observations/reference/cabr_inat_plant_all_taxa.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
-  plant_park_confirmed = "data/reference/curated/plant_park_confirmed.csv",               # curated: species the botanist confirms are in the park (e.g. obscured threatened taxa)
+  plant_park_confirmed = "data/reference/hand_curated/plant_park_confirmed.csv",               # curated: species the botanist confirms are in the park (e.g. obscured threatened taxa)
   inat_bee_forage = "data/inat_observations/reference/cabr_inat_bee_forage.csv",       # plants bees were recorded foraging on in-park (bee-obs flower_visited) -- in-park truth
 # Checklists. These names are the CURRENT ones on disk (the earlier
   # cabr_inat_bee_checklist / *_combined_* / *_v2 keys pointed at filenames that no
@@ -197,11 +255,27 @@ PATHS <- list(
   # same person appears many times and can't be deduped. surveyor_roster is the
   # canonical people list (one row per person-year, full name + role + method) and is
   # the SOLE authority for WHO surveyed -- count distinct people from here.
-  per_survey = "data/project_info/master_per_survey_info.csv",
+  per_survey = "data/project_info/surveys/master_per_survey_info.csv",
   surveyor_roster = "data/project_info/rosters/surveyor_roster.csv",
   # identifier roster: WHO determined each specimen. The raw "determination" code (initials + surname)
   # maps to a person's iNaturalist username here (read-only; the pipeline never writes this file).
-  identifier_roster = "data/project_info/rosters/identifier_roster.csv"
+  identifier_roster = "data/project_info/rosters/identifier_roster.csv",
+  # ONE row per human: identity, every written form of their name, and what they do.
+  # Replaces the three rosters above, which each re-stated the same people.
+  people = "data/project_info/rosters/people.csv",
+  # who was in the field, which year, in what capacity -- GENERATED from the survey record
+  participation = "data/project_info/rosters/participation.csv",
+
+  # project_info is organised into three jobs, each with its own review/ folder, the same
+  # shape inat_observations/ and specimens/ already use: rosters (who), surveys (when and
+  # where), crosswalk (the shared vocabulary). master_crosswalk.csv spans BOTH methods --
+  # it carries specimen label variants as well as iNat fields -- so it is not an iNat file.
+  crosswalk                = "data/project_info/crosswalk/master_crosswalk.csv",
+  qc_inat_unknown_tags     = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags.csv",
+  qc_inat_unknown_fields   = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields.csv",
+  qc_inat_plant_names      = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_plant_names.csv",
+  qc_survey_date_windows   = "data/project_info/surveys/review/qc_review_survey_beeple_date_windows.csv",
+  qc_survey_transect_ties  = "data/project_info/surveys/review/qc_review_survey_transect_overlap.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the
@@ -238,15 +312,26 @@ TAXONOMY_LEVELS <- c(
 # check_paths() below makes that impossible to repeat.
 PATH_KIND <- list(
   # --- inputs: hand-maintained, must exist up front ---
-  surveyor_roster          = "input",
-  identifier_roster        = "input",
-  per_survey               = "input",
+  people                   = "input",   # the one hand-maintained people file
+  # RETIRED 2026-09-02: folded into people.csv by build_people_roster.R. Kept optional so
+  # the migration can be re-run, but nothing in the pipeline reads them any more.
+  surveyor_roster          = "optional",
+  identifier_roster        = "optional",
+  crosswalk                = "input",
+  qc_inat_unknown_tags     = "output",
+  qc_inat_unknown_fields   = "output",
+  qc_inat_plant_names      = "output",
+  qc_survey_date_windows   = "output",
+  qc_survey_transect_ties  = "output",
   specimen_additions       = "input",
   plant_specimen_overrides = "input",
   plant_park_confirmed     = "input",
   verified_taxa            = "input",
+  rejected_taxa            = "input",
   holway_combined          = "input",
   # --- outputs: the pipeline writes these ---
+  per_survey               = "output",   # finding_project_info.R rebuilds it every run
+  participation            = "output",   # derived from per_survey: declared identity, derived activity
   taxonomy_lookup          = "output",
   holway_reference         = "output",
   plant_taxonomy_lookup    = "output",

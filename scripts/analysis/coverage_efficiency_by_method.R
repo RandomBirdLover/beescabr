@@ -16,7 +16,9 @@
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 has_vegan <- requireNamespace("vegan", quietly = TRUE)
-if (!requireNamespace("ggpattern", quietly = TRUE)) try(install.packages("ggpattern", repos = "https://cloud.r-project.org"), silent = TRUE)
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style

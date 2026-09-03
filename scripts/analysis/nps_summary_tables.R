@@ -45,10 +45,16 @@ uniq_lc  <- function(v) { v <- str_squish(tolower(as.character(v))); unique(v[v 
 psf$year_i <- suppressWarnings(as.integer(psf$year))
 pmethod  <- str_squish(tolower(psf$method))                                    # trip method: lethal / non-lethal
 
-rost <- read.csv(if (!is.null(PATHS$surveyor_roster)) PATHS$surveyor_roster else
-                 PATHS$surveyor_roster, stringsAsFactors = FALSE, check.names = FALSE)
-person   <- str_squish(tolower(paste(rost$first_name, rost$last_name)))        # canonical people key: full name, deduped across years
-rrole    <- str_squish(tolower(rost$role))
+# people.csv = WHO exists (declared, one row each). participation.csv = who was in the
+# field which year, DERIVED from the survey record -- so an assignment nobody showed up
+# to can no longer inflate a headcount, which is what the old roster allowed.
+rost <- read.csv(PATHS$people, stringsAsFactors = FALSE, check.names = FALSE)
+rost <- rost[as.logical(rost$surveyor) %in% TRUE, , drop = FALSE]
+prt  <- if (!is.null(PATHS$participation) && file.exists(PATHS$participation))
+          read.csv(PATHS$participation, stringsAsFactors = FALSE, check.names = FALSE) else
+          data.frame(person_id = character(0), role = character(0))
+person   <- str_squish(tolower(paste(rost$first_name, rost$last_name)))        # canonical people key, one row per human
+role_ids <- function(r) unique(prt$person_id[str_squish(tolower(prt$role)) == r])
 ndistinct <- function(mask) length(unique(person[mask & person != "" & !is.na(person)]))
 
 # General public = iNat observers who are NOT on the roster (matched by handle); total
@@ -64,8 +70,8 @@ part <- kv(
   total_surveys              = nrow(psf),
   netting_surveys            = sum(pmethod == "lethal",     na.rm = TRUE),
   inaturalist_surveys        = sum(pmethod == "non-lethal", na.rm = TRUE),
-  interns                    = ndistinct(rrole == "intern"),
-  beeple                     = ndistinct(rrole == "beeple"),
+  interns                    = ndistinct(rost$person_id %in% role_ids("intern")),
+  beeple                     = ndistinct(rost$person_id %in% role_ids("beeple")),
   dedicated_surveyors        = dedic_n,
   public_contributors        = public_n,
   total_contributors         = dedic_n + public_n)

@@ -100,84 +100,34 @@ install.packages(c(
 ```
 beescabr/
   scripts/
-    utils/
-      utils.R                        # shared read_latest(), require_columns()
-      finding_beeple_calendar.R      # parses annual calendar PDFs → beeple_calendar_windows.csv
-      survey_dates.R                 # infers beeple survey dates from iNat obs → beeple_survey_dates_official.csv + intern_survey_dates_official.csv
-    clean/
-      inat_bee_clean.R               # cleans non-lethal bee iNat data (intern + beeple)
-      inat_plant_clean.R             # cleans non-lethal plant iNat data
-      specimen_bee_clean.R           # cleans lethal CABR specimen data; QC flags; complex match
-    checklists/
-                                      # PART B: TIER 2 (merged) checklists + CABR specimen checklist
-    analysis/
-    spatial/
-      spatial_utils.R                # loads + reprojects boundaries; containment checks; 10m transect buffers
-      plot_boundaries_individually.R # one map per boundary layer
-      diagnose_county_gap.R          # computes gap between point_loma_boundary and sd_county_boundary
-  data/                            # gitignored — NOT on GitHub (see .gitignore)
+    run_data_cleaning_pipeline.R        # STAGE 1: ingest + clean + checklists (interactive)
+    run_all_analysis_pipeline.R         # STAGE 2: every analysis in scripts/analysis/
+    run_publishing_materials_pipeline.R # STAGE 3: rebuild the public pages and copy to docs/
+    config.R                            # PATHS, ids, CRS, API versions, season folder
+    inat_observations/                  # iNaturalist ingest + cleaning (engine/ holds the API + DuckDB layers)
+    specimens/                          # specimen workbook cleaning + QC
+    project_info/                       # the "brain": who surveyed, when, and the tag/field crosswalk
+    checklists/                         # tiered species checklists (CABR / Point Loma / SD County)
+    reference/                          # taxonomy + plant lookups, id resolution, verification prompts
+    analysis/                           # every figure and table (theme_beescabr.R holds ALL colours)
+    publish/                            # builds docs/ for GitHub Pages
+    spatial/                            # boundary + transect geometry helpers
+    utils/                              # run-mode menu, refresh checks, per-script warning capture
+  tests/testthat/                       # unit tests; never touch the real data or the network
+  dev-docs/                             # developer documentation (see the map below)
+  docs/                                 # the PUBLIC SITE, served by GitHub Pages
+  data/                                 # gitignored -- NOT on GitHub (see .gitignore and DATA_ACCESS.md)
+    inat_observations/                  # cache/ (DuckDB), inat_clean/, review/ QC worklists
+    specimens/                          # records/ (versioned workbooks), specimens_clean/
     project_info/
-      surveyors_by_year.csv        # per-year surveyor roster: username, role, method, technique
-      project_tags_fields.csv      # iNat tag / observation-field → keep/flag/exclude crosswalk
-      beeple_calendar_windows.csv  # parsed from annual calendar PDFs: one row per (year, person, transect, window)
-      beeple_calendar/             # annual calendar PDFs: "YYYY Cabrillo Bee Survey Calendar.pdf"
-                                   # drop new year's PDF here and re-run the pipeline (stage 2d)
-      intern_survey_dates.csv               # raw intern dates input (one row per person per date)
-      beeple_survey_dates_official.csv      # PERMANENT beeple record; one row per window, transects as username columns
-                                            # rows marked "manual" or "skipped" are never overwritten
-      intern_survey_dates_official.csv      # PERMANENT intern record; one row per date, full names + usernames
-      survey_dates_needs_review.csv         # ambiguous/no_obs beeple windows needing manual attention (auto-deleted when resolved)
-    reference_exports/
-      gbif/                        # GBIF regional reference exports
-      holway_2026/                 # Dr. Holway's SD County Bee Species Checklist v3, flattened to CSV
-    cabr_surveys/
-      lethal/                      # all versions of specimen file live here
-        cabr_bee_specimens_record_V1_2026_05_04.xlsx
-        cabr_bee_specimens_record_V2_2026_05_29.xlsx
-        ...
-        cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx   ← newest = authoritative
-        deposit/                   # permanent specimen transfers
-        loans/                     # temporary specimen transfers
-      nonlethal/
-        inat_bee/                  # iNat SD County bee exports (inat_native_bees_sdcounty_25_mi_buffer_*)
-        inat_plant/                # iNat Point Loma Peninsula plant exports (inat_plants_point_loma_peninsula_*)
-    spatial/
-      transects/
-        cabr_bee_transects.shp     # source of truth for transect buffers
-      boundaries/
-        cabr/
-          nps_official/            # NPS-authoritative shapefiles
-            cabr_boundary_nps_official.shp
-            cabr_tracts_nps_official.shp
-          cabr_survey_box.shp      # hand-drawn survey inclusion polygon (see Spatial analysis)
-        point_loma/                # point_loma_boundary.shp
-        san_diego_county/          # sd_county_boundary.shp (Union+Dissolve — see Spatial analysis)
-                                    # DIAGNOSTIC_county_gap.shp (diagnostic output)
-    outputs/                       # generated by scripts — do not edit manually
-      inat_clean/
-        cabr_inat_bee_clean.csv
-        cabr_inat_plant_clean.csv
-        qc/
-          cabr_inat_bee_unknown_tags.csv
-          cabr_inat_plant_unknown_tags.csv
-      checklists/
-        cabr/
-          cabr_combined_native_bee_checklist.csv   # TIER 2 merged (iNat + specimens)
-          cabr_inat_bee_checklist.csv              # TIER 1 iNat-only
-          cabr_specimen_bee_checklist.csv          # specimen-only
-        point_loma/
-          pl_inat_native_bee_checklist.csv         # TIER 1
-          pl_native_bee_checklist.csv              # TIER 2
-        sd_county/
-          sd_county_inat_native_bee_checklist.csv  # TIER 1
-          sd_county_native_bee_checklist.csv       # TIER 2
-      specimens/
-        cabr_specimen_bee_record_clean.csv
-        cabr_specimen_bee_missing.csv
-        cabr_specimen_bee_duplicates.csv
-      reference/
-        bee_taxonomy_lookup.csv
-  SPECIMEN_CHANGELOG.md            # version history for specimen spreadsheet
+      rosters/                          # WHO: surveyor + identifier + research-team rosters
+      surveys/                          # WHEN and WHERE: effort log, transects, date sources, review/
+      crosswalk/                        # the shared tag/field dictionary, and its review/
+    checklists/                         # generated tier checklists + IUCN status cache
+    reference/                          # curated/ (hand-edited), generated/, source/ taxonomy lookups
+    spatial/                            # boundary + transect shapefiles, basemap cache
+    analysis/                           # figures and tables, in a per-season folder (nps_report_YYYY)
+  CLAUDE.md                             # rules for coding agents
   README.md
 ```
 
@@ -186,7 +136,7 @@ beescabr/
 ## Data rules
 
 - **GBIF = regional reference context only.** GBIF records are never used as CABR survey records. CABR specimens are being deposited to SDNHM (via Pam Horsley) and are not yet in GBIF.
-- **`data/` is gitignored** — no specimen, iNat, or personal data is on GitHub. Exception: shapefiles under `data/spatial/`.
+- **`data/` is gitignored** — no specimen, iNat, or personal data is on GitHub. Exception: shapefiles under `data/spatial/shapefiles/`.
 - **`data/analysis/` is generated.** Never edit output CSVs by hand — re-run the relevant script instead.
 - **Buffers are generated in R**, not stored as shapefiles. Do not commit `Buffer_10m.*` or any derived shapefile.
 

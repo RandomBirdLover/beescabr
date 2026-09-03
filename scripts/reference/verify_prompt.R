@@ -204,7 +204,7 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
 # Verified ids -> verified_taxa.csv; rejected ids -> rejected_taxa.csv; a verify un-rejects.
 prompt_verify_taxa <- function(lookup_df,
                                verified_path = if (exists("PATHS")) PATHS$verified_taxa else PATHS$verified_taxa,
-                               rejected_path = if (exists("PATHS") && !is.null(PATHS$rejected_taxa)) PATHS$rejected_taxa else "data/reference/rejected_taxa.csv",
+                               rejected_path = if (exists("PATHS") && !is.null(PATHS$rejected_taxa)) PATHS$rejected_taxa else "data/reference/hand_curated/rejected_taxa.csv",
                                prompt_fn = readline, interactive_ok = TRUE, write = TRUE, verbose = TRUE) {
   if (!interactive_ok) return(invisible(NULL))
   needs <- unverified_rows(lookup_df)

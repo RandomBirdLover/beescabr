@@ -31,10 +31,9 @@
 
 # ---- dependency guard (install-guarded HERE, not in utils.R -- the pipeline
 #      never needs network packages) -----------------------------------------
-for (pkg in c("igraph", "ggplot2", "vegan")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({
   library(dplyr); library(stringr); library(igraph)
 })

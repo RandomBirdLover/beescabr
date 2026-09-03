@@ -152,6 +152,20 @@ main <- function() {
   # this same R process cannot leak into this run. ----
   ingest_mode_apply(ingest_mode_flags())
 
+  # ---- Whose iNaturalist account is this run pulling as? ----
+  # Credentials are PERSONAL and are never shipped with the code or the data. Ask once,
+  # here, rather than deep inside the pull. Unauthenticated is allowed but returns
+  # OBSCURED coordinates for sensitive taxa, so the operator is told which they are getting.
+  if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1") {
+    if (!exists("inat_auth_prompt")) source("scripts/inat_observations/engine/api/inat_auth.R")
+    inat_auth_prompt()
+    .who <- tryCatch(inat_auth_login(), error = function(e) "")
+    message("")
+    if (nzchar(.who)) message("  iNaturalist: signed in as @", .who,
+                              " -- true coordinates for taxa this account is trusted with.")
+    else message("  iNaturalist: not signed in -- sensitive taxa will have OBSCURED coordinates.")
+  }
+
   # ---- Is the cached reference data (IUCN status, plant common names) stale? Age comes
   # from each cache's own retrieved_on dates, oldest entry first. Anything past a year is
   # refreshed AUTOMATICALLY at phase 0 below -- nobody should have to remember a flag once
@@ -277,7 +291,7 @@ main <- function() {
 
   # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows.csv from the PDFs ----
   # Re-parses every "YYYY Cabrillo Bee Survey Calendar.pdf" in
-  # data/project_info/survey_date_sources/beeple_calendar_windows/ each run, so a newly-added year
+  # data/project_info/surveys/survey_date_sources/beeple_calendar_windows/ each run, so a newly-added year
   # (e.g. 2027) is picked up automatically. The brain reads the resulting windows CSV.
   # Wrapped so a missing pdftools / malformed PDF warns and keeps the existing CSV
   # rather than killing the run.
@@ -554,12 +568,12 @@ bx_analysis_files <- function() {
   grp("specimens")
   item(PATHS$specimen_clean)
   grp("spatial / boundaries")
-  item("data/spatial/boundaries/cabr/cabr_survey_box.shp")
-  item("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
-  item("data/spatial/boundaries/point_loma/point_loma_boundary.shp")
-  item("data/spatial/boundaries/san_diego_county/sd_county_boundary.shp")
-  item("data/spatial/transects/cabr_bee_transects.shp")
-  item("data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp")
+  item("data/spatial/shapefiles/boundaries/cabr/cabr_survey_box.shp")
+  item("data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
+  item("data/spatial/shapefiles/boundaries/point_loma/point_loma_boundary.shp")
+  item("data/spatial/shapefiles/boundaries/san_diego_county/sd_county_boundary.shp")
+  item("data/spatial/shapefiles/transects/cabr_bee_transects.shp")
+  item("data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp")
 }
 
 main()

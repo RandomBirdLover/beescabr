@@ -607,12 +607,21 @@ attach_lookup_taxonomy <- function(df, lookup) {
 }
 
 # resolve_determiners(): PURE. Map each specimen determination CODE ("initials + surname", e.g.
-# "JL Mullins") to a determiner's iNaturalist username by matching surname + first initial against the
-# identifier roster. Returns a data frame (code, determiner, status): status is "matched", "unknown"
-# (no roster row), "ambiguous" (>1 roster row shares that surname + initial -- a human must resolve), or
-# NA (blank code = no determination recorded). READ-ONLY: never writes the roster. `roster` needs
-# columns first_name, last_name, inaturalist_username. Multi-word surnames in a code fall to "unknown"
-# (flagged, not silently mismatched) since only the last token is read as the surname.
+# "JL Mullins") to a determiner's iNaturalist username, via the identifier roster.
+#
+# The roster's `determiner_code` column IS the join key: it holds the determination string exactly as
+# it is written on the specimen label, so a label matches a stored value rather than a name we
+# assembled -- the same rule taxon joins follow (CLAUDE.md). A determiner who determines specimens
+# needs that cell filled; a blank cell never matches anything, including a blank label.
+#
+# FALLBACK, for a roster row whose code is not filled in yet: surname + first initial. It is a guess,
+# and it loses multi-word surnames ("D de Pedro" reads its surname as "Pedro"), which is exactly why
+# the code column exists. Fill the code and the fallback stops mattering.
+#
+# Returns a data frame (code, determiner, status): status is "matched", "unknown" (no roster row),
+# "ambiguous" (>1 roster row claims it -- a human must resolve), or NA (blank code = no determination
+# recorded). READ-ONLY: never writes the roster. `roster` needs columns first_name, last_name,
+# inaturalist_username, and ideally determiner_code.
 resolve_determiners <- function(codes, roster) {
   low  <- function(x) tolower(trimws(as.character(x)))
   code     <- trimws(as.character(codes))
@@ -621,11 +630,14 @@ resolve_determiners <- function(codes, roster) {
   r_last <- low(roster$last_name)
   r_fi   <- substr(low(roster$first_name), 1, 1)
   r_user <- as.character(roster$inaturalist_username)
+  r_code <- if ("determiner_code" %in% names(roster)) low(roster$determiner_code) else character(nrow(roster))
+  r_code[is.na(r_code)] <- ""                         # an unfilled cell is not a key: it matches nothing
   out <- data.frame(code = code, determiner = NA_character_, status = NA_character_,
                     stringsAsFactors = FALSE)
   for (i in seq_along(code)) {
     if (is.na(code[i]) || !nzchar(code[i])) next      # blank -> no determination; status stays NA
-    hit <- which(r_last == low(surname[i]) & r_fi == low(first_in[i]))
+    hit <- which(nzchar(r_code) & r_code == low(code[i]))                  # the stored key wins
+    if (!length(hit)) hit <- which(r_last == low(surname[i]) & r_fi == low(first_in[i]))
     if (length(hit) == 1L) { out$determiner[i] <- r_user[hit]; out$status[i] <- "matched" }
     else if (length(hit) > 1L) out$status[i] <- "ambiguous"
     else out$status[i] <- "unknown"

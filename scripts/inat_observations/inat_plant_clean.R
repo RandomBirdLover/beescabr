@@ -17,10 +17,10 @@
 #
 # INPUTS   data/inat_observations/cabr_inat_raw.csv                 (brain per-obs lookup; kind=="plant")
 #          data/inat_observations/cache/export_flat_plant.rds       (taxonomy + coords + fields/tags)
-#          data/project_info/master_crosswalk.csv              (flowering field variants)
+#          data/project_info/crosswalk/master_crosswalk.csv              (flowering field variants)
 #          data/project_info/rosters/surveyor_roster.csv               (surveyor usernames -> scope)
-#          data/spatial/transects/cabr_bee_transects.shp       (off-transect test)
-#          data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp (walk-in)
+#          data/spatial/shapefiles/transects/cabr_bee_transects.shp       (off-transect test)
+#          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (walk-in)
 # OUTPUT   data/inat_observations/inat_clean/cabr_inat_plant_clean.csv
 #
 # Run: source("scripts/inat_observations/inat_plant_clean.R"); inat_plant_clean()
@@ -31,10 +31,10 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 
 IPC_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"
 IPC_EXPORT         <- "data/inat_observations/cache/export_flat_plant.rds"
-IPC_CROSSWALK      <- "data/project_info/master_crosswalk.csv"
-IPC_ROSTER         <- PATHS$surveyor_roster
-IPC_TRANSECTS      <- "data/spatial/transects/cabr_bee_transects.shp"
-IPC_ROAD           <- "data/spatial/access_routes_to_transects/cabr_survey_access_routes.shp"
+IPC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk.csv"
+IPC_ROSTER         <- PATHS$people          # one row per human; `surveyor` flag scopes it
+IPC_TRANSECTS      <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"
+IPC_ROAD           <- "data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- PATHS$inat_plant_clean
 IPC_ALL_TAXA       <- PATHS$plant_all_taxa  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
 IPC_LOCATION_REVIEW <- "data/inat_observations/review/location/qc_review_inat_plant_location.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
@@ -216,6 +216,8 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   # SCOPE: surveyors' plant obs only (observer on the roster)
   if (file.exists(roster_path)) {
     roster    <- suppressWarnings(suppressMessages(read_csv(roster_path, show_col_types = FALSE)))
+    # people.csv holds everyone; only those flagged `surveyor` scope the plant obs
+    if ("surveyor" %in% names(roster)) roster <- roster[as.logical(roster$surveyor) %in% TRUE, , drop = FALSE]
     surveyors <- if ("inaturalist_username" %in% names(roster)) roster$inaturalist_username else character(0)
     mem <- ipc_scope_to_surveyors(mem, surveyors)
   } else {

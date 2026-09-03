@@ -29,10 +29,9 @@
 # Depends on: dplyr, stringr, ggplot2, ggridges (+ config.R).
 # =============================================================
 
-for (pkg in c("ggplot2", "ggridges")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({
   library(dplyr); library(stringr); library(ggplot2); library(ggridges)
 })

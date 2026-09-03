@@ -40,8 +40,8 @@ local({
   need("cw_append",         "project_info/review/qc_review_mastercrosswalk.R")
 })
 
-CPN_CW       <- "data/project_info/master_crosswalk.csv"
-CPN_WORKLIST <- "data/project_info/review/qc_review_mastercrosswalk_plant_names.csv"
+CPN_CW       <- "data/project_info/crosswalk/master_crosswalk.csv"
+CPN_WORKLIST <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_plant_names.csv"
 
 pcn_norm <- function(x) tolower(gsub("\\s+", " ", trimws(as.character(x))))
 

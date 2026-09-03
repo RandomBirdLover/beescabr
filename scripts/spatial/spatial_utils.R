@@ -4,7 +4,8 @@
 # throughout the pipeline (CABR, Point Loma, SD County), and generate
 # transect buffers.
 #
-# Requires the sf package: install.packages("sf")
+# Requires the sf package. Install everything with:
+#   Rscript scripts/utils/install_requirements.R
 #
 # Project working CRS: EPSG:26946 (NAD83 / California zone 6, meters).
 # All layers are reprojected on load. The shapefiles on disk are already
@@ -40,7 +41,7 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 # Config
 # ------------------------------------------------------------
 PROJECT_CRS <- 26946  # NAD83 / California zone 6 (meters)
-boundary_dir <- "data/spatial/boundaries"
+boundary_dir <- "data/spatial/shapefiles/boundaries"
 ACRES_PER_SQM <- 1 / 4046.8564224
 
 # ------------------------------------------------------------
@@ -172,7 +173,7 @@ bx_note("CABR reaches just past the Point Loma / County lines — expected (know
 buffer_dist_m <- 50  # change this one line to adjust buffer width
 
 transects <- st_read(
-  file.path("data/spatial/transects", "cabr_bee_transects.shp"),
+  file.path("data/spatial/shapefiles/transects", "cabr_bee_transects.shp"),
   quiet = TRUE
 ) |>
   st_transform(PROJECT_CRS)
@@ -187,6 +188,6 @@ bx_cont("boundaries + 50 m buffer ready")
 }, error = function(e) {
   message("  [spatial] WARNING: could not load boundary/transect layers -- ", conditionMessage(e))
   message("  [spatial] The spatial stages (CABR membership, SD-County clip, transect flags) need the ",
-          "shapefiles under ", boundary_dir, "/ and data/spatial/transects/. Fix those and re-run; ",
+          "shapefiles under ", boundary_dir, "/ and data/spatial/shapefiles/transects/. Fix those and re-run; ",
           "the rest of the pipeline continues for now instead of dying at startup.")
 })

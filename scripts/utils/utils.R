@@ -4,8 +4,9 @@ library(stringr)
 # utils.R is sourced first, so this runs before the calendar parser loads pdftools,
 # keeping the pipeline from halting at load time on a fresh machine. try() so an
 # offline install just warns and the calendar stage's own tryCatch skips gracefully.
-if (!requireNamespace("pdftools", quietly = TRUE))
-  try(install.packages("pdftools", repos = "https://cloud.r-project.org"), silent = TRUE)
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 
 read_latest <- function(folder, pattern) {
   files <- list.files(folder, pattern = pattern, full.names = TRUE)

@@ -24,10 +24,9 @@
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
-for (pkg in c("ggplot2", "sf", "leaflet", "htmlwidgets")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2); library(sf) })
 
 if (!exists("PATHS")) source("scripts/config.R")
@@ -281,10 +280,10 @@ tr_list <- ib_tx %>% group_by(transect) %>%
             .groups = "drop")
 
 # real transect LINES + the NPS park boundary, straight from the GIS shapefiles (single source:
-# data/spatial/). Specimen coords are only transect centroids, so we draw the actual survey lines.
+# data/spatial/shapefiles/). Specimen coords are only transect centroids, so we draw the actual survey lines.
 read_shp <- function(p) tryCatch(sf::st_transform(sf::st_read(p, quiet = TRUE), 4326), error = function(e) NULL)
-park_bnd <- read_shp("data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
-tran_ln  <- read_shp("data/spatial/transects/cabr_bee_transects.shp")
+park_bnd <- read_shp("data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp")
+tran_ln  <- read_shp("data/spatial/shapefiles/transects/cabr_bee_transects.shp")
 if (!is.null(tran_ln)) {
   tran_ln$transect <- toupper(str_squish(tran_ln$Name))
   tran_ln$col <- ifelse(tran_ln$transect %in% names(BEE_TRANSECT), unname(BEE_TRANSECT[tran_ln$transect]), BEE_HTML[["cn"]])

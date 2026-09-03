@@ -61,7 +61,7 @@ the survey list):
 
 - `data/inat_observations/inat_clean/cabr_inat_bee_clean.csv` — non-lethal (photo) records; now has `plant_genus` / `plant_species`
 - `data/specimens/specimens_clean/cabr_specimen_bee_clean.csv` — lethal (net) records; now has `plant_genus` / `plant_species`
-- `data/project_info/master_per_survey_info.csv` — the authoritative survey list
+- `data/project_info/surveys/master_per_survey_info.csv` — the authoritative survey list
 - `data/checklists/cabr/cabr_official_native_bee_checklist.csv` — has `specimen` / `inat` / `holway` presence flags (drives Q1, Q9)
 - `data/inat_observations/inat_clean/cabr_inat_plant_clean.csv` — non-lethal plant records (Q11)
 

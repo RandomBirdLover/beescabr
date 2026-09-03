@@ -37,3 +37,13 @@ test_that("the export rank columns are present and ordered (incl. sub-ranks)", {
   expect_equal(TAXONOMY_LEVELS[14], "subtribe")
   expect_equal(TAXONOMY_LEVELS[19], "subspecies")
 })
+
+# iNaturalist publishes its rate limits in the v2 API docs: 100 requests/minute hard,
+# 60/minute requested, 10,000/day, and "we may institute blocks without notification".
+# The throttle was 0.5s (120/min), which exceeded even the hard cap. Pin it so a future
+# edit cannot quietly put the project back over the line.
+test_that("the iNat throttle stays within the rate limit iNaturalist asks for", {
+  expect_true(exists("INAT_THROTTLE_SEC"))
+  expect_gte(INAT_THROTTLE_SEC, 1.0)              # 1s => at most 60 requests/minute
+  expect_lte(60 / INAT_THROTTLE_SEC, 60)
+})

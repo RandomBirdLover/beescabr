@@ -63,7 +63,7 @@ radius around it.
 - **`r` = reject‑for‑now is remembered, not deleted.** A rejected taxon is re‑shown next
   run flagged *"you rejected this before — verified now?"*, so if it's ever confirmed later
   you just hit `y`. To forget a rejection entirely, delete its row from
-  `data/reference/rejected_taxa.csv`.
+  `data/reference/hand_curated/rejected_taxa.csv`.
 
 - **Specimen vs photo:** Chris's **specimen** determinations you can trust directly. The
   iNaturalist check above is mainly for the **photo (iNat)** taxa — like *Perdita larreae*,

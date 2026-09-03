@@ -138,6 +138,42 @@ literally, write a `__C_NAME__` token and pass the finished string through
 
 Why it matters, and the drift it already caused, is in `dev-docs/WEBSITE_GUIDE.md`.
 
+## Dependencies: the list is a constant, installing is a script
+
+**`config.R` holds the list. It never installs anything.**
+
+- `BEESCABR_PACKAGES` (required) and `BEESCABR_PACKAGES_OPTIONAL` (nice to have) live in
+  `config.R`, because that is the constants file and one list means one place to edit when
+  a dependency is added.
+- `scripts/utils/install_requirements.R` does the installing, and is run deliberately:
+  `Rscript scripts/utils/install_requirements.R`.
+
+Why the split: `config.R` is sourced by **every** script. If it installed packages, every
+run would check the network at load, and a setup step would become a side effect of merely
+reading a constant. Installing belongs in something you choose to run.
+
+**Adding a dependency:** add it to `BEESCABR_PACKAGES` in `config.R`. That is the whole
+change. Do not add a new install block.
+
+**Scripts CHECK, they never install.** Every script that needs packages calls
+`beescabr_require()` (defined in `config.R`) near the top:
+
+```r
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
+```
+
+If anything is missing it stops with the one command that fixes it, instead of a bare
+"there is no package called 'sf'". It defaults to the whole `BEESCABR_PACKAGES` list on
+purpose: a per-script subset is another list to keep in sync, and that is exactly the drift
+this replaced. The old `for (pkg in ...) install.packages(...)` blocks are **gone** from all
+24 scripts, along with the duplicate `ANALYSIS_PACKAGES` list — they covered 14 packages
+against a real set of 36, and they installed software as a side effect of sourcing a file.
+
+**Prefer CRAN.** A GitHub-only dependency cannot be installed by `install_requirements.R`'s
+CRAN call and makes a fresh machine harder to set up. This is why the project stays on
+`rredlist` rather than IUCN's own GitHub-only `iucnredlist`.
+
 ## Running the pipeline
 
 ```

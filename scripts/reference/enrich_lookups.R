@@ -21,8 +21,17 @@
 # Depends on: dplyr, stringr; httr2 (common names); rredlist (IUCN, optional). + config.R.
 # =============================================================
 
+# rredlist (rOpenSci) is the IUCN Red List client. Same auto-install pattern the analysis
+# scripts use, so a fresh machine does not have to discover the requirement from a skipped
+# refresh. It is on CRAN; the official IUCN package is GitHub-only and we deliberately
+# stay on rredlist (see dev-docs/TODO.md).
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
+
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
+if (!exists("cred_get")) source("scripts/utils/credentials.R")
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (length(a) == 1 && is.na(a)) ||
                             (is.character(a) && length(a) == 1 && !nzchar(a))) b else a
@@ -32,6 +41,8 @@ if (!exists("PATHS")) source("scripts/config.R")
 # =====================================================================================
 IUCN_DIR        <- "data/checklists/iucn"
 IUCN_CACHE_FILE <- file.path(IUCN_DIR, "iucn_status.csv")
+IUCN_VERSION_FILE <- file.path(IUCN_DIR, "iucn_redlist_version.txt")  # the edition we cited
+if (!exists("citation_save_version")) source("scripts/publish/citations.R")
 IUCN_SECRET     <- "data/secrets/iucn_api.env"          # gitignored -- paste token here
 IUCN_CODE_NAME  <- c(EX = "Extinct", EW = "Extinct in the Wild", RE = "Regionally Extinct",
                      CR = "Critically Endangered", EN = "Endangered", VU = "Vulnerable",
@@ -43,6 +54,20 @@ IUCN_SYNONYM    <- c("Bombus sonorus"      = "Bombus pensylvanicus",
 .iucn_name_of <- function(code) { n <- unname(IUCN_CODE_NAME[toupper(code)]); ifelse(is.na(n), code, n) }
 
 .iucn_token <- function() {
+  # A free personal key. Ask rather than silently skipping the conservation status: a blank
+  # IUCN column looks the same as "nothing is threatened", which is the wrong impression.
+  if (exists("cred_get")) {
+    if (!nzchar(Sys.getenv("IUCN_REDLIST_KEY")) && !file.exists(IUCN_SECRET)) {
+      message("")
+      message("  The IUCN Red List key is not set on this machine.")
+      message("  It fills the conservation status column on the field guides (the codes")
+      message("  NE, LC, NT, VU, EN, CR). Without it that column is blank, which reads as")
+      message("  'nothing is threatened' rather than 'we did not check'.")
+      message("  The key is FREE: request one at https://api.iucnredlist.org")
+      message("  (approval usually arrives by email within a day or two).")
+    }
+    return(cred_get("IUCN_REDLIST_KEY", IUCN_SECRET, what = "IUCN Red List API key"))
+  }
   k <- Sys.getenv("IUCN_REDLIST_KEY")
   if (nzchar(k)) return(k)
   if (!file.exists(IUCN_SECRET)) return("")
@@ -64,17 +89,35 @@ IUCN_SYNONYM    <- c("Bombus sonorus"      = "Bombus pensylvanicus",
   d
 }
 
-# latest global category for one species (NE if not assessed / not found / offline)
-.iucn_fetch_one <- function(binom, key) {
-  q    <- if (binom %in% names(IUCN_SYNONYM)) unname(IUCN_SYNONYM[binom]) else binom
-  res  <- tryCatch(rredlist::rl_species_latest(genus = word(q, 1), species = word(q, 2),
-                                               key = key, parse = TRUE),
-                   error = function(e) NULL)
-  if (is.null(res)) return(list(code = "NE", year = NA_character_, note = ""))
+# Is this failure an authentication problem (bad/expired/revoked key) rather than a
+# network blip? Worth naming separately: the fix is different and the operator can act on it.
+.iucn_is_auth_error <- function(msg) {
+  if (!length(msg) || is.na(msg)) return(FALSE)
+  grepl("401|403|not valid|unauthor|forbidden", msg, ignore.case = TRUE)
+}
+
+# Latest global category for one species.
+#
+# CRITICAL: a FAILED call must not look like an answer. This used to return "NE" when the
+# request errored, which is the same value IUCN returns for a species it has genuinely not
+# assessed. An expired key would therefore have relabelled every bee "Not Evaluated" --
+# quietly erasing Bombus crotchii (Endangered) from the public pages. A failure now returns
+# ok = FALSE with code = NA, and the caller keeps whatever the cache already held.
+# fetch_fn is injectable so the failure paths are testable without touching the network.
+.iucn_fetch_one <- function(binom, key, fetch_fn = NULL) {
+  q  <- if (binom %in% names(IUCN_SYNONYM)) unname(IUCN_SYNONYM[binom]) else binom
+  fn <- if (is.null(fetch_fn))
+    function(...) rredlist::rl_species_latest(genus = word(q, 1), species = word(q, 2),
+                                              key = key, parse = TRUE)
+  else fetch_fn
+  err <- NA_character_
+  res <- tryCatch(fn(), error = function(e) { err <<- conditionMessage(e); NULL })
+  if (is.null(res))
+    return(list(code = NA_character_, year = NA_character_, note = "", ok = FALSE, error = err))
   code <- tryCatch(res$red_list_category$code, error = function(e) NULL)
   year <- tryCatch(res$year_published %||% res$assessment_date, error = function(e) NA)
   code <- toupper(code %||% "NE")
-  list(code = code, year = as.character(year %||% ""),
+  list(ok = TRUE, error = NA_character_, code = code, year = as.character(year %||% ""),
        note = if (q != binom && code != "NE") sprintf(" (as %s)", q) else "")
 }
 
@@ -84,26 +127,64 @@ resolve_iucn <- function(species, force = FALSE, verbose = TRUE) {
   species <- unique(str_squish(species))
   species <- species[!is.na(species) & grepl(" ", species)]          # species-rank binomials only
   cache   <- .iucn_read_cache()
-  need    <- if (force) species else setdiff(species, cache$scientific_name)
-  key     <- .iucn_token()
-  can_net <- length(need) > 0 && nzchar(key) && requireNamespace("rredlist", quietly = TRUE)
+  need <- if (force) species else setdiff(species, cache$scientific_name)
+  key  <- .iucn_token()
 
-  if (length(need) > 0 && !can_net && verbose)
-    message(sprintf("  IUCN: %d species unresolved (no token / rredlist missing) -- using cache only, not fetching.",
-                    length(need)))
+  has_pkg <- requireNamespace("rredlist", quietly = TRUE)   # installed at load; see top of file
+  can_net <- length(need) > 0 && nzchar(key) && has_pkg
+
+  # Say WHICH thing is missing. "no token / rredlist missing" left the operator guessing,
+  # and the two have completely different fixes.
+  if (length(need) > 0 && !can_net && verbose) {
+    message(sprintf("  IUCN: %d species not refreshed -- using the cached values.", length(need)))
+    if (!has_pkg)
+      message("  IUCN: rredlist is not installed. Run: Rscript scripts/utils/install_requirements.R")
+    if (!nzchar(key))
+      message("  IUCN: no API token. Get one free at https://api.iucnredlist.org and the")
+      message("  IUCN: pipeline will ask for it, or put it in data/secrets/iucn_api.env")
+  }
 
   if (can_net) {
     if (verbose) message(sprintf("  IUCN: fetching %d species from the Red List (v4)...", length(need)))
     fetched <- lapply(seq_along(need), function(i) {
       r <- .iucn_fetch_one(need[i], key)
       if (verbose && i %% 10 == 0) message(sprintf("    ...%d/%d", i, length(need)))
-      Sys.sleep(0.34)                                                # ~3 req/s, courteous
-      data.frame(scientific_name = need[i], iucn_code = r$code,
+      # IUCN's own client package (IUCN-UK/iucnredlist) recommends wait_time >= 0.5s to
+      # avoid rate limiting; they warn that heavy use can get a token throttled or revoked.
+      # 0.34s was faster than their guidance.
+      Sys.sleep(0.5)
+      d <- data.frame(scientific_name = need[i], iucn_code = r$code,
                  iucn_category = paste0(.iucn_name_of(r$code), r$note),
                  assessment_year = as.character(r$year), source = "IUCN Red List API v4 (rredlist)",
                  retrieved_on = as.character(Sys.Date()), stringsAsFactors = FALSE)
+      attr(d, "error") <- r$error %||% NA_character_
+      d
     })
     new <- do.call(rbind, fetched)
+
+    # Drop lookups that FAILED. Writing them would cache a network or auth problem as a
+    # scientific claim ("Not Evaluated"), and the cache is what the public pages read.
+    failed <- is.na(new$iucn_code)
+    if (any(failed)) {
+      auth <- any(vapply(fetched[failed], function(x) .iucn_is_auth_error(attr(x, "error")), TRUE))
+      if (verbose) {
+        message(sprintf("  IUCN: %d of %d lookups FAILED and were not cached (existing values kept).",
+                        sum(failed), nrow(new)))
+        if (all(failed)) {
+          message("  IUCN: every lookup failed. The status column is unchanged, NOT 'nothing is threatened'.")
+          if (auth) {
+            message("  IUCN: the API REJECTED the key (401/403). It is expired, revoked, or wrong.")
+            message("  IUCN: get a new one at https://api.iucnredlist.org (Your account -> Cycle token),")
+            message("  IUCN: then put it in data/secrets/iucn_api.env as IUCN_REDLIST_KEY=...")
+          }
+        }
+      }
+      new <- new[!failed, , drop = FALSE]
+    }
+    if (!nrow(new)) {
+      if (verbose) message("  IUCN: nothing new to cache.")
+      return(invisible(cache))
+    }
     old_assessed <- sum(toupper(cache$iucn_code) != "NE", na.rm = TRUE)
     # offline guard applies only to a FULL (force) re-pull: if EVERY species came back NE
     # yet the cache held real assessments, the API was almost certainly unreachable, so keep
@@ -119,6 +200,14 @@ resolve_iucn <- function(species, force = FALSE, verbose = TRUE) {
       write.csv(merged, IUCN_CACHE_FILE, row.names = FALSE)
       cache <- merged
       if (verbose) message(sprintf("  IUCN: cache now holds %d species.", nrow(cache)))
+      # Record the Red List EDITION these statuses came from. IUCN requires the version in
+      # any citation, and the public pages must not have to make a live call to print it.
+      v <- tryCatch(rredlist::rl_version(key = key), error = function(e) NULL)
+      v <- if (is.list(v)) as.character(v[[1]] %||% "") else as.character(v %||% "")
+      if (nzchar(v)) {
+        citation_save_version(IUCN_VERSION_FILE, v)
+        if (verbose) message("  IUCN: Red List version ", v, " recorded for citation.")
+      }
     }
   }
   cache

@@ -45,7 +45,7 @@ needs a look and remembers what you've cleared.
 
 ## Recording your checks
 
-`data/reference/verified_taxa.csv` — a simple list you maintain.
+`data/reference/hand_curated/verified_taxa.csv` — a simple list you maintain.
 Columns: `taxon_id, verified`. Once you've confirmed a bee's photo/ID, add its
 `taxon_id` (verified = `Y`). It stops being flagged on the next run.
 

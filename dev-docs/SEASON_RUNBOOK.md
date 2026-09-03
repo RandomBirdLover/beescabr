@@ -25,6 +25,19 @@ needs to ask, it asks.
 
 ---
 
+## 0. First time on this machine: install the packages
+
+```
+Rscript scripts/utils/install_requirements.R
+```
+
+Installs everything the pipeline needs and names anything it could not install. A few
+packages (`sf`, `pdftools`) need system libraries; on macOS
+`brew install gdal proj geos poppler` covers them. Run it once per machine, and again after
+an R upgrade.
+
+---
+
 ## 1. Before you run anything: the hand-maintained files
 
 The pipeline pulls bees and plants from iNaturalist by itself. It cannot pull
@@ -35,9 +48,9 @@ produce last season's answer:
 |---|---|---|
 | who surveyed | `data/project_info/rosters/surveyor_roster.csv` | any new intern or beeple |
 | who identified | `data/project_info/rosters/identifier_roster.csv` | a new identifier contributes |
-| survey dates | `data/project_info/survey_date_sources/master_intern_survey_log.csv` | each intern survey trip |
-| trip-level effort | `data/project_info/master_per_survey_info.csv` | each survey trip |
-| beeple calendar | `data/project_info/survey_date_sources/beeple_calendar_windows/YYYY Cabrillo Bee Survey Calendar.pdf` | each new season |
+| survey dates | `data/project_info/surveys/survey_date_sources/master_intern_survey_log.csv` | each intern survey trip |
+| trip-level effort | `data/project_info/surveys/master_per_survey_info.csv` | each survey trip |
+| beeple calendar | `data/project_info/surveys/survey_date_sources/beeple_calendar_windows/YYYY Cabrillo Bee Survey Calendar.pdf` | each new season |
 | specimens | `data/specimens/records/cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx` | after netting or a new determination |
 
 The roster and the survey log are **two separate files that must stay in sync**.
@@ -52,6 +65,41 @@ version rather than editing the old one in place.
 sure whether a file is hand-kept or generated, check its "Do NOT hand-edit"
 section before touching it. A generated file will be overwritten on the next run
 and your edit will vanish without warning.
+
+---
+
+## 1b. Your own API credentials (first run on a new machine)
+
+Two services need a key. **They are personal: never use someone else's, and never copy
+another person's `data/secrets/` folder.** A pull runs as whoever's account signed in, and
+that account's trust level decides what data comes back.
+
+| service | what it unlocks | needed? |
+|---|---|---|
+| iNaturalist | TRUE coordinates for SENSITIVE taxa (*Bombus crotchii* and the like), for observers who trust this account | Optional. Without it the pull still works, but those coordinates come back OBSCURED. |
+| IUCN Red List | conservation status on the field guides | Optional. Without it the status column is blank. |
+
+The pipeline **asks** for anything missing on its first run and offers to save it to
+`data/secrets/` (gitignored, and written readable only by you). Nothing is stored in a
+script, and typing is hidden if the `askpass` package is installed.
+
+**Setting up iNaturalist, once:**
+
+1. Sign in to iNaturalist **as the account observers already trust** (the park's own
+   account). On iNaturalist, coordinate trust is granted by each observer to a specific
+   account. It is not a project setting and it does NOT transfer. Our surveyors trusted
+   `@randombirdlover` and `@cabrillonationalmonument`, so a brand-new account would get
+   obscured coordinates until each observer trusted it too.
+2. Go to <https://www.inaturalist.org/oauth/applications/new>
+3. Name it something identifiable, e.g. `officialbeescabr`.
+4. Set the callback URL to `http://localhost:3000/beescabr`
+5. Copy the Client ID and Client Secret; the pipeline will ask for them.
+
+The first run opens a browser once so you can click Authorize. Later runs are silent.
+**Every run prints which account it is signed in as** — check that line. If it names
+somebody else, you are pulling on their credentials and should replace them.
+
+The IUCN key is free from <https://api.iucnredlist.org>.
 
 ---
 

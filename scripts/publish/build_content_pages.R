@@ -10,6 +10,7 @@
 # =============================================================
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 if (!exists("beescabr_fill_colors")) source("scripts/analysis/theme_beescabr.R")  # palette is the only colour source
+if (!exists("person_name_keys")) source("scripts/utils/people.R")  # name -> person (all three name shapes)
 suppressPackageStartupMessages(library(dplyr))
 
 DOCS <- "docs"
@@ -19,8 +20,14 @@ rd <- function(p) if (file.exists(p)) read.csv(p, check.names = FALSE, stringsAs
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 sq  <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
 
-# ---- survey team (surveyor_roster.csv) ---------------------------------------
-r <- rd(PATHS$surveyor_roster)
+# ---- the people (people.csv: ONE row per human, flags say what they do) -------
+# Was three rosters that each re-stated the same person; six people were in more
+# than one and had already drifted (two emails for one human). Now one file.
+.people <- rd(PATHS$people)
+.flag <- function(d, col) if (is.null(d) || !nrow(d)) d else d[as.logical(d[[col]]) %in% TRUE, , drop = FALSE]
+
+# ---- survey team --------------------------------------------------------------
+r <- .flag(.people, "surveyor")
 r$first_name <- sq(r$first_name); r$last_name <- sq(r$last_name)
 r <- r[r$first_name != "" | r$last_name != "", ]
 r$name <- trimws(paste(r$first_name, r$last_name))
@@ -37,8 +44,7 @@ num0 <- function(x) { x <- suppressWarnings(as.numeric(x)); ifelse(is.na(x), 0, 
 mp$rec <- num0(mp$n_obs) + num0(mp$n_speci)
 uu <- tolower(team$user); has <- nzchar(uu) & !is.na(uu)
 key_user  <- setNames(team$name[has], uu[has])                                   # iNat username -> person (unambiguous)
-key_first <- setNames(team$name, tolower(team$first))                            # first name -> person
-key_init  <- setNames(team$name, tolower(paste0(substr(team$first, 1, 1), " ", team$last)))  # "F Lastname" -> person
+key_name  <- person_name_keys(team$name, team$first, team$last)                  # "First Last" / "F Last" / unique first name -> person
 recs <- setNames(numeric(nrow(team)), team$name)
 for (i in seq_len(nrow(mp))) {
   u <- tolower(trimws(mp$inat_username[i]))
@@ -46,20 +52,24 @@ for (i in seq_len(nrow(mp))) {
     recs[key_user[u]] <- recs[key_user[u]] + mp$rec[i]
   } else for (tk in trimws(unlist(strsplit(mp$surveyors[i], "[,;&]")))) {        # net/specimen: credit each collector
     t <- tolower(tk); if (!nzchar(t)) next
-    p <- if (!is.na(key_first[t])) key_first[t] else if (!is.na(key_init[t])) key_init[t] else NA_character_
+    p <- unname(key_name[t])
     if (!is.na(p)) recs[p] <- recs[p] + mp$rec[i]
   }
 }
 team$recs <- recs[team$name]
 team <- team[order(-team$recs, tolower(team$last), tolower(team$name)), , drop = FALSE]
-yr_span <- { y <- suppressWarnings(as.integer(r$year)); y <- y[!is.na(y)]
-             if (length(y)) as.character(min(y)) else "" }   # start year only -> "Since 2021"
+# start year only -> "Since 2021". Years live in participation.csv now: people.csv is
+# identity (no years), and when someone surveyed is derived from the survey record.
+yr_span <- { pp <- rd(PATHS$participation)
+             y <- if (!is.null(pp) && nrow(pp)) suppressWarnings(as.integer(pp$year)) else integer(0)
+             y <- y[!is.na(y)]
+             if (length(y)) as.character(min(y)) else "" }
 
 # ---- identifiers (identifier_roster.csv -- may be empty for now) --------------
 taxa_label <- function(x) { x <- tolower(trimws(x %||% "")); ifelse(is.na(x), "",
   ifelse(x == "bee", "bees", ifelse(x == "plant", "plants", ifelse(x == "both", "bees & plants", x)))) }
 `%||%` <- function(a, b) if (is.null(a)) b else a
-id <- rd(PATHS$identifier_roster)
+id <- .flag(.people, "identifier")
 ids <- if (!is.null(id) && nrow(id)) {
   id$name <- trimws(paste(sq(id$first_name), sq(id$last_name)))
   id$name <- ifelse(id$name == "" & sq(id$inaturalist_username) != "", sq(id$inaturalist_username), id$name)  # username-only entries (e.g. itazura) fall back to the handle
@@ -208,8 +218,13 @@ css <- beescabr_fill_colors('
   footer{max-width:820px;margin:0 auto;padding:0 1.5rem 3.5rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);padding-top:1.5rem}
 ')
 
-# ---- main research team (research_team_roster.csv) --------------------------
-rt <- rd("data/project_info/rosters/research_team_roster/research_team_roster.csv")
+# ---- main research team -----------------------------------------------------
+rt <- .flag(.people, "researcher")
+if (!is.null(rt) && nrow(rt)) {
+  rt$role <- sq(rt$team_title)                               # job title for the page, not a project role
+  .o <- suppressWarnings(as.integer(rt$team_order)); .o[is.na(.o)] <- .Machine$integer.max
+  rt <- rt[order(.o), , drop = FALSE]                        # hand-curated order, PI first
+}
 if (!is.null(rt) && nrow(rt)) { rt$name <- trimws(paste(sq(rt$first_name), sq(rt$last_name))); rt <- rt[rt$name != "", , drop = FALSE] } else rt <- NULL
 research_section <- if (!is.null(rt) && nrow(rt)) {
   has_photo  <- "photo" %in% names(rt)

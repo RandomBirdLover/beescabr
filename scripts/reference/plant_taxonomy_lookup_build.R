@@ -49,7 +49,7 @@ PLANT_BASIC_RANKS <- c("kingdom", "phylum", "class", "order", "family", "genus",
 
 .plt_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
 PLT_ALL_TAXA     <- .plt_path("plant_all_taxa",         PATHS$plant_all_taxa)
-PLT_CROSSWALK    <- "data/project_info/master_crosswalk.csv"
+PLT_CROSSWALK    <- "data/project_info/crosswalk/master_crosswalk.csv"
 PLT_CACHE        <- .plt_path("plant_name_cache",       PATHS$plant_name_cache)
 PLT_LOOKUP_OUT   <- .plt_path("plant_taxonomy_lookup",  PATHS$plant_taxonomy_lookup)
 PLT_WORKLIST_OUT <- .plt_path("plant_not_in_park",      PATHS$plant_not_in_park)

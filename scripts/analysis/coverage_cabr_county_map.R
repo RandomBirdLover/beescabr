@@ -12,18 +12,17 @@
 # Depends on: sf, ggplot2, dplyr, stringr (+ config.R).
 # =============================================================
 
-for (pkg in c("sf", "ggplot2", "cowplot")) {
-  if (!requireNamespace(pkg, quietly = TRUE))
-    try(install.packages(pkg, repos = "https://cloud.r-project.org"), silent = TRUE)
-}
+# Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
+if (!exists("beescabr_require")) source("scripts/config.R")
+beescabr_require()
 suppressPackageStartupMessages({ library(sf); library(dplyr); library(stringr); library(ggplot2) })
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")
 OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint"); dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-BND_COUNTY <- "data/spatial/boundaries/san_diego_county/sd_county_boundary.shp"
-BND_CABR   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
-BND_PL     <- "data/spatial/boundaries/point_loma/point_loma_boundary.shp"
+BND_COUNTY <- "data/spatial/shapefiles/boundaries/san_diego_county/sd_county_boundary.shp"
+BND_CABR   <- "data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
+BND_PL     <- "data/spatial/shapefiles/boundaries/point_loma/point_loma_boundary.shp"
 CHECKLIST_CABR   <- PATHS$checklist_cabr_official
 CHECKLIST_HOLWAY <- PATHS$checklist_sd_holway
 SPECIES_RANKS <- c("species", "subspecies")

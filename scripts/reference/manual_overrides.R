@@ -22,7 +22,7 @@ suppressWarnings(suppressMessages({ library(dplyr); library(readr); library(stri
 
 `%||%` <- if (exists("%||%")) `%||%` else function(a, b) if (is.null(a) || length(a) == 0) b else a
 
-MANUAL_OVERRIDES_PATH <- "data/reference/curated/manual_taxon_overrides.csv"   # user-curated answers
+MANUAL_OVERRIDES_PATH <- "data/reference/hand_curated/manual_taxon_overrides.csv"   # user-curated answers
 TAXON_REVIEW_PATH     <- "data/reference/generated/cabr_taxon_ids_needs_review.csv"  # the prompt / worklist
 RMI_CACHE_PATH        <- "data/reference/generated/resolved_missing_ids.csv"     # the resolver's verdict cache
 MO_REVIEW_RANKS       <- c("genus", "subgenus", "complex", "species", "subspecies")

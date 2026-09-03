@@ -23,10 +23,10 @@ BLRM_DIR        <- "data/inat_observations/review/location"
 BLRM_MAPS_DIR   <- file.path(BLRM_DIR, "by_surveyors")   # the per-surveyor maps live here; CSVs + instructions stay at the top of review/location/
 BLRM_BEE_CSV    <- file.path(BLRM_DIR, "qc_review_inat_bee_location.csv")
 BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "qc_review_inat_plant_location.csv")
-BLRM_ROSTER     <- PATHS$surveyor_roster
+BLRM_ROSTER     <- PATHS$people
 BLRM_MASTER     <- PATHS$per_survey
-BLRM_TRANSECTS  <- "data/spatial/transects/cabr_bee_transects.shp"
-BLRM_BOUNDARY   <- "data/spatial/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
+BLRM_TRANSECTS  <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"
+BLRM_BOUNDARY   <- "data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
 BLRM_ASSETS     <- "scripts/inat_observations/assets"
 BLRM_TEMPLATE   <- file.path(BLRM_ASSETS, "location_map_template.html")
 BLRM_INSTRUCT   <- file.path(BLRM_ASSETS, "cabr_fix_instructions.html")
