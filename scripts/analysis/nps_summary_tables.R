@@ -45,7 +45,7 @@ uniq_lc  <- function(v) { v <- str_squish(tolower(as.character(v))); unique(v[v 
 psf$year_i <- suppressWarnings(as.integer(psf$year))
 pmethod  <- str_squish(tolower(psf$method))                                    # trip method: lethal / non-lethal
 
-# people.csv = WHO exists (declared, one row each). participation.csv = who was in the
+# people_manual.csv = WHO exists (declared, one row each). participation_generated.csv = who was in the
 # field which year, DERIVED from the survey record -- so an assignment nobody showed up
 # to can no longer inflate a headcount, which is what the old roster allowed.
 rost <- read.csv(PATHS$people, stringsAsFactors = FALSE, check.names = FALSE)
@@ -75,7 +75,7 @@ part <- kv(
   dedicated_surveyors        = dedic_n,
   public_contributors        = public_n,
   total_contributors         = dedic_n + public_n)
-write.csv(part, file.path(OUT_DIR, "nps_participation.csv"), row.names = FALSE)
+write.csv(part, file.path(OUT_DIR, "nps_participation_generated.csv"), row.names = FALSE)
 # (transect count is in nps_participation above; the transect NAMES list is reference/design
 #  info, not a summary output, so it lives in data/project_info/, not here.)
 

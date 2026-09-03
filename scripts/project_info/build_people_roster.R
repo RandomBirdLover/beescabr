@@ -2,14 +2,14 @@
 # project_info/build_people_roster.R
 # beescabr -- merges the three hand-maintained rosters into ONE people table:
 #   surveyor_roster.csv + identifier_roster.csv + research_team_roster.csv
-#     -> data/project_info/rosters/people.csv   (one row per human)
+#     -> data/project_info/rosters/people_manual.csv   (one row per human)
 #
 # WHY: the three files all held IDENTITY, so every person in more than one was
 # copy-pasted between them and had already drifted (two emails for one person, a
 # phone in one year's row and not the next). One row per human means a fact is
 # stated once and cannot disagree with itself.
 #
-# This is a ONE-TIME migration. After it runs, people.csv is the hand-maintained
+# This is a ONE-TIME migration. After it runs, people_manual.csv is the hand-maintained
 # input and the three rosters are retired. Re-running it is safe (it rebuilds
 # from whatever rosters are present) but it is not part of the pipeline.
 #
@@ -91,14 +91,25 @@ people_from_rosters <- function(surveyor, identifier, team) {
   out
 }
 
-build_people_roster <- function(out = NULL) {
+RESEARCH_TEAM_ROSTER <- "data/project_info/rosters/research_team_roster.csv"   # RETIRED, deleted 2026-09-02
+
+build_people_roster <- function(out = NULL, surveyor = NULL, identifier = NULL, team = NULL) {
   if (!exists("PATHS")) source("scripts/config.R")
   rd <- function(p) if (!is.null(p) && file.exists(p))
     read.csv(p, stringsAsFactors = FALSE, check.names = FALSE) else data.frame()
-  team_path <- "data/project_info/rosters/research_team_roster/research_team_roster.csv"
-  ppl <- people_from_rosters(rd(PATHS$surveyor_roster), rd(PATHS$identifier_roster), rd(team_path))
+  surveyor   <- if (is.null(surveyor))   PATHS$surveyor_roster   else surveyor
+  identifier <- if (is.null(identifier)) PATHS$identifier_roster else identifier
+  team       <- if (is.null(team))       RESEARCH_TEAM_ROSTER    else team
+  ppl <- people_from_rosters(rd(surveyor), rd(identifier), rd(team))
   cf  <- attr(ppl, "conflicts")
   out <- if (is.null(out)) PATHS$people else out
+  # The source rosters are RETIRED and deleted. Re-running this would otherwise
+  # overwrite people_manual.csv -- the hand-maintained record of 48 humans -- with nothing.
+  if (!nrow(ppl))
+    stop("build_people_roster: found no people in the source rosters. They were retired ",
+         "on 2026-09-02 and people_manual.csv is now the hand-maintained input -- refusing to ",
+         "overwrite it. Restore the rosters from git history if you really mean to re-migrate.",
+         call. = FALSE)
   write.csv(ppl, out, row.names = FALSE, na = "")
   message(sprintf("Wrote %s  (%d people: %d surveyor / %d identifier / %d researcher)",
                   out, nrow(ppl), sum(ppl$surveyor), sum(ppl$identifier), sum(ppl$researcher)))

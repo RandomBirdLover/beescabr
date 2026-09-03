@@ -53,3 +53,32 @@ test_that("ids stay character, so no integer coercion can mis-credit anyone", {
   expect_type(person_id_mint(1), "character")
   expect_true(all(grepl("^p[0-9]{3}$", person_id_mint(5))))
 })
+
+# --- going the other way: ids -> what a human reads --------------------------
+# The intern log stores person_ids so a name is never typed twice. The generated
+# master still shows names, because a person reviewing it must be able to read it.
+
+test_that("ids render as full names, in the order given", {
+  expect_equal(people_display("p002, p001", .people), "Cindy Pencek, Sam O'Dell")
+})
+
+test_that("ids render as iNat handles, and a person without one is skipped", {
+  p <- .people; p$inaturalist_username[2] <- ""      # Cindy has no handle
+  expect_equal(people_handles("p001, p002", p), "wranglebees")
+})
+
+test_that("an id that matches nobody is kept verbatim so it is visible", {
+  # a typo'd id must not vanish silently -- it shows up in the master as itself
+  expect_equal(people_display("p001, p999", .people), "Sam O'Dell, p999")
+})
+
+test_that("blank and NA cells pass through", {
+  expect_equal(people_display(c("", NA), .people), c("", NA))
+  expect_equal(people_handles("", .people), "")
+})
+
+test_that("handles collapse to n/a when nobody in the cell has one", {
+  # the master's inat_username column has always written "n/a" for netting days
+  p <- .people; p$inaturalist_username <- ""
+  expect_equal(people_handles("p001, p002", p), "n/a")
+})

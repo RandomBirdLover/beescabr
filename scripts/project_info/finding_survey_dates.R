@@ -1,6 +1,6 @@
 # =============================================================
 # project_info/finding_survey_dates.R
-# beescabr -- builds the per-survey record (master_per_survey_info.csv): one row per
+# beescabr -- builds the per-survey record (master_per_survey_info_generated.csv): one row per
 # surveyor per survey DAY, BOTH methods (lethal net + non-lethal iNat) and BOTH roles
 # (intern + beeple). Split out of finding_project_info.R (the brain) on 2026-07-18.
 #
@@ -11,12 +11,13 @@
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibble); library(tidyr)}))
 if (!exists("person_name")) source("scripts/utils/people.R")
+if (!exists("people_display")) source("scripts/utils/people_ids.R")
 
 # ------------------------------------------------------------
-# master_per_survey_info.csv  +  qc_review_survey_beeple_date_windows.csv  (tag-first rewrite 2026-07-17)
+# master_per_survey_info_generated.csv  +  qc_review_survey_beeple_date_windows_generated.csv  (tag-first rewrite 2026-07-17)
 # Survey dates for BOTH methods (lethal net + non-lethal iNaturalist) and BOTH roles
 # (intern + beeple):
-#   * INTERNS (lethal net AND non-lethal iNat) -> PRESERVED as-is from master_per_survey_info.csv
+#   * INTERNS (lethal net AND non-lethal iNat) -> PRESERVED as-is from master_per_survey_info_generated.csv
 #     (the source=="intern-log" rows). We never invent OR regenerate them; edit them
 #     there. See the TODO in the body -- interns are PAID, so an authoritative date
 #     should always exist.
@@ -29,13 +30,13 @@ if (!exists("person_name")) source("scripts/utils/people.R")
 #   * the beeple CALENDAR is only the PLAN, used to catch MISSING surveys. A planned
 #     window is "covered" if ANY tagged survey (anyone, any transect) lands within
 #     tol_days of it -- people covered shifts and swapped transects. Windows with NO
-#     survey evidence nearby -> qc_review_survey_beeple_date_windows.csv ("planned, nothing tagged
+#     survey evidence nearby -> qc_review_survey_beeple_date_windows_generated.csv ("planned, nothing tagged
 #     -- did it happen?"). HEADS-UP ONLY: ruling a window does NOT add a survey -- nothing
 #     is ever hand-added to survey_dates (no tag = not a survey day).
 #     NOTE: this catches missing DATES, not a specific missing transect (see PITFALLS).
 #     (Flagging misplaced / mistagged obs is a TODO in the clean scripts -- inat_bee_clean.R /
 #     inat_plant_clean.R; the old qc_misplaced_transect.R was deleted from the repo.)
-# master_per_survey_info.csv = CONFIRMED surveys only. Returns list(survey_dates, review).
+# master_per_survey_info_generated.csv = CONFIRMED surveys only. Returns list(survey_dates, review).
 # ------------------------------------------------------------
 fpi_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))
@@ -95,15 +96,19 @@ sd_full_names <- function(x, year, roster) {
 fpi_survey_dates <- function(membership, windows, roster,
                              existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW,
                              intern_log_path = FPI_INTERN_LOG,
-                             tol_days = SD_WINDOW_TOL_DAYS) {
+                             tol_days = SD_WINDOW_TOL_DAYS,
+                             people = NULL) {
   blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
+  if (is.null(people)) people <- tryCatch(
+    read.csv(PATHS$people, stringsAsFactors = FALSE, check.names = FALSE),
+    error = function(e) data.frame())
 
-  # ---- INTERNS: read from the curated intern-survey-day LOG (master_intern_survey_log.csv) ----
+  # ---- INTERNS: read from the curated intern-survey-day LOG (master_intern_survey_log_manual.csv) ----
   # Interns' survey days (BOTH lethal net days AND non-lethal iNat days) live in a curated
-  # INPUT file -- data/project_info/surveys/survey_date_sources/master_intern_survey_log.csv -- as the source=="intern-log"
+  # INPUT file -- data/project_info/surveys/survey_date_sources/master_intern_survey_log_manual.csv -- as the source=="intern-log"
   # rows. The brain reads them UNCHANGED and rebuilds only the beeple rows around them; the
   # master is pure generated output. Interns are PAID, so an authoritative date should always
-  # exist -- add / fix intern surveys by editing master_intern_survey_log.csv (NOT the master, which is
+  # exist -- add / fix intern surveys by editing master_intern_survey_log_manual.csv (NOT the master, which is
   # OVERWRITTEN every run: a hand-added intern row kept only there is silently wiped on the next
   # regeneration -- that is how 2024-05-05, a tagged intern iNat day that is neither in the
   # beeple tag-rebuild nor a specimen date, kept vanishing). FALLBACK: if the log file is absent,
@@ -114,6 +119,13 @@ fpi_survey_dates <- function(membership, windows, roster,
     if (!"source" %in% names(ex)) return(tibble())
     it <- ex |> filter(source == "intern-log")
     if (!nrow(it)) return(tibble())
+    # The log stores person_ids, so a person's name is typed once (in people_manual.csv) and
+    # never again. Names are rendered here for the generated master, which a human reads.
+    if ("person_ids" %in% names(it) && nrow(people)) {
+      it$surveyors <- people_display(it$person_ids, people)
+      # inat_username is NOT derived: it says whose ACCOUNT evidences the survey, which is
+      # not the same as who was there. One 2024 day has two surveyors and one tagger.
+    }
     for (col in SD_COLUMNS) if (!col %in% names(it)) it[[col]] <- NA
     it |>
       mutate(date = as.Date(date), confirmed = as.logical(confirmed),
@@ -177,7 +189,7 @@ fpi_survey_dates <- function(membership, windows, roster,
   # Every Cabrillo-TAGGED obs by a BEEPLE (roster role FOR THAT YEAR) is a real survey that
   # day. The tag is the evidence -- no calendar, no location test, no minimum count. One row
   # per surveyor per DAY; transects listed. INTERNS are NOT rebuilt here -- their tagged days
-  # are already preserved from master_per_survey_info.csv above, so regenerating them from tags would
+  # are already preserved from master_per_survey_info_generated.csv above, so regenerating them from tags would
   # double-count. Scoped by that-year role because someone can be intern one year, beeple
   # another. A non-roster tag can't fake a survey (there are none in the data anyway).
   tagged <- membership |>

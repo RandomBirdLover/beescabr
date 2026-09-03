@@ -299,7 +299,7 @@ fw("nps_summary_tables",
    c(scope    = "ALL records (not survey-only); the report's factual backbone that every other analysis interprets",
      contents = "participation (dedicated surveyors + public contributors, deduped from the roster, plus surveys by method + year span), bee + plant genus/species counts, method breakdown, and bee/plant checklists",
      no_stats = "descriptive by design -- no p-values or estimators here; the inferential findings live in the other summaries"),
-   "nps_participation.csv; nps_bees_summary.csv; nps_bee_checklist_species.csv; nps_bee_checklist_genus.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_checklist_genus.csv; nps_summary_tables.{html,png}")
+   "nps_participation_generated.csv; nps_bees_summary.csv; nps_bee_checklist_species.csv; nps_bee_checklist_genus.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_checklist_genus.csv; nps_summary_tables.{html,png}")
 
 # ---- master index -----------------------------------------------------------
 idx <- do.call(rbind, .index)

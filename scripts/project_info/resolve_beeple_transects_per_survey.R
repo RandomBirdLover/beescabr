@@ -1,24 +1,24 @@
 # =============================================================
 # project_info/resolve_beeple_transects_per_survey.R
-# beescabr -- pick the ONE transect that goes in master_per_survey_info.csv for each
+# beescabr -- pick the ONE transect that goes in master_per_survey_info_generated.csv for each
 # BEEPLE survey day.
 #
 # WHAT IT'S FOR
 #   A beeple surveys ONE transect per day, but their individual iNat obs sometimes carry a
 #   stray wrong transect tag (e.g. 50 tagged TP + 3 accidentally UPMON). This picks the real
 #   transect for that surveyor-day by the MAJORITY of their tags, so the survey record
-#   (master_per_survey_info.csv) lists the correct single transect -- not the typos.
+#   (master_per_survey_info_generated.csv) lists the correct single transect -- not the typos.
 #
 # HOW IT'S USED
 #   Called by the brain (finding_project_info.R) on the membership, AFTER it is built and
 #   BEFORE the survey dates. resolve_transects(membership) returns list(membership, mistags, ties):
 #     * membership -- every beeple obs re-stamped with its day's resolved `transect` (the raw tag
 #       is kept in `transect_tagged`). finding_survey_dates.R then groups these per surveyor-day,
-#       so the resolved value becomes the `transects` cell in master_per_survey_info.csv.
-#     * mistags    -- outvoted obs -> qc_review_inat_mistagged_transects.csv (obs URL, tagged vs should_be).
-#     * ties       -- no clear majority (looks like two transects in a day) -> qc_review_survey_transect_overlap.csv;
+#       so the resolved value becomes the `transects` cell in master_per_survey_info_generated.csv.
+#     * mistags    -- outvoted obs -> qc_review_inat_mistagged_transects_manual.csv (obs URL, tagged vs should_be).
+#     * ties       -- no clear majority (looks like two transects in a day) -> qc_review_survey_transect_overlap_generated.csv;
 #       rule it in review_transect_ties() ("both" keeps a genuine two-transect day). If you rule any,
-#       the brain re-runs at stage 3f so master_per_survey_info.csv reflects it THIS run.
+#       the brain re-runs at stage 3f so master_per_survey_info_generated.csv reflects it THIS run.
 #
 #   INTERNS are LEFT ALONE -- they walk a multi-transect route, so their obs keep their own tags
 #   (only status=="keep" & surveyor_type=="beeple" obs are resolved).
@@ -28,8 +28,8 @@
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(tibble); library(readr)}))
 
-ST_MISTAG_OUT <- "data/inat_observations/review/qc_review_inat_mistagged_transects.csv"
-ST_TIES_OUT   <- "data/project_info/surveys/review/qc_review_survey_transect_overlap.csv"
+ST_MISTAG_OUT <- "data/inat_observations/review/qc_review_inat_mistagged_transects_manual.csv"
+ST_TIES_OUT   <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_generated.csv"
 
 st_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))

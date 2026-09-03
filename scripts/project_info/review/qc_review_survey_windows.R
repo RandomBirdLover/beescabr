@@ -6,7 +6,7 @@
 # The brain (finding_project_info) auto-confirms a beeple survey window when the
 # assigned surveyor has a Cabrillo-tagged obs (or an in-CABR untagged obs) inside
 # it. Windows it CAN'T auto-confirm -- empty / off-site / excluded / no-username --
-# get written to qc_review_survey_beeple_date_windows.csv for a human ruling. This walks them.
+# get written to qc_review_survey_beeple_date_windows_generated.csv for a human ruling. This walks them.
 #
 # Runs LAST in the review chain (after tags + fields), so it sees the fullest
 # picture of membership. For each un-ruled window you say whether the survey
@@ -16,7 +16,7 @@
 #   u  unsure     -- revisit next run
 #   s  skip       -- leave blank, revisit next run       q  save & quit    ? help
 #
-# Decisions persist in qc_review_survey_beeple_date_windows.csv (the `decision` column), so a
+# Decisions persist in qc_review_survey_beeple_date_windows_generated.csv (the `decision` column), so a
 # window you've ruled y/n never comes back; only blank/unsure resurface.
 #
 # This file ALSO holds review_transect_ties() -- for equal-split days where a beeple's
@@ -30,7 +30,7 @@
 
 library(dplyr); library(readr)
 
-RW_PATH <- "data/project_info/surveys/review/qc_review_survey_beeple_date_windows.csv"
+RW_PATH <- "data/project_info/surveys/review/qc_review_survey_beeple_date_windows_generated.csv"
 
 .rw_blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
 # a window still needs a ruling if its decision is blank OR "unsure"
@@ -117,15 +117,15 @@ review_windows <- function(path = RW_PATH, prompt_fn = readline, write = TRUE, m
 # resolve_beeple_transects_per_survey.R (called by the brain) resolves each beeple survey day to the
 # transect the MAJORITY of that day's obs are tagged with. When it's an exact tie
 # (e.g. TP:3 | UPMON:3 -- looks like two transects walked in one day) it does NOT
-# guess; it writes the day to qc_review_survey_transect_overlap.csv with the per-transect
+# guess; it writes the day to qc_review_survey_transect_overlap_generated.csv with the per-transect
 # tag counts. This walks those ties so you can rule each one:
 #   <TP|UPMON|...>  the whole day was really this ONE transect -> stamped on every obs,
-#                   the other tag's obs go to qc_review_inat_mistagged_transects.csv
+#                   the other tag's obs go to qc_review_inat_mistagged_transects_manual.csv
 #   b  both         a genuine two-transect day -> obs keep their own tags (stays split)
 # Your ruling persists in the file's `decision` column and is applied on the next brain
 # run; blank/unsure ties resurface, ruled ones don't.
 # =============================================================
-RTT_PATH <- "data/project_info/surveys/review/qc_review_survey_transect_overlap.csv"
+RTT_PATH <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_generated.csv"
 
 # a tie still needs a ruling if its decision is blank OR "unsure"
 .rtt_todo <- function(dec) .rw_blank(dec) | tolower(trimws(as.character(dec))) == "unsure"
@@ -144,7 +144,7 @@ RTT_PATH <- "data/project_info/surveys/review/qc_review_survey_transect_overlap.
   cat("   A beeple's obs for one day are tagged EVENLY across two transects, as if they\n")
   cat("   walked both. The counts show exactly what they tagged. Decide what it really was:\n\n")
   cat("   TP / UPMON / ...  pick the ONE real transect -> the WHOLE day is stamped that;\n")
-  cat("                     the other tag's obs -> qc_review_inat_mistagged_transects.csv\n")
+  cat("                     the other tag's obs -> qc_review_inat_mistagged_transects_manual.csv\n")
   cat("   b  both     -- a genuine two-transect day; keep every obs on its own tag\n")
   cat("   u  unsure   -- revisit next run\n")
   cat("   s  skip     -- leave blank, revisit next run\n")

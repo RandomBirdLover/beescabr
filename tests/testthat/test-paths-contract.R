@@ -54,7 +54,7 @@ test_that("a file the pipeline generates is never gated as a hand-maintained inp
   # PATH_KIND "input" drives the pre-flight in run_data_cleaning_pipeline.R: the run
   # STOPS if the file is missing and says "these are maintained by hand". Classifying a
   # GENERATED file that way sends someone off to hand-create a file the pipeline writes
-  # itself (finding_project_info.R:348 writes master_per_survey_info.csv every run).
+  # itself (finding_project_info.R:348 writes master_per_survey_info_generated.csv every run).
   generated <- c("per_survey")
   expect_equal(unlist(PATH_KIND[generated]), setNames(rep("output", length(generated)), generated))
 })

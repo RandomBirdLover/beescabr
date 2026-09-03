@@ -33,7 +33,7 @@ local({
 
 .bf_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
 BF_EXPORT     <- "data/inat_observations/cache/export_flat.rds"
-BF_CROSSWALK  <- "data/project_info/crosswalk/master_crosswalk.csv"
+BF_CROSSWALK  <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 # the brain's per-obs CABR membership (obs_id + status + kind). REQUIRED: forage
 # must be scoped to bees INSIDE the park, not the whole county export -- an
 # unscoped pull would import plants bees visit anywhere in San Diego.

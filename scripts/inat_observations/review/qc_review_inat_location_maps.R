@@ -6,7 +6,7 @@
 #
 # This is the R port of the old map/build_per_user.py. The per-pin survey-log annotation
 # (which transect the log says the observer walked that day) is computed HERE from
-# master_per_survey_info.csv -- no external _pin_logmap.json, no hard-coded survey days.
+# master_per_survey_info_generated.csv -- no external _pin_logmap.json, no hard-coded survey days.
 # Because tag-only intern days (e.g. 2024-05-05) now live in the master via the intern
 # seed, they annotate correctly on their own.
 #

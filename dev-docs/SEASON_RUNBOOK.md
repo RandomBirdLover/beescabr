@@ -48,8 +48,8 @@ produce last season's answer:
 |---|---|---|
 | who surveyed | `data/project_info/rosters/surveyor_roster.csv` | any new intern or beeple |
 | who identified | `data/project_info/rosters/identifier_roster.csv` | a new identifier contributes |
-| survey dates | `data/project_info/surveys/survey_date_sources/master_intern_survey_log.csv` | each intern survey trip |
-| trip-level effort | `data/project_info/surveys/master_per_survey_info.csv` | each survey trip |
+| survey dates | `data/project_info/surveys/survey_date_sources/master_intern_survey_log_manual.csv` | each intern survey trip |
+| trip-level effort | `data/project_info/surveys/master_per_survey_info_generated.csv` | each survey trip |
 | beeple calendar | `data/project_info/surveys/survey_date_sources/beeple_calendar_windows/YYYY Cabrillo Bee Survey Calendar.pdf` | each new season |
 | specimens | `data/specimens/records/cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx` | after netting or a new determination |
 

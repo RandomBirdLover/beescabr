@@ -4,6 +4,7 @@
 # Merging must join them into ONE row without ever silently choosing between
 # two different values for the same fact.
 
+if (!exists("PATHS")) src("config.R")   # build_people_roster() reads PATHS for its defaults
 src("project_info/build_people_roster.R")
 
 .sr <- data.frame(year = c(2021, 2022, 2021), inaturalist_username = c("wranglebees", "wranglebees", ""),
@@ -59,4 +60,18 @@ test_that("two different values for one fact are REPORTED, never silently picked
 
 test_that("no conflicts reported when the rosters agree", {
   expect_equal(nrow(attr(people_from_rosters(.sr, .ir, .tr), "conflicts")), 0)
+})
+
+test_that("a migration that finds nobody REFUSES to write", {
+  # the old rosters are deleted now. Re-running this script would otherwise
+  # overwrite people_manual.csv -- 48 people -- with an empty file.
+  gone <- file.path(tempdir(), "no-such-roster.csv")
+  expect_error(build_people_roster(out = tempfile(fileext = ".csv"),
+                                   surveyor = gone, identifier = gone, team = gone),
+               "no people")
+})
+
+test_that("merging empty rosters yields zero rows, not an error", {
+  e <- data.frame()
+  expect_equal(nrow(people_from_rosters(e, e, e)), 0)
 })

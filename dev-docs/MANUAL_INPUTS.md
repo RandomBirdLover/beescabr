@@ -10,9 +10,9 @@ Verified on 2026-08-18 by checking, for each file, that no pipeline script write
 
 | File | Path | What it is | How it enters | Update trigger |
 |---|---|---|---|---|
-| `people.csv` | `data/project_info/rosters/` | **Every person, one row each.** Identity plus every written form of their name (`inaturalist_username`, `collector_code`, `determiner_code`) and what they do (`surveyor`/`identifier`/`researcher`). **Sole authority for "who."** Replaced `surveyor_roster.csv`, `identifier_roster.csv` and `research_team_roster.csv` on 2026-09-02. | Hand-typed | Anyone new — before their first season |
-| `research_team_photos/` | `data/project_info/rosters/research_team_roster/` | Headshots for the People page. The roster CSV beside them is retired — team rows live in `people.csv` now. | Image drop | Team changes |
-| `master_intern_survey_log.csv` | `data/project_info/surveys/survey_date_sources/` | Intern net/photo survey **dates** (the intern survey calendar/log). Effort, not identity. | Hand-typed | Each intern survey trip |
+| `people_manual.csv` | `data/project_info/rosters/` | **Every person, one row each.** Identity plus every written form of their name (`inaturalist_username`, `collector_code`, `determiner_code`) and what they do (`surveyor`/`identifier`/`researcher`). **Sole authority for "who."** Replaced `surveyor_roster.csv`, `identifier_roster.csv` and `research_team_roster.csv` on 2026-09-02. | Hand-typed | Anyone new — before their first season |
+| `research_team_photos/` | `data/project_info/rosters/` | Headshots for the People page. The roster CSV beside them is retired — team rows live in `people_manual.csv` now. | Image drop | Team changes |
+| `master_intern_survey_log_manual.csv` | `data/project_info/surveys/survey_date_sources/` | Intern net/photo survey **dates** (the intern survey calendar/log). Effort, not identity. | Hand-typed | Each intern survey trip |
 | Beeple survey calendars | `data/project_info/surveys/survey_date_sources/beeple_calendar_windows/` → `YYYY Cabrillo Bee Survey Calendar.pdf` | Annual beeple survey windows, one PDF per year. | Download / export PDF, drop in | Each new season; then re-run the calendar parser |
 
 > The roster (people) and the intern log (dates) are **two separate files that must stay in sync**. New person → edit the roster. New survey date → edit the log. A new intern means editing both.
@@ -28,10 +28,10 @@ deduped. **The roster is the sole authority for *who*; the effort log is for
 
 | File | Path | Role | Edit by hand? |
 | --- | --- | --- | --- |
-| `people.csv` | `data/project_info/rosters/` | Every person, one row each. **Authority for who exists.** | ✅ Yes |
-| `participation.csv` | `data/project_info/rosters/` | **Generated output** — who was in the field, which year, in what capacity. Derived from the survey record, so an assignment nobody showed up to cannot inflate a headcount. | ❌ No — never hand-edit |
-| `master_intern_survey_log.csv` | `data/project_info/surveys/survey_date_sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
-| `master_per_survey_info.csv` | `data/project_info/surveys/` | **Generated output** — rebuilt every run by `finding_project_info.R` from three sources: the intern log above, beeple tags on iNaturalist, and the specimen spreadsheet (netting days the log missed). Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
+| `people_manual.csv` | `data/project_info/rosters/` | Every person, one row each. **Authority for who exists.** | ✅ Yes |
+| `participation_generated.csv` | `data/project_info/rosters/` | **Generated output** — who was in the field, which year, in what capacity. Derived from the survey record, so an assignment nobody showed up to cannot inflate a headcount. | ❌ No — never hand-edit |
+| `master_intern_survey_log_manual.csv` | `data/project_info/surveys/survey_date_sources/` | Curated intern survey days (both lethal net days and non-lethal iNat days). | ✅ Yes |
+| `master_per_survey_info_generated.csv` | `data/project_info/surveys/` | **Generated output** — rebuilt every run by `finding_project_info.R` from three sources: the intern log above, beeple tags on iNaturalist, and the specimen spreadsheet (netting days the log missed). Used for effort only (trip counts, method split), never for headcounts. | ❌ No — never hand-edit |
 
 **What to edit when**
 
@@ -39,11 +39,11 @@ deduped. **The roster is the sole authority for *who*; the effort log is for
   Their survey dates flow in automatically from their tagged iNaturalist
   observations.
 - **New intern:** add them to `surveyor_roster.csv` **and** add their net/photo
-  days to `sources/master_intern_survey_log.csv`. Intern days are not all
+  days to `sources/master_intern_survey_log_manual.csv`. Intern days are not all
   tag-derivable, so the log is their source of truth.
 - **More survey dates for existing interns:** add them to
-  `sources/master_intern_survey_log.csv`, then re-run the pipeline.
-- **Never** edit `master_per_survey_info.csv` directly. Re-run
+  `sources/master_intern_survey_log_manual.csv`, then re-run the pipeline.
+- **Never** edit `master_per_survey_info_generated.csv` directly. Re-run
   `finding_project_info.R` (or the full pipeline) to rebuild it.
 
 **Gotcha:** the roster (people) and the intern log (dates) are two separate
@@ -76,7 +76,7 @@ manual entry is needed for those.
 | `cabr_bee_transects.shp` (+ sidecars) | `data/spatial/shapefiles/transects/` | The survey transect lines. | Drawn in GIS |
 | `cabr_survey_access_routes.shp` | `data/spatial/shapefiles/access_routes_to_transects/` | Access routes to the transects. | Drawn in GIS |
 | Boundary shapefiles | `data/spatial/shapefiles/boundaries/cabr/`, `.../point_loma/`, `.../san_diego_county/` | Park / peninsula / county boundaries. | Downloaded from authoritative source |
-| `transects.csv` | `data/project_info/` | Non-spatial transect attributes (names, lengths, order). | Hand-typed |
+| `transects_manual.csv` | `data/project_info/` | Non-spatial transect attributes (names, lengths, order). | Hand-typed |
 
 ## 4. External reference data (downloaded, dropped in)
 
@@ -107,11 +107,11 @@ These are hand-maintained files the observation pipeline reads as override truth
 |---|---|---|
 | `qc_review_inat_misid.csv` | `data/inat_observations/review/` | Misidentifications to correct. |
 | `qc_review_inat_new_bees_not_on_holway.csv` | `data/inat_observations/review/` | New bees not on the Holway checklist (candidate county additions). |
-| `qc_review_inat_mistagged_transects.csv` | `data/inat_observations/review/` | Records tagged to the wrong transect. |
+| `qc_review_inat_mistagged_transects_manual.csv` | `data/inat_observations/review/` | Records tagged to the wrong transect. |
 | `qc_review_inat_bee_behavior_survey.csv` / `…_nonsurvey.csv` | `data/inat_observations/review/` | Behavior/foraging corrections (survey vs non-survey). |
 | `qc_review_inat_bee_location.csv`, `qc_review_inat_plant_location.csv` | `data/inat_observations/review/location/` | Location fixes for bee / plant observations. |
 | `inat_field_id_map.csv` | `data/inat_observations/reference/` | Maps iNaturalist observation-field IDs. |
-| `master_crosswalk.csv` | `data/project_info/` | iNaturalist project tags/fields crosswalk (the `project_tags_fields` reference). |
+| `master_crosswalk_manual.csv` | `data/project_info/` | iNaturalist project tags/fields crosswalk (the `project_tags_fields` reference). |
 
 ---
 
@@ -159,7 +159,7 @@ Two special cases:
 
 Listed because they look like inputs but are rebuilt every run. Editing them is wasted work; change the manual source instead.
 
-- `beeple_calendar_windows.csv` — parsed from the calendar PDFs by `scripts/project_info/finding_beeple_calendar.R` (pipeline stage 2d). Edit the PDFs, not this.
+- `beeple_calendar_windows_generated.csv` — parsed from the calendar PDFs by `scripts/project_info/finding_beeple_calendar.R` (pipeline stage 2d). Edit the PDFs, not this.
 - `cabr_official_native_bee_checklist.csv` — written by `scripts/checklists/cabr_bee_checklist.R`.
 - `holway_v3_combined.csv`, `holway_sd_bee_reference_table_v3.csv` — built from the Holway `.xlsx` source.
 - Everything in `data/reference/generated/`.

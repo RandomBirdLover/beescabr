@@ -10,7 +10,7 @@
 #   2b. PLANTS   pull vascular plants -> SEPARATE plant cache -> export_flat_plant.rds
 #                (the brain's second input; survey-day confirm + flower resources)
 #   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
-#                project_unclean + unknown tags/fields/notes -> master_per_survey_info.csv
+#                project_unclean + unknown tags/fields/notes -> master_per_survey_info_generated.csv
 #   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
 #                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
 #                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
@@ -289,7 +289,7 @@ main <- function() {
     build_field_id_map(con = con)
   }  # else: silently reused (ingest skipped and the map already exists)
 
-  # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows.csv from the PDFs ----
+  # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows_generated.csv from the PDFs ----
   # Re-parses every "YYYY Cabrillo Bee Survey Calendar.pdf" in
   # data/project_info/surveys/survey_date_sources/beeple_calendar_windows/ each run, so a newly-added year
   # (e.g. 2027) is picked up automatically. The brain reads the resulting windows CSV.
@@ -297,12 +297,12 @@ main <- function() {
   # rather than killing the run.
   tryCatch(finding_beeple_calendar(), error = function(e)
     bx_note("calendar parse failed (", conditionMessage(e),
-            ") — kept the existing beeple_calendar_windows.csv."))
+            ") — kept the existing beeple_calendar_windows_generated.csv."))
 
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
-  # finding_project_info() decides survey membership from master_crosswalk.csv, writes
+  # finding_project_info() decides survey membership from master_crosswalk_manual.csv, writes
   # cabr_inat_raw.csv, the THREE unknown reports (review them by
-  # hand in order -> update crosswalk_master -> re-run), and builds master_per_survey_info.csv
+  # hand in order -> update crosswalk_master -> re-run), and builds master_per_survey_info_generated.csv
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
   bx_phase(2, "SURVEY BRAIN — who surveyed, when, which transect")
   finding_project_info()
@@ -342,7 +342,7 @@ main <- function() {
     # [3e] TRANSECT TIES -- equal-split survey days the resolver couldn't call by
     # majority (a beeple's obs tagged evenly across two transects). Rule which transect
     # the day really was, or "both". If you rule any, the brain re-runs right below so the
-    # chosen transect lands in master_per_survey_info.csv THIS run (your master truth).
+    # chosen transect lands in master_per_survey_info_generated.csv THIS run (your master truth).
     n_ties <- .n_windows(FPI_TIES)   # reuse the blank/unsure "still to rule" counter
     if (n_ties > 0) {
       bx_kv("Ties", n_ties, " equal-split day(s) to rule")
@@ -439,7 +439,7 @@ main <- function() {
            error = function(e) bx_note("plant-name review failed: ", conditionMessage(e)))
 
   # ---- 7c. OBSERVATION REVIEW: prompt for the iNat obs that need fixing ON iNaturalist ----
-  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + qc_review_inat_mistagged_transects.csv
+  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + qc_review_inat_mistagged_transects_manual.csv
   # (stray transect tag) + the bee/plant location_review files (survey pins far from any transect).
   # Each row carries the observation's url, so you open it and fix it there; the next iNat pull picks
   # up your fix. Non-blocking: surfaces + prompts, then continues.
@@ -452,8 +452,8 @@ main <- function() {
       label = c("bee behavior to fix (survey)", "bee flowers to add (non-survey)", "stray transect tags"),
       count = c(.n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_survey.csv")),
                 .n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_nonsurvey.csv")),
-                .n_rows(file.path(obs_rev, "qc_review_inat_mistagged_transects.csv"))),
-      file  = c("qc_review_inat_bee_behavior_survey.csv", "qc_review_inat_bee_behavior_nonsurvey.csv", "qc_review_inat_mistagged_transects.csv"),
+                .n_rows(file.path(obs_rev, "qc_review_inat_mistagged_transects_manual.csv"))),
+      file  = c("qc_review_inat_bee_behavior_survey.csv", "qc_review_inat_bee_behavior_nonsurvey.csv", "qc_review_inat_mistagged_transects_manual.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",

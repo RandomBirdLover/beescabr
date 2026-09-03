@@ -46,7 +46,7 @@ local({
 SBC_RECORDS_DIR     <- "data/specimens/records"
 SBC_RECORDS_PATTERN <- "^cabr_bee_specimens_record_V"
 SBC_TRANSECTS       <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"
-SBC_CROSSWALK       <- "data/project_info/crosswalk/master_crosswalk.csv"
+SBC_CROSSWALK       <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 SBC_OFF_TRANSECT_M  <- 50   # a plot-less specimen within this of a transect line is assigned to it
 
 # blank behavior flags (iNat-only annotations); cabr_bee_lethal_collection is set TRUE

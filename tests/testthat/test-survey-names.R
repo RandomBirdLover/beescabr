@@ -55,7 +55,7 @@ test_that("it is vectorised over rows, each with its own year", {
 
 # --- museum-label names ------------------------------------------------------
 # The specimen SPREADSHEET keeps "S O'Dell" -- that is what is written on the pin
-# and it is never rewritten. But master_per_survey_info.csv is a generated survey
+# and it is never rewritten. But master_per_survey_info_generated.csv is a generated survey
 # table, so the people in it are named in full, whichever source the row came from.
 
 roster2 <- data.frame(

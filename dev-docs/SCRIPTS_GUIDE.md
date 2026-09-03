@@ -46,9 +46,9 @@ The runner sources modules in this order and calls them from `main()`:
 | 1–2 | **Ingest + export** | `inat_observations/engine/**` | `inat_observations/cache/inat_cache.duckdb`, `export_flat.rds` |
 | 2b | **Plants** | `inat_observations/engine/pipelines/ingest_plants.R` | `inat_observations/cache/export_flat_plant.rds` |
 | 2c | **Field map** | `inat_observations/build_field_id_map.R` | `inat_observations/reference/inat_field_id_map.csv` |
-| 2d | **Beeple calendars** | `project_info/finding_beeple_calendar.R` | `project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv` |
-| 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `inat_observations/cabr_inat_raw.csv`, `project_info/surveys/master_per_survey_info.csv`, the review queues |
-| 3b–3e | **Review** (interactive) | `project_info/qc_review_mastercrosswalk.R`, `project_info/qc_review_survey_windows.R` (+ optional y/N notes review → `project_info/qc_review_mastercrosswalk_notes.R`) | updates `project_info/master_crosswalk.csv` + `*/review/*` |
+| 2d | **Beeple calendars** | `project_info/finding_beeple_calendar.R` | `project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows_generated.csv` |
+| 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `inat_observations/cabr_inat_raw.csv`, `project_info/surveys/master_per_survey_info_generated.csv`, the review queues |
+| 3b–3e | **Review** (interactive) | `project_info/qc_review_mastercrosswalk.R`, `project_info/qc_review_survey_windows.R` (+ optional y/N notes review → `project_info/qc_review_mastercrosswalk_notes.R`) | updates `project_info/master_crosswalk_manual.csv` + `*/review/*` |
 | 4 | **Clean** | `inat_observations/inat_bee_clean.R` (live) · `specimens/specimen_bee_clean.R` (stub) | `inat_observations/inat_clean/cabr_inat_bee_clean.csv` (bee; plant + specimen pending) |
 | 5 | **Reference / taxonomy** (restored) | `reference/taxonomy_lookup_build.R` → `build_taxonomy_lookup()` (non-interactive, wired here). The interactive `reference/holway_reference_build.R` (Holway→iNat resolver, **parent roll-up**) is run **by hand**; helpers `holway.R`, `taxonomy_reference.R`, `verify.R` load via its `need()` block | `reference/holway_sd_bee_reference_table_v3.csv` (by hand), `reference/sd_bee_taxonomy_lookup.csv` |
 | 5+ | **Checklists** *(rough drafts — run LAST, not sourced yet)* | `checklists/cabr_bee_checklist.R`, `pl_bee_checklist.R`, `sd_bee_checklist.R` on shared helper `checklist_build.R` | (pending) `data/checklists/{cabr,point_loma,sd_county}/…_native_bee_checklist.csv` |
@@ -59,7 +59,7 @@ flowchart TD
   ENG --> BRAIN[project_info/finding_project_info.R<br/>the brain]
   SPEC[(specimen record .xlsx)] --> BRAIN
   CAL[beeple calendar PDFs] --> BRAIN
-  BRAIN --> PSI[/project_info/surveys/master_per_survey_info.csv/]
+  BRAIN --> PSI[/project_info/surveys/master_per_survey_info_generated.csv/]
   BRAIN --> RAW[/observations/cabr_inat_raw.csv/]
   BRAIN --> REV[review queues] --> RW[project_info/review/qc_review_*.R] --> BRAIN
   ENG -.rebuild pending.-> REF[reference/ taxonomy<br/>rebuild pending] --> LOOK[/reference/sd_bee_taxonomy_lookup.csv/]

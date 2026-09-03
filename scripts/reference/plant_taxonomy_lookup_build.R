@@ -13,7 +13,7 @@
 #   * IN-PARK TRUTH  cabr_inat_plant_all_taxa.csv -- every plant taxon observed
 #     anywhere in the CABR boundary by ANY observer (not just surveyors), with
 #     iNat taxon_id + ranks.  -> in_observations = TRUE, in_park = TRUE.
-#   * SPECIMEN PLANTS  master_crosswalk.csv (what_for == "plant_taxon") -- the
+#   * SPECIMEN PLANTS  master_crosswalk_manual.csv (what_for == "plant_taxon") -- the
 #     curated CANONICAL names of plants on specimen labels.  -> in_specimens.
 #     A specimen species is in_park only if it's actually observed; otherwise
 #     its clean name is resolved once via iNat (reliable -- no "Madia sp." moth).
@@ -49,7 +49,7 @@ PLANT_BASIC_RANKS <- c("kingdom", "phylum", "class", "order", "family", "genus",
 
 .plt_path <- function(key, default) if (!is.null(PATHS[[key]])) PATHS[[key]] else default
 PLT_ALL_TAXA     <- .plt_path("plant_all_taxa",         PATHS$plant_all_taxa)
-PLT_CROSSWALK    <- "data/project_info/crosswalk/master_crosswalk.csv"
+PLT_CROSSWALK    <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 PLT_CACHE        <- .plt_path("plant_name_cache",       PATHS$plant_name_cache)
 PLT_LOOKUP_OUT   <- .plt_path("plant_taxonomy_lookup",  PATHS$plant_taxonomy_lookup)
 PLT_WORKLIST_OUT <- .plt_path("plant_not_in_park",      PATHS$plant_not_in_park)

@@ -1,7 +1,7 @@
 # =============================================================
 # project_info/qc_review_mastercrosswalk.R
 # beescabr -- interactive review of unknown tags & fields
-# Rewritten 2026-07-14 for the concept-per-row master_crosswalk.csv.
+# Rewritten 2026-07-14 for the concept-per-row master_crosswalk_manual.csv.
 # Auto-suggest + multi-file + help block added 2026-07-15.
 #
 # Feels like the bee-name resolver. It shows each unknown tag/field one at a
@@ -20,7 +20,7 @@
 # Filing appends the item to that concept's variant cell (deduped):
 #   a tag   -> inat_tag_variants     a field -> inat_field_variants
 # After you finish, re-run finding_project_info() -- everything you filed drops
-# out of the unknown reports because it's now recognized in master_crosswalk.csv.
+# out of the unknown reports because it's now recognized in master_crosswalk_manual.csv.
 #
 # Run: source("scripts/project_info/review/qc_review_mastercrosswalk.R"); review_unknowns("tags")
 #      then                                        review_unknowns("fields")
@@ -28,9 +28,9 @@
 
 library(dplyr); library(readr); library(stringr)
 
-CW_PATH    <- "data/project_info/crosswalk/master_crosswalk.csv"
-UNK_TAGS   <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags.csv"
-UNK_FIELDS <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields.csv"
+CW_PATH    <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
+UNK_TAGS   <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags_generated.csv"
+UNK_FIELDS <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields_generated.csv"
 
 # paren-aware split: don't break on ";" inside "(...)" -- some field NAMES embed
 # their allowed values, e.g. "soil type (sandy; loam; clay)" is ONE variant.
@@ -204,7 +204,7 @@ review_unknowns <- function(kind = c("tags", "fields"), cw_path = CW_PATH,
     } else cat("  ? didn't understand -- skipped\n")
   }
 
-  if (changed && write) { write.csv(cw, cw_path, row.names = FALSE, na = ""); cat("\nSaved master_crosswalk.csv\n") }
+  if (changed && write) { write.csv(cw, cw_path, row.names = FALSE, na = ""); cat("\nSaved master_crosswalk_manual.csv\n") }
   else cat("\nNo changes written.\n")
   invisible(cw)
 }

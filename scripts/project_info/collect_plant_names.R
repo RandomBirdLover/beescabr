@@ -5,7 +5,7 @@
 #
 # After the API ingest (plant observations) and the specimen ingest (bee
 # flower labels), this gathers EVERY plant name seen in CABR and checks each
-# against master_crosswalk.csv's plant rows (what_for == "plant_taxon"):
+# against master_crosswalk_manual.csv's plant rows (what_for == "plant_taxon"):
 #
 #   * a name the crosswalk already knows (a canonical or one of its label
 #     variants) -> recognized, nothing to do.
@@ -13,7 +13,7 @@
 #     like the tag/field reviewer: file it as a spelling variant of an existing
 #     canonical, or add it as a brand-new canonical plant.
 #
-# Your decision is written back into master_crosswalk.csv, so it's remembered
+# Your decision is written back into master_crosswalk_manual.csv, so it's remembered
 # and the plant lookup + specimen_bee_clean pick up the canonical name on the
 # next run. Non-interactive runs just drop a worklist and move on.
 #
@@ -40,7 +40,7 @@ local({
   need("cw_append",         "project_info/review/qc_review_mastercrosswalk.R")
 })
 
-CPN_CW       <- "data/project_info/crosswalk/master_crosswalk.csv"
+CPN_CW       <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 CPN_WORKLIST <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_plant_names.csv"
 
 pcn_norm <- function(x) tolower(gsub("\\s+", " ", trimws(as.character(x))))
@@ -195,7 +195,7 @@ review_plant_names <- function(cw_path = CPN_CW,
     } else cat("  ? didn't understand -- skipped\n")
   }
 
-  if (changed && write) { write.csv(cw, cw_path, row.names = FALSE, na = ""); cat("\nSaved master_crosswalk.csv\n") }
+  if (changed && write) { write.csv(cw, cw_path, row.names = FALSE, na = ""); cat("\nSaved master_crosswalk_manual.csv\n") }
   else cat("\nNo changes written.\n")
   invisible(cw)
 }

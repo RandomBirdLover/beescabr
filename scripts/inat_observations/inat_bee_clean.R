@@ -12,7 +12,7 @@
 #   "In CABR" uses cabr_survey_box.shp (the generous hand-drawn box), on purpose: it keeps ocean /
 #   misplaced pins IN so they aren't lost.
 #
-# CROSSWALK ANNOTATIONS (per obs, from its iNat obs-fields + tags via master_crosswalk.csv)
+# CROSSWALK ANNOTATIONS (per obs, from its iNat obs-fields + tags via master_crosswalk_manual.csv)
 #   * flower_visited -- the PLANT SPECIES the bee visited (a real value, e.g. "Encelia californica"),
 #     coalesced from the visited-plant obs-fields (most-populated first).
 #   * yes/no flags: bee_on_flower, pollen_on_bee, feeding, mating, bee_on_ground, bee_nest,
@@ -37,7 +37,7 @@
 #
 # INPUTS   data/inat_observations/cabr_inat_raw.csv                         (the brain's per-obs lookup)
 #          data/inat_observations/cache/export_flat.rds                     (taxon_id + coords + fields/tags)
-#          data/project_info/crosswalk/master_crosswalk.csv                      (field/tag -> annotation concept)
+#          data/project_info/crosswalk/master_crosswalk_manual.csv                      (field/tag -> annotation concept)
 #          data/spatial/shapefiles/transects/cabr_bee_transects.shp               (off-transect test)
 #          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (Humphreys Rd walk-in)
 # OUTPUT   data/inat_observations/inat_clean/cabr_inat_bee_clean.csv        (one labeled CABR table)
@@ -50,7 +50,7 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 
 IBC_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"
 IBC_EXPORT         <- "data/inat_observations/cache/export_flat.rds"
-IBC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk.csv"
+IBC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 IBC_TRANSECTS      <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"   # Name: TP/UPMON/BST/OT
 IBC_ROAD           <- "data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp"  # Humphreys Rd
 IBC_OUT_CLEAN      <- PATHS$inat_clean
@@ -119,7 +119,7 @@ ibc_norm_transect <- function(x) {
 }
 
 # ---- crosswalk annotations -------------------------------------------------
-# From each obs's iNat obs-fields (field:* columns) + tags, per master_crosswalk.csv:
+# From each obs's iNat obs-fields (field:* columns) + tags, per master_crosswalk_manual.csv:
 #   flower_visited -> the plant value (coalesced, most-populated field first)
 #   the IBC_BOOL_ANNOT concepts -> TRUE if any of the concept's field variants is populated or any
 #   of its tag variants is present. Returns tibble(obs_id, flower_visited, <bool annot...>).

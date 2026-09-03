@@ -255,27 +255,27 @@ PATHS <- list(
   # same person appears many times and can't be deduped. surveyor_roster is the
   # canonical people list (one row per person-year, full name + role + method) and is
   # the SOLE authority for WHO surveyed -- count distinct people from here.
-  per_survey = "data/project_info/surveys/master_per_survey_info.csv",
+  per_survey = "data/project_info/surveys/master_per_survey_info_generated.csv",
   surveyor_roster = "data/project_info/rosters/surveyor_roster.csv",
   # identifier roster: WHO determined each specimen. The raw "determination" code (initials + surname)
   # maps to a person's iNaturalist username here (read-only; the pipeline never writes this file).
   identifier_roster = "data/project_info/rosters/identifier_roster.csv",
   # ONE row per human: identity, every written form of their name, and what they do.
   # Replaces the three rosters above, which each re-stated the same people.
-  people = "data/project_info/rosters/people.csv",
+  people = "data/project_info/rosters/people_manual.csv",
   # who was in the field, which year, in what capacity -- GENERATED from the survey record
-  participation = "data/project_info/rosters/participation.csv",
+  participation = "data/project_info/rosters/participation_generated.csv",
 
   # project_info is organised into three jobs, each with its own review/ folder, the same
   # shape inat_observations/ and specimens/ already use: rosters (who), surveys (when and
-  # where), crosswalk (the shared vocabulary). master_crosswalk.csv spans BOTH methods --
+  # where), crosswalk (the shared vocabulary). master_crosswalk_manual.csv spans BOTH methods --
   # it carries specimen label variants as well as iNat fields -- so it is not an iNat file.
-  crosswalk                = "data/project_info/crosswalk/master_crosswalk.csv",
-  qc_inat_unknown_tags     = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags.csv",
-  qc_inat_unknown_fields   = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields.csv",
+  crosswalk                = "data/project_info/crosswalk/master_crosswalk_manual.csv",
+  qc_inat_unknown_tags     = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags_generated.csv",
+  qc_inat_unknown_fields   = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields_generated.csv",
   qc_inat_plant_names      = "data/project_info/crosswalk/review/qc_review_mastercrosswalk_plant_names.csv",
-  qc_survey_date_windows   = "data/project_info/surveys/review/qc_review_survey_beeple_date_windows.csv",
-  qc_survey_transect_ties  = "data/project_info/surveys/review/qc_review_survey_transect_overlap.csv"
+  qc_survey_date_windows   = "data/project_info/surveys/review/qc_review_survey_beeple_date_windows_generated.csv",
+  qc_survey_transect_ties  = "data/project_info/surveys/review/qc_review_survey_transect_overlap_generated.csv"
 )
 
 # Standard ranked-name columns produced from the iNat taxon ancestry, in the
@@ -313,7 +313,7 @@ TAXONOMY_LEVELS <- c(
 PATH_KIND <- list(
   # --- inputs: hand-maintained, must exist up front ---
   people                   = "input",   # the one hand-maintained people file
-  # RETIRED 2026-09-02: folded into people.csv by build_people_roster.R. Kept optional so
+  # RETIRED 2026-09-02: folded into people_manual.csv by build_people_roster.R. Kept optional so
   # the migration can be re-run, but nothing in the pipeline reads them any more.
   surveyor_roster          = "optional",
   identifier_roster        = "optional",

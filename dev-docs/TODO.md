@@ -140,13 +140,13 @@ were two separate lists covering the same project).
   Built and tested, deliberately run BY HAND for now (like the notes reviewer):
   `scripts/analysis/genera_and_species_accumulation.R` reads the three
   cleaned tables (`cabr_inat_bee_clean.csv`, `cabr_specimen_bee_clean.csv`,
-  `master_per_survey_info.csv`) and writes the two survey-effort accumulation figures
+  `master_per_survey_info_generated.csv`) and writes the two survey-effort accumulation figures
   (cumulative species + genera, each with 8 lines = 4 transects x 2 methods: color =
   transect, solid = non-lethal photo / dashed = lethal net; no CI band) plus
   `transect_accumulation_summary.csv` into `data/analysis/`.
   To wire in: add a final analysis stage to `run_data_cleaning_pipeline.R` that sources it after the
   clean stage (guard on the three inputs existing; needs vegan/dplyr/stringr). Depends on
-  `master_per_survey_info.csv` being regenerated in the new format (see that item above).
+  `master_per_survey_info_generated.csv` being regenerated in the new format (see that item above).
 
 ---
 

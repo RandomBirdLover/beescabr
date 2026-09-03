@@ -14,13 +14,13 @@ if (!exists("person_name_keys")) source("scripts/utils/people.R")  # name -> per
 suppressPackageStartupMessages(library(dplyr))
 
 DOCS <- "docs"
-PHOTO_DIR <- "data/project_info/rosters/research_team_roster/research_team_photos"   # gitignored; raw headshots embedded into the page
+PHOTO_DIR <- "data/project_info/rosters/research_team_photos"   # gitignored; raw headshots embedded into the page
 AVATAR_PX <- 640                                         # downscale longest side before embedding (headroom for zoomed crops)
 rd <- function(p) if (file.exists(p)) read.csv(p, check.names = FALSE, stringsAsFactors = FALSE) else NULL
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 sq  <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
 
-# ---- the people (people.csv: ONE row per human, flags say what they do) -------
+# ---- the people (people_manual.csv: ONE row per human, flags say what they do) -------
 # Was three rosters that each re-stated the same person; six people were in more
 # than one and had already drifted (two emails for one human). Now one file.
 .people <- rd(PATHS$people)
@@ -58,7 +58,7 @@ for (i in seq_len(nrow(mp))) {
 }
 team$recs <- recs[team$name]
 team <- team[order(-team$recs, tolower(team$last), tolower(team$name)), , drop = FALSE]
-# start year only -> "Since 2021". Years live in participation.csv now: people.csv is
+# start year only -> "Since 2021". Years live in participation_generated.csv now: people_manual.csv is
 # identity (no years), and when someone surveyed is derived from the survey record.
 yr_span <- { pp <- rd(PATHS$participation)
              y <- if (!is.null(pp) && nrow(pp)) suppressWarnings(as.integer(pp$year)) else integer(0)
@@ -165,7 +165,8 @@ partners <- list(
   c("Cabrillo National Monument", "https://www.nps.gov/cabr/"),
   c("National Park Service", "https://www.nps.gov/"),
   c("San Diego Natural History Museum", "https://www.sdnhm.org/"),
-  c("UC San Diego", "https://www.ucsd.edu/"))
+  c("UC San Diego", "https://www.ucsd.edu/"),
+  c("iNaturalist", "https://www.inaturalist.org/"))
 partner_html <- paste(vapply(partners, function(p)
   sprintf('<a class="partner" href="%s">%s</a>', p[2], esc(p[1])), character(1)), collapse = "\n")
 
@@ -190,6 +191,7 @@ css <- beescabr_fill_colors('
   h2{font-size:1.05rem;letter-spacing:.02em;color:var(--accent-deep);margin:0 0 .3rem}
   .sec-note{color:var(--muted);font-size:.9rem;margin:0 0 1rem}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.6rem}
+  .thanks{margin:1.1rem 0 0}
   .idlist{display:flex;flex-direction:column;gap:.6rem}
   .chip{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;box-shadow:var(--shadow)}
   .chip-name{font-weight:600;display:block}
@@ -208,7 +210,6 @@ css <- beescabr_fill_colors('
   .chip-text{min-width:0}
   .chip-role{display:block;font-size:.82rem;font-weight:600;color:var(--fg);margin-top:.2rem}
   .chip-aff{display:block;font-size:.76rem;color:var(--muted);margin-top:.12rem}
-  .photo-credit{font-size:.78rem;font-style:italic;margin:.7rem 0 0}
   .pending{color:var(--muted);font-size:.92rem;background:var(--accent-soft);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem}
   .thanks{color:var(--muted);font-size:.95rem;font-style:italic;margin:1.1rem 0 0}
   .pending code{font-size:.85em}
@@ -231,21 +232,19 @@ research_section <- if (!is.null(rt) && nrow(rt)) {
   has_credit <- "photo_credit" %in% names(rt)
   has_focus  <- "photo_focus" %in% names(rt)
   has_zoom   <- "photo_zoom"  %in% names(rt)
-  creds <- character(0)
   chips <- paste(vapply(seq_len(nrow(rt)), function(i) {
     photo  <- if (has_photo)  sq(rt$photo[i])        else ""
     credit <- if (has_credit) sq(rt$photo_credit[i]) else ""
     focus  <- if (has_focus)  sq(rt$photo_focus[i])  else ""
     zoom   <- if (has_zoom)   sq(rt$photo_zoom[i])   else ""
-    if (nzchar(photo) && nzchar(credit) && file.exists(file.path(PHOTO_DIR, photo)))
-      creds[[length(creds) + 1L]] <<- sprintf("%s (%s)", esc(rt$name[i]), esc(credit))
     research_chip(sq(rt$first_name[i]), sq(rt$last_name[i]), rt$name[i],
                   sq(rt$inaturalist_username[i]), sq(rt$role[i]), sq(rt$affiliation[i]),
                   photo, credit, focus, zoom)
   }, character(1)), collapse = "\n")
-  credit_note <- if (length(creds))
-    sprintf('\n    <p class="sec-note photo-credit">Photographs: %s.</p>', paste(creds, collapse = "; ")) else ""
-  sprintf('<section>\n    <h2>Main Research Team</h2>\n    <p class="sec-note">The people who lead the native bee monitoring program.</p>\n    <div class="grid grid-team">%s</div>%s\n  </section>\n  ', chips, credit_note)
+  # Photographer credit rides on each image as a hover tooltip (title="Photo: ..."),
+  # not as a footnote line: most headshots share one photographer, so the line read
+  # "Ashley Kim (Ashley Kim); Brandi Sanchez (Ashley Kim)".
+  sprintf('<section>\n    <h2>Research Team</h2>\n    <p class="sec-note">The people who lead the native bee monitoring program.</p>\n    <div class="grid grid-team">%s</div>\n  </section>\n  ', chips)
 } else ""
 
 intro <- if (nzchar(yr_span))
@@ -264,9 +263,9 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
 <main>
   <a class="backlink" href="./index.html">&larr; Back to main page</a>
   %s<section>
-    <h2>Survey Team</h2>
-    <p class="sec-note">The people who walked the transects, photographed bees, and collected specimens (%d people). iNaturalist handles link to their profiles.</p>
-    <div class="grid">%s</div>
+    <h2>Partners</h2>
+    <p class="sec-note">Institutions that host the program, the collections, and the data.</p>
+    <div class="partners">%s</div>
   </section>
   <section>
     <h2>Identification Team</h2>
@@ -274,14 +273,15 @@ html <- sprintf('<!doctype html><html lang="en"><head><meta charset="utf-8">
     <div class="idlist">%s</div>
   </section>
   <section>
-    <h2>Partners</h2>
-    <p class="sec-note">Institutions that host the program, the collections, and the data.</p>
-    <div class="partners">%s</div>
+    <h2>Survey Team</h2>
+    <p class="sec-note">The people who walked the transects, photographed bees, and collected specimens. iNaturalist handles link to their profiles.</p>
+    <div class="grid">%s</div>
+    <p class="sec-note thanks">And to the rest of the iNaturalist community who have shared observations from the park, thank you.</p>
   </section>
 </main>
 <footer>Generated from the beescabr pipeline by Brandi Sanchez. Native Bee Monitoring Program, Cabrillo National Monument.</footer>
 </body></html>',
-  css, esc(intro), research_section, nrow(team), team_html, id_html, partner_html)
+  css, esc(intro), research_section, partner_html, id_html, team_html)
 
 dir.create(DOCS, showWarnings = FALSE)
 writeLines(html, file.path(DOCS, "acknowledgements.html"))

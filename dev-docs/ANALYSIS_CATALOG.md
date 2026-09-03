@@ -61,7 +61,7 @@ the survey list):
 
 - `data/inat_observations/inat_clean/cabr_inat_bee_clean.csv` — non-lethal (photo) records; now has `plant_genus` / `plant_species`
 - `data/specimens/specimens_clean/cabr_specimen_bee_clean.csv` — lethal (net) records; now has `plant_genus` / `plant_species`
-- `data/project_info/surveys/master_per_survey_info.csv` — the authoritative survey list
+- `data/project_info/surveys/master_per_survey_info_generated.csv` — the authoritative survey list
 - `data/checklists/cabr/cabr_official_native_bee_checklist.csv` — has `specimen` / `inat` / `holway` presence flags (drives Q1, Q9)
 - `data/inat_observations/inat_clean/cabr_inat_plant_clean.csv` — non-lethal plant records (Q11)
 
@@ -144,7 +144,7 @@ and year (R²=0.50), both p=0.001. The `.docx` in each folder has the full write
 taxa, and how close are we to having found them all?* — at two ranks, one curve
 per transect.
 
-- **x-axis = number of surveys**, from `master_per_survey_info.csv`. A multi-transect
+- **x-axis = number of surveys**, from `master_per_survey_info_generated.csv`. A multi-transect
   day counts as one survey for each transect it covered. Zero-catch surveys still
   count as effort (they flatten the curve).
 - **Lines = transects** (BST, UPMON, TP, OT); **bands = 95% CI** from
@@ -613,10 +613,10 @@ specimen bounty), so a surveyor knows when/where/on-what to look. Scope: all rec
 
 Plain counts for the data-focused NPS report — **no interpretation, no tests.**
 
-**Outputs:** `nps_participation.csv` (494 trips, 39 field surveyors, 24 iNat users, 2021–2026),
+**Outputs:** `nps_participation_generated.csv` (494 trips, 39 field surveyors, 24 iNat users, 2021–2026),
 `nps_bees_summary.csv` (31 genera / 76 species / 12,193 records) + `nps_bee_checklist_species.csv`
 + `nps_bee_checklist_genus.csv`, `nps_methods.csv` (records by method × surveyor type),
-`nps_plants_summary.csv` + `nps_plant_checklist_genus.csv`, `nps_transects.csv`.
+`nps_plants_summary.csv` + `nps_plant_checklist_genus.csv`, `nps_transects_manual.csv`.
 
 ---
 

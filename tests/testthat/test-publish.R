@@ -22,7 +22,7 @@ test_that("build_landing_html renders one card per page with its fields", {
 test_that("build_landing_html interpolates the date and hero cache-buster", {
   h <- build_landing_html(list(), "2026-08-13", "deadbeef")
   expect_true(grepl("hero.jpg?v=deadbeef", h, fixed = TRUE))
-  expect_true(grepl("Based on data available as of 2026-08-13.", h, fixed = TRUE))
+  expect_true(grepl("Data as of 2026-08-13.", h, fixed = TRUE))
 })
 
 test_that("build_landing_html links the Acknowledgements page and is a full document", {

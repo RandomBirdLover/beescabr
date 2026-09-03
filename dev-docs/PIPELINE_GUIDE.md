@@ -60,7 +60,7 @@ scripts/
     qc/qc_review_inat_misid.R           likely-misID review queue
   project_info/                  THE BRAIN + its reviewers
     finding_project_info.R       provenance: membership + unknown tags/fields/notes
-    finding_survey_dates.R       master_per_survey_info.csv (per-survey record)
+    finding_survey_dates.R       master_per_survey_info_generated.csv (per-survey record)
     finding_specimen_dates.R     specimen-record aggregation (in-memory)
     finding_beeple_calendar.R    beeple calendar PDFs → windows
     resolve_beeple_transects_per_survey.R  majority-transect resolver

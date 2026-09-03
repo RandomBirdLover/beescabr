@@ -4,7 +4,7 @@
 #
 # Surveyor names reach us in three shapes and all three mean the same person:
 #
-#   "Sam O'Dell"   intern-log and inat-tag rows in master_per_survey_info.csv
+#   "Sam O'Dell"   intern-log and inat-tag rows in master_per_survey_info_generated.csv
 #   "S O'Dell"     specimen-record rows -- the museum label written on the
 #                  specimen. That string is the record, so it is never rewritten.
 #   "Sam"          older data, before the log was expanded to full names.

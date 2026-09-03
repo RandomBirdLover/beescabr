@@ -1,4 +1,4 @@
-# participation.csv -- who was in the field, which year, in what capacity.
+# participation_generated.csv -- who was in the field, which year, in what capacity.
 #
 # GENERATED from the survey record, never hand-typed. The reason is a real bug:
 # the old roster recorded who was ASSIGNED, so Michael Ready's 2022 row existed
@@ -62,4 +62,18 @@ test_that("an empty survey record yields an empty table, not an error", {
   p <- participation_from_surveys(.surveys[0, ], .people)
   expect_equal(nrow(p), 0)
   expect_equal(names(p), c("person_id", "year", "role", "method"))
+})
+
+test_that("a survey row with no inat_username still yields participation", {
+  # the intern log no longer stores handles: an intern day is proven by the log
+  # itself, and who was there is a list of person_ids. Nothing may depend on a handle.
+  s <- .surveys; s$inat_username <- ""
+  p <- participation_from_surveys(s, .people)
+  expect_true(all(c("p001", "p002", "p003") %in% p$person_id))
+  expect_equal(nrow(p), nrow(participation_from_surveys(.surveys, .people)))
+})
+
+test_that("a survey record with no inat_username column at all works", {
+  s <- .surveys; s$inat_username <- NULL
+  expect_equal(nrow(participation_from_surveys(s, .people)), 4)
 })

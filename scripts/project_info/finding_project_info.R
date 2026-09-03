@@ -20,30 +20,31 @@
 #
 # INPUTS
 #   data/inat_observations/cache/export_flat.rds                 (bee obs; plant export added later)
-#   data/project_info/crosswalk/master_crosswalk.csv  (tag/field crosswalk)
+#   data/project_info/crosswalk/master_crosswalk_manual.csv  (tag/field crosswalk)
 #   data/project_info/rosters/surveyor_roster.csv    (roster)
-#   data/project_info/surveys/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv (from finding_beeple_calendar.R, stage 2d)
+#   data/project_info/surveys/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows_generated.csv (from finding_beeple_calendar.R, stage 2d)
 #   data/spatial/shapefiles/boundaries/cabr/cabr_survey_box.shp
 #
-# The intern schedule is a CURATED INPUT file -- data/project_info/surveys/survey_date_sources/master_intern_survey_log.csv
+# The intern schedule is a CURATED INPUT file -- data/project_info/surveys/survey_date_sources/master_intern_survey_log_manual.csv
 # (FPI_INTERN_LOG) -- holding the `source == "intern-log"` rows for interns (BOTH lethal net
 # days AND non-lethal iNat days). Each run READS those rows from the log and rebuilds the
 # beeple rows around them; the master is pure generated OUTPUT. This replaced the old design
 # where intern rows lived only in the generated master and were silently wiped on regeneration
 # (a tagged intern iNat day like 2024-05-05 -- not in the beeple tag-rebuild, not a specimen
-# date -- fell through every crack). Edit intern dates in master_intern_survey_log.csv, NOT the master.
+# date -- fell through every crack). Edit intern dates in master_intern_survey_log_manual.csv, NOT the master.
 #
 # OUTPUTS
 #   data/inat_observations/cabr_inat_raw.csv  <- NEW: the per-obs lookup
-#   data/project_info/surveys/master_per_survey_info.csv                      <- built upon in place
-#   data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags.csv        <- unrecognized hashtags
-#   data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields.csv      <- unrecognized obs-field names
+#   data/project_info/surveys/master_per_survey_info_generated.csv                      <- built upon in place
+#   data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags_generated.csv        <- unrecognized hashtags
+#   data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields_generated.csv      <- unrecognized obs-field names
 #
 # Run: source("scripts/project_info/finding_project_info.R"); finding_project_info()
 # =============================================================
 
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 if (!exists("build_participation")) source("scripts/project_info/build_participation.R")
+if (!exists("roster_view")) source("scripts/project_info/roster_view.R")
 library(dplyr)
 library(stringr)
 library(tidyr)
@@ -67,20 +68,20 @@ FPI_EXPORTS   <- list(
   list(path = "data/inat_observations/cache/export_flat.rds",       kind = "bee"),
   list(path = "data/inat_observations/cache/export_flat_plant.rds", kind = "plant")
 )
-FPI_CROSSWALK <- "data/project_info/crosswalk/master_crosswalk.csv"
-FPI_ROSTER    <- PATHS$surveyor_roster
-FPI_WINDOWS   <- "data/project_info/surveys/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows.csv"
+FPI_CROSSWALK <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
+FPI_YEARS     <- 2021:as.integer(format(Sys.Date(), "%Y"))   # seasons the derived roster spans
+FPI_WINDOWS   <- "data/project_info/surveys/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows_generated.csv"
 FPI_BOUNDARY  <- "data/spatial/shapefiles/boundaries/cabr/cabr_survey_box.shp"
 FPI_TRANSECTS <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"  # rescue: on-transect untagged obs
 
 FPI_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"  # the per-obs lookup
 FPI_SURVEY_DATES   <- PATHS$per_survey
-FPI_INTERN_LOG     <- "data/project_info/surveys/survey_date_sources/master_intern_survey_log.csv"  # curated intern survey-day log (SOURCE OF TRUTH -- edit intern days HERE, not in the generated master)
-FPI_REVIEW         <- "data/project_info/surveys/review/qc_review_survey_beeple_date_windows.csv"   # beeple windows to rule on (persistent)
-FPI_MISTAGS        <- "data/inat_observations/review/qc_review_inat_mistagged_transects.csv"  # stray transect tags outvoted by the day's majority
-FPI_TIES           <- "data/project_info/surveys/review/qc_review_survey_transect_overlap.csv"  # equal-split days to rule (review_transect_ties)
-FPI_UNKNOWN_TAGS   <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags.csv"    # unknown hashtags
-FPI_UNKNOWN_FIELDS <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields.csv"  # unknown obs-field NAMES
+FPI_INTERN_LOG     <- "data/project_info/surveys/survey_date_sources/master_intern_survey_log_manual.csv"  # curated intern survey-day log (SOURCE OF TRUTH -- edit intern days HERE, not in the generated master)
+FPI_REVIEW         <- "data/project_info/surveys/review/qc_review_survey_beeple_date_windows_generated.csv"   # beeple windows to rule on (persistent)
+FPI_MISTAGS        <- "data/inat_observations/review/qc_review_inat_mistagged_transects_manual.csv"  # stray transect tags outvoted by the day's majority
+FPI_TIES           <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_generated.csv"  # equal-split days to rule (review_transect_ties)
+FPI_UNKNOWN_TAGS   <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags_generated.csv"    # unknown hashtags
+FPI_UNKNOWN_FIELDS <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields_generated.csv"  # unknown obs-field NAMES
 SD_COLUMNS <- c("year", "role", "source", "date",
                 "transects", "surveyors", "inat_username", "specimen_collector",
                 "method", "technique",
@@ -287,8 +288,14 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
 # ------------------------------------------------------------
 finding_project_info <- function(write = TRUE) {
   crosswalk <- read_csv(FPI_CROSSWALK, show_col_types = FALSE)
-  roster    <- read_csv(FPI_ROSTER, show_col_types = FALSE)
   windows   <- read_csv(FPI_WINDOWS, show_col_types = FALSE)
+  # The per-year roster the rebuild needs is DERIVED now: people_manual.csv says who exists,
+  # the intern log says who was an intern that year, everyone else is a beeple. The
+  # old surveyor_roster.csv is retired (see rosters/WHAT_THESE_FILES_ARE.txt).
+  people    <- read.csv(PATHS$people, stringsAsFactors = FALSE, check.names = FALSE)
+  intern_lg <- if (file.exists(FPI_INTERN_LOG))
+                 read.csv(FPI_INTERN_LOG, stringsAsFactors = FALSE, check.names = FALSE) else NULL
+  roster    <- roster_view(people, intern_lg, years = FPI_YEARS)
   tagmap    <- fpi_build_tagmap(crosswalk)
 
   # load + normalize each export (bee + plant). A listed-but-absent export (e.g.
@@ -353,7 +360,7 @@ finding_project_info <- function(write = TRUE) {
     if (!is.null(ties))    write.csv(ties,    FPI_TIES,    row.names = FALSE, na = "")
     write.csv(unknown_tags,   FPI_UNKNOWN_TAGS,   row.names = FALSE, na = "")
     write.csv(unknown_fields, FPI_UNKNOWN_FIELDS, row.names = FALSE, na = "")
-    # participation falls out of the survey record: declared identity (people.csv),
+    # participation falls out of the survey record: declared identity (people_manual.csv),
     # derived activity. Written after the master because it reads it back.
     .part <- tryCatch(build_participation(), error = function(e) { bx_note("participation: ", conditionMessage(e)); NULL })
     bx_kv("Classified", format(nrow(membership), big.mark = ","), " observations (bees + plants)")
@@ -363,7 +370,7 @@ finding_project_info <- function(write = TRUE) {
     bx_kv("Review queue", nrow(unknown_tags), " unknown tags · ", nrow(unknown_fields), " fields · ", nrow(review_windows), " windows")
     if (!is.null(mistags)) bx_cont(nrow(mistags), " stray transect tags to fix")
     if (!is.null(ties) && nrow(ties)) bx_cont(nrow(ties), " tie day(s) to rule")
-    bx_out("master_per_survey_info.csv, cabr_inat_raw.csv (+ review files)")
+    bx_out("master_per_survey_info_generated.csv, cabr_inat_raw.csv (+ review files)")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  mistags = mistags, ties = ties, unknown_tags = unknown_tags, unknown_fields = unknown_fields))

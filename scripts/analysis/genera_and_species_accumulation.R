@@ -13,7 +13,7 @@
 #   * genus    (Figure 2)
 #
 # THE UNIT (x-axis): one SURVEY. The authoritative survey list is
-# master_per_survey_info.csv (494 surveys). A survey that walked several
+# master_per_survey_info_generated.csv (494 surveys). A survey that walked several
 # transects in a day counts as one survey FOR EACH transect it covered, so
 # the list is expanded to one survey-event per (day x transect). Surveys that
 # recorded no identifiable bee still count as effort (an empty row that flattens
@@ -50,7 +50,7 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")   # PATHS$specimen_clean, PATHS$inat_clean
 
-# master_per_survey_info.csv is not in config's PATHS list; name it here.
+# master_per_survey_info_generated.csv is not in config's PATHS list; name it here.
 PER_SURVEY_INFO <- PATHS$per_survey
 
 OUT_JOURNAL     <- file.path(DIR_JOURNAL, "richness/accumulation")  # method small-multiples (fair window)

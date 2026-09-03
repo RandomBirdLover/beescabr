@@ -1,7 +1,7 @@
 # =============================================================
 # project_info/build_participation.R
-# beescabr -- participation.csv: who was in the field, which year, in what capacity.
-#   master_per_survey_info.csv + people.csv  ->  participation.csv
+# beescabr -- participation_generated.csv: who was in the field, which year, in what capacity.
+#   master_per_survey_info_generated.csv + people_manual.csv  ->  participation_generated.csv
 #
 # GENERATED. Never hand-typed, and the reason is a bug this replaced: the old
 # surveyor_roster.csv was filled partly from the beeple CALENDAR, so it recorded
@@ -57,7 +57,7 @@ build_participation <- function(out = NULL) {
   rd <- function(p) if (!is.null(p) && file.exists(p))
     read.csv(p, stringsAsFactors = FALSE, check.names = FALSE) else data.frame()
   ppl <- rd(PATHS$people)
-  if (!nrow(ppl)) { message("build_participation: no people.csv -- skipped"); return(invisible(NULL)) }
+  if (!nrow(ppl)) { message("build_participation: no people_manual.csv -- skipped"); return(invisible(NULL)) }
   part <- participation_from_surveys(rd(PATHS$per_survey), ppl)
   out  <- if (is.null(out)) PATHS$participation else out
   write.csv(part, out, row.names = FALSE, na = "")

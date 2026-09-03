@@ -52,3 +52,36 @@ person_ids_in <- function(cell, people, keys = person_id_keys(people)) {
   tk <- tk[nzchar(tk)]
   unique(na.omit(person_id_of(tk, people, keys)))
 }
+
+# ---- ids -> what a human reads ----------------------------------------------
+# The hand-maintained files store person_ids so a name is typed once, in
+# people_manual.csv, ever. The GENERATED master still shows names and handles, because
+# someone reviewing it has to be able to read it. An id that matches nobody is
+# kept verbatim rather than dropped -- a typo must be visible, not silent.
+.pid_lookup <- function(ids, people, col, blank_ok = TRUE) {
+  one <- function(cell) {
+    if (is.na(cell) || !nzchar(trimws(cell))) return(cell)
+    tk  <- trimws(unlist(strsplit(cell, "[,;&]")))
+    tk  <- tk[nzchar(tk)]
+    hit <- people[[col]][match(tk, trimws(as.character(people$person_id)))]
+    out <- ifelse(is.na(hit) | !nzchar(trimws(ifelse(is.na(hit), "", hit))), NA_character_, trimws(hit))
+    if (blank_ok) out <- ifelse(is.na(out), tk, out)      # unknown id stays visible
+    out <- out[!is.na(out)]
+    if (!length(out)) return("")
+    paste(out, collapse = ", ")
+  }
+  vapply(seq_along(ids), function(i) one(ids[[i]]), character(1))
+}
+
+# "p002, p001" -> "Cindy Pencek, Sam O'Dell"
+people_display <- function(ids, people) {
+  nm <- person_name(people$first_name, people$last_name)
+  .pid_lookup(ids, transform(people, .nm = ifelse(is.na(nm), "", nm)), ".nm", blank_ok = TRUE)
+}
+
+# "p001, p002" -> "wranglebees, carrotpeople"; people without a handle are skipped,
+# and a cell where nobody has one becomes "n/a" (what the master has always written).
+people_handles <- function(ids, people) {
+  out <- .pid_lookup(ids, people, "inaturalist_username", blank_ok = FALSE)
+  ifelse(!is.na(ids) & nzchar(trimws(ifelse(is.na(ids), "", ids))) & !nzchar(out), "n/a", out)
+}

@@ -17,7 +17,7 @@
 #
 # INPUTS   data/inat_observations/cabr_inat_raw.csv                 (brain per-obs lookup; kind=="plant")
 #          data/inat_observations/cache/export_flat_plant.rds       (taxonomy + coords + fields/tags)
-#          data/project_info/crosswalk/master_crosswalk.csv              (flowering field variants)
+#          data/project_info/crosswalk/master_crosswalk_manual.csv              (flowering field variants)
 #          data/project_info/rosters/surveyor_roster.csv               (surveyor usernames -> scope)
 #          data/spatial/shapefiles/transects/cabr_bee_transects.shp       (off-transect test)
 #          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (walk-in)
@@ -31,7 +31,7 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 
 IPC_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"
 IPC_EXPORT         <- "data/inat_observations/cache/export_flat_plant.rds"
-IPC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk.csv"
+IPC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 IPC_ROSTER         <- PATHS$people          # one row per human; `surveyor` flag scopes it
 IPC_TRANSECTS      <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp"
@@ -99,7 +99,7 @@ ipc_norm_transect <- function(x) {
 
 # ---- flowering annotation --------------------------------------------------
 # ipc_flowering(): PURE. From each plant obs's iNat obs-fields (field:* columns), per
-# master_crosswalk.csv's flower_flowering row, return tibble(obs_id, flower_flowering) where
+# master_crosswalk_manual.csv's flower_flowering row, return tibble(obs_id, flower_flowering) where
 # flower_flowering is the phenology VALUE (e.g. "Flowering", "Fruiting"), coalesced from the
 # flowering fields most-populated-first. Missing crosswalk / no flowering field -> NA column.
 ipc_flowering <- function(ex_full, crosswalk_path) {
@@ -216,7 +216,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   # SCOPE: surveyors' plant obs only (observer on the roster)
   if (file.exists(roster_path)) {
     roster    <- suppressWarnings(suppressMessages(read_csv(roster_path, show_col_types = FALSE)))
-    # people.csv holds everyone; only those flagged `surveyor` scope the plant obs
+    # people_manual.csv holds everyone; only those flagged `surveyor` scope the plant obs
     if ("surveyor" %in% names(roster)) roster <- roster[as.logical(roster$surveyor) %in% TRUE, , drop = FALSE]
     surveyors <- if ("inaturalist_username" %in% names(roster)) roster$inaturalist_username else character(0)
     mem <- ipc_scope_to_surveyors(mem, surveyors)
