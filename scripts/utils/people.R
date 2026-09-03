@@ -27,8 +27,8 @@ person_name <- function(first, last) {
 # Lookup vector: lowercased name-as-written -> canonical person. Covers the full
 # name, the museum-label form, and the first name only where it is unambiguous.
 #
-# `code` is the label form DECLARED by a roster (surveyor_roster.csv's collector_code,
-# identifier_roster.csv's determiner_code). It is checked first because inference cannot
+# `code` is the label form DECLARED in people_manual.csv (collector_code for a netter,
+# determiner_code for a specimen determiner). It is checked first because inference cannot
 # reproduce every label: "X. Gaeta" and a middle initial are both out of its reach. An
 # unfilled cell adds no key -- it must never match a blank.
 person_name_keys <- function(name, first, last, code = NULL) {

@@ -6,7 +6,7 @@
 # membership file (cabr_inat_raw.csv, filtered kind=="plant"), same spatial survey refinement,
 # same is_survey marking -- but PLANT-shaped:
 #   * SCOPE: only the surveyors' plant obs -- observer is on the surveyor roster
-#     (surveyor_roster.csv). Non-surveyor / public plant obs in the box are dropped.
+#     (people_manual.csv, surveyor = TRUE). Public plant obs in the box are dropped.
 #   * ANNOTATION: the ONE plant concept -- flower_flowering (the phenology value, e.g. "Flowering"),
 #     coalesced from the crosswalk's "flowering?"/"flowering" obs-fields. (No bee annotations.)
 #   * TAXONOMY: filled straight from the plant iNat export (scientific_name / common_name + the
@@ -18,7 +18,7 @@
 # INPUTS   data/inat_observations/cabr_inat_raw.csv                 (brain per-obs lookup; kind=="plant")
 #          data/inat_observations/cache/export_flat_plant.rds       (taxonomy + coords + fields/tags)
 #          data/project_info/crosswalk/master_crosswalk_manual.csv              (flowering field variants)
-#          data/project_info/rosters/surveyor_roster.csv               (surveyor usernames -> scope)
+#          data/project_info/rosters/people_manual.csv                 (surveyor usernames -> scope)
 #          data/spatial/shapefiles/transects/cabr_bee_transects.shp       (off-transect test)
 #          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (walk-in)
 # OUTPUT   data/inat_observations/inat_clean/cabr_inat_plant_clean.csv

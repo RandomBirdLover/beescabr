@@ -21,7 +21,7 @@
 # INPUTS
 #   data/inat_observations/cache/export_flat.rds                 (bee obs; plant export added later)
 #   data/project_info/crosswalk/master_crosswalk_manual.csv  (tag/field crosswalk)
-#   data/project_info/rosters/surveyor_roster.csv    (roster)
+#   data/project_info/rosters/people_manual.csv      (who exists; per-year role is derived)
 #   data/project_info/surveys/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows_generated.csv (from finding_beeple_calendar.R, stage 2d)
 #   data/spatial/shapefiles/boundaries/cabr/cabr_survey_box.shp
 #

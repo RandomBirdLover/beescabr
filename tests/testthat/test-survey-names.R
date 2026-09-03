@@ -104,3 +104,52 @@ test_that("a collector_code declared on the roster resolves the label", {
 test_that("a roster with no collector_code column still works", {
   expect_equal(sd_full_names("S O'Dell", 2021, roster2), "Sam O'Dell")
 })
+
+# --- calendar windows name a beeple by FIRST NAME ----------------------------
+# The beeple calendar writes "Julia", and the review report has to say which
+# Julia. Two are on the roster (Keum, a 2024 intern; Showalter, a 2025-26
+# beeple), and the derived roster spans every year, so the first name alone is
+# not enough. Prefer whoever actually has a tagged survey that year, and when
+# that still does not settle it, say nothing rather than name the wrong person.
+
+.ros <- data.frame(
+  year = c(2025, 2025, 2025), first_name = c("Julia", "Julia", "Cindy"),
+  uname = c("julaliak", "jwanderer6", "carrotpeople"), stringsAsFactors = FALSE)
+
+test_that("a unique first name resolves straight away", {
+  expect_equal(sd_calendar_uname(2025, "Cindy", .ros, evidence = character(0)), "carrotpeople")
+})
+
+test_that("a shared first name is settled by who actually surveyed that year", {
+  expect_equal(sd_calendar_uname(2025, "Julia", .ros, evidence = "jwanderer6"), "jwanderer6")
+  expect_equal(sd_calendar_uname(2025, "Julia", .ros, evidence = "julaliak"),  "julaliak")
+})
+
+test_that("a shared first name with no evidence either way stays blank", {
+  # naming one of them would be a coin flip; the window still surfaces for review
+  expect_true(is.na(sd_calendar_uname(2025, "Julia", .ros, evidence = character(0))))
+})
+
+test_that("a shared first name where BOTH surveyed stays blank", {
+  expect_true(is.na(sd_calendar_uname(2025, "Julia", .ros,
+                                      evidence = c("julaliak", "jwanderer6"))))
+})
+
+test_that("a name nobody on the roster has is NA", {
+  expect_true(is.na(sd_calendar_uname(2025, "Nobody", .ros, evidence = character(0))))
+})
+
+test_that("only a beeple can match a beeple calendar window", {
+  # the calendar IS the beeple schedule -- an intern was never on it, so they must
+  # not be offered as the answer even when they share the first name
+  r <- data.frame(year = 2024, first_name = c("Julia", "Julia"),
+                  uname = c("julaliak", "jwanderer6"),
+                  role = c("intern", "beeple"), stringsAsFactors = FALSE)
+  expect_equal(sd_calendar_uname(2024, "Julia", r, evidence = character(0)), "jwanderer6")
+})
+
+test_that("a window naming only an intern resolves to nobody", {
+  r <- data.frame(year = 2024, first_name = "Grant", uname = "grant65",
+                  role = "intern", stringsAsFactors = FALSE)
+  expect_true(is.na(sd_calendar_uname(2024, "Grant", r, evidence = "grant65")))
+})

@@ -103,6 +103,7 @@ source("scripts/inat_observations/engine/db/store_conn.R")
 source("scripts/inat_observations/engine/db/observations_store.R")
 source("scripts/inat_observations/engine/db/taxon_store.R")
 source("scripts/inat_observations/engine/db/decision_store.R")
+source("scripts/inat_observations/engine/db/compact_store.R")
 source("scripts/inat_observations/engine/api/inat_http.R")
 source("scripts/inat_observations/engine/api/inat_flatten.R")
 source("scripts/inat_observations/engine/api/inat_cache.R")
@@ -206,7 +207,7 @@ main <- function() {
     stop("missing required input(s); nothing was run", call. = FALSE)
   }
   con <- store_connect()
-  on.exit(store_disconnect(con), add = TRUE)
+  on.exit(if (!is.null(con)) store_disconnect(con), add = TRUE)
 
   bx_need_reset()
 
@@ -288,6 +289,19 @@ main <- function() {
   if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1" || !file.exists(FIELD_MAP_PATH)) {
     build_field_id_map(con = con)
   }  # else: silently reused (ingest skipped and the map already exists)
+
+  # ---- 2d. COMPACT: hand dead space back to the filesystem ----
+  # DuckDB never shrinks a file on its own. Every incremental ingest rewrites rows
+  # and leaves the old copies behind, so the cache only grows -- the bee cache had
+  # reached 31 GB holding 78,578 observations, and rewriting it gave 7.9 GB with
+  # every row intact. Asking how much dead space a file carries is instant, so this
+  # checks after every ingest and only rewrites when it is worth it (most runs do
+  # nothing). NOTHING IS PRUNED: it copies every row and value, just compactly.
+  # Both connections must be closed first -- the copy needs the file to itself.
+  store_disconnect(con); con <- NULL
+  for (.p in c(DB_CACHE_PATH, DB_CACHE_PATH_PLANT))
+    db_compact_if_needed(.p, say = function(...) bx_cont(...))
+  con <- store_connect(DB_CACHE_PATH)
 
   # ---- 2d. BEEPLE CALENDARS: (re)build beeple_calendar_windows_generated.csv from the PDFs ----
   # Re-parses every "YYYY Cabrillo Bee Survey Calendar.pdf" in
@@ -560,7 +574,8 @@ bx_analysis_files <- function() {
   item(PATHS$inat_plant_clean)
   grp("survey record")
   item(PATHS$per_survey)
-  item(PATHS$surveyor_roster)
+  item(PATHS$participation)
+  item(PATHS$people)
   grp("reference / lookups")
   item(PATHS$taxonomy_lookup)
   item(PATHS$plant_taxonomy_lookup)

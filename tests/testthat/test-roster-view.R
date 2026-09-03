@@ -56,3 +56,43 @@ test_that("every surveyor gets a row per year, so the 'one of ours' gate is comp
   v <- roster_view(.people, .log, years = 2021:2026)
   expect_equal(nrow(v), 2 * 6)
 })
+
+# --- surveyor_type: declared, not guessed ------------------------------------
+# people_manual.csv declares what KIND of surveyor someone is. Deriving it from
+# the intern log alone said "beeple" for every year an intern was not logged, so
+# a 2024 intern read as a 2025 beeple and could be offered as the answer to a
+# 2025 beeple calendar window. The declaration settles that.
+
+.typed <- data.frame(
+  person_id            = c("p001", "p002"),
+  first_name           = c("Julia", "Julia"),
+  last_name            = c("Keum", "Showalter"),
+  inaturalist_username = c("julaliak", "jwanderer6"),
+  collector_code = "", determiner_code = "", surveyor = TRUE,
+  surveyor_type        = c("intern", "beeple"),
+  stringsAsFactors = FALSE)
+
+test_that("the declared type is used in every year", {
+  v <- roster_view(.typed, NULL, years = 2024:2025)
+  expect_equal(v$role[v$inaturalist_username == "julaliak"],   c("intern", "intern"))
+  expect_equal(v$role[v$inaturalist_username == "jwanderer6"], c("beeple", "beeple"))
+})
+
+test_that("the intern log still forces intern for a year it names", {
+  # belt and braces: if the log says they netted that year, they are an intern
+  # that year whatever the column says
+  lg <- data.frame(year = 2025, person_ids = "p002", method = "lethal",
+                   technique = "net", stringsAsFactors = FALSE)
+  v <- roster_view(.typed, lg, years = 2024:2025)
+  expect_equal(v$role[v$inaturalist_username == "jwanderer6" & v$year == 2025], "intern")
+  expect_equal(v$role[v$inaturalist_username == "jwanderer6" & v$year == 2024], "beeple")
+})
+
+test_that("a missing surveyor_type column falls back to the log", {
+  p <- .typed; p$surveyor_type <- NULL
+  lg <- data.frame(year = 2024, person_ids = "p001", method = "lethal",
+                   technique = "net", stringsAsFactors = FALSE)
+  v <- roster_view(p, lg, years = 2024)
+  expect_equal(v$role[v$inaturalist_username == "julaliak"], "intern")
+  expect_equal(v$role[v$inaturalist_username == "jwanderer6"], "beeple")
+})

@@ -19,7 +19,7 @@ if (!exists("person_id_mint")) source("scripts/utils/people_ids.R")
 
 PEOPLE_COLUMNS <- c("person_id", "first_name", "last_name", "inaturalist_username",
                     "email", "phone_number", "affiliation", "collector_code",
-                    "determiner_code", "taxa_identified", "id_count", "surveyor", "identifier",
+                    "determiner_code", "taxa_identified", "id_count", "surveyor", "surveyor_type", "identifier",
                     "researcher", "team_title", "team_order", "photo", "photo_focus", "photo_zoom",
                     "photo_credit", "notes")
 

@@ -49,6 +49,17 @@ bpe_index <- function(pairs, thin_at = 1L) {
   list(by_bee = mk("bee", "plant"), by_plant = mk("plant", "bee"))
 }
 
+# bpe_order(): PURE. Names for one side of the index, ordered by how many partner
+# taxa each has, most first. Alphabetical was burying the entries that carry the
+# data: the plants nearly every bee visits, and the generalist bees. Ties break
+# alphabetically so a rerun cannot reshuffle them.
+bpe_order <- function(side) {
+  if (!length(side)) return(character(0))
+  nm <- names(side)
+  k  <- vapply(side, function(e) length(e$name), integer(1))
+  nm[order(-k, nm)]
+}
+
 # ---- build (skipped when a test sources this file for the helper) -------------
 if (!exists("BPE_SOURCED_FOR_HELPERS")) {
   if (!exists("PATHS"))           source("scripts/config.R")
@@ -76,8 +87,8 @@ if (!exists("BPE_SOURCED_FOR_HELPERS")) {
     if (is.na(i) || is.na(.lk$taxon_id[i])) NULL else as.integer(.lk$taxon_id[i])
   }
 
-  bees   <- sort(names(ix$by_bee))
-  plants <- sort(names(ix$by_plant))
+  bees   <- bpe_order(ix$by_bee)      # most plant genera first
+  plants <- bpe_order(ix$by_plant)    # most bee species first
   # italics on every scientific name: bee binomials and plant genera alike
   bee_html   <- function(b) sprintf("<i>%s</i>%s", b, inat_photo_link(.tid_of(b), b))
   plant_html <- function(g) plant_label(g, sci_wrap = "<i>%s</i>")
@@ -122,7 +133,7 @@ p.sub{color:', BEE_HTML[["sub"]], ';margin:13px 0 4px;font-size:13.5px;max-width
 .tab{font:inherit;font-size:13.5px;font-weight:600;padding:8px 15px;border:1px solid ', BEE_HTML[["border"]], ';border-radius:9px 9px 0 0;background:', BEE_PANEL[["panel"]], ';color:', BEE_HTML[["sub"]], ';cursor:pointer;border-bottom:none}
 .tab.on{background:', BEE_HTML_GREEN[["mid"]], ';color:#fff;border-color:', BEE_HTML_GREEN[["mid"]], '}
 .wrap{display:flex;gap:22px;align-items:flex-start;border-top:1px solid ', BEE_HTML[["border"]], ';padding-top:16px}
-.side{width:300px;flex:none;max-height:70vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:', BEE_PANEL[["panel"]], '}
+.side{width:360px;flex:none;max-height:70vh;overflow:auto;border:1px solid ', BEE_HTML[["border"]], ';border-radius:10px;padding:10px 12px;background:', BEE_PANEL[["panel"]], '}
 #q{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:7px 9px;margin-bottom:8px;border:1px solid ', BEE_HTML[["border"]], ';border-radius:7px}
 .row{padding:4px 7px;margin:1px 0;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row:hover{background:rgba(28,92,40,.08)}

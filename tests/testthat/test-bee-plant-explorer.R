@@ -56,3 +56,36 @@ test_that("evidence strength is reported per row", {
   expect_false(ix$by_bee[["Bombus vosnesenskii"]]$thin[1])   # 9 records
   expect_true(ix$by_bee[["Andrena baeriae"]]$thin[1])        # 1 record
 })
+
+# --- sidebar order -----------------------------------------------------------
+# The list was alphabetical, which buries the plants that actually carry the
+# data. Order by how many partner taxa each entry has, most first, so the
+# widely-visited plants and the generalist bees are at the top. Ties break
+# alphabetically so a rerun cannot reshuffle them.
+
+test_that("entries are ordered by how many partners they have, most first", {
+  ix <- bpe_index(data.frame(
+    bee   = c("A one", "A two", "A three", "B one", "C one"),
+    plant = c("Salvia", "Salvia", "Salvia",  "Rhus",  "Acmispon"),
+    n     = c(4L, 2L, 1L, 9L, 3L), stringsAsFactors = FALSE))
+  expect_equal(bpe_order(ix$by_plant), c("Salvia", "Acmispon", "Rhus"))
+})
+
+test_that("a tie falls back to alphabetical, so reruns are stable", {
+  ix <- bpe_index(data.frame(
+    bee   = c("A one", "B one"), plant = c("Zauschneria", "Acmispon"),
+    n     = c(1L, 1L), stringsAsFactors = FALSE))
+  expect_equal(bpe_order(ix$by_plant), c("Acmispon", "Zauschneria"))
+})
+
+test_that("it works in the bee direction too", {
+  ix <- bpe_index(data.frame(
+    bee   = c("Bee one", "Bee one", "Bee two"),
+    plant = c("Salvia", "Rhus", "Salvia"),
+    n     = c(1L, 1L, 5L), stringsAsFactors = FALSE))
+  expect_equal(bpe_order(ix$by_bee), c("Bee one", "Bee two"))
+})
+
+test_that("an empty index gives an empty order, not an error", {
+  expect_equal(bpe_order(list()), character(0))
+})

@@ -65,7 +65,7 @@ yr_span <- { pp <- rd(PATHS$participation)
              y <- y[!is.na(y)]
              if (length(y)) as.character(min(y)) else "" }
 
-# ---- identifiers (identifier_roster.csv -- may be empty for now) --------------
+# ---- identifiers (people_manual.csv, identifier = TRUE) ----------------------
 taxa_label <- function(x) { x <- tolower(trimws(x %||% "")); ifelse(is.na(x), "",
   ifelse(x == "bee", "bees", ifelse(x == "plant", "plants", ifelse(x == "both", "bees & plants", x)))) }
 `%||%` <- function(a, b) if (is.null(a)) b else a
@@ -158,7 +158,7 @@ if (nrow(ids)) {
   id_html <- paste0(id_html,
     '\n<p class="thanks">And to the rest of the iNaturalist community who have helped identify our bees, thank you.</p>')
 } else {
-  id_html <- '<p class="pending">The specialists who identified specimens and confirmed photo records are being compiled, and will be credited here. (Fill <code>data/project_info/rosters/identifier_roster.csv</code>.)</p>'
+  id_html <- '<p class="pending">The specialists who identified specimens and confirmed photo records are being compiled, and will be credited here. (Set <code>identifier</code> to TRUE in <code>data/project_info/rosters/people_manual.csv</code>.)</p>'
 }
 
 partners <- list(

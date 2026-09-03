@@ -12,6 +12,7 @@
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibble); library(tidyr)}))
 if (!exists("person_name")) source("scripts/utils/people.R")
 if (!exists("people_display")) source("scripts/utils/people_ids.R")
+`%||%` <- function(a, b) if (is.null(a)) b else a
 
 # ------------------------------------------------------------
 # master_per_survey_info_generated.csv  +  qc_review_survey_beeple_date_windows_generated.csv  (tag-first rewrite 2026-07-17)
@@ -60,6 +61,27 @@ fpi_norm_transect <- function(x) {
 # token that does not resolve to exactly one person that year is left exactly as
 # written -- a name a human can see and fix beats a name we guessed.
 # ------------------------------------------------------------
+# The beeple calendar names people by FIRST NAME only. Two surveyors are called
+# Julia (Keum, a 2024 intern; Showalter, a 2025-26 beeple) and the derived roster
+# spans every season, so a first name does not identify anyone on its own. Prefer
+# whoever actually tagged a survey that year; if that still leaves two, return NA.
+# A blank cell in the review file is a question for a human. A wrong handle is not.
+sd_calendar_uname <- function(year, first_name, roster, evidence = character(0)) {
+  # The calendar IS the beeple schedule, so only a beeple can be the answer. An
+  # intern was never on it, whatever their first name.
+  keep <- if ("role" %in% names(roster)) tolower(trimws(roster$role)) == "beeple" else TRUE
+  cand <- roster$uname[keep &
+                       as.integer(roster$year) == as.integer(year) &
+                       tolower(trimws(roster$first_name)) == tolower(trimws(first_name))]
+  cand <- unique(cand[!is.na(cand) & nzchar(cand)])
+  if (length(cand) == 1L) return(cand)
+  if (length(cand) > 1L) {
+    seen <- cand[tolower(cand) %in% tolower(evidence)]
+    if (length(seen) == 1L) return(seen)
+  }
+  NA_character_
+}
+
 sd_full_names <- function(x, year, roster) {
   if (!length(x)) return(x)
   yr <- rep_len(as.integer(year), length(x))
@@ -238,14 +260,18 @@ fpi_survey_dates <- function(membership, windows, roster,
     min(pmax(0L, as.integer(ws - all_survey_dates), as.integer(all_survey_dates - we)))
   }
   wrole <- roster |>
-    transmute(year = as.integer(year), first_name,
-              uname = ifelse(blank(inaturalist_username), NA_character_, trimws(inaturalist_username))) |>
-    distinct(year, first_name, .keep_all = TRUE)
+    transmute(year = as.integer(year), first_name, role,
+              uname = ifelse(blank(inaturalist_username), NA_character_, trimws(inaturalist_username)))
   w <- windows |>
     mutate(year = as.integer(year),
            window_start = as.Date(window_start), window_end = as.Date(window_end),
-           transect = fpi_norm_transect(transect)) |>
-    left_join(wrole, by = c("year", "first_name"))
+           transect = fpi_norm_transect(transect))
+  # who actually tagged a survey that year -- the tie-breaker for a shared first name
+  ev <- if (nrow(tagged_sd)) split(tagged_sd$inat_username, as.integer(tagged_sd$year)) else list()
+  w$uname <- if (!nrow(w)) character(0) else vapply(seq_len(nrow(w)), function(i)
+    sd_calendar_uname(w$year[i], w$first_name[i], wrole,
+                      evidence = unique(ev[[as.character(w$year[i])]] %||% character(0))),
+    character(1))
   w$nearest <- if (nrow(w)) vapply(seq_len(nrow(w)),
                                    function(i) nearest_gap(w$window_start[i], w$window_end[i]),
                                    integer(1)) else integer(0)

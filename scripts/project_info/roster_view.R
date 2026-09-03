@@ -20,6 +20,8 @@ if (!exists("person_id_keys")) source("scripts/utils/people_ids.R")
 
 roster_view <- function(people, intern_log, years) {
   sq <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
+  if (!is.null(people) && nrow(people) && !"surveyor_type" %in% names(people))
+    people$surveyor_type <- ""    # older people.csv: fall back to deriving from the log
   if (!nrow(people) || !length(years))
     return(data.frame(year = integer(0), first_name = character(0), last_name = character(0),
                       inaturalist_username = character(0), collector_code = character(0),
@@ -50,7 +52,13 @@ roster_view <- function(people, intern_log, years) {
     collector_code       = sq(sv$collector_code[g$i]),
     stringsAsFactors = FALSE)
   hit <- match(paste(sq(sv$person_id[g$i]), g$year), key)
-  out$role      <- ifelse(is.na(hit), "beeple", "intern")
+  # people_manual.csv DECLARES the kind of surveyor. Deriving it from the log alone
+  # made every unlogged year "beeple", so a 2024 intern read as a 2025 beeple and
+  # could be offered as the answer to a beeple calendar window. The log still wins
+  # for a year it names: if they netted that season, they were an intern that season.
+  declared <- if ("surveyor_type" %in% names(sv)) tolower(sq(sv$surveyor_type[g$i])) else ""
+  out$role      <- ifelse(!is.na(hit), "intern",
+                   ifelse(declared %in% c("beeple", "intern"), declared, "beeple"))
   out$method    <- ifelse(is.na(hit), "non-lethal", il$method[hit])
   out$technique <- ifelse(is.na(hit), "photo",      il$technique[hit])
   out$method    <- ifelse(nzchar(out$method),    out$method,    "non-lethal")
