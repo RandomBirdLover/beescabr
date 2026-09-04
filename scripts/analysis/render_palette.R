@@ -13,7 +13,11 @@ OUT <- "dev-docs"; dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 
 # ---- website design colors, parsed LIVE from their sources so the sheet never goes stale ----
 # landing page CSS variables live in publish_pages.R (:root light set first, dark set second)
-.pp <- readLines("scripts/website/publish_pages.R", warn = FALSE)
+# The landing CSS carries __W_BG__ tokens, not hex literals -- that is the rule in
+# CLAUDE.md, because a hex typed into a template is a color the theme cannot reach.
+# Resolve them first, or the regex below matches nothing and the sheet renders two
+# empty rows (which it silently did until tests/testthat/test-palette-sheet.R).
+.pp <- beescabr_fill_colors(readLines("scripts/website/publish_pages.R", warn = FALSE))
 .vars <- regmatches(.pp, gregexpr("--[a-z0-9-]+ *: *#[0-9a-fA-F]{3,8}", .pp))
 .vars <- unlist(.vars)
 .vn <- sub(" *:.*$", "", .vars); .vh <- sub("^.*: *", "", .vars)
@@ -23,11 +27,24 @@ LAND_DARK  <- setNames(.vh[!.first], sub("^--", "", .vn[!.first]))
 .hero <- regmatches(.pp, regexpr("hero \\{[^}]*background:#[0-9a-fA-F]{6}", .pp))
 HERO_BG <- if (length(.hero <- unlist(.hero))) sub("^.*background:", "", .hero[1]) else BEE_SITE[["head"]]
 
+# Palettes deliberately NOT drawn below, and why. Everything else in
+# theme_beescabr.R must appear on the sheet -- tests/testthat/test-palette-sheet.R
+# fails if a new palette is added and this file is not.
+PALETTE_NOT_CHARTED <- c(
+  BEE_COLOR_TOKENS = "the __C_NAME__ registry -- it is every color above, re-listed",
+  BEE_SEQ          = "an alias of BEE_TEAL, already drawn as TEAL (non-urgent)",
+  BEE_SITE_DARK    = "the same nine colors as LANDING dark, which is drawn below"
+)
+
 rows <- list(
   list("TRANSECT",       "4 transects (BST/UPMON/TP/OT) -- full",      unname(BEE_TRANSECT),     names(BEE_TRANSECT), TRUE),
   list("TRANSECT light", "raw / lower bar tint (e.g. observed)",       unname(BEE_TRANSECT_LT),  names(BEE_TRANSECT_LT), TRUE),
   list("METHOD",         "specimen (net) vs photo (iNat)",             unname(BEE_METHOD_COL),   c("lethal (net)","non-lethal (photo)"), TRUE),
   list("METHOD light",   "still-unresolved side of a method bar",      unname(BEE_METHOD_COL_LT),c("lethal","non-lethal"), TRUE),
+  list("OBSERVER",       "who surveyed -- beeple vs interns (method held constant)",
+       unname(BEE_OBSERVER_COL), unname(BEE_OBSERVER_LABEL), TRUE),
+  list("OBSERVER light", "lower / still-unresolved half of an observer bar",
+       unname(BEE_OBSERVER_COL_LT), names(BEE_OBSERVER_COL_LT), TRUE),
   list("TEAL (non-urgent)", "ONE ramp -> evidence + magnitude + neutrals all draw from this", BEE_TEAL, rep("",length(BEE_TEAL)), TRUE),
   list("RARE / URGENT",  "rare bees / act-here -- the red pop (crimson ramp)", BEE_RARE,          rep("",length(BEE_RARE)), TRUE),
   list("WEB nodes",      "plant vs bee (interaction webs)",            c(BEE_WEB[["plant"]], BEE_WEB[["bee"]]), c("plant","bee"), TRUE),
@@ -37,6 +54,43 @@ rows <- list(
   list("SEASON",         "blue Nov-Feb; green from end-Feb; orange summer; warm tan fall", BEE_SEASON,            rep("",length(BEE_SEASON)), FALSE),
   list("NPS footprint",  "CABR footprint figures -- own NPS theme",    unname(BEE_NPS),          names(BEE_NPS), TRUE),
   list("NPS magnitude",  "forest-green ramp (footprint lollipop)",     NPS_SEQ,                  rep("",length(NPS_SEQ)), TRUE),
+  list("EVIDENCE",       "ID confidence: deep voucher -> pale needs-ID (teal stops)",
+       unname(BEE_EVIDENCE),    names(BEE_EVIDENCE), TRUE),
+  list("SET overlap",    "venn / shared-vs-unique sets (NOT the method venn)",
+       unname(BEE_SET),         names(BEE_SET), TRUE),
+  list("ACCENTS",        "single reserved colors -- do not reuse for a series",
+       c(BEE_SELECT, BEE_FAVORITE, BEE_METHOD_BOTH, BEE_GENUS_GREY),
+       c("select","favorite","both methods","too few"), TRUE),
+  list("SLIDE",          "drawn bee + paper (rare_bee_plants slide figures)",
+       unname(BEE_SLIDE),       names(BEE_SLIDE), TRUE),
+  # ---- pills: a background paired with its text color, one row each ----
+  list("PREF pills",     "forage preference: selective / generalist / n-a",
+       unname(BEE_PREF),        names(BEE_PREF), TRUE),
+  list("DIET pills",     "diet breadth backgrounds (field guides)",
+       unname(BEE_DIET_BG),     names(BEE_DIET_BG), TRUE),
+  list("DIET text",      "pairs with the row above",
+       unname(BEE_DIET_FG),     names(BEE_DIET_FG), TRUE),
+  list("FORAGE pills",   "forage-preference pill backgrounds",
+       unname(BEE_FORAGE_BG),   names(BEE_FORAGE_BG), TRUE),
+  list("FORAGE text",    "pairs with the row above",
+       unname(BEE_FORAGE_FG),   names(BEE_FORAGE_FG), TRUE),
+  list("COVERAGE pills", "method coverage: both / photo-only / specimen-only",
+       unname(BEE_COVERAGE_BG), names(BEE_COVERAGE_BG), TRUE),
+  list("COVERAGE text",  "pairs with the row above",
+       unname(BEE_COVERAGE_FG), names(BEE_COVERAGE_FG), TRUE),
+  list("ABUNDANCE pills","abundance status: rare / uncommon / common",
+       unname(BEE_ABUND_BG),    names(BEE_ABUND_BG), TRUE),
+  list("ABUNDANCE text", "pairs with the row above",
+       unname(BEE_ABUND_FG),    names(BEE_ABUND_FG), TRUE),
+  list("BADGE",          "callout badge on a guide page",
+       unname(BEE_BADGE),       names(BEE_BADGE), TRUE),
+  # ---- maps + document-style page chrome ----
+  list("MAP surfaces",   "land, inset, boundary -- leaflet + static maps",
+       unname(BEE_MAP),         names(BEE_MAP), TRUE),
+  list("MAP controls",   "zoom / basemap / north / scale card chrome",
+       unname(BEE_MAP_CHROME),  names(BEE_MAP_CHROME), TRUE),
+  list("PANEL chrome",   "guides, explorers, summary tables",
+       unname(BEE_PANEL),       names(BEE_PANEL), TRUE),
   # ---- website design (the HTML pages + landing site) ----
   list("WEBSITE green",  "peridot accent from the hero bee photo",
        unname(BEE_HTML_GREEN),  names(BEE_HTML_GREEN), TRUE),

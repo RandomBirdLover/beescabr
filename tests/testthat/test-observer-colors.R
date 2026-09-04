@@ -35,3 +35,20 @@ test_that("observers have display labels a stranger can read", {
   expect_setequal(names(BEE_OBSERVER_LABEL), c("beeple", "intern"))
   expect_true(all(nzchar(BEE_OBSERVER_LABEL)))
 })
+
+# TRANSECT and METHOD each carry a _LT tint for the lighter half of a split bar
+# (the "still unresolved" side). Observer had no tint, so an observer bar that
+# needed one would have had a hex invented for it at the call site.
+test_that("the observer contrast has a light tint, built like the others", {
+  expect_true(exists("BEE_OBSERVER_COL_LT"))
+  expect_setequal(names(BEE_OBSERVER_COL_LT), names(BEE_OBSERVER_COL))
+  expect_true(all(grepl("^#[0-9A-Fa-f]{6}$", BEE_OBSERVER_COL_LT)))
+})
+
+test_that("each observer tint is the same hue as its full color, only lighter", {
+  full <- grDevices::rgb2hsv(grDevices::col2rgb(BEE_OBSERVER_COL))
+  lt   <- grDevices::rgb2hsv(grDevices::col2rgb(BEE_OBSERVER_COL_LT))
+  # same hue: a tint that shifts hue reads as a different series, not a lighter one
+  expect_lt(max(pmin(abs(full["h", ] - lt["h", ]), 1 - abs(full["h", ] - lt["h", ]))), 0.02)
+  expect_true(all(lt["v", ] > full["v", ] | lt["s", ] < full["s", ]))
+})

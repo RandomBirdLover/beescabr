@@ -85,6 +85,9 @@ BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research
 # periwinkle in BEE_METHOD_COL, so the two do not read as the same series.
 BEE_OBSERVER_COL   <- c(beeple = "#E5B80B", intern = "#6A3D9A")
 BEE_OBSERVER_LABEL <- c(beeple = "beeple (volunteers)", intern = "interns (NPS)")
+# lighter tints, same 0.38 blend-toward-white as TRANSECT and METHOD -- the lower or
+# still-unresolved half of a split observer bar. Computed, so it tracks the full colors.
+BEE_OBSERVER_COL_LT <- setNames(grDevices::rgb(t(255 - (255 - grDevices::col2rgb(BEE_OBSERVER_COL)) * 0.38), maxColorValue = 255), names(BEE_OBSERVER_COL))
 # Interns netting (2021-2023) vs interns photographing (2024) gets NO palette of its own:
 # it is lethal-vs-non-lethal with the observer held constant, so it reuses BEE_METHOD_COL.
 # The same question asked of a subset must not change colour, or the subset reads as a
