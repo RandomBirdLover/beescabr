@@ -3,6 +3,8 @@
 Everything else the pipeline writes. **If a name ends in `_generated`, never edit
 it** — the next run overwrites it, silently.
 
+Every path below is relative to `data/`.
+
 ## The rule
 
 ```
@@ -19,7 +21,7 @@ the script. Never in the output.
 |---|---|---|
 | `people_manual.csv` | `project_info/rosters/` | **Anyone new, before their first season** |
 | `master_intern_survey_log_manual.csv` | `project_info/surveys/survey_date_sources/` | Each intern survey trip |
-| `YYYY Cabrillo Bee Survey Calendar.pdf` | `.../beeple_calendar_windows/` | Each new season |
+| `YYYY Cabrillo Bee Survey Calendar.pdf` | `project_info/surveys/survey_date_sources/beeple_calendar_windows/` | Each new season |
 | `research_team_photos/` | `project_info/rosters/` | Team changes |
 
 **Two files, two jobs — keep them in sync:**
@@ -40,7 +42,21 @@ the script. Never in the output.
 > name and iNat folks by handle. One person recurred across trips and could not be
 > deduped, so the totals inflated. People come from the roster. Always.
 
-## 2. Specimens
+## 2. The crosswalk
+
+| File | Where | When it changes |
+|---|---|---|
+| `master_crosswalk_manual.csv` | `project_info/crosswalk/` | When the pipeline meets a tag or field it does not know |
+
+**This one file decides how every tag and observation field is handled**, for bees
+and plants both. 63 rows today. You rarely edit it by hand: the cleaning run stops,
+shows you what it did not recognise, and writes your answers into it.
+
+What a row can say: keep the field (`obs_field`), keep the observation but skip this
+field (`ignore`), or drop the observation entirely (`exclude`). The column and type
+reference is in `PIPELINE_GUIDE.md` Part 2.
+
+## 3. Specimens
 
 | File | Where |
 |---|---|
@@ -48,25 +64,30 @@ the script. Never in the output.
 
 Newest version wins. **Save a new version; never edit an old one.**
 
-## 3. Spatial
+## 4. Spatial
 
 | File | Where |
 |---|---|
 | `cabr_bee_transects.shp` + sidecars | `spatial/shapefiles/transects/` |
 | `cabr_survey_access_routes.shp` | `spatial/shapefiles/access_routes_to_transects/` |
 | `transect_years_manual.csv` | `spatial/shapefiles/transects/` |
+| `transects_manual.csv` | `project_info/surveys/` |
 
 A shapefile is a *set* of files sharing a name. Keep them together.
 
-## 4. External reference
+`transects_manual.csv` is the list of transect codes (BST, UPMON, TP, OT) and
+`transect_years_manual.csv` says which years each was walked. A transect with a
+blank last year is still in use.
+
+## 5. External reference
 
 | File | Where |
 |---|---|
 | `San Diego County Bee Species Checklist, v3.xlsx` | `reference/source/holway_2026/` |
 
-## 5. Curated corrections
+## 6. Curated corrections
 
-All in `data/reference/hand_curated/`. These are where you fix a taxon the
+All in `reference/hand_curated/`. These are where you fix a taxon the
 pipeline keeps getting wrong.
 
 | File | Fixes |

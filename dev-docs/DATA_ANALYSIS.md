@@ -6,29 +6,59 @@ Every analysis, what it produces, and where it lands.
 
 ```mermaid
 flowchart TD
-  CLEAN[(cleaned tables<br/>iNat bees · specimens · plants · per-survey)] --> COV
-  CLEAN --> RICH
-  CLEAN --> INT
-  CLEAN --> PHEN
-  CLEAN --> METH
-  CLEAN --> REF
+  IN[(cleaned tables<br/>iNat bees · specimens · plants · per-survey)]
 
-  COV[coverage/<br/>what have we missed?]
-  RICH[richness/<br/>how many are there?]
-  INT[interactions/<br/>who visits what?]
-  PHEN[phenology/<br/>when?]
-  METH[method_comparison/<br/>who caught more, and how?<br/>nets vs photos · beeple vs interns]
-  REF[reference/<br/>guides + maps for people]
+  IN --> COV & RICH & INT & PHEN & METH & REF
 
-  COV --> OUT
-  RICH --> OUT
-  INT --> OUT
-  PHEN --> OUT
-  METH --> OUT
-  REF --> OUT
-  OUT[data/analysis/2026_generated/] --> IDX[findings_index.csv<br/>one row per analysis]
-  REF --> WEB[docs/<br/>the public site]
+  subgraph COV[coverage/ — what have we missed?]
+    direction LR
+    C1[checklist_gaps<br/>not on Holway] ~~~ C2[off_transect<br/>park vs transects]
+    C3[id_resolution<br/>what needs an ID] ~~~ C4[least_sampled<br/>go-find-it sheet]
+    C5[bee_bounties<br/>which method next] ~~~ C6[records_by_evidence<br/>what backs each taxon]
+    C7[transect_effort<br/>effort per transect] ~~~ C8[footprint<br/>share of the county]
+  end
+
+  subgraph RICH[richness/ — how many are there?]
+    direction LR
+    R1[accumulation<br/>found them all? Chao2] ~~~ R2[diversity<br/>Shannon · Simpson · NMDS]
+    R3[rarefaction<br/>equal effort — by method AND observer]
+  end
+
+  subgraph INT[interactions/ — who visits what?]
+    direction LR
+    I1[networks<br/>the web · H2′ · NODF] ~~~ I2[top_plants<br/>most-visited plants]
+  end
+
+  subgraph PHEN[phenology/ — when? · no subfolders, files sit here]
+    direction LR
+    P1[bee activity by month<br/>+ Rayleigh test] ~~~ P2[plant bloom timing]
+    P3[survey effort by month] ~~~ P4[most-observed bee,<br/>year to year]
+  end
+
+  subgraph METH[method_comparison/ — nets vs photos]
+    direction LR
+    M1[yield<br/>by method AND contributor] ~~~ M2[effort<br/>trips per method]
+    M3[efficiency<br/>rarefied to equal effort]
+  end
+
+  subgraph REF[reference/ — for people, not papers]
+    direction LR
+    F1[field_guide] ~~~ F2[nps_summary] ~~~ F3[conservation<br/>IUCN]
+    F4[occurrence_map] ~~~ F5[bee_plant] ~~~ F6[transects]
+  end
+
+  COV & RICH & INT & PHEN & METH --> IDX[findings_index.csv<br/>one row per analysis:<br/>type · key finding · file]
+  REF --> IDX
+  REF --> WEB[docs/ — the public site]
 ```
+
+Two things the picture cannot show:
+
+- **`richness/rarefaction/` holds the observer comparison**, not `method_comparison/`.
+  It is filed by what the analysis *is*, not by what it compares.
+- **A `fair_*` subfolder means the output is restricted to one window.** Anything
+  outside one is all-records.
+
 
 ## Where to find a figure or a table
 
