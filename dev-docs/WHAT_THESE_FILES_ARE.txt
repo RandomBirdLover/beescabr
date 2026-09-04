@@ -1,0 +1,80 @@
+WHAT THIS FOLDER IS
+===================
+
+Notes for whoever maintains the pipeline. Not for the public, and not for
+readers of the results -- these explain how the machinery works and why it was
+built the way it is.
+
+The results themselves are elsewhere: data/analysis/ for the figures and tables,
+docs/ for the public website. Each of those folders has its own note.
+
+
+START HERE
+==========
+
+  HANDOFF_CHECKLIST.md What to hand over, and what the next person needs on
+                       day one.
+
+If you are running the program and nothing has gone wrong, you do not need this
+folder at all -- the README covers a whole season, start to finish.
+
+
+WHAT YOU MAINTAIN
+=================
+
+  MANUAL_INPUTS.md     Every file a person hand-edits, and what it is for. The
+                       counterpart to everything named _generated, which the
+                       pipeline rewrites and you never touch.
+
+  DATA_ACCESS.md       What is in this repository, what is kept out of it, and
+                       how to get the data that is kept out.
+
+  VERIFICATION.md      The pipeline stops and asks you to confirm a bee it has
+                       not seen before. This is how to answer, and how the
+                       system works underneath.
+
+  SPECIMEN_CHANGELOG.md  Version history of the specimen spreadsheet, and how to
+                       bump it when you add specimens.
+
+
+HOW THE CODE IS PUT TOGETHER
+============================
+
+  PIPELINE_GUIDE.md    The architecture: the API, the DuckDB cache, and the
+                       order the stages run in.
+
+  SCRIPTS_GUIDE.md     The scripts/ layout, and which script writes which file.
+
+  TESTS_GUIDE.md       What the test suite covers and how to run it.
+
+  WEBSITE_GUIDE.md     How a page reaches the public site, the page layout
+                       standard, and how to publish from your own account.
+
+  ARCGIS_SPATIAL_MAPPING.md  Where each spatial layer came from and how it was
+                       prepared.
+
+
+THE SCIENCE BEHIND THE NUMBERS
+==============================
+
+  ANALYSIS_DECISIONS.md  For each figure and test: its scope, the ranks it runs
+                       at, the parameters, the statistical test, and the
+                       reasoning. This is the methods reference for a paper.
+
+  LIMITATIONS.md       Everything the pipeline knowingly trades away. Read it
+                       before quoting a number in something permanent.
+
+  ANALYSIS_ROADMAP.md  The stakeholders' questions, triaged into a plan. Mostly
+                       built; kept for the reasoning behind what was and was not
+                       attempted.
+
+
+OPEN WORK
+=========
+
+  TODO.md              What is left, by area.
+
+
+BEE_THEMES_PALLETE.png is generated, not written: it is a reference sheet of the
+live colour tokens, redrawn by scripts/analysis/render_palette.R whenever the
+theme changes. Do not edit it -- edit the theme.

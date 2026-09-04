@@ -190,15 +190,15 @@ the docs describe the layout and should be written once it has stopped moving.
 
 **Docs** (do these LAST, once the layout has settled)
 
-- [ ] **`PEOPLE_ROSTER_BRIEF.md` is stale.** It is a design brief for the people
+- [x] **`PEOPLE_ROSTER_BRIEF.md` deleted (2026-09-04).** It is a design brief for the people
   redesign that has since been BUILT, and its six "open decisions" are all settled.
   As written it reads like a live proposal. Either close it out with what was chosen
   and why, or delete it and let the explainers carry the reasoning.
 
-- [ ] **Merge `VERIFICATION_DESIGN.md` + `verification_guide.md`.** Two files on
+- [x] **Merged into `VERIFICATION.md` (2026-09-04).** Two files on
   one subject.
 
-- [ ] **Merge `analysis_decisions.md` + `analysis_roadmap.md`.** Same.
+- [ ] **Merge `ANALYSIS_DECISIONS.md` + `ANALYSIS_ROADMAP.md`.** Same.
 
 - [ ] **Cut `PIPELINE_GUIDE.md` back to architecture.** It has accumulated
   task-level detail that now lives in the runbook and the per-folder explainers.

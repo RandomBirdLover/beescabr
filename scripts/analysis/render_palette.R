@@ -4,7 +4,7 @@
 # truth: scripts/analysis/shared/theme_beescabr.R). Regenerated with the rest of the
 # analysis figures; re-run alone after any token change:
 #   source("scripts/analysis/render_palette.R")
-# Output: dev-docs/bee_themes_pallete.png -- it lives with the docs, not under data/,
+# Output: dev-docs/BEE_THEMES_PALLETE.png -- it lives with the docs, not under data/,
 # because data/ is gitignored and the palette swatch is reference material a developer
 # (or Taro) needs to be able to see in the repo.
 # =============================================================
@@ -55,7 +55,7 @@ rows <- list(
 )
 
 n <- length(rows)
-bee_png(file.path(OUT, "bee_themes_pallete.png"), width = 2200, height = 160 * n + 220, res = 200)
+bee_png(file.path(OUT, "BEE_THEMES_PALLETE.png"), width = 2200, height = 160 * n + 220, res = 200)
 par(mar = c(0.5, 0.5, 0.5, 0.5), family = "sans"); plot.new(); plot.window(c(0, 100), c(0, 100))
 text(2, 98.5, "beescabr palette -- current theme tokens", adj = c(0, 1), font = 2, cex = 1.5, col = BEE_INK$primary)
 text(2, 95.2, "single source of truth: scripts/analysis/shared/theme_beescabr.R", adj = c(0, 1), cex = 0.62, col = BEE_INK$muted)
@@ -76,4 +76,4 @@ for (i in seq_len(n)) {
     if (nzchar(g[[4]][j])) text((2*xl + bw)/2, yb - rowh*0.12, g[[4]][j], cex = 0.52, col = BEE_INK$secondary, adj = c(0.5, 1))
   }
 }
-dev.off(); cat("wrote", file.path(OUT, "bee_themes_pallete.png"), "\n")
+dev.off(); cat("wrote", file.path(OUT, "BEE_THEMES_PALLETE.png"), "\n")

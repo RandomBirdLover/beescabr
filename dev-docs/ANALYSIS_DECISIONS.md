@@ -5,8 +5,8 @@ The **why** behind every native-bee analysis: for each graph/test we record its
 parameters** (and their values), the **statistical test + null model**, and the
 reasoning for each choice. This is the methods reference for the papers.
 
-Companions: `ANALYSIS_CATALOG.md` (the output catalog) and
-`analysis_roadmap.md` (the stakeholder-question triage), both in this folder. When a parameter
+Companions: the generated `findings_index.csv` (the output catalog) and
+`ANALYSIS_ROADMAP.md` (the stakeholder-question triage), both in this folder. When a parameter
 changes in a script, update it here too.
 
 ---

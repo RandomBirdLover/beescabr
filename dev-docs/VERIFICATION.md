@@ -1,4 +1,13 @@
-# Pass‑2 Verification — how to check a flagged bee on iNaturalist
+# Verification
+
+Two things, in one place: **what to do** when the pipeline asks you to verify a bee,
+and **how the verification system works** underneath.
+
+If you are sitting at the prompt right now, read Part 1 and stop there.
+
+---
+
+## Part 1 — At the prompt: how to check a flagged bee
 
 **When:** the pipeline's pass‑2 prompt shows a taxon that is *new to the Holway San Diego
 baseline* and asks:
@@ -74,3 +83,72 @@ radius around it.
 *This is pass 2 of two. Pass 1 (the taxon_id prompt) answers "which iNaturalist species is
 this?"; pass 2 (here) answers "is that ID actually right for San Diego?" Your `y` / `r` /
 skip calls are what curate the confirmed San Diego bee checklist.*
+
+---
+
+## Part 2 — How it works
+
+Plain-English notes on the verification workflow and the taxonomy tables it
+uses. (Added 2026-07.)
+
+## What "verification" means here
+
+When a bee turns up on iNaturalist whose **genus, subgenus, complex, species,
+or subspecies is not in the Holway reference**, it's something we haven't seen
+before, and a human needs to check that the iNaturalist photo/ID is actually
+correct. Holway is the trusted baseline; anything beyond it is flagged until
+you verify it. Verification is **manual** — the pipeline just surfaces what
+needs a look and remembers what you've cleared.
+
+## Renamed files
+
+- `bee_taxonomy_lookup.csv` → **`sd_bee_taxonomy_lookup_generated.csv`** (Holway + iNat)
+- `holway_reference_checklist.csv` → **`holway_sd_bee_reference_table.csv`**
+  (Holway only, from the occasional interactive builder)
+
+## `sd_bee_taxonomy_lookup_generated.csv`
+
+- Now includes **iNat-observed species**, not just Holway's list.
+- Keeps Holway's **Tentative** and **Unpublished** rows; the `holway_status`
+  column shows `Described` / `Tentative` / `Unpublished` (blank = not from
+  Holway, i.e. an iNat-only name).
+- `verified` column: TRUE if the taxon is in Holway **or** you've verified it.
+- **Source-membership columns** (yes/no): `in_holway`, `in_inat`,
+  `in_cabr_specimens`. `in_cabr_specimens` is all FALSE until
+  `specimen_bee_clean.R` has produced the cleaned specimen file.
+- Column order: `taxon_id, scientific_name, rank, verified, holway_status,
+  in_holway, in_inat, in_cabr_specimens`, then the taxonomic hierarchy kingdom
+  → phylum → class → order → superfamily → family → subfamily → tribe →
+  subtribe → genus → subgenus → complex → species → subspecies, then
+  `complex_taxon_id, common_name`.
+- **To find iNat-only species:** filter `in_inat == TRUE & in_holway == FALSE`.
+
+## Flagging in `inat_bee_clean.R`
+
+- `needs_verification` = TRUE when any of genus/subgenus/complex/species/
+  subspecies is new to Holway and not yet verified.
+- `new_at_rank` = which level(s) are new (e.g. "genus,species").
+- `cabr_inat_to_verify.csv` (in `data/inat_observations/inat_clean/qc/`) = just the
+  flagged observations — your worklist.
+
+## Recording your checks
+
+`data/reference/hand_curated/verified_taxa.csv` — a simple list you maintain.
+Columns: `taxon_id, verified`. Once you've confirmed a bee's photo/ID, add its
+`taxon_id` (verified = `Y`). It stops being flagged on the next run.
+
+## "Updated since last time" refresh
+
+The ingest now also re-pulls observations that were **re-identified or edited
+on iNaturalist since the last run** (not just brand-new ones), so a scientist
+fixing an ID flows back into your data. The cutoff time is stored in
+`data/inat_observations/cache/last_ingest.txt`. To re-pull everything from scratch:
+`BEESCABR_FULL_INGEST=1`.
+
+## Run order (RStudio)
+
+1. `run_data_cleaning_pipeline.R` — ingest + checklists; builds `sd_bee_taxonomy_lookup_generated.csv`
+   and refreshes the cache.
+2. The clean step → `cabr_inat_bee_clean_generated.csv` + `cabr_inat_to_verify.csv`.
+3. Check the photos in the to-verify list; add confirmed `taxon_id`s to
+   `verified_taxa.csv`; re-run — they drop off the flag list.

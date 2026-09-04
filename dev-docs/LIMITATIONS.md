@@ -3,8 +3,8 @@
 Everything this pipeline knowingly trades away, in one place: pipeline/design
 assumptions, methodological trade-offs we accepted on purpose, and data problems
 split by whether a script can fix them. Merged 2026-08-24 from three files that
-covered the same ground (README "Known limitations", PITFALLS.txt,
-data_issues_notes.md).
+covered the same ground (README "Known limitations", PITFALLS.txt and
+data_issues_notes.md, all three now deleted).
 
 ---
 

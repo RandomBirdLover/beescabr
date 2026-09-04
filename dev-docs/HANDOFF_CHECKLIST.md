@@ -10,7 +10,7 @@ Started 2026-08-25.
 ## Blocked on you (I cannot do these)
 
 - [ ] **Do NOT transfer `data/secrets/`.** It holds YOUR iNaturalist app credentials and
-      YOUR IUCN key. The new operator creates their own (see SEASON_RUNBOOK section 1b);
+      YOUR IUCN key. The new operator creates their own (see README, "Your own API credentials");
       the pipeline asks for them on first run. Delete the folder from any copy you hand over.
 - [ ] **Decide what happens to the `beescabr` OAuth app** owned by @randombirdlover. Taro
       should create his own on the park account (`officialbeescabr`). Yours can then be
@@ -34,7 +34,7 @@ Started 2026-08-25.
 - [ ] **Rewrite `PIPELINE_GUIDE.md`.** It is numbered 1-10, but sections 6-10 came
       over from the README and it has never had a proper pass. Should read as one
       document written for a new maintainer.
-- [ ] **Merge `VERIFICATION_DESIGN.md` + `verification_guide.md`** into one
+- [x] **Merged into `VERIFICATION.md` (2026-09-04)** into one
       `VERIFICATION.md`. Two files, one topic: the design is the *what*, the guide
       is the *how*.
 - [ ] **A season runbook** — what to run, in what order, at what point in the year,
