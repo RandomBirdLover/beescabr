@@ -8,11 +8,30 @@ Browse the public field guides, checklists, and interactive maps online — no c
 
 **https://randombirdlover.github.io/beescabr/**
 
+Includes the bee field guides (species + genus), park summary tables, least-sampled bees, the survey-transect and bee-bounty maps, and an interactive **Bee Occurrence Explorer** (filter every record by genus, species, transect, and method).
+
 *That is the upstream site. A fork publishes its own, at
 `https://<owner>.github.io/beescabr` — the publish pipeline prints yours on the
 first build.*
 
-Includes the bee field guides (species + genus), park summary tables, least-sampled bees, the survey-transect and bee-bounty maps, and an interactive **Bee Occurrence Explorer** (filter every record by genus, species, transect, and method).
+**Working in a fork?** A fork does not update itself — it shows whatever it showed
+the day it was forked until you pull. The whole sequence:
+
+```
+1. Sync fork              GitHub: fork's page -> Sync fork -> Update branch
+                          or in R:  system("git pull upstream main")
+2. Open beescabr.Rproj
+3. source("scripts/run_data_cleaning_pipeline.R")
+4. source("scripts/run_all_analysis_pipeline.R")
+5. source("scripts/run_publishing_materials_pipeline.R")
+6. commit and push docs/
+```
+
+Sync **first**. Steps 3-5 rebuild `docs/` from whatever code is checked out, so
+syncing afterwards leaves new code sitting under pages built from the old. Step 6 is
+what makes it public — building is not publishing.
+
+*(`upstream` is set once: `git remote add upstream <upstream url>`.)*
 
 The site is built by stage 3 of the pipeline, below. `docs/` is committed to git,
 and GitHub Pages redeploys on every push.
@@ -78,7 +97,7 @@ beescabr/
     checklists/                         # tiered species checklists (CABR / Point Loma / SD County)
     reference/                          # taxonomy + plant lookups, id resolution, verification prompts
     analysis/                           # every figure and table (theme_beescabr.R holds ALL colours)
-    publish/                            # builds docs/ for GitHub Pages
+    website/                            # builds and publishes the public pages into docs/
     spatial/                            # boundary + transect geometry helpers
     utils/                              # run-mode menu, refresh checks, per-script warning capture
   tests/testthat/                       # unit tests; never touch the real data or the network

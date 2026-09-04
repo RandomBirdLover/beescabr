@@ -95,11 +95,10 @@ Your site then appears at `https://<you>.github.io/beescabr`.
 Forking gives the fork its own `docs/` and its own Pages URL. Both sites stay live
 and neither updates the other — they are separate publications of the same code.
 
-**A fork does not sync itself.** It is a copy taken the moment it was forked.
-Pushing to the upstream repo changes nothing in the fork until somebody presses
-**Sync fork** on GitHub, or runs `git pull upstream main`. So if the fork's site is
-the official link, it shows whatever it showed on the day of the fork until someone
-syncs it — while the upstream keeps quietly rebuilding pages nobody sees.
+**A fork does not sync itself.** It is a copy taken the moment it was forked, so if
+the fork's site is the official link it shows whatever it showed on the day of the
+fork until someone pulls — while the upstream quietly rebuilds pages nobody sees.
+The sequence for a fork is in the README.
 
 | | |
 |---|---|
@@ -121,6 +120,9 @@ one, the person maintaining the code should be a collaborator *on that repo* and
 there directly — one `docs/`, one site, nothing to sync and nothing to drift. A second
 repo only earns its keep when two people genuinely need to publish two different
 things.
+
+**If you keep two, the fork must sync from upstream before it publishes.** The
+sequence is in the README.
 
 ```r
 source("scripts/run_publishing_materials_pipeline.R")   # build only
