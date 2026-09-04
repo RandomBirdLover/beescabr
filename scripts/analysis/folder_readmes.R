@@ -196,7 +196,8 @@ FOLDER_NOTES <- list(
     "Genus and species versions of the same thing sit side by side."),
   "reference/nps_summary" = paste(
     "The tables NPS asked for, formatted for the report rather than for analysis:",
-    "checklists at each rank, headline counts, methods, and who took part."),
+    "checklists at each rank, headline counts, methods, who took part, and the",
+    "bee-by-plant matrix of which bee was recorded on which plant."),
   "reference/conservation" = paste(
     "The IUCN-listed bees and the plants that carry them. The rare_flower_ figures",
     "are one per rare bee, each showing the plants it was recorded on."),

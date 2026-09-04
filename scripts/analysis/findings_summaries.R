@@ -135,19 +135,43 @@ fw("genera_and_species_accumulation",
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
    "richness/accumulation/: transect_accumulation_summary.csv; REPORT bee_taxa_accumulation_by_transect_{species,genus}.png (transect completeness); JOURNAL accumulation_by_effort_journal_{species,genus}.png (lethal vs non-lethal, fair window)")
 
+# The rarefaction headline, built from the rarefied numbers themselves so the
+# sentence in findings_index.csv can never disagree with the figure it describes.
+if (!exists("rare_window_dir")) source("scripts/analysis/rarefaction_names.R")
+if (!exists("BEE_METHOD_LABEL")) source("scripts/analysis/theme_beescabr.R")   # method keys -> reader spelling
+.rare_headline <- function(dimdir) {
+  f <- file.path(DIR_REPORT, "richness/rarefaction", rare_window_dir(dimdir),
+                 rare_out_name(dimdir, kind = "rarefied"))
+  d <- .rd(f); if (is.null(d) || !nrow(d)) return("")
+  say <- function(rk, word) {
+    v <- d[d$rank == rk, , drop = FALSE]; if (nrow(v) < 2) return(NULL)
+    v <- v[order(-v$rarefied_richness), ]
+    # "nonlethal" is a data key; BEE_METHOD_LABEL spells it for a reader. Guarded
+    # because this script does not otherwise need the theme loaded.
+    lab <- v$group[1]
+    if (exists("BEE_METHOD_LABEL") && !is.na(BEE_METHOD_LABEL[lab]))
+      lab <- unname(BEE_METHOD_LABEL[lab])
+    sprintf("%s finds more %s (%.1f vs %.1f)", lab, word,
+            v$rarefied_richness[1], v$rarefied_richness[2])
+  }
+  parts <- Filter(Negate(is.null), list(say("species", "species"), say("genus", "genera")))
+  if (!length(parts)) "" else paste0(paste(unlist(parts), collapse = "; "), ".")
+}
+
 fw("richness_at_equal_effort",
    "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
    "estimator",
-   "iNEXT is an R package that answers: at EQUAL sampling effort, do lethal or non-lethal surveys find more kinds of bee (fair_method_2021_2023), and do beeple or interns (fair_observer_2024)? Raw counts cannot answer it because the groups were not sampled equally. iNEXT levels them by coverage (how completely each group was sampled) and reports three views: q0 = how many kinds, q1 = weighted toward common kinds, q2 = weighted hard toward the most common.",
-   c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
+   sprintf("At equal effort, 2021-2023: %s In 2024 with method held constant: %s Read together, the method gap is the netting rather than the people.",
+           .rare_headline("by_method"), .rare_headline("by_observer")),
+   c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation, Hill numbers q0/q1/q2 (journal only; the report uses the vegan curves/bars). iNEXT levels groups by COVERAGE -- how completely each was sampled -- so groups with unequal effort can be compared; q0 = how many kinds, q1 = weighted toward common kinds, q2 = weighted hard toward the most common",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate. CONFOUND in fair_method_2021_2023: in Mar-Oct 2021-2023 only interns netted and only beeple photographed, so lethal-vs-non-lethal is also beeple-vs-interns on the same records, and a difference there cannot be attributed to the method rather than to who was surveying. fair_observer_2024 is the control: May-Sep 2024, both groups photographing, so method is held constant and the observer effect is measured cleanly. Read the two together, never either alone."),
    "richness/rarefaction/fair_method_2021_2023/bee_richness_lethal_vs_nonlethal_both_ranks_rarefaction.png and richness/rarefaction/fair_observer_2024/bee_richness_beeple_vs_interns_both_ranks_rarefaction.png -- ONE figure per comparison, both ranks and all three Hill orders on it, iNEXT curves with vegan points as the cross-check (+ the matching .csv, which also keeps the coverage-standardised curves the figure omits). The _effort_standardized_estimates.csv beside each holds both ranks and all three standardizations (asymptotic / equal_size / equal_coverage) in one table, keyed by a `basis` column")
 
 fw("richness_rarefied_to_smallest_group",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
    "estimator",
-   "vegan is an R package doing the older, simpler version of the same levelling: cut every group down to the smallest group's record count and see what is left. It is the report's rarefaction figures, and in the journal it is the cross-check on iNEXT. The two agreeing is what makes the result trustworthy.",
-   c("analysis" = "vegan rarefaction to the lowest group's record total",
+   "The report's rarefaction figures, plus the cross-check on iNEXT in the journal: vegan's rarefied numbers sit on the iNEXT curves, and the two agreeing is what makes the comparison trustworthy.",
+   c("analysis" = "vegan rarefaction to the lowest group's record total -- the older, simpler levelling: cut every group down to the smallest group's record count and count what is left",
      assumption = "assumes even sampling within a group"),
    "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves; its rarefied numbers are in each window folder's _rarefied_to_smallest_group.csv, both ranks in one table")
 
@@ -170,7 +194,7 @@ fw("phenology_activity",
 # ============================ DESCRIPTIVE ====================================
 fw("interactions_network",
    "Plant-bee visitation network (webs + heatmaps)",
-   "descriptive",
+   "inferential",
    "Who visits what: full plant-genus x bee network as webs + heatmaps (raw co-occurrence; read descriptively).",
    c("analysis" = "NODF nestedness of the plant x bee matrix tested against a quasiswap null (vegan::oecosimu); the webs and heatmaps themselves are descriptive",
      note = "raw visitation counts -- NOT preference (see forage_selectivity for the inferential preference test)",
@@ -225,9 +249,10 @@ fw("coverage_cabr_vs_holway",
 
 fw("yield_by_method",
    "Yield by method (lethal vs non-lethal Venn)",
-   "descriptive",
+   "inferential",
    "How the lethal and non-lethal methods overlap in the taxa they detect -- each method's unique + shared species and genera (the yield tier of the effort/yield/efficiency comparison).",
-   c(note   = "shows each method's unique + shared taxa contribution",
+   c("analysis" = "Pearson chi-square test of independence on the 2x2 of survey method x taxonomic resolution (species-level vs coarser); stats::chisq.test, written to coverage_method_resolution_chisq_report.txt. The Venn itself is descriptive",
+     note   = "shows each method's unique + shared taxa contribution",
      scope  = "ALL records (survey filter off), since 'what each method detects' wants every record",
      tier   = "YIELD -- see method_comparison/effort for sampling work and method_comparison/efficiency for richness at equal effort"),
    "method_comparison/yield/yield_by_method_report.png; bee_yield_by_contributor_and_method.png; coverage_method_resolution_report.csv; yield_by_method_taxa_report.csv")
