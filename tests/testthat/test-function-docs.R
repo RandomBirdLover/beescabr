@@ -37,3 +37,35 @@ test_that("FUNCTIONS.md is what the generator produces from the source", {
                functions_md(file.path(.root, "scripts")),
                info = "stale -- regenerate with scripts/utils/function_docs.R")
 })
+
+# Two things the generated table got wrong, both visible only once it was rendered.
+#
+# 1. A roxygen TITLE is its first paragraph. The extractor joined every line before
+#    the first @tag and cut at the first sentence end -- but a title carries no
+#    trailing period, so the cut fired inside the paragraph BELOW it and the two ran
+#    together: "The warnings each script raised, named and quoted The tally names..."
+# 2. Plain comments are written "fn_name(): what it does", which is right in the
+#    source and redundant in a table whose first column is already the name.
+test_that("a roxygen title stops at the blank line under it", {
+  f <- tempfile(fileext = ".R"); on.exit(unlink(f), add = TRUE)
+  writeLines(c("#' The title line",
+               "#'",
+               "#' A second paragraph that must not be glued on.",
+               "#'",
+               "#' @param x anything",
+               "f <- function(x) x"), f)
+  d <- .read_def(f, 6L)
+  expect_equal(d$title, "The title line")
+})
+
+test_that("a plain comment does not repeat the function's own name", {
+  f <- tempfile(fileext = ".R"); on.exit(unlink(f), add = TRUE)
+  writeLines(c("# my_fn(): the closing line of the run", "my_fn <- function(x) x"), f)
+  expect_equal(.read_def(f, 2L)$title, "the closing line of the run")
+})
+
+test_that("no rendered description repeats its own function name", {
+  api <- r_api_functions(file.path(.root, "scripts"))
+  bad <- api$name[mapply(function(n, t) startsWith(t, paste0(n, "(")), api$name, api$title)]
+  expect_equal(sort(bad), character(0))
+})

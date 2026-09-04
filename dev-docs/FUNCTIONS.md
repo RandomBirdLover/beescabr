@@ -37,7 +37,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `beescabr_require` | `pkgs`, `have_fn`, `stop_fn` | beescabr_require(): the per-script dependency guard |
+| `beescabr_require` | `pkgs`, `have_fn`, `stop_fn` | the per-script dependency guard |
 | `check_paths` | `paths`, `kinds`, `stage` | Report every PATHS entry whose file is missing when the contract says it should be there |
 
 
@@ -72,7 +72,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `write_folder_readmes` | `root` | Write a WHAT_THESE_FILES_ARE.txt into every folder that has a note Only folders named in `FOLDER_NOTES` get... |
+| `write_folder_readmes` | `root` | Write a WHAT_THESE_FILES_ARE.txt into every folder that has a note |
 
 **forage_selectivity.R**
 
@@ -82,7 +82,7 @@ roxygen block above the function and regenerate.*
 | `forage_preference_label_species` | `species`, `plant_fmt`, `min_rec` | One-line forage-preference verdict for a SPECIES (Genus epithet), for the species field guide |
 | `selective_genera` | `min_rec` | Genera that use plants more selectively than availability predicts |
 | `selectivity_table` | `min_rec` | SEASON + YEAR + METHOD-AWARE selectivity |
-| `selectivity_table_species` | `min_rec` | Per-species version of the forage-selectivity table Memoised: the table is expensive and the species field ... |
+| `selectivity_table_species` | `min_rec` | Per-species version of the forage-selectivity table |
 
 **inat_taxon_links.R**
 
@@ -101,10 +101,10 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `format_new_bees` | `noh`, `mode` | format_new_bees(): the grouped, numbered "N new bees not in Holway's Checklist" text block |
-| `holway_id_set` | `holway_path` | holway_id_set(): taxon_ids present in Holway's reference (as character) |
-| `holway_name_set` | `holway_path` | holway_name_set(): lower-case binomials Holway lists, from BOTH its scientific_name and its complex column ... |
-| `not_on_holway_bees` | `checklist_path`, `spec`, `inat`, `holway_path` | not_on_holway_bees(): one row per CABR-checklist taxon with holway == FALSE, annotated with CURRENT specime... |
+| `format_new_bees` | `noh`, `mode` | the grouped, numbered "N new bees not in Holway's Checklist" text block |
+| `holway_id_set` | `holway_path` | taxon_ids present in Holway's reference (as character) |
+| `holway_name_set` | `holway_path` | lower-case binomials Holway lists, from BOTH its scientific_name and its complex column -- a complex counts... |
+| `not_on_holway_bees` | `checklist_path`, `spec`, `inat`, `holway_path` | one row per CABR-checklist taxon with holway == FALSE, annotated with CURRENT specimen/iNat record counts (... |
 
 **plant_names.R**
 
@@ -119,7 +119,7 @@ roxygen block above the function and regenerate.*
 | Function | Arguments | What it does |
 |---|---|---|
 | `rare_out_name` | `dim`, `rank`, `kind` | kind: "figure" / "table" -> one per rank, sharing a stem so they sort together |
-| `rare_takeaway` | `veg`, `dim` | The subtitle sentence for a rarefaction figure Computed from the numbers actually plotted, so the sentence ... |
+| `rare_takeaway` | `veg`, `dim` | The subtitle sentence for a rarefaction figure |
 | `rare_window` | `dim` | NULL for a report dimension (by_transect / by_year), which has no fair window |
 | `rare_window_dir` | `dim` | Output subfolder for a comparison's fair window |
 | `rare_window_records` | `rec`, `dim` | `methods = NULL` means keep both; naming a method is how the observer window holds it constant |
@@ -131,24 +131,24 @@ roxygen block above the function and regenerate.*
 | `bee_badge_css` | `bg`, `fg`, `sel` | turn a background + foreground pair into CSS rules; `sel` maps each key to its full selector |
 | `bee_base_par` | -- | House `par()` defaults for a base-R figure |
 | `bee_caption_base` | `cex`, `line0` | base-R figures draw the caption in the BOTTOM OUTER margin (ggplot uses labs(caption=)) |
-| `bee_data_asof` | `path` | The date the data was last pulled, for a figure caption Read from the ingest state file so it updates itsel... |
+| `bee_data_asof` | `path` | The date the data was last pulled, for a figure caption |
 | `bee_ggsave` | `filename`, `plot`, `dpi` | 400 dpi (was 300) -- inches-based, so just more pixels, same layout |
 | `bee_low_n` | `n` | TRUE for counts too small to claim a preference from |
 | `bee_low_n_mark` | `n` | asterisk (universal glyph) on sparse taxa |
-| `bee_png` | `filename` | Open a PNG device at house resolution Canvas and resolution scale by the same factor, so the bump is pure r... |
+| `bee_png` | `filename` | Open a PNG device at house resolution |
 | `bee_sort_mark_js` | -- | Marker JS shared by every sortable table (both field guides + least-sampled bees), so the pages cannot drif... |
 | `bee_table_css` | -- | The shared stylesheet (the rules that go BETWEEN <style> and </style>) |
 | `bee_test` | `name`, `stats` | Significance clause that always NAMES the test, so a caption says WHICH test ran, not just the numbers |
-| `beescabr_fill_colors` | `x` | Substitute theme colors into a CSS or JS template For CSS built inside `sprintf()` or a template string, wh... |
+| `beescabr_fill_colors` | `x` | Substitute theme colors into a CSS or JS template |
 | `scope_cap` | `scope`, `method`, `rank`, `n`, `sig`, `source`, `asof`, `width`, `control` | Build the caption string |
-| `theme_beescabr` | `base_size` | The house ggplot theme `theme_minimal()` plus the project's text conventions: centred title and takeaway su... |
+| `theme_beescabr` | `base_size` | The house ggplot theme |
 
 **transect_years.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
 | `read_transect_years` | `path` | Read the hand-maintained table of which years each transect was walked |
-| `transects_in_year` | `year`, `years` | transects_in_year(): PURE |
+| `transects_in_year` | `year`, `years` | PURE |
 
 
 ## `scripts/checklists/`
@@ -163,10 +163,10 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `build_checklist` | `obs_df`, `label`, `verbose` | Reduce observations to one row per taxon Keeps the full ancestry columns so a checklist can be filtered at ... |
+| `build_checklist` | `obs_df`, `label`, `verbose` | Reduce observations to one row per taxon |
 | `combine_checklists` | `sources` | Merge per-source checklists into one backbone with a flag per source |
 | `finalize_checklist` | `checklist`, `taxonomy_lookup` | Attach the taxonomy lookup and reduce names to bare epithets |
-| `lookup_subtree` | `lookup`, `present_df`, `label`, `verbose` | lookup_subtree(): the normalized subtree (leaves + ALL ancestor rows) of present_df's taxa, taken from the ... |
+| `lookup_subtree` | `lookup`, `present_df`, `label`, `verbose` | the normalized subtree (leaves + ALL ancestor rows) of present_df's taxa, taken from the lookup |
 | `run_qc` | `checklist`, `label` | Print a per-tier quality-control summary |
 | `spatial_split` | `points_sf`, `boundary`, `label`, `verbose` | Keep only the observations that fall inside a boundary |
 | `taxonomy_lookup_from_bees` | `bees` | The subgenus and complex columns the bee tables already carry, keyed by id |
@@ -221,8 +221,8 @@ roxygen block above the function and regenerate.*
 | Function | Arguments | What it does |
 |---|---|---|
 | `inat_auth_enabled` | -- | auth is ON only when an app client id is present (so an unfilled file = unauthenticated) |
-| `inat_auth_login` | -- | inat_auth_login(): the signed-in iNaturalist username, or "" when unauthenticated |
-| `inat_auth_prompt` | `say` | inat_auth_prompt(): ask for credentials ONCE at the start of a run if none are present |
+| `inat_auth_login` | -- | the signed-in iNaturalist username, or "" when unauthenticated |
+| `inat_auth_prompt` | `say` | ask for credentials ONCE at the start of a run if none are present |
 | `inat_auth_token` | `force` | The iNaturalist API token for this session, fetched once and reused |
 
 **inat_cache.R**
@@ -239,7 +239,7 @@ roxygen block above the function and regenerate.*
 | Function | Arguments | What it does |
 |---|---|---|
 | `flatten_observation` | `o` | Flatten one API observation into a single-row data frame |
-| `parse_taxon_ranks` | `taxon` | Spread a taxon's ancestry across the standard rank columns Column names come from `.RANK_TO_COLUMN`, so the... |
+| `parse_taxon_ranks` | `taxon` | Spread a taxon's ancestry across the standard rank columns |
 
 **inat_http.R**
 
@@ -256,14 +256,14 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `db_compact_if_needed` | `path`, `threshold`, `say` | db_compact_if_needed(): the step that runs after an ingest |
+| `db_compact_if_needed` | `path`, `threshold`, `say` | the step that runs after an ingest |
 
 **decision_store.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
 | `decision_get` | `con`, `search_term` | Return the recorded decision for a search term, or NULL if undecided |
-| `decision_put` | `con`, `search_term`, `action`, `chosen_taxon_id` | Record what a human decided about an ambiguous name Decisions are stored so the same question is never aske... |
+| `decision_put` | `con`, `search_term`, `action`, `chosen_taxon_id` | Record what a human decided about an ambiguous name |
 
 **observations_store.R**
 
@@ -273,7 +273,7 @@ roxygen block above the function and regenerate.*
 | `count_observations` | `con` | How many observations the cache holds |
 | `max_observation_id` | `con` | Highest stored observation id -- the incremental fetch cursor |
 | `read_observations_raw` | `con` | Return raw observation JSON strings (id + raw_data) for the flatten layer |
-| `write_observations_page` | `con`, `raw_text` | Write one page of API results into the cache The raw JSON text is handed to DuckDB to parse, rather than pa... |
+| `write_observations_page` | `con`, `raw_text` | Write one page of API results into the cache |
 
 **store_conn.R**
 
@@ -298,7 +298,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `ingest_observations` | `con`, `place_id`, `taxon_id`, `without_taxon_id`, `incremental`, `state_path`, `extra_query`, `per_page`, `commit_every`, `throttle`, `request_text_fn`, `sleep_fn`, `verbose` | Fetch observations from iNaturalist into the cache The only place in the project that calls the observation... |
+| `ingest_observations` | `con`, `place_id`, `taxon_id`, `without_taxon_id`, `incremental`, `state_path`, `extra_query`, `per_page`, `commit_every`, `throttle`, `request_text_fn`, `sleep_fn`, `verbose` | Fetch observations from iNaturalist into the cache |
 
 **ingest_plants.R**
 
@@ -341,7 +341,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `finding_project_info` | `write` | Rebuild the per-survey information table The per-year roster is derived, not typed: `people_manual.csv` say... |
+| `finding_project_info` | `write` | Rebuild the per-survey information table |
 
 
 ## `scripts/project_info/review/`
@@ -374,7 +374,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `build_participation` | `out` | Build the participation summary the acknowledgements page reads Counts PEOPLE from the roster, never from t... |
+| `build_participation` | `out` | Build the participation summary the acknowledgements page reads |
 
 **roster_view.R**
 
@@ -408,7 +408,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `fpi_rescue_on_transect` | `membership`, `coords`, `transects_sf`, `off_m` | fpi_rescue_on_transect(): given membership + per-obs coords + the transect lines, upgrade each untagged (fl... |
+| `fpi_rescue_on_transect` | `membership`, `coords`, `transects_sf`, `off_m` | given membership + per-obs coords + the transect lines, upgrade each untagged (flag) obs that is on a surve... |
 
 **resolve_beeple_transects_per_survey.R**
 
@@ -423,21 +423,21 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `apply_manual_overrides` | `df`, `overrides` | apply_manual_overrides(): PURE |
-| `prompt_missing_taxon_ids` | `cache_path`, `overrides_path`, `interactive_ok`, `prompt_fn` | prompt_missing_taxon_ids(): INTERACTIVE |
-| `write_review_worklist` | `cache_path`, `overrides`, `path` | write_review_worklist(): the file version of the prompt -- writes the open not_found set to cabr_taxon_ids_... |
+| `apply_manual_overrides` | `df`, `overrides` | PURE |
+| `prompt_missing_taxon_ids` | `cache_path`, `overrides_path`, `interactive_ok`, `prompt_fn` | INTERACTIVE |
+| `write_review_worklist` | `cache_path`, `overrides`, `path` | the file version of the prompt -- writes the open not_found set to cabr_taxon_ids_needs_review.csv with bla... |
 
 **specimen_id_prompt.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `resolve_specimen_taxa` | `record_df`, `additions_path`, `flags_path`, `fetch_fn`, `prompt_fn`, `interactive_ok`, `write`, `verbose` | resolve_specimen_taxa(): the DRIVER |
+| `resolve_specimen_taxa` | `record_df`, `additions_path`, `flags_path`, `fetch_fn`, `prompt_fn`, `interactive_ok`, `write`, `verbose` | the DRIVER |
 
 **verify_prompt.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `prompt_verify_taxa` | `lookup_df`, `verified_path`, `rejected_path`, `prompt_fn`, `interactive_ok`, `write`, `verbose` | prompt_verify_taxa(): DRIVER |
+| `prompt_verify_taxa` | `lookup_df`, `verified_path`, `rejected_path`, `prompt_fn`, `interactive_ok`, `write`, `verbose` | DRIVER |
 
 
 ## `scripts/reference/refresh/`
@@ -458,25 +458,25 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `build_holway_reference` | `con`, `holway_df`, `request_fn`, `interactive_ok` | Resolve every Holway checklist name to an iNaturalist taxon Already-decided taxa are batch-prefetched with ... |
+| `build_holway_reference` | `con`, `holway_df`, `request_fn`, `interactive_ok` | Resolve every Holway checklist name to an iNaturalist taxon |
 
 **holway.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
 | `backfill_taxonomy` | `bees`, `genus_lookup` | Fill blank family/subfamily/tribe from the Holway genus table |
-| `clean_holway_species` | `species_raw` | Strip tentative and unpublished qualifiers from a Holway epithet `"CF annectens"` becomes `"annectens"`; a ... |
+| `clean_holway_species` | `species_raw` | Strip tentative and unpublished qualifiers from a Holway epithet |
 | `holway_genus_taxonomy` | `holway_df`, `warn` | Genus-to-ancestry table built from the Holway checklist |
-| `holway_qualifier` | `species_raw` | The qualifier Holway put in front of an epithet, if any Matched as a standalone token so `"affinis"` is nev... |
+| `holway_qualifier` | `species_raw` | The qualifier Holway put in front of an epithet, if any |
 | `load_holway` | `path` | Read the Holway San Diego County bee checklist |
-| `split_holway_species` | `species_raw` | Split a Holway epithet into species and subspecies A `"a/b"` entry means Holway could not choose between tw... |
+| `split_holway_species` | `species_raw` | Split a Holway epithet into species and subspecies |
 
 **plant_lookup_join.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
 | `attach_flower_ids` | `df`, `lookup_path` | Attach plant taxon ids to records carrying a flower name |
-| `plant_name_parts` | `x` | plant_name_parts(x): split a plant name into genus + FULL-BINOMIAL species |
+| `plant_name_parts` | `x` | split a plant name into genus + FULL-BINOMIAL species |
 
 **plant_taxonomy_lookup_build.R**
 
@@ -488,30 +488,30 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `resolve_missing_taxon_ids` | `df`, `cache_path`, `fetch_fn`, `verbose` | resolve_missing_taxon_ids(): fill df$taxon_id for rows missing it, by iNat name search |
+| `resolve_missing_taxon_ids` | `df`, `cache_path`, `fetch_fn`, `verbose` | fill df$taxon_id for rows missing it, by iNat name search |
 
 **subspecies_from_cache.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `subspecies_from_cache` | `lookup`, `fetch_fn` | fetch_fn(taxon_id) -> the cached taxon record as a list (or NULL when not cached) |
+| `subspecies_from_cache` | `lookup`, `fetch_fn` | -> the cached taxon record as a list (or NULL when not cached) |
 
 **taxonomy_lookup_build.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `build_taxonomy_lookup` | `con` | Build the bee taxonomy lookup from the cache and the reference tables Boundaries are sourced lazily, so mer... |
+| `build_taxonomy_lookup` | `con` | Build the bee taxonomy lookup from the cache and the reference tables |
 
 **taxonomy_reference.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
 | `ancestry_ids_from_reference` | `ref` | Pull the per-rank ancestor ids out of a resolved reference table |
-| `apply_verified_ids` | `lookup`, `verified_ids` | apply_verified_ids(): PURE |
-| `backfill_parent_taxonomy` | `lk` | Fill blank ancestor ranks from other rows that share a lower rank This is what keeps a record identified on... |
+| `apply_verified_ids` | `lookup`, `verified_ids` | PURE |
+| `backfill_parent_taxonomy` | `lk` | Fill blank ancestor ranks from other rows that share a lower rank |
 | `build_bee_taxonomy_lookup` | `holway_resolved`, `checklist_sd_county`, `bees`, `verified_ids`, `ancestry_ids` | Assemble the bee taxonomy lookup from all of its sources |
-| `drop_phantom_additions` | `additions`, `spec_clean`, `inat_clean` | drop_phantom_additions(): PURE |
-| `load_specimen_additions` | `path` | load_specimen_additions(): read the curated specimen-only additions CSV (lookup-shaped rows: rank + rank-na... |
+| `drop_phantom_additions` | `additions`, `spec_clean`, `inat_clean` | PURE |
+| `load_specimen_additions` | `path` | read the curated specimen-only additions CSV (lookup-shaped rows: rank + rank-name columns, blank taxon_id) |
 | `specimen_additions_to_lookup` | `lookup`, `additions` | Add taxa found only in the specimen records to the lookup |
 
 **verify.R**
@@ -540,26 +540,26 @@ roxygen block above the function and regenerate.*
 | `build_known_names` | `tax_check`, `inat_species` | Build the "known names" sets used by the spell-check + new-taxon detection, from the taxonomy lookup + the ... |
 | `compute_taxonomy_flags` | `df`, `known_genera`, `known_genus_species`, `known_subgenera`, `known_complexes`, `known_subspecies` | Spell-check + NEW-taxon detection |
 | `detect_duplicate_ids` | `df` | Duplicate ID detection: any repeated ucsd_id (should be unique), or repeated sdnhm_id excluding 0/NA (0 is ... |
-| `drop_non_native_apis` | `df` | drop_non_native_apis(): PURE |
-| `flag_raw_clutter` | `df` | flag_raw_clutter(): PURE |
-| `keep_bee_specimens` | `df` | keep_bee_specimens(): PURE |
-| `match_plot_transect` | `plot`, `variant_map` | match_plot_transect(): PURE |
+| `drop_non_native_apis` | `df` | PURE |
+| `flag_raw_clutter` | `df` | PURE |
+| `keep_bee_specimens` | `df` | PURE |
+| `match_plot_transect` | `plot`, `variant_map` | PURE |
 | `match_specimen_complex` | `df`, `complex_lookup` | Apply the species-level complex match, gated on BOTH genus and species present |
-| `normalize_flower_name` | `x`, `variant_map` | normalize_flower_name(): map each raw flower label to its canonical plant name via the crosswalk plant-vari... |
+| `normalize_flower_name` | `x`, `variant_map` | map each raw flower label to its canonical plant name via the crosswalk plant-variant map; unmapped names p... |
 | `parse_specimen_dates` | `df` | Parse the specimen date column into date_clean + month/day/year, and turn empty strings into NA across char... |
-| `plant_variant_map` | `crosswalk` | plant_variant_map(): from the crosswalk's plant rows (what_for == "plant_taxon"), a variant(lowercased) -> ... |
-| `resolve_determiners` | `codes`, `roster` | resolve_determiners(): PURE |
+| `plant_variant_map` | `crosswalk` | from the crosswalk's plant rows (what_for == "plant_taxon"), a variant(lowercased) -> canonical-name lookup... |
+| `resolve_determiners` | `codes`, `roster` | PURE |
 | `resolve_review_gate` | `items`, `review_dir`, `interactive_ok`, `prompt_fn`, `fix_hint`, `blocking` | ONE consolidated review checkpoint so nothing in the review folder gets silently missed |
-| `sbc_bee_situation` | `df` | sbc_bee_situation(): PURE |
+| `sbc_bee_situation` | `df` | PURE |
 | `standardize_specimen_names` | `df` | Standard scientific-name casing: Genus title-case, species/subspecies lower |
 | `strip_control_chars` | `df` | Defensive: strip embedded control/null bytes from character columns so the saved CSV re-reads cleanly |
-| `transect_variant_map` | `crosswalk` | transect_variant_map(): PURE |
+| `transect_variant_map` | `crosswalk` | PURE |
 
 **specimen_raw_worklist.R**
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `tidy_raw_specimens` | `write` | tidy_raw_specimens(): read the newest raw record, flag the cluttered rows (non-ID'd, missing, duplicate ids... |
+| `tidy_raw_specimens` | `write` | read the newest raw record, flag the cluttered rows (non-ID'd, missing, duplicate ids), and write the worklist |
 
 
 ## `scripts/utils/`
@@ -568,9 +568,9 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `analysis_tally` | `names`, `results` | analysis_tally(): the closing line of the run |
-| `analysis_warning_report` | `names`, `results` | The warnings each script raised, named and quoted The tally names the scripts that warned |
-| `run_analysis_script` | `nm`, `dir`, `source_fn`, `fatal` | run_analysis_script(): source one script, capturing what it warned about |
+| `analysis_tally` | `names`, `results` | the closing line of the run |
+| `analysis_warning_report` | `names`, `results` | The warnings each script raised, named and quoted |
+| `run_analysis_script` | `nm`, `dir`, `source_fn`, `fatal` | source one script, capturing what it warned about |
 
 **console.R**
 
@@ -578,9 +578,9 @@ roxygen block above the function and regenerate.*
 |---|---|---|
 | `bx_cont` | -- | (aligned continuation) |
 | `bx_kv` | `label` | Label detail |
-| `bx_need` | `what`, `where` | Queue an item for the end-of-run "NEEDS YOU" rollup Nothing here blocks the pipeline |
+| `bx_need` | `what`, `where` | Queue an item for the end-of-run "NEEDS YOU" rollup |
 | `bx_need_print` | -- | Print the "NEEDS YOU" rollup at the end of a run |
-| `bx_need_reset` | -- | Empty the "NEEDS YOU" queue Called at the start of a run so a second run in the same session does not inher... |
+| `bx_need_reset` | -- | Empty the "NEEDS YOU" queue |
 | `bx_note` | -- | calm FYI |
 | `bx_out` | -- | → output file |
 | `bx_phase` | `n`, `title` | ━━ n · TITLE ━━ |
@@ -590,7 +590,7 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `cred_get` | `key`, `file`, `ask`, `what`, `prompt_fn`, `confirm_fn`, `say`, `is_interactive` | cred_get(): the credential, or "" if the operator declines |
+| `cred_get` | `key`, `file`, `ask`, `what`, `prompt_fn`, `confirm_fn`, `say`, `is_interactive` | the credential, or "" if the operator declines |
 
 **ingest_mode.R**
 
@@ -621,11 +621,11 @@ roxygen block above the function and regenerate.*
 
 | Function | Arguments | What it does |
 |---|---|---|
-| `decorate_complex` | `df` | decorate_complex(): prefix "(Complex) " onto species-complex names for display, so a complex ("Bombus fervi... |
-| `decorate_complex_name` | `df` | decorate_complex_name(): mirror the "(Complex) <name>" tag into scientific_name for rank == "complex" ROWS,... |
+| `decorate_complex` | `df` | prefix "(Complex) " onto species-complex names for display, so a complex ("Bombus fervidus") isn't mistaken... |
+| `decorate_complex_name` | `df` | mirror the "(Complex) <name>" tag into scientific_name for rank == "complex" ROWS, so a complex reads disti... |
 | `read_latest` | `folder`, `pattern` | Read the most recent file matching a pattern |
 | `require_columns` | `df`, `required`, `df_name` | Stop unless a data frame has the columns that follow it |
-| `write_fresh` | `x`, `path`, `row.names` | Write a CSV over anything already at the path Removes a stale file OR directory first, so a leftover folder... |
+| `write_fresh` | `x`, `path`, `row.names` | Write a CSV over anything already at the path |
 
 
 ## `scripts/website/`
@@ -642,8 +642,8 @@ roxygen block above the function and regenerate.*
 |---|---|---|
 | `citation_read_version` | `path` | Read a data source's version string, if it recorded one |
 | `citation_save_version` | `path`, `version` | The version is written beside the IUCN cache when the status is refreshed, so the site can cite the exact e... |
-| `inat_citation` | `accessed` | inat_citation(): a credit, not a formal citation (iNaturalist requires none) |
-| `iucn_citation` | `version`, `accessed` | iucn_citation(): the required form, or "" when the version is unknown |
+| `inat_citation` | `accessed` | a credit, not a formal citation (iNaturalist requires none) |
+| `iucn_citation` | `version`, `accessed` | the required form, or "" when the version is unknown |
 
 **setup_notice.R**
 

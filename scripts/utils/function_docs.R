@@ -126,6 +126,13 @@ r_api_functions <- function(dir) {
   # like a bug in the generator.
   tag1 <- which(grepl("^@", block))[1]
   prose <- if (is.na(tag1)) block else block[seq_len(tag1 - 1L)]
+  # A roxygen TITLE is its FIRST PARAGRAPH -- everything up to the blank #' line.
+  # Joining the whole run and cutting at the first sentence glued the title to the
+  # paragraph under it, because a title carries no trailing period.
+  if (roxy) {
+    stop_at <- which(!nzchar(trimws(prose)))[1]
+    if (!is.na(stop_at)) prose <- prose[seq_len(stop_at - 1L)]
+  }
   prose <- prose[nzchar(trimws(prose))]
   title <- if (!length(prose)) "" else {
     one <- gsub("[[:space:]]+", " ", trimws(paste(prose, collapse = " ")))
@@ -137,6 +144,9 @@ r_api_functions <- function(dir) {
     keep <- if (cut > 0) trimws(substr(hid, 1, cut - 1)) else hid
     gsub("\u0001", ".", keep, fixed = TRUE)
   }
+  # Plain comments are written "fn_name(): what it does". The name is already the
+  # first column of the table, so drop the prefix rather than print it twice.
+  title <- sub("^[A-Za-z_.][A-Za-z0-9_.]*\\([^)]*\\)\\s*:?\\s*", "", title)
   if (nchar(title) > 110) title <- paste0(substr(title, 1, 107), "...")
   ret <- block[grepl("^@return", block)]
   list(documented = length(block) > 0, roxygen = roxy, title = title,
