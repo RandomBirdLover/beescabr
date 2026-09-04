@@ -35,6 +35,15 @@ is a defensive no-op.
 | **CABR reaches just past the Point Loma / County lines** | A coastal discrepancy between an NPS boundary and a city plan district. Expected, not an error — the pipeline prints a note about it. |
 | **1 m noise buffer on the county layer** | The Union + Dissolve left slivers of a few square feet along the coastline. The buffer swallows them. |
 
+## Buffers are computed, never stored
+
+Every buffer this project uses is generated in R at the moment it is needed —
+there is no `Buffer_10m` shapefile and there should not be. A stored buffer is a
+derived layer that silently goes stale when the source it came from is edited.
+
+**Do not commit `Buffer_10m.*` or any other derived shapefile.** Only the source
+layers under `data/spatial/shapefiles/` belong in git.
+
 ## Where it is used
 
 | Job | Layer |

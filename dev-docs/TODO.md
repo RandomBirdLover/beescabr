@@ -32,13 +32,21 @@ One line each. Done items are deleted, not archived — git remembers them.
 
 ## Pipeline
 
-- [ ] **Where do `data/analysis/` outputs actually live?** Right now: three private
-  copies (Brandi, Taro, James). That is not an archive — they will diverge, nothing
-  marks which is current, and a clone gets none of them because `data/` is gitignored.
-  Either name one machine as the copy of record, or put the outputs somewhere the park
-  keeps (an NPS share, a DOI'd deposit). The figures are cheap to rebuild; the
-  **cleaned tables and the DuckDB cache are not**, since they depend on iNaturalist as
-  it stood on the day of the pull.
+- [ ] **Name one `data/` folder as the copy of record.** There are three (Brandi, Taro,
+  James) and no way to tell which is current. `data/` is gitignored, so git cannot
+  arbitrate and a clone gets none of it. Pick one location the park keeps — an NPS
+  share or a DOI'd deposit — and say in `DATA_ACCESS.md` that it is the source.
+
+  What is at stake differs by folder:
+
+  | | rebuildable? |
+  |---|---|
+  | `analysis/`, `checklists/` | yes — re-run the pipeline |
+  | `inat_observations/cache/` | **no** — a snapshot of iNaturalist on the day of the pull, and taxa get renamed |
+  | `specimens/records/` | **no** — hand-typed, 19 versions |
+  | `project_info/rosters/`, `spatial/` | **no** — hand-maintained |
+
+  Three of those four cannot be regenerated from anything.
 
 - [ ] **Migrate the iNaturalist API v1 → v2.** Not a URL swap: v2 needs an explicit
   `fields` parameter and returns nothing else, so `inat_flatten.R` must be rewritten
