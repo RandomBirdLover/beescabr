@@ -31,7 +31,11 @@ test_that("the doc lists no run mode the pipeline does not offer", {
 
 test_that("the doc does not tell a reader to set an ingest flag by hand", {
   # Setting one is what makes ingest_mode.R skip the menu without saying so.
-  for (f in c("dev-docs/PIPELINE_GUIDE.md", "dev-docs/DATA_ACCESS.md", "CLAUDE.md")) {
+  # The runner's own header is included: it used to teach
+  # Sys.setenv(BEESCABR_SKIP_INGEST = "1") as the "everyday run", which is the one
+  # thing that turns the menu off.
+  for (f in c("dev-docs/PIPELINE_GUIDE.md", "dev-docs/DATA_ACCESS.md", "CLAUDE.md",
+              "scripts/run_data_cleaning_pipeline.R")) {
     body <- paste(readLines(file.path("..", "..", f), warn = FALSE),
                   collapse = "\n")
     for (flag in INGEST_MODE_FLAGS)

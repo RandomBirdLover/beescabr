@@ -68,19 +68,30 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
     message("")
     message("  Same bees, different question. You are not re-answering PASS 1.")
     message("")
-    message("  Open the link printed under the name. It is already filtered to San Diego.")
+    message("  Open the link under each name and count what comes back. The link is")
+    message("  already filtered: real San Diego County boundary, and Casual records")
+    message("  excluded (drawer photos, no date, captive -- none of which prove a bee")
+    message("  lives here). You do not need to set any filter yourself.")
+    message("")
     message("    1 or more observations  ->  y   real; add it to the checklist")
     message("    none                    ->  Enter to decide later, or r to reject")
     message("")
-    message("  Rejecting does not delete anything, and nothing is locked out -- a")
-    message("  rejected bee is shown again next run. Full guide: dev-docs/VERIFICATION.md")
+    message("  Your answers are saved and not asked again: a verified bee goes to")
+    message("  verified_taxa.csv and never comes back. Rejecting deletes nothing -- the")
+    message("  records stay in the data, just off the checklist, and a rejected bee IS")
+    message("  shown again next run in case it has since been confirmed. Both files live")
+    message("  in data/reference/hand_curated/.")
     message("")
   }
   for (i in seq_len(nrow(needs))) {
     if (is.na(tid[i])) next                          # no id yet -> pass 1's job
     tag <- if (tid[i] %in% prev_rejected) " -- you REJECTED this before. Verified now?" else "."
     # clickable link: this taxon's records filtered to San Diego County -> "is it actually found in SD?"
-    sd_url <- sprintf("https://www.inaturalist.org/observations?place_id=%s&taxon_id=%s&verifiable=any", sd_place, tid[i])
+    # verifiable=true, NOT any. "Any" includes Casual -- drawer photos, no date,
+    # captive -- which is exactly the evidence that must not decide this question.
+    # The place_id is the real county boundary, not a pin-and-radius, so the link
+    # cannot leak in Imperial or Orange the way the site's Location box does.
+    sd_url <- sprintf("https://www.inaturalist.org/observations?place_id=%s&taxon_id=%s&verifiable=true", sd_place, tid[i])
     if (verbose) {
       rankstr <- if (nzchar(rk[i])) paste0(", ", rk[i]) else ""
       ev <- ""

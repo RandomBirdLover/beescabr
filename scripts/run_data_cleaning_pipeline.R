@@ -1,90 +1,42 @@
 # =============================================================
 # run_data_cleaning_pipeline.R
-# beescabr pipeline -- ONE COMMAND: ingest + clean + export
-# Created: 2026-07-13
+# beescabr -- STAGE 1 of 3: ingest + clean.  source() this file; it asks the rest.
 #
-# The single entrypoint that runs the whole pipeline end to end. Core data first,
-# ALL checklist/taxonomy work LAST:
-#   1.  INGEST   iNat API -> DuckDB cache (once, incremental)
-#   2.  EXPORT   refresh data/inat_observations/cache/export_flat.rds (the brain's input)
-#   2b. PLANTS   pull vascular plants -> SEPARATE plant cache -> export_flat_plant.rds
-#                (the brain's second input; survey-day confirm + flower resources)
-#   3.  BRAIN    finding_project_info(): survey membership from crosswalk_master ->
-#                project_unclean + unknown tags/fields/notes -> master_per_survey_info_generated.csv
-#   3b. REVIEW   walk unknown tags + fields (interactive) -> crosswalk_master ->
-#                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
-#                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
-#                transect ties. Skipped non-interactive.
-#   4.  CLEAN    cabr_inat_bee_clean_generated.csv (labeled CABR bee table; walk-in re-marked not-survey)
-#   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
-#                per-source checklists (parked until built)
+#   1.  INGEST    iNat API -> DuckDB cache (incremental)
+#   2.  EXPORT    flatten the cache -> export_flat.rds
+#   2b. PLANTS    same again for vascular plants -> export_flat_plant.rds
+#   3.  BRAIN     finding_project_info(): who surveyed, when, on which transect
+#   3b. REVIEW    walk unknown tags + fields, survey-date windows, transect ties
+#                 (interactive; skipped on an unattended run)
+#   4.  CLEAN     cabr_inat_bee_clean_generated.csv
+#   5.  CHECKLISTS Holway reference -> taxonomy lookup -> per-source checklists
 #
-# Ingest runs exactly once here; every stage reads the same freshly-filled cache
-# (no re-fetch).
+# Ingest runs ONCE; every later stage reads that same cache.
 #
-# ------------------------------------------------------------------------------
-# HOW TO RUN (RStudio, most common first)
-# ------------------------------------------------------------------------------
-#   Normal run -- pull only NEW/edited observations since last time (fast, seconds):
-#     source("scripts/run_data_cleaning_pipeline.R")            # no flags needed; this is the default
+# HOW TO RUN
+#   source("scripts/run_data_cleaning_pipeline.R")
 #
-#   Everyday run -- reuse the caches, don't touch iNat at all:
-#     Sys.setenv(BEESCABR_SKIP_INGEST = "1")
-#     source("scripts/run_data_cleaning_pipeline.R")
+# It opens a menu -- normal / bees only / offline / full rebuild -- and sets every
+# flag itself from your answer.
 #
-# ------------------------------------------------------------------------------
-# FLAGS = on/off switches. How they work (READ THIS -- it bit us once):
-# ------------------------------------------------------------------------------
-#   * A flag is just an env var stored in your R SESSION's memory.
-#   * Turn a flag ON :  Sys.setenv(FLAG_NAME = "1")
-#   * Turn a flag OFF:  Sys.unsetenv("FLAG_NAME")
-#   * Check a flag   :  Sys.getenv("FLAG_NAME")   # ""  = off,  "1" = on
-#   * A flag you set STAYS ON for the whole R session (every source() re-uses it)
-#     until you Sys.unsetenv() it or restart RStudio. That is how a leftover
-#     BEESCABR_FULL_INGEST=1 can silently make every run do a slow full rebuild.
-#   * Terminal equivalent: prefix it, e.g.  Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")
+# DO NOT set BEESCABR_SKIP_INGEST or BEESCABR_FULL_INGEST by hand. A flag already
+# set is read as "the operator knows what they are doing" and SKIPS the menu without
+# saying so, and an env var survives the whole R session -- which is how a leftover
+# FULL_INGEST=1 turned every later run into a 40-minute rebuild. The menu exists to
+# end that. To clear a stuck flag: Sys.unsetenv("BEESCABR_FULL_INGEST").
 #
-# ------------------------------------------------------------------------------
-# THE FLAGS
-# ------------------------------------------------------------------------------
-#   BEESCABR_SKIP_INGEST=1  -> don't call iNat at all; use whatever is already cached.
-#                              Use when you just want to re-clean/re-export existing data.
-#
-#   BEESCABR_SKIP_PLANTS=1  -> RECOVERY HATCH, not a normal run mode. Pulls bees but
-#                             leaves plant data stale, so survey-day confirmation and
-#                             every forage/flower result use OLD plants. Use only when
-#                             the plant pull is broken and you need the bee side now.
-#                             Deliberately absent from the run menu; it warns loudly.
-#                             A plant pull that ERRORS stops the run on purpose -- re-run
-#                             first (most failures are transient); reach for this flag
-#                             only if it keeps failing and you need the bee side now.
-#
-#   BEESCABR_FULL_INGEST=1  -> !! SLOW, RARELY NEEDED !! Wipe the ENTIRE cache and
-#                              re-download every observation from scratch (~40+ min for
-#                              bees + plants). You'll see "Full rebuild: cleared N cached
-#                              observations; re-downloading everything." in the console --
-#                              if you see that and didn't mean it, this flag is stuck ON:
-#                              stop, run Sys.unsetenv("BEESCABR_FULL_INGEST"), re-run.
-#                              Default (flag OFF) is INCREMENTAL: keeps the cache and only
-#                              fetches records newer than the newest one you already have.
-#                              Only turn ON if the cache looks wrong/corrupt or the iNat
-#                              query params (place/taxon filters) changed.
-#
-#   BEESCABR_REBUILD_HOLWAY_REF=1  force-rebuild the Holway reference table (see NOTE below).
-#   BEESCABR_NONINTERACTIVE=1      auto-skip ambiguous Holway names (no prompts).
-#
-#   BEESCABR_REFRESH=1      -> ONLINE. Force a full re-check of IUCN Red List status + plant
-#                              common names against the live APIs (needs internet + an IUCN
-#                              token), rewriting their caches, then the run re-bakes the fresh
-#                              values into the cleaned tables. Default OFF: a normal run stays
-#                              OFFLINE and keeps both current for NEW taxa incrementally -- turn
-#                              this ON only to re-check taxa already cached (IUCN edits a few/yr).
-#                              Runs the two reference/refresh_*.R tools as a pre-step.
-#
-# NOTE: step 1b builds the Holway reference table ONCE (resolving 700+ names to
-# iNat taxa is slow + interactive). The result is saved to a versioned file and
-# REUSED every run thereafter -- no re-resolution, no prompts. Rebuild only when
-# Holway ships a new checklist version, via BEESCABR_REBUILD_HOLWAY_REF=1.
+# RECOVERY HATCHES -- deliberately NOT in the menu, each does damage if used casually:
+#   BEESCABR_SKIP_PLANTS=1        bees only, plants left STALE. A failing plant pull
+#                                 stops the run on purpose; re-run first, most failures
+#                                 are transient. Every forage result uses old plants.
+#   BEESCABR_REFRESH=1            re-check IUCN status + plant common names against the
+#                                 live APIs. Normally unnecessary: new taxa are kept
+#                                 current incrementally, and anything a year old is
+#                                 refreshed automatically.
+#   BEESCABR_REBUILD_HOLWAY_REF=1 re-resolve 700+ Holway names to iNat taxa. Slow and
+#                                 interactive. The result is versioned and reused every
+#                                 run; rebuild only when Holway ships a new checklist.
+#   BEESCABR_NONINTERACTIVE=1     answer no prompts (for a scripted run).
 # =============================================================
 
 # Prevent the stage scripts' own standalone entrypoints from firing when we

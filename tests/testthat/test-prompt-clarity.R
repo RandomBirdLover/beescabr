@@ -122,3 +122,39 @@ test_that("PASS 1 still asks about a taxon the resolver has not ruled out", {
     known_missing_path = cache, prompt_fn = function(p) { asked <<- asked + 1L; "s" })
   expect_equal(asked, 1L)
 })
+
+# The prompt hands the reviewer a pre-filtered iNaturalist link so they do not have
+# to build the query. It was built with `verifiable=any`, which INCLUDES Casual --
+# drawer photos, no date, captive animals. VERIFICATION.md warned against exactly
+# that filter while the prompt handed it over. The link is the thing people click,
+# so the link has to be right.
+test_that("the San Diego link excludes Casual records", {
+  needs <- data.frame(taxon_id = 345235L, scientific_name = "Colletes hyalinus",
+                      rank = "subspecies", verified = FALSE, stringsAsFactors = FALSE)
+  txt <- .said(resolve_verification_interactive(needs, prompt_fn = function(p) ""))
+  expect_match(txt, "verifiable=true", fixed = TRUE)
+  expect_false(grepl("verifiable=any", txt, fixed = TRUE))
+})
+
+# Everything needed to answer has to be ON the prompt. Backing out to a document,
+# finding the right section and coming back is how people start guessing instead.
+test_that("the prompt states the rule for deciding, not just the keys", {
+  needs <- data.frame(taxon_id = 345235L, scientific_name = "Colletes hyalinus",
+                      rank = "subspecies", verified = FALSE, stringsAsFactors = FALSE)
+  txt <- .said(resolve_verification_interactive(needs, prompt_fn = function(p) ""))
+  expect_match(txt, "1 or more", fixed = TRUE)      # what counts as yes
+  expect_match(txt, "none", fixed = TRUE)           # what counts as no
+  expect_match(txt, "Casual", fixed = TRUE)         # and why the link is filtered
+})
+
+# VERIFICATION.md is being deleted: everything in it belongs at the prompt, where the
+# person is. These two facts were only in the doc -- that an answer is remembered, and
+# where it is written. Both change how someone answers: not knowing an answer sticks
+# makes people hesitate over a decision they can revisit.
+test_that("PASS 2 says answers are saved and not asked again", {
+  needs <- data.frame(taxon_id = 345235L, scientific_name = "Colletes hyalinus",
+                      rank = "subspecies", verified = FALSE, stringsAsFactors = FALSE)
+  txt <- .said(resolve_verification_interactive(needs, prompt_fn = function(p) ""))
+  expect_match(txt, "verified_taxa.csv", fixed = TRUE)
+  expect_match(txt, "never asked", ignore.case = TRUE)
+})
