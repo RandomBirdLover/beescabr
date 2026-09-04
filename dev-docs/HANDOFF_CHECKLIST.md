@@ -6,7 +6,7 @@ Working list. Delete once the handoff is done.
 
 | | Why |
 |---|---|
-| **Do NOT hand over `data/secrets/`** | Your iNaturalist and IUCN keys. The next operator makes their own — the pipeline asks on first run. Delete the folder from any copy. |
+| **Do NOT hand over `data/secrets/`** | Your iNaturalist and IUCN keys. Delete the folder from any copy. The next operator makes **their own OAuth app, under the park's iNaturalist account** — not a new account of their own, which would get obscured coordinates until every observer trusted it separately. The pipeline asks for the values on first run. |
 | **Retire your OAuth app** | Taro creates his own on the park account, then destroy yours at [inaturalist.org/oauth/applications](https://www.inaturalist.org/oauth/applications). |
 | **Use the PARK account** | Surveyors granted coordinate trust to `@randombirdlover` and `@cabrillonationalmonument`. A brand-new account gets obscured coordinates until every observer re-grants. Sign in as `@cabrillonationalmonument`. |
 | **Hand over `data/`** | It is gitignored — a clone gets no data at all. Drive, zip, however. |

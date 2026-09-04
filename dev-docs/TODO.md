@@ -44,6 +44,5 @@ One line each. Done items are deleted, not archived — git remembers them.
 - [ ] **Delete `data/secrets/` from any copy that leaves this machine.** A key is
   personal; a pull runs as whoever signed in. The rest is already handled — `data/`
   is gitignored, no names in the README or DATA_ACCESS.
-- [ ] Decide what happens to `id_count` in `people_manual.csv` — hand-typed and stale on arrival
 - [ ] Sweep the `.DS_Store` files under `data/`
 - [ ] Cut `PIPELINE_GUIDE.md` back to architecture

@@ -47,3 +47,20 @@ test_that("the iNat throttle stays within the rate limit iNaturalist asks for", 
   expect_gte(INAT_THROTTLE_SEC, 1.0)              # 1s => at most 60 requests/minute
   expect_lte(60 / INAT_THROTTLE_SEC, 60)
 })
+
+# 34 scripts use the native pipe |> and 16 use \(x); both need R 4.1.0. On an older
+# R these are SYNTAX errors, so the failure is "unexpected '>'" at parse time, in a
+# file the reader had no reason to open. Nothing checked the version, and a fresh
+# government machine is exactly where an old R turns up. Say it once, plainly.
+test_that("an R older than 4.1.0 is rejected, by name", {
+  said <- NULL
+  beescabr_check_r_version("4.0.5", stop_fn = function(...) said <<- paste0(...))
+  expect_true(!is.null(said))
+  expect_match(said, "4.1.0", fixed = TRUE)
+  expect_match(said, "4.0.5", fixed = TRUE)
+})
+
+test_that("4.1.0 and newer pass silently", {
+  for (v in c("4.1.0", "4.3.2", "4.6.0"))
+    expect_silent(beescabr_check_r_version(v, stop_fn = function(...) stop("rejected ", v)))
+})

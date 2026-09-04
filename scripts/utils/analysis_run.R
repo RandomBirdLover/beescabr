@@ -43,6 +43,35 @@ run_analysis_script <- function(nm, dir = "scripts/analysis", source_fn = NULL,
   list(ok = ok, warnings = warns, error = err)
 }
 
+#' The warnings each script raised, named and quoted
+#'
+#' The tally names the scripts that warned. That is enough to know something is
+#' wrong and not enough to do anything about it -- "6 with warnings" cannot tell a
+#' harmless "NAs introduced by coercion" from a dropped column. This prints the
+#' messages themselves, under the script that raised them.
+#'
+#' Identical messages are collapsed with a count: one script can raise the same
+#' warning once per row, and 1,400 copies of one line buries the other five.
+#'
+#' @param names Script names, in the order they ran.
+#' @param results The `run_analysis_script()` result for each.
+#' @return Character vector of lines to `message()`, empty when nothing warned.
+analysis_warning_report <- function(names, results) {
+  out <- character(0)
+  for (i in seq_along(results)) {
+    w <- results[[i]]$warnings
+    if (!length(w)) next
+    tab <- sort(table(w), decreasing = TRUE)
+    out <- c(out, sprintf("  %s", names[i]))
+    for (j in seq_along(tab)) {
+      n <- as.integer(tab[j])
+      out <- c(out, sprintf("      %s%s", names(tab)[j],
+                            if (n > 1) sprintf("   (x%d)", n) else ""))
+    }
+  }
+  if (length(out)) c("", "  Warnings, by script:", out) else out
+}
+
 # analysis_tally(): the closing line of the run. Names the scripts that failed AND the
 # ones that warned, because "somewhere in 37 scripts something warned" is not actionable.
 analysis_tally <- function(names, results) {

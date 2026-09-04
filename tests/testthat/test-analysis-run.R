@@ -69,3 +69,35 @@ test_that("the tally names failures too, and counts both", {
   expect_match(m, "broke.R", fixed = TRUE)
   expect_match(m, "warned.R", fixed = TRUE)
 })
+
+# Taro's report: "my analysis pipeline has 6 warnings but it doesn't tell me what
+# they are." Correct -- run_analysis_script() captured every message, and
+# analysis_tally() printed only the script NAMES. Knowing that six of 37 scripts
+# warned, without a word of what they said, is not actionable: you cannot tell a
+# harmless "NAs introduced by coercion" from a dropped column.
+test_that("the warning report prints the actual messages, under each script", {
+  res <- list(list(ok = TRUE, warnings = c("NAs introduced by coercion"), error = NA_character_),
+              list(ok = TRUE, warnings = character(0), error = NA_character_),
+              list(ok = TRUE, warnings = c("longer object length is not a multiple",
+                                           "NAs introduced by coercion"), error = NA_character_))
+  out <- analysis_warning_report(c("a.R", "b.R", "c.R"), res)
+  txt <- paste(out, collapse = "\n")
+  expect_match(txt, "a.R", fixed = TRUE)
+  expect_match(txt, "c.R", fixed = TRUE)
+  expect_false(grepl("b.R", txt, fixed = TRUE))          # no warnings -> not listed
+  expect_match(txt, "NAs introduced by coercion", fixed = TRUE)
+  expect_match(txt, "longer object length", fixed = TRUE)
+})
+
+test_that("a warning repeated many times is reported once, with its count", {
+  res <- list(list(ok = TRUE, warnings = rep("NAs introduced by coercion", 40),
+                   error = NA_character_))
+  txt <- paste(analysis_warning_report("a.R", res), collapse = "\n")
+  expect_equal(lengths(regmatches(txt, gregexpr("NAs introduced by coercion", txt)))[[1]], 1)
+  expect_match(txt, "40", fixed = TRUE)
+})
+
+test_that("nothing to report gives nothing", {
+  res <- list(list(ok = TRUE, warnings = character(0), error = NA_character_))
+  expect_equal(analysis_warning_report("a.R", res), character(0))
+})

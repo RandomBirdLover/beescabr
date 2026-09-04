@@ -28,6 +28,31 @@
 # must not touch the network at load. Run the installer once on a new machine:
 #     source("scripts/utils/install_requirements.R")
 # The per-script auto-install blocks stay as a safety net; they should rarely fire.
+# The oldest R this codebase can even be PARSED by. 34 scripts use the native pipe
+# `|>` and 16 use the `\(x)` lambda; both arrived in R 4.1.0, and on anything older
+# they are syntax errors -- so the failure is "unexpected '>'" inside a file the
+# reader had no reason to open. Checked here because config.R is sourced by every
+# script, so the message lands before anything else can go wrong.
+BEESCABR_MIN_R <- "4.1.0"
+
+#' Stop unless R is new enough to parse this codebase
+#'
+#' @param current The running R version; injectable so the check is testable.
+#' @param min Minimum supported version.
+#' @param stop_fn Injectable, so a test can capture the message instead of halting.
+#' @return Invisibly TRUE when the version is fine.
+beescabr_check_r_version <- function(current = getRversion(), min = BEESCABR_MIN_R,
+                                     stop_fn = stop) {
+  if (package_version(current) < package_version(min))
+    stop_fn("beescabr needs R ", min, " or newer -- this is R ", current, ".\n",
+            "  34 scripts use the |> pipe and 16 use \\(x), which R ", current,
+            " cannot parse.\n",
+            "  Update R at https://cloud.r-project.org, then reopen beescabr.Rproj.",
+            call. = FALSE)
+  invisible(TRUE)
+}
+beescabr_check_r_version()
+
 BEESCABR_PACKAGES <- c(
   # data wrangling + IO
   "dplyr", "tidyr", "purrr", "stringr", "stringi", "tibble", "readr", "readxl", "lubridate",

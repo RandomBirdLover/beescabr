@@ -77,6 +77,8 @@ tryCatch(source("scripts/analysis/findings_summaries.R"),
 
 message("\n---------------------------------------------")
 message(analysis_tally(.scripts, .res))
+# The tally names the scripts that warned; this says what they actually said.
+for (.l in analysis_warning_report(.scripts, .res)) message(.l)
 message("Figures + tables are in data/analysis/")
 # The project is run from R, not a shell: every stage is source()d from the console,
 # so the hint is written the way it will actually be typed.
