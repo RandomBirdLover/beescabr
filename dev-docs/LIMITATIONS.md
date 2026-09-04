@@ -58,7 +58,7 @@ listed because the *reason* for them is not visible from the scope itself.
 
 | | |
 |---|---|
-| **Coordinates are published as held** | ⚠️ Nothing obscures or rounds them. When the pipeline runs authenticated it receives *true* coordinates for taxa iNaturalist deliberately obscures, and the occurrence explorer then publishes those. Decide what the public map should show for sensitive taxa. |
+| **Coordinates are published as held** | Nothing obscures or rounds them. Running authenticated returns *true* coordinates for taxa iNaturalist obscures, and the occurrence explorer publishes those. **Accepted deliberately**: the park is staffed and collecting is already well prevented on site. The residual is not poaching but consent — observers granted coordinate trust to the park's account, not to the public. Revisit if an observer objects, or if the project ever covers land without that protection. |
 | **Building is not publishing** | Pages are built into `data/analysis/**/website/`, copied into `docs/`, and only go live when `docs/` is committed and pushed. |
 | A fork publishes **its own site** | Two live sites drift apart, and a stale page does not say how old it is. |
 | Without an IUCN key the status column reads **"Not Evaluated"** | Not "no conservation concern". |
