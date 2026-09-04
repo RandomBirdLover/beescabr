@@ -14,7 +14,9 @@
 # injected, so the whole loop is unit-tested with fakes (test-specimen-idprompt.R).
 # Depends on: dplyr. Uses inat_fetch_taxa_by_name() for the live search.
 # =============================================================
-if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
+if (!exists("PATHS")) source("scripts/config.R")
+# resolve_missing_ids.R's verdict cache -- taxa it searched for and could not resolve.
+RMI_CACHE_DEFAULT <- "data/reference/generated/resolved_missing_ids.csv"
 suppressWarnings(suppressMessages(library(dplyr)))
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
@@ -105,8 +107,22 @@ flag_specimen_ids <- function(flags) {
 # Non-interactive (batch) -> unchanged, never blocks automation. id_map (from
 # flag_specimen_ids) is optional: when present, each prompt also shows the specimen
 # ucsd_id/sdnhm_id behind that taxon so the reviewer can look them up in the records.
+# .spid_known_missing(): the rank|name keys resolve_missing_ids.R has already searched
+# for and failed to resolve. It only records a verdict on an unambiguous outcome, so
+# "not_found_or_ambiguous" means the search was done and there is nothing to find --
+# asking a person again cannot produce a different answer.
+.spid_known_missing <- function(path) {
+  if (is.null(path) || !file.exists(path)) return(character(0))
+  d <- tryCatch(utils::read.csv(path, stringsAsFactors = FALSE), error = function(e) NULL)
+  if (is.null(d) || !all(c("key", "status") %in% names(d))) return(character(0))
+  k <- d$key[trimws(tolower(d$status)) == "not_found_or_ambiguous"]
+  # the cache key is rank|name|id; match on rank|name, the part the prompt knows
+  unique(sub("^([^|]*\\|[^|]*).*$", "\\1", tolower(trimws(k))))
+}
+
 resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prompt_fn = readline,
-                                                   interactive_ok = TRUE, verbose = TRUE, id_map = NULL) {
+                                                   interactive_ok = TRUE, verbose = TRUE, id_map = NULL,
+                                                   known_missing_path = RMI_CACHE_DEFAULT) {
   if (!interactive_ok || is.null(add_df) || !nrow(add_df) || !"taxon_id" %in% names(add_df))
     return(list(additions = add_df, stopped = FALSE))
   if (is.null(fetch_fn)) fetch_fn <- function(nm) inat_fetch_taxa_by_name(nm)
@@ -114,7 +130,46 @@ resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prom
   need <- which(is.na(add_df$taxon_id))
   if (!length(need)) return(list(additions = add_df, stopped = FALSE))
   namecol <- if ("scientific_name" %in% names(add_df)) "scientific_name" else NA_character_
-  if (verbose) message(sprintf("  [taxon-id] %d specimen taxa need a taxon_id -- confirm each (Enter accepts the iNat suggestion):", length(need)))
+
+  # Drop the ones already searched for and not found. Without this the same bees
+  # come back every run and the only right answer is always "skip".
+  ruled_out <- .spid_known_missing(known_missing_path)
+  if (length(ruled_out)) {
+    key_of <- function(i) {
+      nmv <- if (!is.na(namecol)) as.character(add_df[[namecol]][i]) else ""
+      if (is.na(nmv) || !nzchar(trimws(nmv)))
+        nmv <- trimws(paste(add_df$genus[i] %||% "", add_df$species[i] %||% ""))
+      paste(tolower(trimws(as.character(add_df$rank[i] %||% "species"))),
+            tolower(trimws(nmv)), sep = "|")
+    }
+    skip_i <- need[vapply(need, function(i) key_of(i) %in% ruled_out, logical(1))]
+    if (length(skip_i)) {
+      if (verbose) {
+        message("")
+        message(sprintf("  [taxon-id] %d taxon/taxa skipped: iNaturalist has no page for them,",
+                        length(skip_i)))
+        message("  which was already checked and recorded. Nothing for you to do.")
+        message("    ", paste(unique(vapply(skip_i, function(i) sub("^[^|]*\\|", "", key_of(i)), "")),
+                              collapse = ", "))
+      }
+      need <- setdiff(need, skip_i)
+    }
+  }
+  if (!length(need)) return(list(additions = add_df, stopped = FALSE))
+  if (verbose) {
+    message("")
+    message(sprintf("  PASS 1 of 2 -- WHICH BEE IS THIS?   (%d to answer)", length(need)))
+    message("")
+    message("  A taxon_id is iNaturalist's own number for a species. The pipeline joins")
+    message("  on it instead of the name, because names get respelled and renamed and the")
+    message("  number does not. These taxa came off the specimen sheet with no number yet.")
+    message("")
+    message("  Here you are only matching a name to a number. Whether that bee really")
+    message("  turns up in San Diego is a separate question, asked in PASS 2 later in")
+    message("  this same run. So do not reject anything here for being unlikely --")
+    message("  just say which taxon it is. Where a match is offered, Enter accepts it.")
+    message("")
+  }
   for (i in need) {
     term <- if (!is.na(namecol) && !is.na(add_df[[namecol]][i]) && trimws(add_df[[namecol]][i]) != "")
               as.character(add_df[[namecol]][i])
@@ -128,8 +183,21 @@ resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prom
     if (!is.null(ids_hint) && nzchar(ids_hint))
       message(sprintf("      specimens: %s  (look these up in your records)", ids_hint))
     repeat {
+      if (is.null(sug) && verbose) {
+        search_url <- paste0("https://www.inaturalist.org/search?q=", gsub(" ", "+", trimws(term)))
+        message("")
+        message("    ", term, " -- iNaturalist returned no match for this name.")
+        message("    To find its taxon_id by hand:")
+        message("      1. open  ", search_url)
+        message("      2. click the bee in the results")
+        message("      3. the taxon_id is the number in the address bar:")
+        message("           inaturalist.org/taxa/345235-Colletes-hyalinus")
+        message("                                 ^^^^^^")
+        message("    Nothing there? Press s -- it is asked again next run, and a")
+        message("    checklist bee with no iNaturalist page is normal (17 of them).")
+      }
       msg <- if (is.null(sug))
-        sprintf("    %s -- no iNat match. Paste a taxon_id, or  s  skip /  x  stop: ", term)
+        sprintf("    paste the taxon_id for %s, or  s  skip /  x  stop: ", term)
       else
         sprintf("    %s  ->  iNat: %s (id %d, %s).  [Enter accept / paste id / s skip / x stop]: ",
                 term, sug$name, sug$id, sug$rank)

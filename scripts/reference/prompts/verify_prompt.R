@@ -58,8 +58,24 @@ resolve_verification_interactive <- function(needs, prev_rejected = integer(0),
   # iNat place the whole pipeline is scoped to (San Diego County 25-mi buffer). Resolved from config
   # at call time so a config change propagates; falls back to the known id when config isn't loaded.
   sd_place <- if (exists("PLACE_SD_COUNTY_BUFFER")) get("PLACE_SD_COUNTY_BUFFER") else 118491L
-  if (verbose) message(sprintf("  [verify] %d bee taxa to review -- y verify / r reject-for-now / Enter skip:",
-                               sum(!is.na(tid))))
+  if (verbose) {
+    message("")
+    message(sprintf("  PASS 2 of 2 -- IS IT REALLY FOUND HERE?   (%d to answer)", sum(!is.na(tid))))
+    message("")
+    message("  PASS 1 gave each bee its iNaturalist number. This pass checks that bee is")
+    message("  genuinely recorded in San Diego County, so a mis-identification upstream")
+    message("  does not walk onto the park checklist.")
+    message("")
+    message("  Same bees, different question. You are not re-answering PASS 1.")
+    message("")
+    message("  Open the link printed under the name. It is already filtered to San Diego.")
+    message("    1 or more observations  ->  y   real; add it to the checklist")
+    message("    none                    ->  Enter to decide later, or r to reject")
+    message("")
+    message("  Rejecting does not delete anything, and nothing is locked out -- a")
+    message("  rejected bee is shown again next run. Full guide: dev-docs/VERIFICATION.md")
+    message("")
+  }
   for (i in seq_len(nrow(needs))) {
     if (is.na(tid[i])) next                          # no id yet -> pass 1's job
     tag <- if (tid[i] %in% prev_rejected) " -- you REJECTED this before. Verified now?" else "."

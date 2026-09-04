@@ -100,8 +100,29 @@ select_taxon_candidate <- function(results, described, search_term = NULL,
 # invalid). Non-interactive defaults to "skip". Impure (prompts).
 itis_disposition <- function(term, prompt_fn = readline, interactive_ok = TRUE) {
   if (!isTRUE(interactive_ok)) return("skip")
-  message("'", term, "' not found on iNaturalist. Check ITIS for it.")
-  if (.yn(prompt_fn, "Valid species/subspecies in ITIS? (y/n): ")) "keep" else "skip"
+  url <- paste0("https://www.itis.gov/servlet/SingleRpt/SingleRpt",
+                "?search_topic=Scientific_Name&search_value=",
+                gsub(" ", "+", trimws(term)))
+  message("")
+  message("  Building the San Diego reference checklist (this is not one of the two")
+  message("  taxon_id passes -- no bee of yours is being judged here).")
+  message("")
+  message("  '", term, "' is on the checklist but has no iNaturalist page.")
+  message("")
+  message("  That happens for two different reasons, and they need opposite answers:")
+  message("    - it is a real bee iNaturalist has simply never published, or")
+  message("    - the name is an old one that was renamed or withdrawn.")
+  message("")
+  message("  ITIS is a second taxonomy database, run by the US government. It says")
+  message("  which of the two this is. Open the search -- it is already filled in:")
+  message("")
+  message("    ", url)
+  message("")
+  message("  Look at the line that says TAXONOMIC STATUS:")
+  message("    'valid' or 'accepted'  ->  y   real bee; keep it, with no iNaturalist id")
+  message("    'invalid', 'not accepted', or nothing found  ->  n   leave it off")
+  message("")
+  if (.yn(prompt_fn, "  Valid in ITIS?  [y / n]: ")) "keep" else "skip"
 }
 
 # ------------------------------------------------------------
