@@ -17,6 +17,11 @@ local({
 suppressMessages({library(DBI); library(dplyr); library(readr)})
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
+#' Map iNaturalist observation-field names to their numeric ids
+#'
+#' @param out Path for the generated CSV.
+#' @param con An open cache connection; `NULL` opens and closes its own.
+#' @return The map, invisibly.
 build_field_id_map <- function(out = "data/inat_observations/reference/inat_field_id_map_generated.csv", con = NULL) {
   own <- is.null(con)
   if (own) { con <- store_connect(); on.exit(store_disconnect(con), add = TRUE) }

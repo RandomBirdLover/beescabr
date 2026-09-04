@@ -32,6 +32,15 @@ decision_get <- function(con, search_term) {
        chosen_taxon_id = if (is.na(res$chosen_taxon_id[1])) NA_integer_ else as.integer(res$chosen_taxon_id[1]))
 }
 
+#' Record what a human decided about an ambiguous name
+#'
+#' Decisions are stored so the same question is never asked twice.
+#'
+#' @param con An open cache connection.
+#' @param search_term The name that was ambiguous.
+#' @param action One of `"pick"`, `"skip"`, `"keep"`, `"tentative"`.
+#' @param chosen_taxon_id The id chosen, for `"pick"`.
+#' @return Invisibly, nothing.
 decision_put <- function(con, search_term, action, chosen_taxon_id = NA_integer_) {
   stopifnot(action %in% c("pick", "skip", "keep", "tentative"))
   DBI::dbExecute(

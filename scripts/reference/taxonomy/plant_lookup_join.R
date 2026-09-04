@@ -53,6 +53,12 @@ plant_name_parts <- function(x) {
        plant_species = vapply(gs, `[`, character(1), 2))
 }
 
+#' Attach plant taxon ids to records carrying a flower name
+#'
+#' @param df Records with a flower-name column.
+#' @param lookup_path The plant taxonomy lookup; defaults to the `PATHS` entry.
+#' @return `df` with `flower_taxon_id`, `flower_in_park`, `plant_genus` and
+#'   `plant_species` attached.
 attach_flower_ids <- function(df, lookup_path = NULL) {
   if (is.null(lookup_path))
     lookup_path <- if (exists("PATHS") && !is.null(PATHS$plant_taxonomy_lookup)) PATHS$plant_taxonomy_lookup

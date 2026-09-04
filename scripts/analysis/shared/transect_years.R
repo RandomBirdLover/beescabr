@@ -19,6 +19,11 @@
 
 TRANSECT_YEARS_FILE <- "data/spatial/shapefiles/transects/transect_years_manual.csv"
 
+#' Read the hand-maintained table of which years each transect was walked
+#'
+#' @param path The transect-years CSV.
+#' @return A data frame, or `NULL` when the file is absent -- callers treat that
+#'   as "no year filter" rather than an error.
 read_transect_years <- function(path = TRANSECT_YEARS_FILE) {
   if (!file.exists(path)) return(NULL)
   read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)

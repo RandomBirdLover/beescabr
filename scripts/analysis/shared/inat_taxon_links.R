@@ -21,6 +21,13 @@ inat_taxon_url <- function(taxon_id, scientific_name) {
            utils::URLencode(scientific_name, reserved = TRUE))
 }
 
+#' iNaturalist photo link, as an HTML anchor carrying the iNat logo
+#'
+#' @param taxon_id iNaturalist taxon id. Pass the id the record already carries;
+#'   do not look it up again from a name (see CLAUDE.md's join rule).
+#' @param scientific_name Used for the tooltip, and for the name-search fallback
+#'   URL when `taxon_id` is missing -- 17 checklist bees have no iNat taxon.
+#' @return A one-element HTML string, ready to paste into a table cell.
 inat_photo_link <- function(taxon_id, scientific_name) {
   sprintf(paste0('<a class="inat" href="%s" target="_blank" rel="noopener" ',
                  'title="See photos of %s on iNaturalist">',

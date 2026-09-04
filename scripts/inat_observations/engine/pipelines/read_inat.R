@@ -65,6 +65,17 @@ clear_export_cache <- function() {
 # the cached frame is returned. Set resolve_taxa = FALSE for a fast, uncached
 # coordinates/tags-only read.
 # ------------------------------------------------------------
+#' Read the cached observations as a flat table
+#'
+#' @param con An open cache connection.
+#' @param resolve_taxa Fill the rank columns from the taxon cache.
+#' @param request_fn Injection point for the API call.
+#' @param verbose Print progress.
+#' @param use_cache Reuse the flattened cache. Set `BEESCABR_REFRESH_FLAT=1` to
+#'   force a rebuild without editing the call.
+#'
+#' @param cache_path Where the flattened table is cached.
+#' @return The flat observation table, one row per observation.
 read_observations_export <- function(con, resolve_taxa = TRUE,
                                      request_fn = inat_request, verbose = TRUE,
                                      use_cache = TRUE, cache_path = EXPORT_FLAT_CACHE) {

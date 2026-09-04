@@ -77,6 +77,13 @@ local({
 # complex map) against a populated cache. Returns an invisible summary list.
 # backfill_parent_taxonomy() lives in reference/taxonomy_reference.R (sourced above via need()).
 # ------------------------------------------------------------
+#' Build the bee taxonomy lookup from the cache and the reference tables
+#'
+#' Boundaries are sourced lazily, so merely sourcing this file to define the
+#' function does not require the spatial data to be on disk.
+#'
+#' @param con An open DuckDB connection to the observation cache.
+#' @return The bee taxonomy lookup, one row per taxon, keyed by `taxon_id`.
 build_taxonomy_lookup <- function(con) {
   # Boundaries (reads shapefiles) loaded lazily so merely sourcing this file
   # to define the function does not require the spatial data on disk.

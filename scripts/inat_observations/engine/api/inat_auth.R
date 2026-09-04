@@ -131,6 +131,11 @@ inat_api_jwt <- function() {
 
 # the token the transport sends as Bearer; NULL when auth is off. Cached per R session.
 .inat_auth_env <- new.env(parent = emptyenv())
+#' The iNaturalist API token for this session, fetched once and reused
+#'
+#' @param force Fetch a fresh token even if one is cached.
+#' @return The JWT, or `NULL` when no API key is configured -- most of the
+#'   pipeline works unauthenticated, so callers treat `NULL` as normal.
 inat_auth_token <- function(force = FALSE) {
   if (!inat_auth_enabled()) return(NULL)
   if (force || is.null(.inat_auth_env$jwt)) .inat_auth_env$jwt <- inat_api_jwt()

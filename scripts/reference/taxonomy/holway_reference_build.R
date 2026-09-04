@@ -660,6 +660,20 @@ run_described_second_pass <- function(con, holway_df, rows, ancestry,
 # Produces a taxonomy tibble in the clean reference-table layout (one row per
 # Holway entry, full ancestry) and returns it; the runner writes it to disk.
 # ------------------------------------------------------------
+#' Resolve every Holway checklist name to an iNaturalist taxon
+#'
+#' Already-decided taxa are batch-prefetched with their ancestors first, so the
+#' per-row lookups below are cache hits rather than hundreds of throttled
+#' requests. Names that cannot be resolved unambiguously are left without an id
+#' on purpose -- a wrong id is worse than none (see LIMITATIONS.md).
+#'
+#' @param con An open DuckDB connection to the cache.
+#' @param holway_df The Holway checklist, as loaded by `load_holway()`.
+#' @param request_fn Injection point for the API call; tests pass a fake so no
+#'   test ever touches the real API.
+#' @param interactive_ok Allow prompting a human for an ambiguous name. Set
+#'   `FALSE` for an unattended run.
+#' @return The resolved reference table.
 build_holway_reference <- function(con, holway_df,
                                    request_fn = inat_request,
                                    interactive_ok = TRUE) {

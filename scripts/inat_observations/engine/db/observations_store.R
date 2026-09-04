@@ -79,6 +79,14 @@ write_observations <- function(con, results) {
 # Returns list(n = rows inserted this page, last_id = max obs id on the page).
 # Does NOT manage a transaction; the ingest loop keeps one open across pages.
 # ------------------------------------------------------------
+#' Write one page of API results into the cache
+#'
+#' The raw JSON text is handed to DuckDB to parse, rather than parsed in R --
+#' an ingest is many pages and this is the difference between minutes and hours.
+#'
+#' @param con An open cache connection.
+#' @param raw_text The page's JSON, as returned by the API.
+#' @return Invisibly, how many observations were written.
 write_observations_page <- function(con, raw_text) {
   stg <- data.frame(arr = raw_text, stringsAsFactors = FALSE)
   duckdb::duckdb_register(con, "stg_page", stg)
@@ -121,6 +129,10 @@ write_observations_page <- function(con, raw_text) {
 # ------------------------------------------------------------
 # Read helpers.
 # ------------------------------------------------------------
+#' How many observations the cache holds
+#'
+#' @param con An open cache connection.
+#' @return The row count.
 count_observations <- function(con) {
   DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM inat_observations")$n[1]
 }
@@ -132,6 +144,10 @@ count_observations <- function(con) {
 # never be deleted otherwise. Called ONLY on a full ingest; incremental runs
 # never clear. Returns the number of rows removed (for logging).
 # ------------------------------------------------------------
+#' Empty the observations table
+#'
+#' @param con An open cache connection.
+#' @return Invisibly, how many rows were deleted.
 clear_observations <- function(con) {
   n <- count_observations(con)
   DBI::dbExecute(con, "DELETE FROM inat_observations")

@@ -138,6 +138,14 @@ cw_get_or_add <- function(cw, name, what_for = NA) {
   cat(bar, "\n", sep = "")
 }
 
+#' Walk a human through unrecognised tags or observation fields
+#'
+#' @param kind `"tags"` or `"fields"`.
+#' @param cw_path The crosswalk, which this updates.
+#' @param prompt_fn Injection point for reading an answer.
+#' @param write Save the answers.
+#' @param max_items Stop after this many, so a long queue can be done in sittings.
+#' @return Invisibly, how many were resolved.
 review_unknowns <- function(kind = c("tags", "fields"), cw_path = CW_PATH,
                             prompt_fn = readline, write = TRUE, max_items = Inf) {
   kind <- match.arg(kind)

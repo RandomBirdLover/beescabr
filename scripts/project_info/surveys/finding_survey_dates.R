@@ -39,6 +39,11 @@ if (!exists("people_display")) source("scripts/utils/people_ids.R")
 #     inat_plant_clean.R; the old qc_misplaced_transect.R was deleted from the repo.)
 # master_per_survey_info_generated.csv = CONFIRMED surveys only. Returns list(survey_dates, review).
 # ------------------------------------------------------------
+#' Normalise a transect code to one of the four the project uses
+#'
+#' @param x Transect as typed, in any of its spellings.
+#' @return `"BST"`, `"UPMON"`, `"TP"`, `"OT"` or `NA`. TP1 and TP2 both become
+#'   TP: the tidepools transect is one transect walked in both directions.
 fpi_norm_transect <- function(x) {
   u <- toupper(gsub("^#", "", trimws(as.character(x))))
   dplyr::case_when(
@@ -115,6 +120,17 @@ sd_full_names <- function(x, year, roster) {
   vapply(seq_along(x), function(i) one(x[[i]], yr[[i]]), character(1))
 }
 
+#' Work out which survey each record belongs to
+#'
+#' @param membership Which observations belong to the project.
+#' @param windows The scheduled survey windows.
+#' @param roster Who was surveying.
+#' @param existing_path Survey dates already settled, which are not revisited.
+#' @param review_path Where to write records that matched no window.
+#' @param intern_log_path Which people were interns, per year.
+#' @param tol_days How many days either side of a window still counts as it.
+#' @param people The roster, when already loaded.
+#' @return The per-survey table, plus a review file of what did not fit.
 fpi_survey_dates <- function(membership, windows, roster,
                              existing_path = FPI_SURVEY_DATES, review_path = FPI_REVIEW,
                              intern_log_path = FPI_INTERN_LOG,

@@ -52,6 +52,13 @@ participation_from_surveys <- function(surveys, people) {
   out[order(out$person_id, out$year, out$role, out$method), , drop = FALSE]
 }
 
+#' Build the participation summary the acknowledgements page reads
+#'
+#' Counts PEOPLE from the roster, never from the trip log -- the trip log
+#' measures effort, not headcount.
+#'
+#' @param out Output path; `NULL` uses the `PATHS` default.
+#' @return Invisibly, the summary.
 build_participation <- function(out = NULL) {
   if (!exists("PATHS")) source("scripts/config.R")
   rd <- function(p) if (!is.null(p) && file.exists(p))

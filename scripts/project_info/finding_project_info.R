@@ -287,6 +287,14 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
 # ------------------------------------------------------------
 # ORCHESTRATOR
 # ------------------------------------------------------------
+#' Rebuild the per-survey information table
+#'
+#' The per-year roster is derived, not typed: `people_manual.csv` says who
+#' exists, the intern log says who was an intern that year, and everyone else
+#' is a beeple.
+#'
+#' @param write Write the result.
+#' @return The per-survey table.
 finding_project_info <- function(write = TRUE) {
   crosswalk <- read_csv(FPI_CROSSWALK, show_col_types = FALSE)
   windows   <- read_csv(FPI_WINDOWS, show_col_types = FALSE)

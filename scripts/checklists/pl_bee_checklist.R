@@ -15,6 +15,11 @@ if (!exists("point_loma_boundary")) source("scripts/spatial/spatial_utils.R")
 
 PL_OUT_DIR <- "data/checklists/point_loma"
 
+#' Build the Point Loma tier of checklists and write them out
+#'
+#' @param bees_sf Cleaned bee observations as an `sf` point layer.
+#' @param lookup The bee taxonomy lookup.
+#' @return Invisibly, the checklists written.
 build_pl_bee_checklists <- function(bees_sf, lookup) {
   dir.create(PL_OUT_DIR, showWarnings = FALSE, recursive = TRUE)
   lookup <- lookup |> mutate(taxon_id = as.character(taxon_id))

@@ -17,7 +17,17 @@
 
 library(DBI)
 
+#' Cache key for a taxon looked up by id
+#'
+#' @param id iNaturalist taxon id.
+#' @return The key, `"id:<n>"`.
 taxon_cache_key_id   <- function(id)   paste0("id:", as.integer(id))
+#' Cache key for a taxon looked up by name
+#'
+#' @param name The name searched for; lower-cased and trimmed so spelling
+#'   variants share one cache entry.
+#'
+#' @return The key, `"name:<name>"`.
 taxon_cache_key_name <- function(name) paste0("name:", tolower(trimws(name)))
 
 # Return parsed JSON (a nested list) for a cache key, or NULL on miss.

@@ -60,6 +60,13 @@ RW_PATH <- "data/project_info/surveys/review/qc_review_survey_beeple_date_window
   for (u in parts) cat("     ", u, "\n")
 }
 
+#' Walk a human through records that fell outside any survey window
+#'
+#' @param path The review file, written by `finding_project_info()`.
+#' @param prompt_fn Injection point for reading an answer.
+#' @param write Save the answers.
+#' @param max_items Stop after this many.
+#' @return Invisibly, how many were resolved.
 review_windows <- function(path = RW_PATH, prompt_fn = readline, write = TRUE, max_items = Inf) {
   if (!file.exists(path)) {
     message("No review file at ", path, " -- run finding_project_info() first.")
@@ -162,6 +169,13 @@ RTT_PATH <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_
   for (u in parts) cat("     ", u, "\n")
 }
 
+#' Walk a human through records that matched two transects equally well
+#'
+#' @param path The tie file, written by `finding_project_info()`.
+#' @param prompt_fn Injection point for reading an answer.
+#' @param write Save the answers.
+#' @param max_items Stop after this many.
+#' @return Invisibly, how many were ruled on. No tie file means no ties.
 review_transect_ties <- function(path = RTT_PATH, prompt_fn = readline, write = TRUE, max_items = Inf) {
   if (!file.exists(path)) {
     message("No tie file at ", path, " -- run finding_project_info() first (0 ties = nothing to rule).")

@@ -45,6 +45,11 @@ citation_save_version <- function(path, version) {
   invisible(version)
 }
 
+#' Read a data source's version string, if it recorded one
+#'
+#' @param path The version file.
+#' @return The version, or `""` when the file is absent or unreadable. A missing
+#'   version is normal for a source that does not publish one.
 citation_read_version <- function(path) {
   if (!length(path) || !file.exists(path)) return("")
   v <- tryCatch(trimws(paste(readLines(path, warn = FALSE), collapse = "")),

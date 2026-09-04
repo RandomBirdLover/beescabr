@@ -21,6 +21,10 @@
 library(dplyr)
 library(stringr)
 
+#' Read the Holway San Diego County bee checklist
+#'
+#' @param path The checklist CSV.
+#' @return The checklist as a data frame, unmodified.
 load_holway <- function(path) utils::read.csv(path, stringsAsFactors = FALSE)
 
 # ------------------------------------------------------------
@@ -28,6 +32,13 @@ load_holway <- function(path) utils::read.csv(path, stringsAsFactors = FALSE)
 # entry like "CF annectens" or "MSN foo sp. nov." becomes a bare epithet.
 # Vectorized, pure.
 # ------------------------------------------------------------
+#' Strip tentative and unpublished qualifiers from a Holway epithet
+#'
+#' `"CF annectens"` becomes `"annectens"`; a bare `"sp. nov."` becomes `""`.
+#' Vectorised and pure.
+#'
+#' @param species_raw The epithet column as Holway spells it.
+#' @return The cleaned epithet.
 clean_holway_species <- function(species_raw) {
   species_raw |>
     str_remove("^CF\\s+") |>
@@ -51,6 +62,13 @@ clean_holway_species <- function(species_raw) {
 #   "robustior" / "affinis" / "a / b" -> NA  (plain names & slash pairs carry no marker;
 #                                             a real epithet like "affinis" is NOT the aff. marker)
 # ------------------------------------------------------------
+#' The qualifier Holway put in front of an epithet, if any
+#'
+#' Matched as a standalone token so `"affinis"` is never read as `"aff."`.
+#'
+#' @param species_raw The epithet column as Holway spells it.
+#' @return `"CF"`, `"MSN"`, `"aff."` or `NA` -- the uncertainty the checklist
+#'   recorded, kept rather than silently dropped.
 holway_qualifier <- function(species_raw) {
   x     <- ifelse(is.na(species_raw), "", species_raw)
   # marker must be a standalone token (followed by whitespace), so "affinis" is
@@ -77,6 +95,13 @@ holway_qualifier <- function(species_raw) {
 # interactive "which to use?" prompt); this pure split just avoids the bogus
 # subspecies. Returns a tibble(species, subspecies); either is NA when absent.
 # ------------------------------------------------------------
+#' Split a Holway epithet into species and subspecies
+#'
+#' A `"a/b"` entry means Holway could not choose between two names: the first is
+#' taken as the species and no subspecies is claimed.
+#'
+#' @param species_raw The epithet column as Holway spells it.
+#' @return A data frame with `species` and `subspecies`.
 split_holway_species <- function(species_raw) {
   cleaned   <- clean_holway_species(species_raw)
   has_slash <- !is.na(cleaned) & str_detect(cleaned, "/")
@@ -97,6 +122,11 @@ split_holway_species <- function(species_raw) {
 # tribe and, if `warn`, surface the conflicting genera so they stay visible.
 # Returns columns: genus, family_holway, subfamily_holway, tribe_holway.
 # ------------------------------------------------------------
+#' Genus-to-ancestry table built from the Holway checklist
+#'
+#' @param holway_df The Holway checklist.
+#' @param warn Report genera whose rows disagree about their own family.
+#' @return One row per genus with `family`, `subfamily` and `tribe`.
 holway_genus_taxonomy <- function(holway_df, warn = TRUE) {
   raw <- holway_df |>
     filter(!is.na(genus), genus != "") |>
@@ -127,6 +157,12 @@ holway_genus_taxonomy <- function(holway_df, warn = TRUE) {
 # Holway only fills blanks. Returns the bees df with columns coalesced and
 # the *_holway helper columns dropped.
 # ------------------------------------------------------------
+#' Fill blank family/subfamily/tribe from the Holway genus table
+#'
+#' @param bees Bee records with possibly-blank rank columns.
+#' @param genus_lookup Genus-to-ancestry table from `holway_genus_taxonomy()`.
+#' @return `bees` with those three ranks filled where they were blank. Values
+#'   already present are never overwritten.
 backfill_taxonomy <- function(bees, genus_lookup) {
   bees |>
     left_join(genus_lookup, by = "genus") |>

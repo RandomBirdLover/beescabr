@@ -83,6 +83,13 @@ infer_higher_rank <- function(family, subfamily, tribe, subtribe = NA_character_
 # family's species). Adds NO taxa; never overwrites a populated cell.
 # Run as the LAST step of build_taxonomy_lookup(), after every taxon + id is merged.
 # ------------------------------------------------------------
+#' Fill blank ancestor ranks from other rows that share a lower rank
+#'
+#' This is what keeps a record identified only to `Halictini` from losing its
+#' family and order.
+#'
+#' @param lk The lookup being built.
+#' @return `lk` with blank ancestor ranks filled where a sibling row knew them.
 backfill_parent_taxonomy <- function(lk) {
   anc <- intersect(c("kingdom","phylum","subphylum","class","subclass","order","suborder",
                      "infraorder","superfamily","family","epifamily","subfamily","tribe","subtribe"),
@@ -353,6 +360,12 @@ fill_parent_ids <- function(df, ancestry_ids) {
 # reference table -- using the name at each row's own rank. Replaces the retired
 # ancestry side-file now that the ancestor taxa live in the reference table itself.
 # ------------------------------------------------------------
+#' Pull the per-rank ancestor ids out of a resolved reference table
+#'
+#' @param ref A reference table carrying `taxon_id`, `rank`, `scientific_name`
+#'   and the rank-name columns.
+#' @return One row per taxon with an id for each ancestral rank, so a record
+#'   identified only to tribe can still be rolled up.
 ancestry_ids_from_reference <- function(ref) {
   LEVELS <- c("kingdom", "phylum", "subphylum", "class", "subclass", "order",
               "suborder", "infraorder", "superfamily", "family", "epifamily",
@@ -428,6 +441,13 @@ SPECIMEN_ADDITION_RANKS <- c("kingdom","phylum","subphylum","class","subclass","
   out
 }
 
+#' Add taxa found only in the specimen records to the lookup
+#'
+#' @param lookup The lookup so far.
+#' @param additions Specimen-only taxa, carrying at least a `rank`.
+#' @return A list of `lookup` (with the additions merged), `added` (what was
+#'   new) and `missing_parents` (additions whose parent rank is still unknown,
+#'   so the run can report them instead of silently dropping the lineage).
 specimen_additions_to_lookup <- function(lookup, additions) {
   empty_mp <- tibble(taxon = character(), rank = character(),
                      missing_parent_rank = character(), missing_parent_name = character())
@@ -526,6 +546,17 @@ drop_phantom_additions <- function(additions, spec_clean = NULL, inat_clean = NU
 # their unit tests but are no longer part of this path: with the reference as the
 # base, taxon_ids are already present and there is no stale raw row to reconcile.
 # ============================================================================
+#' Assemble the bee taxonomy lookup from all of its sources
+#'
+#' @param holway_resolved The cleaned Holway reference table. Required -- it is
+#'   the base every other source is layered onto.
+#' @param checklist_sd_county The San Diego County iNaturalist checklist.
+#' @param bees Cleaned bee observations, for taxa the checklists missed.
+#' @param verified_ids Taxon ids a human has confirmed.
+#' @param ancestry_ids Per-rank ancestor ids, from
+#'   `ancestry_ids_from_reference()`.
+#' @return The lookup, one row per taxon. 17 rows legitimately have no
+#'   `taxon_id`: iNaturalist has published no taxon for them.
 build_bee_taxonomy_lookup <- function(holway_resolved, checklist_sd_county, bees,
                                       verified_ids = integer(0),
                                       ancestry_ids = NULL) {

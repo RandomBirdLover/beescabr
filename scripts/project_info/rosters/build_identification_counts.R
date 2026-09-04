@@ -63,6 +63,10 @@ identification_counts <- function(ids, people) {
   data.frame(login = r$login, kind = kind, n = as.integer(r$n), stringsAsFactors = FALSE)
 }
 
+#' Count identifications per person for the acknowledgements page
+#'
+#' @param out Output path; `NULL` uses the `PATHS` default.
+#' @return Invisibly, the counts, or `NULL` when there is no roster.
 build_identification_counts <- function(out = NULL) {
   rd <- function(p) if (!is.null(p) && file.exists(p))
     read.csv(p, stringsAsFactors = FALSE, check.names = FALSE) else data.frame()

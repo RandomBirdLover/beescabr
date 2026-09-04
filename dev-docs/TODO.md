@@ -133,6 +133,9 @@
 - [ ] Year vs. year comparison
 - [ ] 10-minute survey analysis
 - [ ] What should we target specifically for future collecting?
+- [ ] **Find the bee by its plant's flowering season** — a synthesis of the
+  plant–bee network and plant phenology. Proposed, never built: it needs plant
+  phenology to be solid first, and `flower_flowering` is filled on 68 of 9,243 rows.
 
 ## Writing / presentation
 
@@ -155,7 +158,6 @@
   leave it, drop it and sort the list some other way, or DERIVE it by counting
   identifications per person from the observation cache. The cache holds 245,946
   identifications, so the data is already there -- the same JSON we decided not to prune.
-- [ ] **Merge `ANALYSIS_DECISIONS.md` + `ANALYSIS_ROADMAP.md`.** Same.
 - [ ] **Cut `PIPELINE_GUIDE.md` back to architecture.** It has accumulated
   task-level detail that now lives in the runbook and the per-folder explainers.
 - [ ] **Triage this file.** 52 items, never reviewed; several are certainly done.

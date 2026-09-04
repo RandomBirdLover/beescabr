@@ -129,6 +129,15 @@ sbc_transect_spatial <- function(df, transect_path = SBC_TRANSECTS, off_m = SBC_
 # clean_specimens(): read -> clean -> write. Non-interactive in the pipeline
 # (interactive_ok = FALSE logs flags and continues; never hard-stops the run).
 # ------------------------------------------------------------
+#' Clean the specimen spreadsheet into the analysis table
+#'
+#' @param interactive_ok Allow prompting for a taxon id the lookup cannot find.
+#'   Set `BEESCABR_NONINTERACTIVE=1` for an unattended run.
+#'
+#' @param prompt_fn Injection point for reading an answer.
+#' @param verbose Print progress.
+#' @return The cleaned specimen table, plus QC files under
+#'   `specimens_clean/review/` for a human to look over.
 clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
                             prompt_fn = readline, verbose = TRUE) {
   cleaned_dir <- "data/specimens/specimens_clean"

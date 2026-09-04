@@ -30,25 +30,25 @@ Read the first two together. Neither means much alone.
 
 ## Master table
 
-| Analysis (script) | Q | Scope | Ranks | Method | Key parameters | Test / null |
-|---|---|---|---|---|---|---|
-| Accumulation by effort (`genera_and_species_accumulation.R`) | Q5 | survey-effort (iNat survey-only + all specimens) | both | pooled per transect | `PERMUTATIONS=200`, unit = one survey per (day×transect), zero-catch kept, `seed=1` | `vegan::specaccum(random)`; Chao2 via `specpool` (± SE, no p) |
-| CABR vs Holway (`coverage_cabr_vs_holway.R`) | Q10 | all-records (evidence recomputed from cleaned tables) | species | pooled | grades each non-Holway taxon by specimen/iNat/research-grade evidence | descriptive |
-| Method Venn + resolution (`coverage_method_venn.R`) | Q1/Q2 | **all-records** | both | **method split** | colors per method | **χ²** (resolution × method) |
-| Off-transect bees (`coverage_offtransect.R`) | Q6 | **all-records** | both | pooled | park vs transect assignment | descriptive |
-| Yield by group (`coverage_yield_by_group.R`) | Q11 | **survey-only** | both | **method split** × beeple/intern | per-survey yield | descriptive |
-| Target-ID list (`coverage_id_targets.R`) | Q7 | all-records | species-resolution flag | pooled | **all genera** (no top-N); per-method figs share one A–Z genus set with `drop=FALSE` | descriptive |
-| Diversity indices + ordination (`diversity_indices.R`) | Q8 | **survey-only** | both | pooled | `WINDOW_MONTHS=3:9`, `MIN_SITE_REC=15` | **PERMANOVA** `adonis2` Bray–Curtis + NMDS; Shannon/Simpson/Pielou |
-| Spatial richness map (`spatial_richness_map.R`) | Q8 | all-records | both | grid: **iNat only** (real GPS); transect table: both methods | `CRS=32611`, `CELL_M=75`, `MAX_ACCURACY=250`, `RAREFY_N=20` | rarefied grid (iNat) + per-transect richness CSV/bar |
-| Top plants (`interactions_top_plants.R`) | Q3 | 3 disclosed: whole-park (headline), survey-only, method | genus (plant) | split shown | `TOP_N=10`, `TOP_MONTH=12` | descriptive |
-| Plant–bee network (`interactions_network.R`) | Q4 | **all-records** | both | pooled | `SPECIALIST_MAX_PLANTS=2`, `MIN_SHARED=3`, H2′ `nsim=999`, NODF `nsimul=499` | **H2′** vs `r2dtable`; **NODF** vs `oecosimu` quasiswap |
-| Per-genus species webs (`interactions_genus_species_webs.R`) | Q4+ | all-records (matches network) | within-genus species | pooled | `MIN_SPECIES`, `MIN_REC` thresholds; `seed=1` | within-genus **H2′** vs `r2dtable` |
-| Phenology activity (`phenology_activity.R`) | Q12 | plants **survey-only**; bees **all-records** | both (bees) | pooled (bees) | drop `flower_flowering=="no"` | **Rayleigh** circular test |
-| Effort calendar (`phenology_effort.R`) | Q13 | survey list | — | shown | `WINDOW_MONTHS=3:9` | descriptive |
-| Rarefaction — vegan (`rarefaction_vegan.R`) | — | **survey-only** | both | 4 comparisons incl. method | `WINDOW_MONTHS=3:9`, rarefy-to-lowest | rarefaction (CIs, no p) |
-| Rarefaction — iNEXT (`rarefaction_inext.R`) | — | **survey-only** | both | incl. obs-vs-specimen | `QVALS=0,1,2` (Hill), `NBOOT=50` | size- & coverage-based Hill numbers |
-| Bee Bounties (`bee_bounties.R`) | — | method-gap (all-records) | both | **method split** | **all gap species (no cap)**, `HALF_WIDTH_M=5` (photo corridor) | descriptive gap lists |
-| NPS summary (`nps_summary_tables.R`) | — | descriptive (all) | species | shown | — | plain counts, no test |
+| Analysis (script) | Scope | Ranks | Method | Key parameters | Test / null |
+|---|---|---|---|---|---|
+| Accumulation by effort (`genera_and_species_accumulation.R`) | survey-effort (iNat survey-only + all specimens) | both | pooled per transect | `PERMUTATIONS=200`, unit = one survey per (day×transect), zero-catch kept, `seed=1` | `vegan::specaccum(random)`; Chao2 via `specpool` (± SE, no p) |
+| CABR vs Holway (`coverage_cabr_vs_holway.R`) | all-records (evidence recomputed from cleaned tables) | species | pooled | grades each non-Holway taxon by specimen/iNat/research-grade evidence | descriptive |
+| Method Venn + resolution (`coverage_method_venn.R`) | **all-records** | both | **method split** | colors per method | **χ²** (resolution × method) |
+| Off-transect bees (`coverage_offtransect.R`) | **all-records** | both | pooled | park vs transect assignment | descriptive |
+| Yield by group (`coverage_yield_by_group.R`) | **survey-only** | both | **method split** × beeple/intern | per-survey yield | descriptive |
+| Target-ID list (`coverage_id_targets.R`) | all-records | species-resolution flag | pooled | **all genera** (no top-N); per-method figs share one A–Z genus set with `drop=FALSE` | descriptive |
+| Diversity indices + ordination (`diversity_indices.R`) | **survey-only** | both | pooled | `WINDOW_MONTHS=3:9`, `MIN_SITE_REC=15` | **PERMANOVA** `adonis2` Bray–Curtis + NMDS; Shannon/Simpson/Pielou |
+| Spatial richness map (`spatial_richness_map.R`) | all-records | both | grid: **iNat only** (real GPS); transect table: both methods | `CRS=32611`, `CELL_M=75`, `MAX_ACCURACY=250`, `RAREFY_N=20` | rarefied grid (iNat) + per-transect richness CSV/bar |
+| Top plants (`interactions_top_plants.R`) | 3 disclosed: whole-park (headline), survey-only, method | genus (plant) | split shown | `TOP_N=10`, `TOP_MONTH=12` | descriptive |
+| Plant–bee network (`interactions_network.R`) | **all-records** | both | pooled | `SPECIALIST_MAX_PLANTS=2`, `MIN_SHARED=3`, H2′ `nsim=999`, NODF `nsimul=499` | **H2′** vs `r2dtable`; **NODF** vs `oecosimu` quasiswap |
+| Per-genus species webs (`interactions_genus_species_webs.R`) | all-records (matches network) | within-genus species | pooled | `MIN_SPECIES`, `MIN_REC` thresholds; `seed=1` | within-genus **H2′** vs `r2dtable` |
+| Phenology activity (`phenology_activity.R`) | plants **survey-only**; bees **all-records** | both (bees) | pooled (bees) | drop `flower_flowering=="no"` | **Rayleigh** circular test |
+| Effort calendar (`phenology_effort.R`) | survey list | — | shown | `WINDOW_MONTHS=3:9` | descriptive |
+| Rarefaction — vegan (`rarefaction_vegan.R`) | **survey-only** | both | 4 comparisons incl. method | `WINDOW_MONTHS=3:9`, rarefy-to-lowest | rarefaction (CIs, no p) |
+| Rarefaction — iNEXT (`rarefaction_inext.R`) | **survey-only** | both | incl. obs-vs-specimen | `QVALS=0,1,2` (Hill), `NBOOT=50` | size- & coverage-based Hill numbers |
+| Bee Bounties (`bee_bounties.R`) | method-gap (all-records) | both | **method split** | **all gap species (no cap)**, `HALF_WIDTH_M=5` (photo corridor) | descriptive gap lists |
+| NPS summary (`nps_summary_tables.R`) | descriptive (all) | species | shown | — | plain counts, no test |
 
 ---
 

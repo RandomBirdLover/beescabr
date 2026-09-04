@@ -40,13 +40,26 @@ iucn_table <- function() {
     .iucn_fallback
   }
 }
+#' TRUE when the IUCN status cache has been fetched
+#'
+#' @return `TRUE` if the cache file exists. Callers use this to skip the IUCN
+#'   columns entirely rather than render a table of "NE".
 iucn_cache_exists <- function() file.exists(IUCN_CACHE_FILE)
 
 # ---- vectorised lookups over a character vector of "Genus species" ------------
+#' IUCN red-list code for each species
+#'
+#' @param sp Character vector of "Genus species" names.
+#' @return The IUCN code (`LC`, `NT`, `VU`, `EN`, `CR`, `DD`), or `"NE"` for a
+#'   species the red list has not evaluated. Same length as `sp`.
 iucn_code_of <- function(sp) {
   out <- unname(setNames(iucn_table()$iucn_code, iucn_table()$scientific_name)[sp])
   out[is.na(out)] <- "NE"; out
 }
+#' IUCN red-list category, spelled out for a reader
+#'
+#' @param sp Character vector of "Genus species" names.
+#' @return The category name ("Endangered"), or `"Not Evaluated"` when absent.
 iucn_name_of <- function(sp) {
   out <- unname(setNames(iucn_table()$iucn_category, iucn_table()$scientific_name)[sp])
   out[is.na(out)] <- "Not Evaluated"; out

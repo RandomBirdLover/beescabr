@@ -144,6 +144,16 @@ cw_add_plant_canonical <- function(cw, canonical, variant) {
 # ------------------------------------------------------------
 # review_plant_names(): the interactive loop (mirrors review_unknowns).
 # ------------------------------------------------------------
+#' Walk a human through the plant names the pipeline could not resolve
+#'
+#' @param cw_path The plant-name crosswalk, which this updates.
+#' @param specimen_clean_path The cleaned specimen table.
+#' @param plant_clean_path The cleaned plant table.
+#' @param prompt_fn Injection point for reading an answer; tests pass a fake.
+#' @param write Save the answers.
+#' @param interactive_ok Whether prompting is allowed at all.
+#' @param worklist_path Where the outstanding names are listed.
+#' @return Invisibly, how many names were resolved.
 review_plant_names <- function(cw_path = CPN_CW,
                                specimen_clean_path = PATHS$specimen_clean,
                                plant_clean_path    = PATHS$inat_plant_clean,

@@ -30,11 +30,28 @@ bx_act  <- function(...)        message("  » ", paste0(...))                # �
 # Stages don't touch this; run_data_cleaning_pipeline.R collects the items after the run (from
 # the review artifacts on disk) and prints them once at the very end.
 .BX_NEED <- new.env(parent = emptyenv()); .BX_NEED$items <- list()
+#' Empty the "NEEDS YOU" queue
+#'
+#' Called at the start of a run so a second run in the same session does not
+#' inherit the first run's items.
+#'
+#' @return Invisibly, nothing.
 bx_need_reset <- function() .BX_NEED$items <- list()
+#' Queue an item for the end-of-run "NEEDS YOU" rollup
+#'
+#' Nothing here blocks the pipeline. It is how a stage says "a human should look
+#' at this eventually" without interrupting a run that is otherwise fine.
+#'
+#' @param what What the person has to do.
+#' @param where The file or place to do it in.
+#' @return Invisibly, nothing.
 bx_need <- function(what, where = "") {
   if (!is.null(what) && nzchar(what))
     .BX_NEED$items[[length(.BX_NEED$items) + 1L]] <- c(what = what, where = where)
 }
+#' Print the "NEEDS YOU" rollup at the end of a run
+#'
+#' @return Invisibly, nothing. Prints an all-clear line when nothing is queued.
 bx_need_print <- function() {
   it <- .BX_NEED$items
   if (!length(it)) { message("  Nothing needs you right now — all clear ✓"); return(invisible()) }

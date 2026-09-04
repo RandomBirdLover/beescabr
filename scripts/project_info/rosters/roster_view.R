@@ -18,6 +18,13 @@
 # =============================================================
 if (!exists("person_id_keys")) source("scripts/utils/people_ids.R")
 
+#' Assemble the per-year view of who surveyed
+#'
+#' @param people The one-row-per-human roster.
+#' @param intern_log Which people were interns, per year.
+#' @param years The years to build.
+#' @return One row per person per year, with their surveyor type. Falls back to
+#'   deriving the type from the log for an older roster without that column.
 roster_view <- function(people, intern_log, years) {
   sq <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
   if (!is.null(people) && nrow(people) && !"surveyor_type" %in% names(people))

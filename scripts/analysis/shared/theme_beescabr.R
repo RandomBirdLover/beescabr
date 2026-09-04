@@ -285,6 +285,14 @@ BEE_COLOR_TOKENS <- c(
   "__D_ACCENT__"  = BEE_SITE_DARK[["accent"]],  "__D_ACCENTD__" = BEE_SITE_DARK[["accent_deep"]],
   "__D_ACCENTS__" = BEE_SITE_DARK[["accent_soft"]])
 
+#' Substitute theme colors into a CSS or JS template
+#'
+#' For CSS built inside `sprintf()` or a template string, where `', var, '` would
+#' print literally. Write `__C_NAME__` in the template and pass it through here,
+#' so a page still gets its color from the theme and never a hex literal.
+#'
+#' @param x A template string containing `__C_NAME__` tokens.
+#' @return The same string with each token replaced by its theme color.
 beescabr_fill_colors <- function(x) {
   for (.k in names(BEE_COLOR_TOKENS)) x <- gsub(.k, BEE_COLOR_TOKENS[[.k]], x, fixed = TRUE)
   x
@@ -374,6 +382,11 @@ BEE_SEASON <- c("#2C7BB6", "#2C7BB6", "#7DC35E", "#EEDB6E", "#F4972A", "#EBD98C"
 
 # ---- #12 record-confidence: flag taxa too sparse to claim a preference ------
 BEE_MIN_RECORDS <- 10L    # under this many records -> "too few to claim" (matches phenology >=10)
+#' TRUE for counts too small to claim a preference from
+#'
+#' @param n A count, or a vector of them.
+#' @return Logical, `TRUE` below `BEE_MIN_RECORDS`. Mark those rows with
+#'   `bee_low_n_mark()` and footnote them with `BEE_LOW_N_NOTE`.
 bee_low_n       <- function(n) suppressWarnings(as.numeric(n) < BEE_MIN_RECORDS)
 bee_low_n_mark  <- function(n) ifelse(bee_low_n(n), "*", "")      # asterisk (universal glyph) on sparse taxa
 BEE_LOW_N_NOTE  <- sprintf("* fewer than %d records -- too few to claim a real preference", BEE_MIN_RECORDS)
@@ -384,6 +397,12 @@ BEE_LOW_N_NOTE  <- sprintf("* fewer than %d records -- too few to claim a real p
 # scope_cap() definitions. Pass only what applies; `sig` is dropped when no test ran.
 # `asof` is read from the ingest-state file (real provenance -- auto-updates on the next data pull).
 BEE_SOURCE <- "iNaturalist observations + specimen vouchers, Cabrillo NM"
+#' The date the data was last pulled, for a figure caption
+#'
+#' Read from the ingest state file so it updates itself on the next data pull.
+#'
+#' @param path The ingest-state file written at the end of a fetch.
+#' @return `"YYYY-MM-DD"`, or `"date n/a"` if the file is missing.
 bee_data_asof <- function(path = "data/inat_observations/cache/last_ingest.txt") {
   d <- tryCatch(readLines(path, warn = FALSE)[1], error = function(e) NA_character_)
   if (is.na(d) || !nzchar(d)) "date n/a" else substr(d, 1, 10)   # ISO timestamp -> YYYY-MM-DD
@@ -431,6 +450,14 @@ bee_ggsave <- function(filename, plot = ggplot2::last_plot(), ..., dpi = 400) { 
   dev <- if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png else NULL
   ggplot2::ggsave(filename, plot = plot, dpi = dpi, device = dev, ...)
 }
+#' Open a PNG device at house resolution
+#'
+#' Canvas and resolution scale by the same factor, so the bump is pure resolution
+#' and text stays the same size relative to the plot. Uses ragg when installed.
+#'
+#' @param filename Output path.
+#' @param ... Passed to the device; `width`/`height` in inches, `res` in dpi.
+#' @return The device, opened. Close it with `dev.off()`.
 bee_png <- function(filename, ...) {
   a <- list(...)
   if (!is.null(a$width))  a$width  <- a$width  * BEE_HD     # scale canvas + res by the SAME factor => pure
@@ -441,6 +468,14 @@ bee_png <- function(filename, ...) {
 }
 
 # ---- ggplot house theme ----------------------------------------------------
+#' The house ggplot theme
+#'
+#' `theme_minimal()` plus the project's text conventions: centred title and
+#' takeaway subtitle, left-aligned caption, muted axes and grid. Every figure
+#' uses it, so the portfolio reads as one set.
+#'
+#' @param base_size Base font size in points; everything else is relative to it.
+#' @return A ggplot2 theme object, to add to a plot.
 theme_beescabr <- function(base_size = 12) {
   ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(
@@ -478,6 +513,10 @@ scale_fill_evidence   <- function(...) ggplot2::scale_fill_manual(values = BEE_E
                                         labels = BEE_EVIDENCE_LABEL, name = "evidence", ...)
 
 # ---- base-R helper: consistent par + fonts for the non-ggplot figures ------
+#' House `par()` defaults for a base-R figure
+#'
+#' @param ... Any further `par()` settings, which win over the defaults.
+#' @return Invisibly, the previous `par()` -- restore it with `on.exit()`.
 bee_base_par <- function(...) graphics::par(family = "sans", col.axis = BEE_INK$muted,
   col.lab = BEE_INK$secondary, col.main = BEE_INK$primary, fg = BEE_INK$axis, ...)
 

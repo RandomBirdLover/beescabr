@@ -82,6 +82,16 @@ imq_flag <- function(inat, spec_ref, hol_ref) {
 }
 
 # ---- main ------------------------------------------------------------------
+#' List iNaturalist records whose identification looks doubtful
+#'
+#' @param inat_path The cleaned iNaturalist bee table.
+#' @param specimen_path The cleaned specimen table.
+#' @param holway_path The Holway county checklist.
+#' @param out_path Where to write the candidate list.
+#' @param write Write the result.
+#' @param verbose Print progress.
+#' @return The candidates: a taxon on neither the specimen record nor the county
+#'   checklist is worth a second look, not an automatic correction.
 inat_misid_qc <- function(inat_path = IMQ_INAT, specimen_path = IMQ_SPECIMEN,
                           holway_path = IMQ_HOLWAY, out_path = IMQ_OUT,
                           write = TRUE, verbose = TRUE) {

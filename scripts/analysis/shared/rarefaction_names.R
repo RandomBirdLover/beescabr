@@ -94,6 +94,11 @@ RARE_WINDOWS <- list(
 # NULL for a report dimension (by_transect / by_year), which has no fair window
 rare_window <- function(dim) RARE_WINDOWS[[paste0("by_", sub("^by_", "", dim))]]
 
+#' Output subfolder for a comparison's fair window
+#'
+#' @param dim Comparison dimension, `"method"` or `"observer"`.
+#' @return The folder name (`fair_method_2021_2023`, `fair_observer_2024`), or
+#'   `NULL` for a dimension that is not restricted to a window.
 rare_window_dir <- function(dim) { w <- rare_window(dim); if (is.null(w)) NULL else w$dir }
 
 # `methods = NULL` means keep both; naming a method is how the observer window
@@ -116,6 +121,16 @@ rare_window_records <- function(rec, dim) {
 # drift away from the picture under it.
 RARE_RANK_WORD <- c(species = "species", genus = "genera")
 
+#' The subtitle sentence for a rarefaction figure
+#'
+#' Computed from the numbers actually plotted, so the sentence and the figure can
+#' never disagree. Printed at one decimal place because `%.0f` rounds half to
+#' even and would show a number that differs from the CSV.
+#'
+#' @param veg Rarefied-richness table for the figure, with `rank`, `group` and
+#'   `rarefied_richness` columns.
+#' @param dim Comparison dimension, `"method"` or `"observer"`.
+#' @return One sentence naming the winning group and the gap, per rank.
 rare_takeaway <- function(veg, dim) {
   w <- rare_window(dim)
   say <- function(rk) {

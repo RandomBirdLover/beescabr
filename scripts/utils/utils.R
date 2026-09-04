@@ -13,6 +13,12 @@ library(stringr)
 if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 
+#' Read the most recent file matching a pattern
+#'
+#' @param folder Directory to look in.
+#' @param pattern Regular expression the filename must match.
+#' @return The parsed contents of the newest match. Stops when nothing matches,
+#'   because a silent empty result would look like an empty dataset.
 read_latest <- function(folder, pattern) {
   files <- list.files(folder, pattern = pattern, full.names = TRUE)
   if (length(files) == 0) stop("No files matching '", pattern, "' found in ", folder)
@@ -22,10 +28,26 @@ read_latest <- function(folder, pattern) {
   ver[is.na(ver)] <- 0L
   files[order(dates, ver, decreasing = TRUE)][1]                        # newest date, then highest version number
 }
+#' Stop unless a data frame has the columns that follow it
+#'
+#' @param df The data frame to check.
+#' @param required Column names that must be present.
+#' @param df_name Name to use in the error, so the message says which frame.
+#' @return Invisibly, nothing. Stops listing exactly what is missing.
 require_columns <- function(df, required, df_name = "data") {
   missing <- setdiff(required, names(df))
   if (length(missing) > 0) stop("'", df_name, "' is missing expected column(s): ", paste(missing, collapse = ", "))
 }
+#' Write a CSV over anything already at the path
+#'
+#' Removes a stale file OR directory first, so a leftover folder from an earlier
+#' layout cannot make the write fail.
+#'
+#' @param x The data frame to write.
+#' @param path Output path.
+#' @param row.names Passed to `write.csv()`; off by default.
+#' @param ... Further arguments for `write.csv()`.
+#' @return Invisibly, nothing.
 write_fresh <- function(x, path, row.names = FALSE, ...) {
   if (dir.exists(path)) unlink(path, recursive = TRUE, force = TRUE)
   else if (file.exists(path)) unlink(path, force = TRUE)

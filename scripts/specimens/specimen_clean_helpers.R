@@ -601,6 +601,13 @@ SPECIMEN_LOOKUP_RANKS <- c("kingdom", "phylum", "subphylum", "class", "subclass"
                            "suborder", "infraorder", "superfamily", "family", "epifamily",
                            "subfamily", "tribe", "subtribe", "genus", "subgenus", "complex",
                            "species", "subspecies")
+#' Attach full taxonomy to specimen rows from the lookup
+#'
+#' @param df Specimen rows, with whatever ranks the recorder filled in.
+#' @param lookup The bee taxonomy lookup -- the authority on what a taxon is.
+#' @return `df` with `taxon_id`, `rank`, `scientific_name` and every ancestor
+#'   rank attached. A row identified only to tribe still gets its family and
+#'   order, via the rollback ladder.
 attach_lookup_taxonomy <- function(df, lookup) {
   b2na <- function(x) { x <- as.character(x); ifelse(is.na(x) | x == "", NA_character_, x) }
   d <- df |> mutate(.g = b2na(genus), .s = b2na(species), .ss = b2na(subspecies))

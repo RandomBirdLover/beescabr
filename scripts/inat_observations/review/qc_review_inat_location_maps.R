@@ -153,6 +153,10 @@ BLRM_OFF_M      <- 50   # on-transect buffer radius (metres) -- matches IBC_OFF_
   jsonlite::toJSON(recs, auto_unbox = TRUE, na = "null")
 }
 
+#' Build the review maps for records whose location looks wrong
+#'
+#' @param write Write the maps. `FALSE` builds them without touching disk.
+#' @return Invisibly, the maps, or `NULL` when the template is missing.
 build_location_review_maps <- function(write = TRUE) {
   if (!file.exists(BLRM_TEMPLATE)) { message("  (no map template at ", BLRM_TEMPLATE, " -- skipping maps)"); return(invisible(NULL)) }
   # Force a UTF-8 ctype for this call -- in a C locale R escapes the em-dash / arrow glyphs

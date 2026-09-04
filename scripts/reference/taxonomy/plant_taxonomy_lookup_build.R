@@ -272,6 +272,18 @@ plt_resolve_names <- function(names_vec, cache = NULL, resolve_fn = plt_resolve_
 # =============================================================
 # ORCHESTRATOR
 # =============================================================
+#' Build the plant taxonomy lookup -- the authority on what a plant taxon is
+#'
+#' @param all_taxa_path Every plant name seen anywhere in the project.
+#' @param crosswalk_path Hand-maintained name corrections.
+#' @param cache_path Cached iNaturalist resolutions, so a rebuild is offline.
+#' @param confirmed_path Names a human has confirmed.
+#' @param forage_path Forage-plant list.
+#' @param forage_fn Injection point for reading forage data; `NULL` uses the file.
+#' @param resolve_fn Injection point for resolving one name; tests pass a fake.
+#' @param write Write the lookup to disk. `FALSE` returns it only.
+#' @param verbose Print progress.
+#' @return The lookup, one row per plant taxon, keyed by `taxon_id`.
 build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
                                         crosswalk_path = PLT_CROSSWALK,
                                         cache_path     = PLT_CACHE,

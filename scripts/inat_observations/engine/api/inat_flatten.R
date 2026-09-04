@@ -95,6 +95,11 @@ flatten_ofvs <- function(ofvs) {
 # joined by taxon_id (see api/inat_cache.R + pipelines/read_inat.R), because
 # the /observations payload only carries ancestor_ids, not their names.
 # ------------------------------------------------------------
+#' Flatten one API observation into a single-row data frame
+#'
+#' @param o One observation, as parsed from the API JSON.
+#' @return A one-row data frame, or `NULL` for a malformed record -- which
+#'   `bind_rows()` then drops, rather than failing the whole page.
 flatten_observation <- function(o) {
   if (!is.list(o)) return(NULL)   # malformed record -> dropped by bind_rows
 
@@ -185,6 +190,12 @@ flatten_observation <- function(o) {
   subspecies  = "taxon_subspecies_name"
 )
 
+#' Spread a taxon's ancestry across the standard rank columns
+#'
+#' Column names come from `.RANK_TO_COLUMN`, so the two cannot drift apart.
+#'
+#' @param taxon A parsed taxon, with its ancestors.
+#' @return A one-row data frame with a column per rank.
 parse_taxon_ranks <- function(taxon) {
   # Derived from .RANK_TO_COLUMN so the two never drift out of sync (the 5 sub-
   # ranks -- subphylum, subclass, suborder, infraorder, epifamily -- were added

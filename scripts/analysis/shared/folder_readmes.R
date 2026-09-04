@@ -312,6 +312,14 @@ folder_readme_text <- function(rel, what, findings, subdirs, hints = character(0
   }) |> Filter(f = Negate(is.null))
 }
 
+#' Write a WHAT_THESE_FILES_ARE.txt into every folder that has a note
+#'
+#' Only folders named in `FOLDER_NOTES` get one -- a note in every folder is
+#' noise; a note where a reader would otherwise guess is worth having.
+#'
+#' @param root Repository root, so the function can be pointed at a temp copy
+#'   in a test rather than the real tree.
+#' @return The number of notes written, invisibly.
 write_folder_readmes <- function(root) {
   n <- 0
   for (rel in names(FOLDER_NOTES)) {

@@ -68,11 +68,21 @@ inat_request_text <- function(path, query = list(), perform = req_perform, ...) 
 # ------------------------------------------------------------
 # Thin taxon endpoints used by the cache layer (parsed JSON).
 # ------------------------------------------------------------
+#' Fetch one taxon by id from the iNaturalist API (no caching)
+#'
+#' @param id iNaturalist taxon id.
+#' @param request_fn Injection point for the API call.
+#' @return The raw `results` list. Prefer `get_taxon_by_id()`, which caches.
 inat_fetch_taxon_by_id <- function(id, request_fn = inat_request) {
   resp <- request_fn(paste0("taxa/", id), query = list(all_names = "true"))
   resp$results
 }
 
+#' Search the iNaturalist taxa endpoint by name (no caching)
+#'
+#' @param name The name to search for.
+#' @param request_fn Injection point for the API call.
+#' @return The raw `results` list. Prefer `get_taxa_by_name()`, which caches.
 inat_fetch_taxa_by_name <- function(name, request_fn = inat_request) {
   resp <- request_fn("taxa", query = list(q = name, all_names = "true"))
   resp$results

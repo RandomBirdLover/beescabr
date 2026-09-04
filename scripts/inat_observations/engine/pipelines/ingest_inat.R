@@ -27,6 +27,25 @@ if (!exists("inat_request_text"))     source("scripts/inat_observations/engine/a
 if (!exists("write_observations_page")) source("scripts/inat_observations/engine/db/observations_store.R")
 if (!exists("TAXON_ANTHOPHILA"))      source("scripts/config.R")
 
+#' Fetch observations from iNaturalist into the cache
+#'
+#' The only place in the project that calls the observations API. Everything
+#' else reads the cache.
+#'
+#' @param con An open cache connection.
+#' @param place_id iNaturalist place to fetch.
+#' @param taxon_id Taxon to fetch within that place.
+#' @param without_taxon_id Taxon to exclude (the honey bee).
+#' @param incremental Fetch only what is newer than the recorded state.
+#' @param state_path File holding the last-ingest timestamp.
+#' @param extra_query Further query parameters.
+#' @param per_page Observations per request.
+#' @param commit_every Write to the database every N pages.
+#' @param throttle Seconds to wait between requests.
+#' @param request_text_fn Injection point for the API call.
+#' @param sleep_fn Injection point for the wait, so tests do not sleep.
+#' @param verbose Print progress.
+#' @return Invisibly, how many observations were written.
 ingest_observations <- function(con,
                                 place_id = PLACE_SD_COUNTY_BUFFER,
                                 taxon_id = TAXON_ANTHOPHILA,

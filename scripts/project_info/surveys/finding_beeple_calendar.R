@@ -137,6 +137,12 @@ parse_calendar <- function(pdf_path, year) {
   bind_rows(out)
 }
 
+#' Read the survey windows out of the yearly calendar PDFs
+#'
+#' @param dir Folder of calendar PDFs.
+#' @param out Where to write the windows.
+#' @param write Write the result.
+#' @return The survey windows, one row per scheduled window.
 finding_beeple_calendar <- function(dir = CALENDAR_DIR, out = WINDOWS_OUT, write = TRUE) {
   pdfs <- list.files(dir, pattern = "\\.pdf$", full.names = TRUE)
   per_year <- character(0)

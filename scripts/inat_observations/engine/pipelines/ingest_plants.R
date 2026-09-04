@@ -40,6 +40,14 @@ if (!exists("TAXON_TRACHEOPHYTA"))         source("scripts/config.R")
 #                         BEESCABR_SKIP_INGEST behavior for bees).
 # Returns (invisibly) the number of observation rows written by the pull.
 # ------------------------------------------------------------
+#' Fetch Point Loma plant observations into the cache
+#'
+#' @param place_id iNaturalist place to fetch.
+#' @param taxon_id Taxon to fetch within that place.
+#' @param incremental Fetch only what is newer than the recorded state.
+#' @param do_ingest Skip the fetch and reuse the cache when `FALSE`.
+#' @param verbose Print progress.
+#' @return Invisibly, how many observations were written.
 ingest_plants <- function(place_id = PLACE_POINT_LOMA,
                           taxon_id = TAXON_TRACHEOPHYTA,
                           incremental = TRUE,

@@ -197,6 +197,17 @@ ipc_scope_to_surveyors <- function(mem, surveyors) {
 }
 
 # ---- main ------------------------------------------------------------------
+#' Clean the raw iNaturalist plant observations into the analysis table
+#'
+#' @param membership_path Which observations belong to the project.
+#' @param export_path The flattened observation export.
+#' @param crosswalk_path Hand-maintained tag and field corrections.
+#' @param roster_path Surveyor roster, for attributing a record.
+#' @param transect_path Transect lines, for assigning a record to a transect.
+#' @param road_path Road layer, used to keep the coastal buffer honest.
+#' @param out_clean Where to write the cleaned table.
+#' @param write Write the result. `FALSE` returns it without touching disk.
+#' @return The cleaned plant table.
 inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
                              export_path     = IPC_EXPORT,
                              crosswalk_path  = IPC_CROSSWALK,

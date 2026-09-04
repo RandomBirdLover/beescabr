@@ -23,6 +23,11 @@ if (!exists("DB_CACHE_PATH")) source("scripts/config.R")
 # store_connect(): open (creating if needed) the cache DB, load extensions,
 # ensure schema. Returns a DBIConnection. Caller must store_disconnect().
 # ------------------------------------------------------------
+#' Open the DuckDB observation cache
+#'
+#' @param path The database file. Its folder is created if absent.
+#' @param read_only Open read-only, so a reader cannot block a writer.
+#' @return An open connection. Close it with `store_disconnect()`.
 store_connect <- function(path = DB_CACHE_PATH, read_only = FALSE) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = path, read_only = read_only)
@@ -47,6 +52,10 @@ store_connect <- function(path = DB_CACHE_PATH, read_only = FALSE) {
   con
 }
 
+#' Close a cache connection and shut the database down
+#'
+#' @param con The connection to close.
+#' @return Invisibly, nothing.
 store_disconnect <- function(con) {
   DBI::dbDisconnect(con, shutdown = TRUE)
 }

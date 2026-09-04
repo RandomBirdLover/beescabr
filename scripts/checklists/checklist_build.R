@@ -25,6 +25,13 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 # boundary polygon, dropped back to a plain data frame. Boundary and points
 # must already share a CRS (the orchestrator transforms both to PROJECT_CRS).
 # ------------------------------------------------------------
+#' Keep only the observations that fall inside a boundary
+#'
+#' @param points_sf Observations as an `sf` point layer.
+#' @param boundary The polygon to test against.
+#' @param label Boundary name, for the progress line.
+#' @param verbose Print how many of how many fell inside.
+#' @return A plain data frame of the observations inside, geometry dropped.
 spatial_split <- function(points_sf, boundary, label = "", verbose = TRUE) {
   inside <- sf::st_within(points_sf, boundary, sparse = FALSE)[, 1]
   result <- points_sf |> filter(inside) |> sf::st_drop_geometry()
@@ -37,6 +44,15 @@ spatial_split <- function(points_sf, boundary, label = "", verbose = TRUE) {
 # build_checklist(): unique taxa (by taxon_id) with genus populated.
 # Returns the deduped, genus-filtered, sorted checklist for one tier.
 # ------------------------------------------------------------
+#' Reduce observations to one row per taxon
+#'
+#' Keeps the full ancestry columns so a checklist can be filtered at any rank
+#' later without going back to the observations.
+#'
+#' @param obs_df Cleaned observations, carrying `taxon_id` and the rank columns.
+#' @param label Tier name, used only in the progress lines.
+#' @param verbose Print the per-tier counts as it goes.
+#' @return One row per distinct taxon, with its ancestry.
 build_checklist <- function(obs_df, label = "", verbose = TRUE) {
   before <- obs_df |>
     select(
@@ -62,6 +78,13 @@ build_checklist <- function(obs_df, label = "", verbose = TRUE) {
 # token of the binomial; na_if("") keeps genus-level rows as NA so downstream
 # joins align.
 # ------------------------------------------------------------
+#' Attach the taxonomy lookup and reduce names to bare epithets
+#'
+#' @param checklist A checklist carrying `taxon_id`.
+#' @param taxonomy_lookup The taxonomy lookup -- the authority on what a taxon
+#'   is. Joined on `taxon_id`, never on a name (see CLAUDE.md).
+#' @return The checklist with lookup columns attached, `species` and
+#'   `subspecies` reduced to the epithet alone.
 finalize_checklist <- function(checklist, taxonomy_lookup) {
   checklist |>
     left_join(taxonomy_lookup, by = "taxon_id") |>
@@ -84,6 +107,11 @@ finalize_checklist <- function(checklist, taxonomy_lookup) {
 # frame (resolve_taxonomy filled it during the read). Derive it directly --
 # no second API pass.
 # ------------------------------------------------------------
+#' The subgenus and complex columns the bee tables already carry, keyed by id
+#'
+#' @param bees Cleaned bee records.
+#' @return One row per `taxon_id` with `subgenus`, `complex` and
+#'   `complex_taxon_id` -- the ranks iNaturalist does not return in ancestry.
 taxonomy_lookup_from_bees <- function(bees) {
   bees |>
     distinct(taxon_id, subgenus, complex, complex_taxon_id)
@@ -93,6 +121,12 @@ taxonomy_lookup_from_bees <- function(bees) {
 # run_qc(): per-tier quality-control summary (families, subgenus/complex
 # counts, genera). Returns an invisible summary list; prints for the log.
 # ------------------------------------------------------------
+#' Print a per-tier quality-control summary
+#'
+#' @param checklist The finished checklist for one tier.
+#' @param label The tier's name, for the heading.
+#' @return Invisibly, nothing. Reports families, subgenus/complex coverage and
+#'   anything with a blank rank, so a bad build is visible in the run output.
 run_qc <- function(checklist, label) {
   families <- checklist |>
     filter(!is.na(family), family != "") |>
@@ -124,6 +158,12 @@ run_qc <- function(checklist, label) {
 # sources first). Key = lowercased genus + species epithet (genus-only taxa key on genus).
 #   combine_checklists(list(inat = cl_inat, specimen = cl_specimen))  # -> in_inat, in_specimen
 # ------------------------------------------------------------
+#' Merge per-source checklists into one backbone with a flag per source
+#'
+#' @param sources Named list of checklists; each name becomes a logical column
+#'   saying whether that source holds the taxon. `NULL` entries are dropped.
+#' @return One row per taxon, plus one `TRUE`/`FALSE` column per source, or
+#'   `NULL` when every source was empty.
 combine_checklists <- function(sources) {
   sources <- sources[!vapply(sources, is.null, logical(1))]
   if (!length(sources)) return(NULL)

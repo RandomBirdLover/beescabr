@@ -22,6 +22,13 @@ if (!exists("taxon_cache_get"))          source("scripts/inat_observations/engin
 # ------------------------------------------------------------
 # get_taxon_by_id(): return one taxon object (nested list), cache-first.
 # ------------------------------------------------------------
+#' One taxon by its id, from the cache or the API
+#'
+#' @param con An open cache connection.
+#' @param id iNaturalist taxon id.
+#' @param request_fn Injection point for the API call.
+#' @param verbose Report cache hits.
+#' @return The parsed taxon, including its ancestors and children.
 get_taxon_by_id <- function(con, id, request_fn = inat_request, verbose = FALSE) {
   key <- taxon_cache_key_id(id)
   hit <- taxon_cache_get(con, key)
@@ -41,6 +48,16 @@ get_taxon_by_id <- function(con, id, request_fn = inat_request, verbose = FALSE)
 # cache-first. Opportunistically caches each candidate by its own id too,
 # so a later get_taxon_by_id() for one of them is a hit.
 # ------------------------------------------------------------
+#' Taxa matching a name, from the cache or the API
+#'
+#' @param con An open cache connection.
+#' @param name The name to search for.
+#' @param request_fn Injection point for the API call; tests pass a fake so no
+#'   test ever reaches the network.
+#'
+#' @param verbose Report cache hits.
+#' @return The parsed `results` list. Several matches means the name is
+#'   ambiguous -- the caller decides, it is not resolved here.
 get_taxa_by_name <- function(con, name, request_fn = inat_request, verbose = FALSE) {
   key <- taxon_cache_key_name(name)
   hit <- taxon_cache_get(con, key)
@@ -74,6 +91,16 @@ TAXA_BATCH_SIZE <- 30L
 # per-taxon behavior that was getting rate limited -- ~30x fewer requests,
 # plus a courteous pause between them. Returns the number of taxa fetched.
 # ------------------------------------------------------------
+#' Warm the cache for many taxa in a few throttled requests
+#'
+#' @param con An open cache connection.
+#' @param taxon_ids Ids to fetch. Already-cached ids are skipped.
+#' @param request_fn Injection point for the API call.
+#' @param throttle Seconds to wait between requests.
+#' @param sleep_fn Injection point for the wait, so tests do not sleep.
+#' @param verbose Print progress.
+#' @return Invisibly, how many were fetched. Call this before a loop of
+#'   `get_taxon_by_id()`, which then costs nothing.
 prefetch_taxa <- function(con, taxon_ids, request_fn = inat_request,
                           throttle = INAT_THROTTLE_SEC, sleep_fn = Sys.sleep,
                           verbose = TRUE) {
@@ -105,6 +132,14 @@ prefetch_taxa <- function(con, taxon_ids, request_fn = inat_request,
 # the batch didn't return (inactive/invalid id) is left with NA ranks rather
 # than triggering an extra single request.
 # ------------------------------------------------------------
+#' Full rank columns for a set of taxon ids
+#'
+#' @param con An open cache connection.
+#' @param taxon_ids Ids to resolve.
+#' @param request_fn Injection point for the API call.
+#' @param throttle Seconds to wait between requests.
+#' @param verbose Print progress.
+#' @return One row per id with every rank column filled from the ancestry.
 resolve_taxonomy <- function(con, taxon_ids, request_fn = inat_request,
                              throttle = INAT_THROTTLE_SEC, verbose = TRUE) {
   taxon_ids <- unique(taxon_ids[!is.na(taxon_ids)])

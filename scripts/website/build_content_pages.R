@@ -18,6 +18,11 @@ PHOTO_DIR <- "data/project_info/rosters/research_team_photos"   # gitignored; ra
 AVATAR_PX <- 640                                         # downscale longest side before embedding (headroom for zoomed crops)
 rd <- function(p) if (file.exists(p)) read.csv(p, check.names = FALSE, stringsAsFactors = FALSE) else NULL
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
+#' Trim a value to a plain string, turning NA into empty
+#'
+#' @param x Any vector.
+#' @return A character vector, trimmed, with `NA` as `""` -- so a blank roster
+#'   cell renders as nothing rather than the text "NA".
 sq  <- function(x) trimws(ifelse(is.na(x), "", as.character(x)))
 
 # ---- the people (people_manual.csv: ONE row per human, flags say what they do) -------

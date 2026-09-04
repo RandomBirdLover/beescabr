@@ -168,6 +168,11 @@ selectivity_table <- function(min_rec = SELECT_MIN_REC) {
 }
 
 # ---- vectorised lookups -------------------------------------------------------
+#' Genera that use plants more selectively than availability predicts
+#'
+#' @param min_rec Minimum records a genus needs before its preference is
+#'   reported at all; below this the test has no power.
+#' @return Genus names, most-recorded first.
 selective_genera <- function(min_rec = SELECT_MIN_REC) {
   t <- selectivity_table(min_rec); t$genus[t$selective]            # ordered most-recorded first
 }
@@ -258,6 +263,14 @@ forage_preference_label <- function(genus, plant_fmt = function(x) x, min_rec = 
   out <- do.call(rbind, rows); out[order(-out$n_records), ]
 }
 
+#' Per-species version of the forage-selectivity table
+#'
+#' Memoised: the table is expensive and the species field guide asks for it once
+#' per column.
+#'
+#' @param min_rec Minimum records a species needs to be tested.
+#' @return A data frame with one row per species: `taxon`, `selective`,
+#'   `preferred_plant`, and the counts behind them.
 selectivity_table_species <- function(min_rec = SELECT_MIN_REC) {
   key <- paste0("sp:", min_rec); if (!is.null(.sel_env[[key]])) return(.sel_env[[key]])
   out <- .forage_core(.selectivity_records_species(), min_rec); .sel_env[[key]] <- out; out

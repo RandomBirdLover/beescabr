@@ -356,6 +356,16 @@ ibc_spatial_flags <- function(keep_rows, transect_path, road_path,
 }
 
 # ---- main ------------------------------------------------------------------
+#' Clean the raw iNaturalist bee observations into the analysis table
+#'
+#' @param membership_path Which observations belong to the project.
+#' @param export_path The flattened observation export.
+#' @param crosswalk_path Hand-maintained tag and field corrections.
+#' @param transect_path Transect lines, for assigning a record to a transect.
+#' @param road_path Road layer, used to keep the coastal buffer honest.
+#' @param out_clean Where to write the cleaned table.
+#' @param write Write the result. `FALSE` returns it without touching disk.
+#' @return The cleaned bee table, carrying `taxon_id` on every row.
 inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
                            export_path     = IBC_EXPORT,
                            crosswalk_path  = IBC_CROSSWALK,

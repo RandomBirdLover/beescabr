@@ -42,32 +42,6 @@ season, and what to do when something breaks.
 
 ---
 
-## Roles
-
-Named people are deliberately not listed here -- this repository is public.
-The roster lives in `data/project_info/rosters/people_manual.csv`, which is kept
-out of git, and the public acknowledgements page is built from it.
-
-The roles the project runs on:
-
-| Role | What it covers |
-|------|----------------|
-| Principal Investigator | scientific direction |
-| Project lead | day-to-day running; oversees the volunteer photographers |
-| NPS park biologist | the park's own biologist; supervises the R side |
-| Intern overseer | supervises the seasonal interns |
-| Museum identification | determines specimens |
-| Pipeline development | builds and maintains this code |
-| Museum curator | the specimen deposit contact |
-| Specialist | occasional collaborators, e.g. genetic sampling |
-
-Who currently holds each role is in the roster, and on the site's
-acknowledgements page.
-
-
----
-
-
 ## Repository structure
 
 ```
@@ -126,19 +100,19 @@ All of them live in `dev-docs/` unless noted.
 | --- | --- | --- |
 | 1 | **README.md** (this file) | What is this, how do I set it up, what do I run? |
 | 2 | **DATA_ACCESS.md** | How do I get the data? It is not in this repo. Written for non-programmers. |
-| 4 | **WEBSITE_GUIDE.md** | The public site: how a page is built and published, the layout every page follows, and why the maps are built two different ways. |
-| 5 | **MANUAL_INPUTS.md** | Which files must a human maintain by hand, and when? Read before any season. |
-| 6 | **PIPELINE_GUIDE.md** | **The main guide.** Part 1: running a season, start to finish. Part 2: how the code is built. |
-| 7 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
-| 8 | *(generated)* | What every analysis output is: `data/analysis/<year>_generated/findings_index.csv`, one row per analysis, plus a note in each folder. |
-| 9 | **ANALYSIS_DECISIONS.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
-| 10 | **ARCGIS_SPATIAL_MAPPING.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
-| 11 | **ANALYSIS_ROADMAP.md** | Stakeholder questions, triaged into a buildable plan. |
-| 12 | **VERIFICATION.md** | What the verification workflow is, and how to answer the prompt. |
-| 13 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
-| 14 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
-| 15 | **TODO.md** | Open work, by area. |
-| 16 | **HANDOFF_CHECKLIST.md** | What to hand over, and what the next person needs on day one. |
+| 3 | **WEBSITE_GUIDE.md** | The public site: how a page is built and published, the layout every page follows, and why the maps are built two different ways. |
+| 4 | **MANUAL_INPUTS.md** | Which files must a human maintain by hand, and when? Read before any season. |
+| 5 | **PIPELINE_GUIDE.md** | **The main guide.** Part 1: running a season, start to finish. Part 2: how the code is built. |
+| 6 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
+| 7 | *(generated)* | What every analysis output is: `data/analysis/<year>_generated/findings_index.csv`, one row per analysis, plus a note in each folder. |
+| 8 | **ANALYSIS_DECISIONS.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
+| 9 | **ARCGIS_SPATIAL_MAPPING.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
+| 10 | **VERIFICATION.md** | What the verification workflow is, and how to answer the prompt. |
+| 11 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
+| 12 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
+| 13 | **FUNCTIONS.md** | *(generated)* Every function called from more than one file: what it does and what to pass it. |
+| 14 | **TODO.md** | Open work, by area. |
+| 15 | **HANDOFF_CHECKLIST.md** | What to hand over, and what the next person needs on day one. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
 

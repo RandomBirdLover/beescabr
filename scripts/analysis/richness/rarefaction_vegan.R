@@ -102,6 +102,17 @@ curve_df <- function(M) {
     data.frame(group = g, n = ns, S = sapply(ns, function(n) as.numeric(vegan::rarefy(v, n))))
   }))
 }
+#' Draw and write one rarefaction figure
+#'
+#' @param M Site-by-taxon matrix; all-zero rows are dropped first.
+#' @param key Output name stem, from `rare_out_name()`.
+#' @param title Figure title.
+#' @param rank `"genus"` or `"species"`. Genus figures are hatched and species
+#'   solid, so the two read as different charts at a glance.
+#'
+#' @param cols Fill colors, one per group; `NULL` uses the theme default.
+#' @param group_fill Color by group rather than by rank.
+#' @return Invisibly, nothing. Skips with a message when fewer than 2 groups have data.
 draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
   M <- M[rowSums(M) > 0, , drop = FALSE]
   if (nrow(M) < 2) { message("  ", key, ": <2 groups with data, skipped"); return(invisible()) }
