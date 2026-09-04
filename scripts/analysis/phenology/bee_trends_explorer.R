@@ -17,7 +17,7 @@
 #   <DIR_REPORT>/phenology/bee_trends_explorer.html   (DIR_REPORT = the season folder)
 # published to the site by publish_pages.R as bee_trends.html.
 #
-# Run from the repo root:  Rscript scripts/analysis/phenology/bee_trends_explorer.R
+# Run from the repo root:  source("scripts/analysis/phenology/bee_trends_explorer.R")
 # =============================================================
 suppressMessages({ library(dplyr); library(stringr); library(jsonlite) })
 if (!exists("PATHS"))     source("scripts/config.R")

@@ -4,7 +4,7 @@ Compares **lethal** (specimen) vs **non-lethal** (iNaturalist) bee surveys at Ca
 National Monument (CABR). One command runs everything:
 
 ```r
-Rscript scripts/run_data_cleaning_pipeline.R      # or Source in RStudio
+source("scripts/run_data_cleaning_pipeline.R")      # or Source in RStudio
 ```
 
 `run_data_cleaning_pipeline.R` is the single entrypoint; `config.R` holds every constant and data
@@ -16,7 +16,7 @@ cleaned tables from a cache). To force a live re-check of both against their API
 the refresh flag:
 
 ```r
-BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R   # ONLINE: re-checks IUCN + plant names, then re-bakes
+Sys.setenv(BEESCABR_REFRESH = "1"); source("scripts/run_data_cleaning_pipeline.R")   # ONLINE: re-checks IUCN + plant names, then re-bakes
 ```
 
 This runs `reference/refresh_iucn_status.R` + `reference/refresh_plant_common_names.R` as an

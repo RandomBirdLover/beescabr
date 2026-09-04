@@ -40,14 +40,14 @@ The whole folder is ~284 KB, so it costs nothing to carry.
 `testthat` is not installed by default on every machine. Once:
 
 ```
-Rscript -e 'install.packages("testthat", repos="https://cloud.r-project.org")'
+install.packages("testthat", repos="https://cloud.r-project.org")
 ```
 
 Then the whole suite, or one file:
 
 ```
-Rscript -e 'library(testthat); test_dir("tests/testthat")'
-Rscript -e 'library(testthat); test_file("tests/testthat/test-publish.R")'
+library(testthat); test_dir("tests/testthat")
+library(testthat); test_file("tests/testthat/test-publish.R")
 ```
 
 Tests never touch the real cache or the real API: DuckDB tests use a temp database,

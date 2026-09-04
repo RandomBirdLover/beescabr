@@ -4,7 +4,7 @@
 # currently the Acknowledgements page. Reads data/project_info/*_roster.csv so
 # the people lists stay in sync with the rosters. Matches the landing page look.
 #
-#   Rscript scripts/website/build_content_pages.R        # writes docs/acknowledgements.html
+#   source("scripts/website/build_content_pages.R")        # writes docs/acknowledgements.html
 #
 # About + Get-involved pages will join this file once their copy is written.
 # =============================================================

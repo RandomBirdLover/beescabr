@@ -19,8 +19,8 @@ entirely (see `DATA_ACCESS.md` and the `/data` rule in `.gitignore`).
 ## 2. How a page reaches the site
 
 ```
-Rscript scripts/run_all_analysis_pipeline.R            # writes pages into data/analysis/<season>/
-Rscript scripts/run_publishing_materials_pipeline.R    # copies them into docs/ and rebuilds the landing page
+source("scripts/run_all_analysis_pipeline.R")            # writes pages into data/analysis/<season>/
+source("scripts/run_publishing_materials_pipeline.R")    # copies them into docs/ and rebuilds the landing page
 git add -A && git commit && git push                   # GitHub Pages serves the new docs/
 ```
 
@@ -47,6 +47,69 @@ allow-listed back (`.html`, `.nojekyll`, and image formats). A stray CSV or note
 into `docs/` is therefore ignored rather than silently published. **If you add a genuinely
 new web asset type (a `.css` or `.svg`), you must add a matching `!` line or the live site
 will look broken.**
+
+## 2b. Publishing from your own account
+
+The deploy step assumes two things that are **not** true on a fresh clone. If you are
+picking this project up from someone else, sort these out first.
+
+**1. Where the site is served from.** GitHub Pages serves `docs/` on the `main` branch.
+That setting lives on the repository, not in this code, so it does not travel with a
+clone or a fork.
+
+**2. Whether you can push.** `BEESCABR_DEPLOY=1` runs `git push origin main`. Without
+write access it fails, and the rebuilt pages sit in your local `docs/` unpublished.
+
+### If you have write access to the original repository
+
+Nothing to set up. Pages is already on, and the site is
+<https://randombirdlover.github.io/beescabr>.
+
+```
+Sys.setenv(BEESCABR_DEPLOY = "1"); source("scripts/run_publishing_materials_pipeline.R")
+```
+
+It commits `docs/` and pushes; Pages redeploys in about a minute.
+
+### If you are working from your own fork
+
+Enable Pages once, on your copy:
+
+1. Fork the repository (or push your clone to a new repository on your account).
+2. On GitHub, go to **Settings → Pages**.
+3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+4. Set the branch to **main** and the folder to **/docs**, then **Save**.
+5. Wait about a minute. Your site is at `https://<your-username>.github.io/<repo-name>`.
+
+Then point your clone at your own repository, so the deploy pushes there:
+
+```
+git remote set-url origin https://github.com/<your-username>/<repo-name>
+```
+
+After that the deploy command above works the same way.
+
+### Before any of it: you need data/
+
+`data/` is deliberately not in git -- it holds the records, and the repository is
+public. A clone gives you the code and the finished pages in `docs/`, and nothing to
+rebuild them from. Get the `data/` folder from whoever handed the project over and put
+it at the repository root before running any pipeline.
+
+Without it the analysis stages produce nothing, and a deploy would publish an empty
+site over a working one.
+
+### Publishing without deploying
+
+Leave `BEESCABR_DEPLOY` unset to rebuild `docs/` and stop there:
+
+```
+source("scripts/run_publishing_materials_pipeline.R")
+```
+
+Look at the pages locally, then commit and push when you are happy with them. This is
+the safer habit -- `docs/` is the one output the public sees.
+
 
 ## 3. Page layout
 

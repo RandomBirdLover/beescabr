@@ -12,7 +12,7 @@
 # Built as a self-contained HTML (Leaflet from CDN + embedded point data), so it
 # publishes to GitHub Pages like the bounty maps. Matches the site's green theme.
 #
-# Run from the repo root:  Rscript scripts/analysis/reference/bee_occurrence_explorer.R
+# Run from the repo root:  source("scripts/analysis/reference/bee_occurrence_explorer.R")
 # Depends on: dplyr, stringr, jsonlite, sf (+ config.R, theme_beescabr.R).
 # =============================================================
 

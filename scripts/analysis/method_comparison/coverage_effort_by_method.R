@@ -16,7 +16,7 @@
 # understate lethal's per-trip coverage. Stated in the caption.
 #
 # SOURCE: the per-survey log (one row = one survey trip), which tags each trip's method.
-# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_effort_by_method.R
+# Run from the repo root:  source("scripts/analysis/method_comparison/coverage_effort_by_method.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

@@ -7,7 +7,7 @@
 # NO lethal/non-lethal split -- every record counts once, colored by family so the
 # reader sees which families dominate the park's record base at a glance.
 #
-# Run from the repo root:  Rscript scripts/analysis/bee_family_share_of_records_pie.R
+# Run from the repo root:  source("scripts/analysis/coverage/records_by_family_pie.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 

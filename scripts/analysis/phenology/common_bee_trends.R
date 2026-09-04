@@ -17,7 +17,7 @@
 # and shelved; flip MAKE_DUO to regenerate it. The interactive trends
 # explorer (bee_trends_explorer.R) was likewise built and left unpublished.
 #
-# Run from the repo root:  Rscript scripts/analysis/phenology/common_bee_trends.R
+# Run from the repo root:  source("scripts/analysis/phenology/common_bee_trends.R")
 # =============================================================
 suppressMessages({ library(dplyr); library(ggplot2); library(stringr) })
 if (!exists("PATHS"))       source("scripts/config.R")

@@ -18,7 +18,7 @@
 # easy to photograph. And the season window matters: interns survey ~Mar-Sep,
 # beeple (non-lethal) run year-round, so month coverage is uneven.
 #
-# Run from the repo root:  Rscript scripts/analysis/interactions/interactions_top_plants.R
+# Run from the repo root:  source("scripts/analysis/interactions/interactions_top_plants.R")
 # Depends on: dplyr, stringr (+ config.R). Base-R plots -- no extra packages.
 # =============================================================
 

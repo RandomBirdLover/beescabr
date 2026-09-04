@@ -5,7 +5,7 @@
 # topographic basemap, but drawn straight from the GIS shapefile so the lines are crisp, with the
 # full trail names + lengths. Interactive, self-contained HTML (like the bounty maps).
 #
-# Run from repo root:  Rscript scripts/analysis/reference/transect_map.R
+# Run from repo root:  source("scripts/analysis/reference/transect_map.R")
 # Depends on: sf, leaflet, htmlwidgets (+ config.R, theme_beescabr.R).
 # =============================================================
 

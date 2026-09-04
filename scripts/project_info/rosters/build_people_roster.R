@@ -13,7 +13,7 @@
 # input and the three rosters are retired. Re-running it is safe (it rebuilds
 # from whatever rosters are present) but it is not part of the pipeline.
 #
-#   Rscript scripts/project_info/rosters/build_people_roster.R
+#   source("scripts/project_info/rosters/build_people_roster.R")
 # =============================================================
 if (!exists("person_id_mint")) source("scripts/utils/people_ids.R")
 

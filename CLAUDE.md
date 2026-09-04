@@ -29,13 +29,13 @@ implementation code before a failing test exists.
    written the code is not testing the new behavior — fix the test until it
    fails for the right reason.
    ```
-   Rscript -e 'library(testthat); test_file("tests/testthat/test-<module>.R")'
+   library(testthat); test_file("tests/testthat/test-<module>.R")
    ```
 3. **Write the minimal implementation** to make it pass.
 4. **Re-run the module tests; iterate red → green** until all pass.
 5. **Run the full suite** and confirm no regressions before finishing:
    ```
-   Rscript -e 'library(testthat); test_dir("tests/testthat")'
+   library(testthat); test_dir("tests/testthat")
    ```
 
 State explicitly, in your response, that you confirmed the test failed before
@@ -146,7 +146,7 @@ Why it matters, and the drift it already caused, is in `dev-docs/WEBSITE_GUIDE.m
   `config.R`, because that is the constants file and one list means one place to edit when
   a dependency is added.
 - `scripts/utils/install_requirements.R` does the installing, and is run deliberately:
-  `Rscript scripts/utils/install_requirements.R`.
+  `source("scripts/utils/install_requirements.R")`.
 
 Why the split: `config.R` is sourced by **every** script. If it installed packages, every
 run would check the network at load, and a setup step would become a side effect of merely
@@ -177,9 +177,9 @@ CRAN call and makes a fresh machine harder to set up. This is why the project st
 ## Running the pipeline
 
 ```
-Rscript scripts/run_data_cleaning_pipeline.R              # ingest + checklists + clean
-BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # reuse cache, no API
-BEESCABR_FULL_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # re-fetch everything
+source("scripts/run_data_cleaning_pipeline.R")              # ingest + checklists + clean
+Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")   # reuse cache, no API
+Sys.setenv(BEESCABR_FULL_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")   # re-fetch everything
 ```
 
 ## Style

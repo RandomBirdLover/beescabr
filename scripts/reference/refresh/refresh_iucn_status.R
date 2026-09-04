@@ -14,8 +14,8 @@
 # rewrites data/checklists/iucn/iucn_status_generated.csv. Needs internet + a free token (see
 # data/secrets/iucn_api.env or the IUCN_REDLIST_KEY env var; free at https://api.iucnredlist.org).
 #
-#   From the repo root:  Rscript scripts/reference/refresh/refresh_iucn_status.R
-#   Or inside the pipeline:  BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R
+#   From the repo root:  source("scripts/reference/refresh/refresh_iucn_status.R")
+#   Or inside the pipeline:  Sys.setenv(BEESCABR_REFRESH = "1"); source("scripts/run_data_cleaning_pipeline.R")
 #
 # Depends on: dplyr, stringr, rredlist (+ config.R + reference/enrich_lookups.R).
 # =============================================================

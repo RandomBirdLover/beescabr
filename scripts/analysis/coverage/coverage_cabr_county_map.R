@@ -8,7 +8,7 @@
 # Area % is measured straight from the polygons; species/genus shares are counted
 # from the CABR official checklist vs the Holway county checklist.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_cabr_county_map.R
+# Run from the repo root:  source("scripts/analysis/coverage/coverage_cabr_county_map.R")
 # Depends on: sf, ggplot2, dplyr, stringr (+ config.R).
 # =============================================================
 

@@ -22,7 +22,7 @@
 #     same grand total. Three metrics per view: records, taxa recorded, group-exclusive.
 #     Run at BOTH species and genus rank.
 #
-# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_yield_by_method.R
+# Run from the repo root:  source("scripts/analysis/method_comparison/coverage_yield_by_method.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 

@@ -37,7 +37,7 @@
 # uses more records, as it should.
 #
 # Run from the repo root:
-#   Rscript scripts/analysis/richness/genera_and_species_accumulation.R
+#   source("scripts/analysis/richness/genera_and_species_accumulation.R")
 # Figures + summary table are written to data/analysis/.
 # Depends on: vegan, dplyr, stringr (+ config.R for the cleaned-table paths).
 # =============================================================

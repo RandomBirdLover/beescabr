@@ -126,21 +126,21 @@ from scratch. You will need R.
 4. **Run the data pipeline.** Open a terminal in the `beescabr` folder and run:
 
    ```
-   Rscript scripts/run_data_cleaning_pipeline.R
+   source("scripts/run_data_cleaning_pipeline.R")
    ```
 
    To skip the online iNaturalist download and just reuse the data you were given,
    run this instead:
 
    ```
-   BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R
+   Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")
    ```
 
 5. **Rebuild the figures and the website (optional):**
 
    ```
-   Rscript scripts/run_all_analysis_pipeline.R
-   Rscript scripts/run_publishing_materials_pipeline.R
+   source("scripts/run_all_analysis_pipeline.R")
+   source("scripts/run_publishing_materials_pipeline.R")
    ```
 
 ---

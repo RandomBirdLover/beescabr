@@ -12,9 +12,9 @@ beyond being able to run a command. For how the code is *built*, see
 Three commands, in this order, from the repo root:
 
 ```
-Rscript scripts/run_data_cleaning_pipeline.R
-Rscript scripts/run_all_analysis_pipeline.R
-Rscript scripts/run_publishing_materials_pipeline.R
+source("scripts/run_data_cleaning_pipeline.R")
+source("scripts/run_all_analysis_pipeline.R")
+source("scripts/run_publishing_materials_pipeline.R")
 ```
 
 The first asks you a question (see below). The other two run on their own. Then
@@ -28,7 +28,7 @@ needs to ask, it asks.
 ## 0. First time on this machine: install the packages
 
 ```
-Rscript scripts/utils/install_requirements.R
+source("scripts/utils/install_requirements.R")
 ```
 
 Installs everything the pipeline needs and names anything it could not install. A few
@@ -108,7 +108,7 @@ The IUCN key is free from <https://api.iucnredlist.org>.
 ## 2. Stage 1: clean the data
 
 ```
-Rscript scripts/run_data_cleaning_pipeline.R
+source("scripts/run_data_cleaning_pipeline.R")
 ```
 
 It opens with a menu. Pick a number:
@@ -141,7 +141,7 @@ who knows the local bee fauna before choosing 4.
 ## 3. Stage 2: run the analyses
 
 ```
-Rscript scripts/run_all_analysis_pipeline.R
+source("scripts/run_all_analysis_pipeline.R")
 ```
 
 This runs every script in `scripts/analysis/` and writes figures and tables into
@@ -158,7 +158,7 @@ also stop you (see stage 3), but do not rely on that as your only check.
 ## 4. Stage 3: publish
 
 ```
-Rscript scripts/run_publishing_materials_pipeline.R
+source("scripts/run_publishing_materials_pipeline.R")
 ```
 
 This regenerates the public pages and copies them into `docs/`, which is what
@@ -184,7 +184,7 @@ half-updated:
   data it is built from, which usually means its analysis script failed in stage
   2. It names the pages. Re-run the analysis and check the failure tally.
   If you are certain the pages are fine as they stand, override it:
-  `BEESCABR_ALLOW_STALE=1 Rscript scripts/run_publishing_materials_pipeline.R`
+  `Sys.setenv(BEESCABR_ALLOW_STALE = "1"); source("scripts/run_publishing_materials_pipeline.R")`
 
 ---
 
@@ -202,7 +202,7 @@ overwritten across seasons.
 To rebuild an earlier season, set the year explicitly:
 
 ```
-BEESCABR_SEASON_YEAR=2026 Rscript scripts/run_all_analysis_pipeline.R
+Sys.setenv(BEESCABR_SEASON_YEAR = "2026"); source("scripts/run_all_analysis_pipeline.R")
 ```
 
 Note that `data/` is **not** in git (it holds precise coordinates for at-risk
@@ -215,7 +215,7 @@ non-sensitive output, and that *is* in git.
 ## 6. Checking your work
 
 ```
-Rscript -e 'library(testthat); test_dir("tests/testthat")'
+library(testthat); test_dir("tests/testthat")
 ```
 
 Expect `FAIL 0`. A few warnings are normal and expected. The tests do not touch

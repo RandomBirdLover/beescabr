@@ -15,7 +15,7 @@
 # Areas are fixed facts: CABR = 143.9 acres (NPS / Wikipedia); San Diego County =
 # ~4,526 sq mi. Everything else is counted from the checklists. Descriptive; no test.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_cabr_share_of_county.R
+# Run from the repo root:  source("scripts/analysis/coverage/coverage_cabr_share_of_county.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

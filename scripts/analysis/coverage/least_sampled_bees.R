@@ -26,7 +26,7 @@
 # Outputs CSV + a styled sortable HTML table + a PNG table image to
 # data/analysis/coverage/least_sampled/.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/least_sampled_bees.R
+# Run from the repo root:  source("scripts/analysis/coverage/least_sampled_bees.R")
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
 # =============================================================
 

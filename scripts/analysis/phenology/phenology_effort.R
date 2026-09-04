@@ -18,7 +18,7 @@
 #       picture, same method-color encoding.
 # "Observations" is renamed "Records" throughout. Descriptive counts -- no test.
 #
-# Run from the repo root:  Rscript scripts/analysis/phenology/phenology_effort.R
+# Run from the repo root:  source("scripts/analysis/phenology/phenology_effort.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

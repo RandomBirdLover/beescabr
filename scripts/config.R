@@ -26,7 +26,7 @@
 # THE LIST lives here because config.R is the constants file; INSTALLING lives in
 # scripts/utils/install_requirements.R because config.R is sourced by every script and
 # must not touch the network at load. Run the installer once on a new machine:
-#     Rscript scripts/utils/install_requirements.R
+#     source("scripts/utils/install_requirements.R")
 # The per-script auto-install blocks stay as a safety net; they should rarely fire.
 BEESCABR_PACKAGES <- c(
   # data wrangling + IO
@@ -63,7 +63,7 @@ beescabr_require <- function(pkgs = BEESCABR_PACKAGES,
     stop_fn("beescabr: ", length(miss), " required package(s) missing: ",
             paste(miss, collapse = ", "), "\n",
             "  Run this once, then try again:\n",
-            "    Rscript scripts/utils/install_requirements.R",
+            "    source('scripts/utils/install_requirements.R')",
             call. = FALSE)
   invisible(TRUE)
 }

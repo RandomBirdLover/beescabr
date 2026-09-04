@@ -10,7 +10,7 @@
 # transect buffers.
 #
 # Requires the sf package. Install everything with:
-#   Rscript scripts/utils/install_requirements.R
+#   source("scripts/utils/install_requirements.R")
 #
 # Project working CRS: EPSG:26946 (NAD83 / California zone 6, meters).
 # All layers are reprojected on load. The shapefiles on disk are already

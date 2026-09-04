@@ -26,6 +26,7 @@
   files <- list.files(file.path(.root, "scripts"), pattern = "\\.R$",
                       recursive = TRUE, full.names = TRUE)
   txt <- unlist(lapply(files, function(f) readLines(f, warn = FALSE)))
+  txt <- txt[!grepl("^\\s*#", txt)]        # a comment showing how to RUN a script is not a source() call
   hits <- unlist(regmatches(txt, gregexpr('source\\("scripts/analysis/[^"]+\\.R"\\)', txt)))
   sort(unique(basename(gsub('source\\("|"\\)', "", hits))))
 }

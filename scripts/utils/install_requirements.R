@@ -2,7 +2,7 @@
 # utils/install_requirements.R
 # beescabr -- install everything the pipeline needs, once, on a new machine.
 #
-#   Rscript scripts/utils/install_requirements.R
+#   source("scripts/utils/install_requirements.R")
 #
 # WHY THIS EXISTS: 23 scripts each installed their own packages and nothing listed the
 # whole set, so a fresh machine discovered missing packages one failure at a time.

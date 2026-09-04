@@ -11,7 +11,7 @@
 # record can't be placed on a species row. A species with few TOTAL records is flagged
 # (*) -- thin evidence base, read its composition with care (>=10-record rule of thumb).
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/records_per_species_by_evidence.R
+# Run from the repo root:  source("scripts/analysis/coverage/records_per_species_by_evidence.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 

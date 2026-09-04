@@ -26,7 +26,7 @@
 # The iNat observation URLs for every photo-evidenced taxon are written out so a
 # reviewer can open each record and confirm the ID.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_cabr_vs_holway.R
+# Run from the repo root:  source("scripts/analysis/coverage/coverage_cabr_vs_holway.R")
 # Depends on: dplyr, stringr (+ config.R). No modeling -- checklist arithmetic.
 # =============================================================
 

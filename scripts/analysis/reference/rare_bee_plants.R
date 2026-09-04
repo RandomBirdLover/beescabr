@@ -21,7 +21,7 @@
 #      species use them. A plant feeding many rare bees is a conservation hub.
 #   B. THREATENED -- each IUCN-threatened bee's own plant list (per species).
 #
-# Run from the repo root:  Rscript scripts/analysis/reference/rare_bee_plants.R
+# Run from the repo root:  source("scripts/analysis/reference/rare_bee_plants.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

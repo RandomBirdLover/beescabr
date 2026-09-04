@@ -25,7 +25,7 @@
 # CAVEAT: interns survey ~Mar-Sep and beeple (non-lethal) run year-round, so the
 # winter tails partly reflect WHO was sampling, not just biology.
 #
-# Run from the repo root:  Rscript scripts/analysis/phenology/phenology_activity.R
+# Run from the repo root:  source("scripts/analysis/phenology/phenology_activity.R")
 # Depends on: dplyr, stringr, ggplot2, ggridges (+ config.R).
 # =============================================================
 

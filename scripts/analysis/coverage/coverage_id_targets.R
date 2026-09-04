@@ -27,7 +27,7 @@
 #
 # Descriptive counts -- no hypothesis test, so no p-value.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_id_targets.R
+# Run from the repo root:  source("scripts/analysis/coverage/coverage_id_targets.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

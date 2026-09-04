@@ -25,7 +25,7 @@
 #   * per-bee-species specialization table: how many plant genera each visits,
 #     its main forage, and rare/specialist flags (rare = low relative frequency)
 #
-# Run from the repo root:  Rscript scripts/analysis/interactions/interactions_network.R
+# Run from the repo root:  source("scripts/analysis/interactions/interactions_network.R")
 # Depends on: dplyr, stringr, igraph, vegan, ggplot2. config.R for paths.
 # =============================================================
 

@@ -79,28 +79,28 @@ analysis script's output. So there is **no dependency chain between them**; the 
 prerequisite is that the pipeline has produced the cleaned tables.
 
 1. **Prerequisite (once):** run the pipeline so the cleaned tables + checklist +
-   resolved `plant_genus` columns exist — `Rscript scripts/run_data_cleaning_pipeline.R` (or
+   resolved `plant_genus` columns exist — `source("scripts/run_data_cleaning_pipeline.R")` (or
    confirm the five shared-input files above are present and current).
 2. **Then run any analysis script, in any order**, from the **repo root**:
 
    ```
-   Rscript scripts/analysis/genera_and_species_accumulation.R   # Q5   vegan, dplyr, stringr
-   Rscript scripts/analysis/coverage_cabr_vs_holway.R           # Q10  dplyr, stringr
-   Rscript scripts/analysis/coverage_method_venn.R              # Q1   dplyr, stringr
-   Rscript scripts/analysis/coverage_yield_by_group.R           # Q11  dplyr, stringr, ggplot2
-   Rscript scripts/analysis/coverage_offtransect.R              # Q6   dplyr, stringr, ggplot2
-   Rscript scripts/analysis/coverage_id_targets.R               # Q7   dplyr, stringr, ggplot2
-   Rscript scripts/analysis/interactions_top_plants.R           # Q3   dplyr, stringr
-   Rscript scripts/analysis/interactions_network.R              # Q4   dplyr, stringr, igraph, ggplot2, vegan (+ optional bipartite)
-   Rscript scripts/analysis/interactions_genus_species_webs.R   # Q4+  dplyr, stringr, ggplot2  (per-genus species webs)
-   Rscript scripts/analysis/phenology_activity.R                # Q12  dplyr, stringr, ggplot2, ggridges
-   Rscript scripts/analysis/phenology_effort.R                  # Q13  dplyr, stringr, ggplot2
-   Rscript scripts/analysis/diversity_indices.R                 # Q8   dplyr, stringr, vegan, ggplot2
-   Rscript scripts/analysis/spatial_richness_map.R              # Q8   sf, dplyr, stringr, vegan, ggplot2  (all-records map)
-   Rscript scripts/analysis/rarefaction_vegan.R                 # rarefaction  dplyr, stringr, vegan, ggplot2
-   Rscript scripts/analysis/rarefaction_inext.R                 # rarefaction  dplyr, stringr, iNEXT, ggplot2  (needs internet for iNEXT)
-   Rscript scripts/analysis/bee_bounties.R                      # bounties     dplyr, stringr, ggplot2
-   Rscript scripts/analysis/nps_summary_tables.R                # NPS summary  dplyr, stringr
+   source("scripts/analysis/genera_and_species_accumulation.R")   # Q5   vegan, dplyr, stringr
+   source("scripts/analysis/coverage_cabr_vs_holway.R")           # Q10  dplyr, stringr
+   source("scripts/analysis/coverage_method_venn.R")              # Q1   dplyr, stringr
+   source("scripts/analysis/coverage_yield_by_group.R")           # Q11  dplyr, stringr, ggplot2
+   source("scripts/analysis/coverage_offtransect.R")              # Q6   dplyr, stringr, ggplot2
+   source("scripts/analysis/coverage_id_targets.R")               # Q7   dplyr, stringr, ggplot2
+   source("scripts/analysis/interactions_top_plants.R")           # Q3   dplyr, stringr
+   source("scripts/analysis/interactions_network.R")              # Q4   dplyr, stringr, igraph, ggplot2, vegan (+ optional bipartite)
+   source("scripts/analysis/interactions_genus_species_webs.R")   # Q4+  dplyr, stringr, ggplot2  (per-genus species webs)
+   source("scripts/analysis/phenology_activity.R")                # Q12  dplyr, stringr, ggplot2, ggridges
+   source("scripts/analysis/phenology_effort.R")                  # Q13  dplyr, stringr, ggplot2
+   source("scripts/analysis/diversity_indices.R")                 # Q8   dplyr, stringr, vegan, ggplot2
+   source("scripts/analysis/spatial_richness_map.R")              # Q8   sf, dplyr, stringr, vegan, ggplot2  (all-records map)
+   source("scripts/analysis/rarefaction_vegan.R")                 # rarefaction  dplyr, stringr, vegan, ggplot2
+   source("scripts/analysis/rarefaction_inext.R")                 # rarefaction  dplyr, stringr, iNEXT, ggplot2  (needs internet for iNEXT)
+   source("scripts/analysis/bee_bounties.R")                      # bounties     dplyr, stringr, ggplot2
+   source("scripts/analysis/nps_summary_tables.R")                # NPS summary  dplyr, stringr
    ```
 
    Every script writes into its **per-category subfolder** under `data/analysis/`
@@ -138,7 +138,7 @@ and year (R²=0.50), both p=0.001. The `.docx` in each folder has the full write
 ## ✅ Genera & species accumulation, per transect — `completeness`  (Q5)
 
 **Script:** `scripts/analysis/genera_and_species_accumulation.R`
-**Run:** `Rscript scripts/analysis/genera_and_species_accumulation.R` (needs `vegan`, `dplyr`, `stringr`)
+**Run:** `source("scripts/analysis/genera_and_species_accumulation.R")` (needs `vegan`, `dplyr`, `stringr`)
 
 *As we run more surveys on a transect, how fast do we keep turning up new bee
 taxa, and how close are we to having found them all?* — at two ranks, one curve
@@ -197,7 +197,7 @@ Chao2 (78 ± 43, ~39%) is a "needs more effort" flag, not a precise target.
 ## ✅ CABR bees not on the Holway checklist — `coverage/checklist_gaps`  (Q10)
 
 **Script:** `scripts/analysis/coverage_cabr_vs_holway.R`
-**Run:** `Rscript scripts/analysis/coverage_cabr_vs_holway.R` (needs `dplyr`, `stringr`)
+**Run:** `source("scripts/analysis/coverage_cabr_vs_holway.R")` (needs `dplyr`, `stringr`)
 
 *Which CABR-checklist taxa are absent from Holway's SD-county checklist — and are
 they real additions or iNaturalist misidentifications?* The `holway` flag is FALSE
@@ -237,7 +237,7 @@ only) — worth fixing upstream.
 ## ✅ Lethal vs non-lethal overlap (Venn) — `coverage/method_comparison`  (Q1)
 
 **Script:** `scripts/analysis/coverage_method_venn.R`
-**Run:** `Rscript scripts/analysis/coverage_method_venn.R` (needs `dplyr`, `stringr`; base-R Venn, no extra packages)
+**Run:** `source("scripts/analysis/coverage_method_venn.R")` (needs `dplyr`, `stringr`; base-R Venn, no extra packages)
 
 *What bees exist in lethal (net/specimen) vs non-lethal (photo/iNat), and where
 don't they overlap?* Two-set Venn at two ranks, plus the taxon list for every region.
@@ -267,7 +267,7 @@ present in the specimen data; drop it upstream if the framing is native-only.
 ## ✅ Yield by surveyor group — `coverage/method_comparison`  (Q11)
 
 **Script:** `scripts/analysis/coverage_yield_by_group.R`
-**Run:** `Rscript scripts/analysis/coverage_yield_by_group.R` (needs `dplyr`, `stringr`, `ggplot2`)
+**Run:** `source("scripts/analysis/coverage_yield_by_group.R")` (needs `dplyr`, `stringr`, `ggplot2`)
 
 *Who finds what?* Records, distinct taxa, efficiency, and group-exclusive taxa per
 surveyor group × method. Groups: **intern lethal** (all 980 specimens), **intern
@@ -289,7 +289,7 @@ cryptic species photos miss); intern photography is the **most redundant** (no e
 ## ✅ Bees off-transect — `coverage/off_transect`  (Q6)
 
 **Script:** `scripts/analysis/coverage_offtransect.R`
-**Run:** `Rscript scripts/analysis/coverage_offtransect.R` (needs `dplyr`, `stringr`, `ggplot2`)
+**Run:** `source("scripts/analysis/coverage_offtransect.R")` (needs `dplyr`, `stringr`, `ggplot2`)
 
 *What does the park hold that the fixed survey routes miss?* On-transect = standardized
 survey (`is_survey == TRUE`, both methods); off-transect = casual park-wide iNaturalist
@@ -305,7 +305,7 @@ off-only** at species and genus rank. Descriptive — no p-value.
 ## ✅ Target-ID list — `coverage/id_resolution`  (Q7)
 
 **Script:** `scripts/analysis/coverage_id_targets.R`
-**Run:** `Rscript scripts/analysis/coverage_id_targets.R` (needs `dplyr`, `stringr`, `ggplot2`)
+**Run:** `source("scripts/analysis/coverage_id_targets.R")` (needs `dplyr`, `stringr`, `ggplot2`)
 
 *What needs identifying most — and which of it is actually doable?* Every record coarser
 than species is a target, grouped to its finest label (genus where known) and ranked by
@@ -320,7 +320,7 @@ count, split into **specimen (keyable in hand)** vs **photo**. Descriptive — n
 ## ✅ Plant–bee visitation networks — `interactions/networks`  (Q4)
 
 **Script:** `scripts/analysis/interactions_network.R`
-**Run:** `Rscript scripts/analysis/interactions_network.R` (needs `dplyr`, `stringr`, `igraph`, `vegan`, `ggplot2`)
+**Run:** `source("scripts/analysis/interactions_network.R")` (needs `dplyr`, `stringr`, `igraph`, `vegan`, `ggplot2`)
 
 *Which flowers do which bees visit, and which plants do the rarer bees depend on?*
 Built from the resolved `plant_genus` column, both methods pooled, at two ranks.
@@ -400,7 +400,7 @@ generalists (Bombus, Agapostemon) act as one interchangeable pollinator block.
 ## ✅ Top plants bees visit — `interactions/top_plants`  (Q3)
 
 **Script:** `scripts/analysis/interactions_top_plants.R`
-**Run:** `Rscript scripts/analysis/interactions_top_plants.R` (needs `dplyr`, `stringr`; base-R plots)
+**Run:** `source("scripts/analysis/interactions_top_plants.R")` (needs `dplyr`, `stringr`; base-R plots)
 
 *Which plants do bees visit most — across the year and per month — so we know what
 to plant more of?* Bee-record counts per `plant_genus`, three scopes + a monthly
@@ -430,7 +430,7 @@ spans those. *Rhus* is visited **only** non-lethally (0 specimens netted on it).
 ## ✅ Phenology — flowering-plant & bee seasonal activity — `phenology`  (Q12 + bee extension)
 
 **Script:** `scripts/analysis/phenology_activity.R`
-**Run:** `Rscript scripts/analysis/phenology_activity.R` (needs `dplyr`, `stringr`, `ggplot2`, `ggridges`)
+**Run:** `source("scripts/analysis/phenology_activity.R")` (needs `dplyr`, `stringr`, `ggplot2`, `ggridges`)
 
 *When in the year is each taxon active?* Descriptive phenology from the records'
 observation date — **not** climate modelling (`phenor`) or nesting-curve fitting
@@ -464,7 +464,7 @@ late-summer (Xenoglossa, Nomada, Megachile). Pairs with the top-plants forage ca
 ## ✅ Effort calendar — `phenology`  (Q13)
 
 **Script:** `scripts/analysis/phenology_effort.R`
-**Run:** `Rscript scripts/analysis/phenology_effort.R` (needs `dplyr`, `stringr`, `ggplot2`)
+**Run:** `source("scripts/analysis/phenology_effort.R")` (needs `dplyr`, `stringr`, `ggplot2`)
 
 *When across the year (and across years) does surveying actually happen?* The effort
 backdrop for every seasonal result — from the per-survey log (494 trips, 2021–2026,
@@ -481,8 +481,8 @@ intern-vs-beeple / lethal-vs-non-lethal splits. Descriptive — no p-value.
 
 **Scripts:** `scripts/analysis/diversity_indices.R` (survey-only indices + composition)
 and `scripts/analysis/spatial_richness_map.R` (all-records spatial map).
-**Run:** `Rscript scripts/analysis/diversity_indices.R` (needs `dplyr`, `stringr`, `vegan`, `ggplot2`)
-then `Rscript scripts/analysis/spatial_richness_map.R` (adds `sf`).
+**Run:** `source("scripts/analysis/diversity_indices.R")` (needs `dplyr`, `stringr`, `vegan`, `ggplot2`)
+then `source("scripts/analysis/spatial_richness_map.R")` (adds `sf`).
 
 *How diverse is the bee community by transect and year, at genus vs species rank,
 do the assemblages differ, and where in the park does richness concentrate?* Alpha
@@ -566,7 +566,7 @@ when it's built, and flip its registry status.
 ## ✅ Rarefaction — effort-controlled diversity — `richness/rarefaction`
 
 **Scripts:** `scripts/analysis/rarefaction_vegan.R` and `scripts/analysis/rarefaction_inext.R`
-**Run:** `Rscript scripts/analysis/rarefaction_vegan.R` (needs `vegan`, `ggplot2`); then
+**Run:** `source("scripts/analysis/rarefaction_vegan.R")` (needs `vegan`, `ggplot2`); then
 `rarefaction_inext.R` (needs `iNEXT` — one-time `install.packages("iNEXT")`, internet required).
 
 *Fair diversity by controlling for sampling effort* — "if every group had been sampled the same,
@@ -589,7 +589,7 @@ effort. (iNEXT adds Hill q1/q2 + coverage-based versions when run on a machine w
 ## ✅ Bee Bounties — method-gap task lists — `coverage/bee_bounties`
 
 **Script:** `scripts/analysis/bee_bounties.R`
-**Run:** `Rscript scripts/analysis/bee_bounties.R` (needs `dplyr`, `stringr`, `ggplot2`)
+**Run:** `source("scripts/analysis/bee_bounties.R")` (needs `dplyr`, `stringr`, `ggplot2`)
 
 Turns the lethal/non-lethal gap into two actionable lists, each with where/when/on-what context:
 
@@ -609,7 +609,7 @@ specimen bounty), so a surveyor knows when/where/on-what to look. Scope: all rec
 ## ✅ NPS summary tables — descriptive only — `reference/nps_summary`
 
 **Script:** `scripts/analysis/nps_summary_tables.R`
-**Run:** `Rscript scripts/analysis/nps_summary_tables.R` (needs `dplyr`, `stringr`)
+**Run:** `source("scripts/analysis/nps_summary_tables.R")` (needs `dplyr`, `stringr`)
 
 Plain counts for the data-focused NPS report — **no interpretation, no tests.**
 

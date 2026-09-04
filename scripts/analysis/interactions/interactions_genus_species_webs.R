@@ -24,7 +24,7 @@
 # resolved to bee species AND with a plant genus enter. Descriptive webs; the H2'
 # p-value is the one inferential piece.
 #
-# Run from the repo root:  Rscript scripts/analysis/interactions/interactions_genus_species_webs.R
+# Run from the repo root:  source("scripts/analysis/interactions/interactions_genus_species_webs.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

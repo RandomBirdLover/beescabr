@@ -14,7 +14,7 @@
 # few points). Outputs a CSV, a styled sortable HTML table, and a PNG table image to
 # data/analysis/reference/field_guide/.
 #
-# Run from the repo root:  Rscript scripts/analysis/reference/bee_field_guide.R
+# Run from the repo root:  source("scripts/analysis/reference/bee_field_guide.R")
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
 # =============================================================
 

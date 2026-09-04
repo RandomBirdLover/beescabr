@@ -6,7 +6,7 @@
 #
 # Run from the repo ROOT:
 #   source("scripts/run_all_analysis_pipeline.R")     # in an R console
-#   Rscript scripts/run_all_analysis_pipeline.R        # or from a terminal
+#   source("scripts/run_all_analysis_pipeline.R")        # or from a terminal
 #
 # Any single script that errors is reported and skipped -- the rest still run,
 # and the failures are listed at the end.
@@ -27,8 +27,8 @@ source("scripts/analysis/shared/forage_selectivity.R")    # shared bee-genus for
 # (scripts/reference/refresh/enrich_lookups.R, called by the *_clean.R scripts + cabr_bee_checklist.R,
 # fetched once and cached). This run stays fully OFFLINE and just reads those columns/caches.
 # To force-refresh existing IUCN assessments or common names, run the pipeline with the refresh
-# flag (BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R) -- or the two tools directly:
-#   Rscript scripts/reference/refresh/refresh_iucn_status.R  |  Rscript scripts/reference/refresh/refresh_plant_common_names.R
+# flag (Sys.setenv(BEESCABR_REFRESH = "1"); source("scripts/run_data_cleaning_pipeline.R")) -- or the two tools directly:
+#   source("scripts/reference/refresh/refresh_iucn_status.R")  |  source("scripts/reference/refresh/refresh_plant_common_names.R")
 RUNNING_ALL <- TRUE
 
 # HELPERS, not analyses: other scripts source them, so the auto-loop must not run
@@ -51,7 +51,7 @@ RUNNING_ALL <- TRUE
 # script's warnings TO that script (R would otherwise pool them all and print them,
 # nameless, after the run) and fails the script on an unknown-column warning, which
 # always means a real bug rather than a style nit. See scripts/utils/analysis_run.R.
-if (!exists("run_analysis_script")) source("scripts/utils/analysis_run.R")
+if (!exists("run_analysis_script")) source('scripts/utils/analysis_run.R')
 .res <- lapply(.scripts, function(nm) {
   message("\n===== ", nm, " =====")
   r <- run_analysis_script(nm)
@@ -78,4 +78,7 @@ tryCatch(source("scripts/analysis/findings_summaries.R"),
 message("\n---------------------------------------------")
 message(analysis_tally(.scripts, .res))
 message("Figures + tables are in data/analysis/")
-message("Next stage: publish the public site with  Rscript scripts/run_publishing_materials_pipeline.R")
+# The project is run from R, not a shell: every stage is source()d from the console,
+# so the hint is written the way it will actually be typed.
+message("Next stage: publish the public site with")
+message('    source("scripts/run_publishing_materials_pipeline.R")')

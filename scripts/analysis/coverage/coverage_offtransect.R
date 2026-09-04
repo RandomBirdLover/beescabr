@@ -18,7 +18,7 @@
 # off-only taxa (candidate park residents the standardized surveys are missing).
 # Descriptive -- no hypothesis test, so no p-value.
 #
-# Run from the repo root:  Rscript scripts/analysis/bees_found_off_transect.R
+# Run from the repo root:  source("scripts/analysis/coverage/coverage_offtransect.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

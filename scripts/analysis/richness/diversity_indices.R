@@ -26,7 +26,7 @@
 # total just reflects being surveyed on more days. Year comparisons are restricted
 # to the intern survey window (Mar-Sep) so seasonal coverage is comparable.
 #
-# Run from the repo root:  Rscript scripts/analysis/richness/diversity_indices.R
+# Run from the repo root:  source("scripts/analysis/richness/diversity_indices.R")
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 

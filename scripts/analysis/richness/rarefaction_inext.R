@@ -22,21 +22,21 @@
 # so this script was NOT executed here -- it is written to run on your machine,
 # where iNEXT is installed. Run scripts/utils/install_requirements.R once per machine.
 #
-# Run from the repo root:  Rscript scripts/analysis/richness/rarefaction_inext.R
+# Run from the repo root:  source("scripts/analysis/richness/rarefaction_inext.R")
 # Depends on: dplyr, stringr, iNEXT, ggplot2 (+ config.R).
 # =============================================================
 
 # Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
-if (!exists("beescabr_require")) source("scripts/config.R")
+if (!exists("beescabr_require")) source('scripts/config.R')
 beescabr_require()
 if (!requireNamespace("iNEXT", quietly = TRUE))
-  stop("iNEXT is not installed. Run: Rscript scripts/utils/install_requirements.R", call. = FALSE)
+  stop("iNEXT is not installed. Run: source('scripts/utils/install_requirements.R')", call. = FALSE)
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT); library(ggplot2) })
 
-if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
-if (!exists("inext_estimates_tidy")) source("scripts/analysis/shared/inext_estimates.R")
-if (!exists("rare_out_name")) source("scripts/analysis/shared/rarefaction_names.R")
+if (!exists("PATHS")) source('scripts/config.R')
+if (!exists("BEE_TRANSECT")) source('scripts/analysis/shared/theme_beescabr.R')   # shared house style
+if (!exists("inext_estimates_tidy")) source('scripts/analysis/shared/inext_estimates.R')
+if (!exists("rare_out_name")) source('scripts/analysis/shared/rarefaction_names.R')
 
 # One tidy estimates table per DIMENSION, both ranks stacked, instead of three raw
 # iNEXT dumps per rank. run_inext() fills this; section 4 writes it out.

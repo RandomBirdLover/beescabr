@@ -29,7 +29,7 @@
 #   * _report  -> ALL RECORDS (every specimen vs every iNaturalist photo, no window,
 #                 casual public included) -- the park's full picture. NPS report.
 #
-# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_method_venn.R
+# Run from the repo root:  source("scripts/analysis/method_comparison/coverage_method_venn.R")
 # Depends on: dplyr, stringr (+ config.R). Base-R Venn -- no extra packages.
 # =============================================================
 

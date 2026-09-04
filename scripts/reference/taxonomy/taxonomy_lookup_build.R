@@ -41,7 +41,7 @@
 #            and LINKS parents that exist but NEVER fabricates a missing parent -- it returns
 #            those in $missing_parents (a missing GENUS is warned at build time).
 #
-# Run standalone: Rscript scripts/reference/taxonomy/taxonomy_lookup_build.R
+# Run standalone: source("scripts/reference/taxonomy/taxonomy_lookup_build.R")
 #   BEESCABR_SKIP_INGEST=1 reuses the cache without hitting the API.
 # =============================================================
 

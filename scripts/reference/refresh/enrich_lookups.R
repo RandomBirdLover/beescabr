@@ -26,12 +26,12 @@
 # refresh. It is on CRAN; the official IUCN package is GitHub-only and we deliberately
 # stay on rredlist (see dev-docs/TODO.md).
 # Dependencies are CHECKED here, not installed: see beescabr_require() in config.R.
-if (!exists("beescabr_require")) source("scripts/config.R")
+if (!exists("beescabr_require")) source('scripts/config.R')
 beescabr_require()
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
-if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("cred_get")) source("scripts/utils/credentials.R")
+if (!exists("PATHS")) source('scripts/config.R')
+if (!exists("cred_get")) source('scripts/utils/credentials.R')
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (length(a) == 1 && is.na(a)) ||
                             (is.character(a) && length(a) == 1 && !nzchar(a))) b else a
@@ -42,7 +42,7 @@ if (!exists("cred_get")) source("scripts/utils/credentials.R")
 IUCN_DIR        <- "data/checklists/iucn"
 IUCN_CACHE_FILE <- file.path(IUCN_DIR, "iucn_status_generated.csv")
 IUCN_VERSION_FILE <- file.path(IUCN_DIR, "iucn_redlist_version_generated.txt")  # the edition we cited
-if (!exists("citation_save_version")) source("scripts/website/citations.R")
+if (!exists("citation_save_version")) source('scripts/website/citations.R')
 IUCN_SECRET     <- "data/secrets/iucn_api.env"          # gitignored -- paste token here
 IUCN_CODE_NAME  <- c(EX = "Extinct", EW = "Extinct in the Wild", RE = "Regionally Extinct",
                      CR = "Critically Endangered", EN = "Endangered", VU = "Vulnerable",
@@ -138,7 +138,7 @@ resolve_iucn <- function(species, force = FALSE, verbose = TRUE) {
   if (length(need) > 0 && !can_net && verbose) {
     message(sprintf("  IUCN: %d species not refreshed -- using the cached values.", length(need)))
     if (!has_pkg)
-      message("  IUCN: rredlist is not installed. Run: Rscript scripts/utils/install_requirements.R")
+      message("  IUCN: rredlist is not installed. Run: source('scripts/utils/install_requirements.R')")
     if (!nzchar(key))
       message("  IUCN: no API token. Get one free at https://api.iucnredlist.org and the")
       message("  IUCN: pipeline will ask for it, or put it in data/secrets/iucn_api.env")

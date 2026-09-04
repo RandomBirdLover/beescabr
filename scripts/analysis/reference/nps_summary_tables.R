@@ -14,7 +14,7 @@
 # SCOPE: all records (the report describes the whole dataset). Everything here is a
 # straight count -- deliberately no tests, rates, or interpretation.
 #
-# Run from the repo root:  Rscript scripts/analysis/reference/nps_summary_tables.R
+# Run from the repo root:  source("scripts/analysis/reference/nps_summary_tables.R")
 # Depends on: dplyr, stringr (+ config.R).
 # =============================================================
 

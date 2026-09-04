@@ -17,29 +17,31 @@ Includes the bee field guides (species + genus), park summary tables, least-samp
 3. `scripts/run_publishing_materials_pipeline.R` — re-render the **public** pages and sync them into `docs/` (which GitHub Pages serves)
 
 ```
-Rscript scripts/run_publishing_materials_pipeline.R                     # rebuild the public site into docs/ (then git push to deploy)
-BEESCABR_DEPLOY=1 Rscript scripts/run_publishing_materials_pipeline.R   # also commit + push docs/ (auto-deploy)
+source("scripts/run_publishing_materials_pipeline.R")                     # rebuild the public site into docs/ (then git push to deploy)
+Sys.setenv(BEESCABR_DEPLOY = "1"); source("scripts/run_publishing_materials_pipeline.R")   # also commit + push docs/ (auto-deploy)
 ```
 
-`docs/` is committed to git; GitHub Pages redeploys on every push. The publish modules live in `scripts/publish/` (the primitive alone is `Rscript scripts/publish/publish_pages.R`), the way cleaning lives in `scripts/inat_observations/` and analysis in `scripts/analysis/`.
+`docs/` is committed to git; GitHub Pages redeploys on every push. The publish modules live in `scripts/website/` (the primitive alone is `source("scripts/website/publish_pages.R")`), the way cleaning lives in `scripts/inat_observations/` and analysis in `scripts/analysis/`.
 
 ---
 
 ## Quickstart — run order
 
 New here? Do the one-time **Setup** below, then run the three pipeline stages in
-order. Each is a single command from the repo root; you do not source individual
-scripts by hand.
+order. Open `beescabr.Rproj` in RStudio first -- that sets the working directory to
+the repo root, which every path in the project assumes. Then each stage is one line
+in the console. Run the three runners only; never source an individual analysis
+script by hand.
 
-```bash
+```r
 # 1. INGEST + CLEAN — pulls iNaturalist into the DuckDB cache, cleans, exports tables
-Rscript scripts/run_data_cleaning_pipeline.R
+source("scripts/run_data_cleaning_pipeline.R")
 
 # 2. ANALYSIS — rebuilds every figure and table into data/analysis/ (no re-ingest)
-Rscript scripts/run_all_analysis_pipeline.R
+source("scripts/run_all_analysis_pipeline.R")
 
 # 3. PUBLISH — copies the public pages into docs/ and rebuilds the landing page
-Rscript scripts/run_publishing_materials_pipeline.R
+source("scripts/run_publishing_materials_pipeline.R")
 ```
 
 Stage 1 is the slow one (it hits the API) and is **interactive** — it stops to ask
@@ -51,9 +53,9 @@ Stage 1 opens with a menu, so there is nothing to memorize: choose **1 (Normal
 run)** unless you have a reason not to. The same modes are available as switches
 if you are scripting it:
 
-```bash
-BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # reuse the cache, no API calls
-BEESCABR_FULL_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R   # re-fetch everything from scratch
+```r
+Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")   # reuse the cache, no API calls
+Sys.setenv(BEESCABR_FULL_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")   # re-fetch everything from scratch
 ```
 
 **Running a season? Start with dev-docs/SEASON_RUNBOOK.md.** It walks the whole

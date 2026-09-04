@@ -10,7 +10,7 @@ Writes nothing of its own.
 THE ONE YOU MIGHT RUN
 =====================
 
-    Rscript scripts/utils/install_requirements.R
+    source("scripts/utils/install_requirements.R")
 
 Installs the packages the project needs. Run it once on a new machine.
 

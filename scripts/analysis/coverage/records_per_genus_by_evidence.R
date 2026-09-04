@@ -16,7 +16,7 @@
 # A genus with few TOTAL records is flagged (*) -- its evidence base is thin, so
 # read its composition with care (matches the project's >=10-record rule of thumb).
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/records_per_genus_by_evidence.R
+# Run from the repo root:  source("scripts/analysis/coverage/records_per_genus_by_evidence.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 

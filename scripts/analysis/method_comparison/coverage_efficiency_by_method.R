@@ -10,7 +10,7 @@
 # genus rank. (The full multi-way rarefaction lives in richness/rarefaction/.)
 #
 # Survey records only (matches the rarefaction analysis scope).
-# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_efficiency_by_method.R
+# Run from the repo root:  source("scripts/analysis/method_comparison/coverage_efficiency_by_method.R")
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 

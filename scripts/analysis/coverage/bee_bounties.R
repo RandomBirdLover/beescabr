@@ -21,7 +21,7 @@
 # SCOPE: ALL records, both methods (a bounty is about finding the bee at all, not
 # standardized effort). Ranks: species AND genus. Descriptive -- no p-value.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/bee_bounties.R
+# Run from the repo root:  source("scripts/analysis/coverage/bee_bounties.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

@@ -13,8 +13,8 @@
 # was missing before). It forces a full re-query and rewrites
 # data/checklists/plants/plant_genus_common_generated.csv. Needs internet; NO token.
 #
-#   From the repo root:  Rscript scripts/reference/refresh/refresh_plant_common_names.R
-#   Or inside the pipeline:  BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R
+#   From the repo root:  source("scripts/reference/refresh/refresh_plant_common_names.R")
+#   Or inside the pipeline:  Sys.setenv(BEESCABR_REFRESH = "1"); source("scripts/run_data_cleaning_pipeline.R")
 #
 # Depends on: httr2, dplyr, stringr (+ config.R + reference/enrich_lookups.R).
 # =============================================================

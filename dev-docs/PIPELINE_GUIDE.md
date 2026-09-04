@@ -101,10 +101,10 @@ by deleting the RDS.
 ## 3. Running it
 
 ```
-Rscript scripts/run_data_cleaning_pipeline.R                       # full run
-BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R  # reuse cache only
-BEESCABR_FULL_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R  # re-fetch all obs
-Rscript -e 'library(testthat); test_dir("tests/testthat")'   # tests
+source("scripts/run_data_cleaning_pipeline.R")                       # full run
+Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")  # reuse cache only
+Sys.setenv(BEESCABR_FULL_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")  # re-fetch all obs
+library(testthat); test_dir("tests/testthat")   # tests
 ```
 
 Tuning: `INAT_THROTTLE_SEC` (pause between API calls) and `commit_every` /

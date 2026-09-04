@@ -15,7 +15,7 @@
 #   effort-standardized richness story is told by rarefaction_{vegan,inext}.R by
 #   transect. The dead grid + map code was removed rather than left commented.)
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage/transect_effort.R
+# Run from the repo root:  source("scripts/analysis/coverage/transect_effort.R")
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 

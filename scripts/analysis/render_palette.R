@@ -3,7 +3,7 @@
 # Renders a one-page reference sheet of the LIVE theme tokens (single source of
 # truth: scripts/analysis/shared/theme_beescabr.R). Regenerated with the rest of the
 # analysis figures; re-run alone after any token change:
-#   Rscript scripts/analysis/render_palette.R
+#   source("scripts/analysis/render_palette.R")
 # Output: dev-docs/bee_themes_pallete.png -- it lives with the docs, not under data/,
 # because data/ is gitignored and the palette swatch is reference material a developer
 # (or Taro) needs to be able to see in the repo.

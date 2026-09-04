@@ -22,7 +22,7 @@
 # pinned records; this = the whole genus). Outputs a CSV, a styled sortable HTML
 # table, and a PNG table image to data/analysis/reference/field_guide/.
 #
-# Run from the repo root:  Rscript scripts/analysis/reference/bee_field_guide_genus.R
+# Run from the repo root:  source("scripts/analysis/reference/bee_field_guide_genus.R")
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
 # =============================================================
 

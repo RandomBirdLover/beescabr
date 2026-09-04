@@ -22,7 +22,7 @@
 # (vegan::rarefy, interpolation only). See the folder README for how this compares
 # to iNEXT's size-based and coverage-based standardization, and which to trust.
 #
-# Run from the repo root:  Rscript scripts/analysis/richness/rarefaction_vegan.R
+# Run from the repo root:  source("scripts/analysis/richness/rarefaction_vegan.R")
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 

@@ -48,7 +48,7 @@ landing page, the wrapper -- the fix is here.
 RUN IT WITH
 ===========
 
-    Rscript scripts/run_publishing_materials_pipeline.R
+    source("scripts/run_publishing_materials_pipeline.R")
 
 Run the analysis pipeline first -- this one only copies and wraps what that
 produced, so anything stale there ends up on the site.

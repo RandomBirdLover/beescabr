@@ -56,4 +56,4 @@ THE ONLINE TOOLS
 These call an external API and are NOT part of a normal run -- the values are
 baked into the cleaned tables and cached. Refresh them deliberately:
 
-    BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R
+    Sys.setenv(BEESCABR_REFRESH = "1"); source("scripts/run_data_cleaning_pipeline.R")

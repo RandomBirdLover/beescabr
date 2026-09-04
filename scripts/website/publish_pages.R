@@ -7,7 +7,7 @@
 # The generated report HTML lives under data/analysis/ (gitignored), so this
 # script copies the chosen public pages into docs/ with clean, stable filenames.
 # Run it after the pipeline whenever the pages change:
-#     Rscript scripts/website/publish_pages.R
+#     source("scripts/website/publish_pages.R")
 # then commit docs/ and push. GitHub Pages source = main branch, /docs folder.
 #
 # This is the R replacement for the old publish_pages.sh -- same docs/ output,
@@ -17,8 +17,8 @@
 
 # Follow the season year from config.R so a new season needs no edit here. Set
 # BEESCABR_SEASON_YEAR=2026 to publish an older season.
-if (!exists("DIR_REPORT")) source("scripts/config.R")
-if (!exists("beescabr_fill_colors")) source("scripts/analysis/shared/theme_beescabr.R")  # palette is the only colour source
+if (!exists("DIR_REPORT")) source('scripts/config.R')
+if (!exists("beescabr_fill_colors")) source('scripts/analysis/shared/theme_beescabr.R')  # palette is the only colour source
 IUCN_VERSION_FILE <- "data/checklists/iucn/iucn_redlist_version_generated.txt"  # written by the IUCN refresh
 SRC_DIR  <- DIR_REPORT
 DOCS_DIR <- "docs"
@@ -75,10 +75,10 @@ publish_empty_message <- function(src_dir) paste0(
   "  has not been run for this year yet.\n\n",
   "  Nothing was changed -- docs/ is left untouched and the live site is unchanged.\n\n",
   "  Run the \"run_all_analysis_pipeline.R\" first, then publish:\n",
-  "    Rscript scripts/run_all_analysis_pipeline.R\n",
-  "    Rscript scripts/run_publishing_materials_pipeline.R\n\n",
+  "    source('scripts/run_all_analysis_pipeline.R')\n",
+  "    source('scripts/run_publishing_materials_pipeline.R')\n\n",
   "  (To publish an EARLIER season instead, set BEESCABR_SEASON_YEAR, e.g.\n",
-  "   BEESCABR_SEASON_YEAR=2026 Rscript scripts/run_publishing_materials_pipeline.R)")
+  "   Sys.setenv(BEESCABR_SEASON_YEAR = '2026'); source('scripts/run_publishing_materials_pipeline.R'))")
 
 # ---- freshness guard --------------------------------------------------------
 # run_all_analysis_pipeline.R runs all 36 analysis scripts best-effort: one that fails
@@ -102,10 +102,10 @@ publish_stale_message <- function(stale) paste0(
   "  outdated numbers on the live site.\n\n",
   "  Nothing was changed -- docs/ is left untouched and the live site is unchanged.\n\n",
   "  Re-run the analysis, check the failure tally it prints at the end, then publish:\n",
-  "    Rscript scripts/run_all_analysis_pipeline.R\n",
-  "    Rscript scripts/run_publishing_materials_pipeline.R\n\n",
+  "    source('scripts/run_all_analysis_pipeline.R')\n",
+  "    source('scripts/run_publishing_materials_pipeline.R')\n\n",
   "  (To publish anyway -- you know these pages are fine as they are:\n",
-  "   BEESCABR_ALLOW_STALE=1 Rscript scripts/run_publishing_materials_pipeline.R)")
+  "   Sys.setenv(BEESCABR_ALLOW_STALE = '1'); source('scripts/run_publishing_materials_pipeline.R'))")
 
 # mtime in seconds, or NA when the file is absent -- keeps the pure function clock-free.
 publish_mtime <- function(path) {
@@ -246,7 +246,7 @@ build_landing_html <- function(cards, date, hero_v) {
   # Data-source credits. IUCN REQUIRES a citation carrying the Red List version, which the
   # status refresh records to disk; iNaturalist asks for none, so it is credited instead.
   # An unknown version prints nothing rather than a citation that could be wrong.
-  if (!exists("iucn_citation")) source("scripts/website/citations.R")
+  if (!exists("iucn_citation")) source('scripts/website/citations.R')
   .fill(.PAGE_TPL, herov = hero_v, cards = cards_html, date = date,
         inat_cite = inat_citation(date),
         iucn_cite = iucn_citation(citation_read_version(IUCN_VERSION_FILE), date))

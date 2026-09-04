@@ -19,7 +19,7 @@
 # analysis -- see forage_selectivity.R and the field guide's Forage preference column.
 #
 # Pure builders (bpm_*) are unit-tested in tests/testthat/test-bee-plant-matrix.R.
-# Run from the repo root:  Rscript scripts/analysis/reference/bee_plant_matrix.R
+# Run from the repo root:  source("scripts/analysis/reference/bee_plant_matrix.R")
 # =============================================================
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 

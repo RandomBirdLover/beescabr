@@ -17,7 +17,7 @@
 # the raw sheet and either ID, dedupe, or delete them. Re-run it any time to see
 # what's left.
 #
-# Run: Rscript scripts/specimens/specimen_raw_worklist.R
+# Run: source("scripts/specimens/specimen_raw_worklist.R")
 #      (or) source("scripts/specimens/specimen_raw_worklist.R"); tidy_raw_specimens()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readxl) }))

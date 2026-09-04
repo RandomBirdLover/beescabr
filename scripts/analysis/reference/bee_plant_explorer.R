@@ -24,7 +24,7 @@
 #   <DIR_REPORT>/reference/bee_plant/bee_plant_explorer.html
 # published to the site by publish_pages.R as bee_plant_explorer.html.
 #
-# Run from the repo root:  Rscript scripts/analysis/reference/bee_plant_explorer.R
+# Run from the repo root:  source("scripts/analysis/reference/bee_plant_explorer.R")
 # =============================================================
 suppressMessages({ library(dplyr); library(stringr); library(jsonlite) })
 # interactive pages live in a website/ subfolder beside the figures they came from

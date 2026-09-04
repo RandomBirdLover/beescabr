@@ -13,8 +13,8 @@
 # publish modules live in scripts/website/, the way cleaning lives in scripts/clean/
 # and analysis in scripts/analysis/.
 #
-#   Rscript scripts/run_publishing_materials_pipeline.R                     # rebuild docs/ (then git push to deploy)
-#   BEESCABR_DEPLOY=1 Rscript scripts/run_publishing_materials_pipeline.R   # also commit + push docs/ (auto-deploy)
+#   source("scripts/run_publishing_materials_pipeline.R")                     # rebuild docs/ (then git push to deploy)
+#   Sys.setenv(BEESCABR_DEPLOY = "1"); source("scripts/run_publishing_materials_pipeline.R")   # also commit + push docs/ (auto-deploy)
 #
 # Assumes the analysis data is current -- run stages 1 + 2 first.
 # =============================================================
@@ -39,6 +39,17 @@ PUBLIC_PAGES <- c(
 # refresh basemap: clear the cached tiles so the static transect map redraws with CURRENT
 # tiles on every publish (the interactive Leaflet maps load theirs live in the browser)
 unlink("data/spatial/basemap_tiles", recursive = TRUE)
+
+# FIRST BUILD: say what GitHub Pages needs before spending five minutes rendering.
+# Shown only when docs/ holds no site yet, so an established setup never sees it.
+if (!exists("website_setup_notice")) source("scripts/website/setup_notice.R")
+local({
+  remote <- tryCatch(system2("git", c("remote", "get-url", "origin"),
+                             stdout = TRUE, stderr = FALSE)[1], error = function(e) "")
+  if (is.na(remote)) remote <- ""
+  notice <- website_setup_notice(has_site = file.exists("docs/index.html"), remote = remote)
+  if (!is.null(notice)) message(paste(notice, collapse = "\n"))
+})
 
 message("==> STAGE 3: regenerating public report HTML")
 ok <- vapply(PUBLIC_PAGES, function(nm) {

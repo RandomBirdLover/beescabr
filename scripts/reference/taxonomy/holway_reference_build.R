@@ -14,7 +14,7 @@
 # so the auto-pick / auto-skip / needs-prompt branching is unit-tested;
 # the readline() prompting is the only impure part.
 #
-# Run: Rscript scripts/reference/taxonomy/holway_reference_build.R
+# Run: source("scripts/reference/taxonomy/holway_reference_build.R")
 #   Set BEESCABR_NONINTERACTIVE=1 to auto-skip anything that would prompt
 #   (for unattended reruns -- ambiguous terms are left for a human pass).
 #
