@@ -254,3 +254,36 @@ test_that("the iNat flower rows say what is actually missing", {
   expect_false(any(grepl("behavior", labs, ignore.case = TRUE)))
   expect_true(all(grepl("flower", labs, ignore.case = TRUE)))
 })
+
+# "Review queue  0 unknown tags · 0 fields · 8 windows" -- a count with no path and
+# no word about what a "window" is or what ruling on one means. Taro: "this is vague
+# and doesn't show pathway to go look for review files."
+src("project_info/finding_project_info.R")
+
+test_that("the review-queue summary names the file for anything outstanding", {
+  txt <- .said(.fpi_review_summary(tags = 0L, fields = 0L, windows = 8L))
+  expect_match(txt, "qc_review_survey_beeple_date_windows_generated.csv", fixed = TRUE)
+  expect_match(txt, "data/project_info/surveys/review", fixed = TRUE)
+  expect_match(txt, "survey day", ignore.case = TRUE)   # what a window IS
+})
+
+test_that("nothing outstanding prints no paths to chase", {
+  txt <- .said(.fpi_review_summary(tags = 0L, fields = 0L, windows = 0L))
+  expect_false(grepl("qc_review", txt, fixed = TRUE))
+  expect_match(txt, "nothing", ignore.case = TRUE)
+})
+
+# Naming "an observation field" is not actionable -- iNaturalist has thousands.
+# The crosswalk knows exactly which two this project reads, so the message names
+# them, spelled as they appear on the site.
+test_that("the flower explanation names the actual iNaturalist fields to add", {
+  w <- .review_what_inat()
+  expect_match(w[1], "Insect on flower", fixed = TRUE)
+  expect_match(w[1], "Interaction", fixed = TRUE)
+  expect_match(w[1], "Visited flower of", fixed = TRUE)
+})
+
+test_that("it says what to do when the bee was not on a flower", {
+  w <- .review_what_inat()
+  expect_match(w[1], "no flower|not on a flower", perl = TRUE)
+})

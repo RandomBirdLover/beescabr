@@ -276,6 +276,25 @@ resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
 #' @param blocking TRUE offers to stop so the fix can happen now; FALSE is a
 #'   heads-up that continues on Enter.
 #' @return `"clean"` when nothing is outstanding, `"continue"`, or `"stop"`.
+#' What to actually do about a record with no flower recorded
+#'
+#' "Add the observation field" is not actionable -- iNaturalist has thousands of
+#' them. These are the two this project reads, spelled the way they appear on the
+#' site, taken from the crosswalk (`bee_on_flower`, `flower_visited`).
+#'
+#' @return Two strings: the survey explanation, then the non-survey one.
+.review_what_inat <- function() {
+  fix <- paste(
+    "On iNaturalist the flower a bee was on lives in an observation field, and",
+    "these records have none. Open the URL on each row and add BOTH:",
+    "\n           Insect on flower              -> Yes / No",
+    "\n           Interaction->Visited flower of -> the plant's name",
+    "\n         If the bee genuinely was not on a flower, set Insect on flower to No",
+    "\n         and leave the plant blank -- that is a real answer, not a gap.")
+  c(paste("Survey records, so these matter most.", fix),
+    paste("Records that were not part of a survey. Same fix, lower priority.", fix))
+}
+
 resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = readline,
                                 fix_hint = "the raw .xlsx", blocking = TRUE) {
   items <- items[!is.na(items$count) & items$count > 0, , drop = FALSE]

@@ -211,8 +211,8 @@ write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL,
 #'
 #' @param cache_path The resolver's verdict cache.
 #' @param overrides_path Where answers are written.
+#' @param interactive_ok FALSE skips the prompts entirely, for an unattended run.
 #' @param prompt_fn Injection point for reading an answer.
-#' @param ... Passed through to the worklist builder.
 #' @return Invisibly, the answers recorded.
 prompt_missing_taxon_ids <- function(cache_path = RMI_CACHE_PATH, overrides_path = MANUAL_OVERRIDES_PATH,
                                      interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
