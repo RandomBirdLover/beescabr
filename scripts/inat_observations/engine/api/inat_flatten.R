@@ -1,5 +1,5 @@
 # =============================================================
-# api/inat_flatten.R
+# inat_observations/engine/api/inat_flatten.R
 # beescabr pipeline -- PURE JSON -> tibble transforms
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #

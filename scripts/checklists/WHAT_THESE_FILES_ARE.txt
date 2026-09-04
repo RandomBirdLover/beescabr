@@ -1,0 +1,26 @@
+WHAT THIS FOLDER IS
+===================
+
+Builds the species lists: which bees have been recorded, and on what evidence.
+
+Writes to data/checklists/.
+
+
+THE FILES
+=========
+
+  checklist_build.R      the shared builder every list below uses
+  cabr_bee_checklist.R   Cabrillo -- THE ONE THAT MATTERS
+  pl_bee_checklist.R     Point Loma
+  sd_bee_checklist.R     San Diego County
+
+cabr_bee_checklist.R produces cabr_official_native_bee_checklist_generated.csv,
+which is the answer to "what bees are at Cabrillo". Cite that one and no other.
+
+It is the union of the iNaturalist list and the specimen list, one row per
+taxon, with columns saying which source each came from. A taxon backed by a
+specimen is settled; one backed only by a photograph rests on somebody's
+identification.
+
+The county list is a CROSS-CHECK. It never adds a species -- it only tells you
+whether the county authority also has it.

@@ -1,5 +1,5 @@
 # =============================================================
-# pipelines/ingest_plants.R
+# inat_observations/engine/pipelines/ingest_plants.R
 # beescabr pipeline -- populate the PLANT observation cache from the iNat API
 # Created: 2026-07-17
 #

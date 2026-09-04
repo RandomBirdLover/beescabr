@@ -1,5 +1,5 @@
 # =============================================================
-# db/store_conn.R
+# inat_observations/engine/db/store_conn.R
 # beescabr pipeline -- DuckDB connection + schema bootstrap
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #

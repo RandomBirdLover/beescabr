@@ -1,3 +1,8 @@
+# =============================================================
+# spatial/spatial_utils.R
+# beescabr -- load, reproject and buffer the boundary + transect layers
+# =============================================================
+
 # spatial_utils.R
 #
 # Purpose: load, reproject, and clean the spatial boundary layers used

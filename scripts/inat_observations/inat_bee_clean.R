@@ -1,5 +1,5 @@
 # =============================================================
-# observations/inat_bee_clean.R
+# inat_observations/inat_bee_clean.R
 # beescabr -- turn the brain's per-obs answer key into an ANALYSIS-ready iNaturalist BEE table.
 #
 # WHAT IT'S FOR

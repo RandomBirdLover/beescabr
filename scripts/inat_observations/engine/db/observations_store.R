@@ -1,5 +1,5 @@
 # =============================================================
-# db/observations_store.R
+# inat_observations/engine/db/observations_store.R
 # beescabr pipeline -- observation object repository (DuckDB)
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #

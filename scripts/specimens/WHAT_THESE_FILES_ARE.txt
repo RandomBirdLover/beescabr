@@ -1,0 +1,30 @@
+WHAT THIS FOLDER IS
+===================
+
+Cleaning the specimen workbook: the bees that were netted, pinned and labelled.
+
+Reads the NEWEST .xlsx in data/specimens/records/, writes
+data/specimens/specimens_clean/.
+
+
+THE FILES
+=========
+
+  specimen_bee_clean.R      the cleaning run: names standardised, dates parsed,
+                            taxa matched to the taxonomy lookup
+  specimen_clean_helpers.R  the pure functions it uses (this is where the tests
+                            point -- the logic is here so it can be tested
+                            without a workbook)
+  specimen_raw_worklist.R   one consolidated list of the rows a person still
+                            needs to fix, so they are not hunted one by one
+
+
+THE THING TO KNOW
+=================
+
+Determiner and collector fields keep the form written on the physical LABEL --
+"S O'Dell", initials and all -- not the person's full name. The label is the
+record. Matching a label to a person happens later, through the roster.
+
+Every correction goes in the workbook, then re-run. Editing the cleaned output
+does nothing; the next run overwrites it.

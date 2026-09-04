@@ -1,3 +1,8 @@
+# =============================================================
+# utils/utils.R
+# beescabr -- tiny shared helpers, sourced first by the pipeline runners
+# =============================================================
+
 library(stringr)
 
 # Ensure pdftools is installed (stage 2d reads the beeple-calendar PDFs with it).

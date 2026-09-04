@@ -1,5 +1,5 @@
 # =============================================================
-# observations/qc/qc_review_inat_misid.R
+# inat_observations/review/qc_review_inat_misid.R
 # beescabr -- misID-candidate QC (Q9's per-observation version)
 # Created 2026-07-22
 #

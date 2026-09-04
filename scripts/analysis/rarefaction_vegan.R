@@ -1,4 +1,5 @@
 # =============================================================
+# analysis/rarefaction_vegan.R
 # Rarefaction (vegan) -- fair diversity by standardizing sampling effort
 # beescabr / Cabrillo National Monument (CABR) native bees
 #

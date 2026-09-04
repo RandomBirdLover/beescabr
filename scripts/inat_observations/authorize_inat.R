@@ -1,5 +1,5 @@
 # =============================================================
-# observations/authorize_inat.R
+# inat_observations/authorize_inat.R
 # Run this ONCE, interactively, to authorize beescabr with your iNaturalist account and
 # confirm authenticated access. A browser window opens the first time -- sign in and click
 # "Authorize". Fill data/secrets/inat_api.env (client id / secret / redirect uri) first.

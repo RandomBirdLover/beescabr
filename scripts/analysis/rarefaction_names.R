@@ -1,3 +1,8 @@
+# =============================================================
+# analysis/rarefaction_names.R
+# beescabr -- output names and fair windows for the rarefaction comparisons
+# =============================================================
+
 # Output names for the fair-window rarefaction files ----------------------------
 #
 # "iNEXT" and "vegan" are the names of two R packages. They say which library

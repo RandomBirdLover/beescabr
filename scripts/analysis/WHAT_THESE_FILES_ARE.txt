@@ -1,0 +1,49 @@
+WHAT THIS FOLDER IS
+===================
+
+One script per figure or table. Together they produce everything in
+data/analysis/.
+
+Writes to data/analysis/<year>_generated/ -- never edit the output, edit the
+script.
+
+
+THE RULE THAT WILL BITE YOU
+===========================
+
+run_all_analysis_pipeline.R runs EVERY .R file in this folder, automatically.
+Add a script here and it runs on the next pipeline run, with no registration
+step.
+
+That is convenient for an analysis and wrong for a HELPER. A file that only
+defines functions for another script to use must be listed in .modules in
+run_all_analysis_pipeline.R, or the runner will execute it as though it drew a
+figure. tests/testthat/test-analysis-modules.R checks the two agree, and fails
+if they drift -- which they already had, by three files, before the check
+existed.
+
+
+THE SHARED PIECES
+=================
+
+  theme_beescabr.R      Colors, fonts, captions. THE ONLY PLACE A COLOR IS
+                        DEFINED. Never write a hex code into an analysis
+                        script; add a token here and reference it.
+  utils_analysis.R      Shared helpers for reading the cleaned tables.
+  rarefaction_names.R   Output names + the fair windows for the method and
+                        observer comparisons.
+  folder_readmes.R      Writes the notes that explain data/analysis/.
+  findings_summaries.R  Runs LAST. Writes one findings file per analysis plus
+                        findings_index.csv, the index a reader starts from.
+
+
+WHAT AN ANALYSIS SCRIPT LOOKS LIKE
+==================================
+
+Read the cleaned tables, compute, then write a figure and the table behind it
+into the same folder. Every figure carries a caption saying its scope, its
+method and where the data came from -- scope_cap() builds it, and a figure that
+ran a statistical test also passes bee_test().
+
+If you are adding one, copy the shape of a short existing script rather than
+starting from scratch: coverage_offtransect.R is a readable example.

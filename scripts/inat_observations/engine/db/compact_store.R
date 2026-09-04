@@ -1,5 +1,5 @@
 # =============================================================
-# engine/db/compact_store.R
+# inat_observations/engine/db/compact_store.R
 # beescabr -- reclaim space in an observation cache without losing a row.
 #
 # DuckDB never hands space back to the filesystem on its own. An updated row

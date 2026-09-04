@@ -1,0 +1,49 @@
+WHAT THIS FOLDER IS
+===================
+
+Everything that talks to iNaturalist, and everything that cleans what comes back.
+
+Writes to data/inat_observations/.
+
+
+THE LAYERS, BOTTOM TO TOP
+=========================
+
+  engine/api/        HTTP, rate limiting, and turning the JSON into rows.
+  engine/db/         The DuckDB cache: connections, tables, compaction.
+  engine/pipelines/  Ingest. THE ONLY CODE THAT CALLS THE OBSERVATIONS API.
+  (this folder)      Cleaning and QC of what the cache holds.
+  review/            Writes the review files a person looks at.
+
+Dependencies point DOWN that list and never up. If a cleaning script needs
+something from the API, it goes through the cache -- it does not make its own
+request.
+
+
+ONE FETCH ENTRYPOINT
+====================
+
+    engine/pipelines/ingest_inat.R
+
+That is the only place observations are downloaded. Everything else reads the
+DuckDB cache. This is deliberate: one place to reason about rate limits, one
+place that can go wrong, and an analysis run that never touches the network.
+
+
+THE CLEANING SCRIPTS
+====================
+
+  inat_bee_clean.R      the bee observations   -> cabr_inat_bee_clean_generated.csv
+  inat_plant_clean.R    the plant observations -> cabr_inat_plant_clean_generated.csv
+  bee_forage.R          which bee was on which plant
+  build_field_id_map.R  the iNat observation-field ids the project uses
+
+review/ writes the QC files: probable misidentifications, records outside the
+park, tags that matched no survey. Those are questions for a person, not errors.
+
+
+TESTING NETWORK CODE
+====================
+
+No test ever hits the real API. Every function that makes a request takes a
+request_fn argument, and the tests pass a fake. If you add one, keep that shape.

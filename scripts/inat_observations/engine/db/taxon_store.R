@@ -1,5 +1,5 @@
 # =============================================================
-# db/taxon_store.R
+# inat_observations/engine/db/taxon_store.R
 # beescabr pipeline -- taxon request cache repository (DuckDB)
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #

@@ -1,3 +1,8 @@
+# =============================================================
+# analysis/inext_estimates.R
+# beescabr -- tidy iNEXT's three result tables into one long table
+# =============================================================
+
 # Tidy the three iNEXT result tables into one long table --------------------------
 #
 # iNEXT hands back three tables per comparison: AsyEst (the extrapolated ceiling),

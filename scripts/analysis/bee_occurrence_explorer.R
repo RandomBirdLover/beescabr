@@ -1,4 +1,5 @@
 # =============================================================
+# analysis/bee_occurrence_explorer.R
 # Bee Occurrence Explorer -- interactive "where has this bee been found?" map
 # beescabr / Cabrillo National Monument (CABR) native bees
 #

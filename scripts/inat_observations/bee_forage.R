@@ -1,5 +1,5 @@
 # =============================================================
-# observations/bee_forage.R
+# inat_observations/bee_forage.R
 # beescabr -- BEE-OBS FORAGE PLANTS extractor
 # Created 2026-07-21
 #

@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/qc_review_survey_windows.R
+# project_info/review/qc_review_survey_windows.R
 # beescabr -- interactive review of SURVEY-DATE windows
 # Created 2026-07-16.
 #

@@ -1,3 +1,8 @@
+# =============================================================
+# analysis/folder_readmes.R
+# beescabr -- per-folder WHAT_THESE_FILES_ARE.txt for the analysis outputs
+# =============================================================
+
 # Per-folder WHAT_THESE_FILES_ARE.txt ------------------------------------------
 #
 # data/analysis/WHAT_THESE_FILES_ARE.txt explains the tree as a whole. It cannot

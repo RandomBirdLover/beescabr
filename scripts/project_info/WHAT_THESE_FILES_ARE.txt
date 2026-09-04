@@ -1,0 +1,34 @@
+WHAT THIS FOLDER IS
+===================
+
+Who surveyed, when, and where. This is the folder that turns a pile of
+observations into "a survey somebody did on a date along a transect".
+
+Writes to data/project_info/.
+
+
+THE PEOPLE
+==========
+
+  build_people_roster.R   ONE ROW PER HUMAN, with a stable person_id.
+  build_participation.R   who actually took part, DERIVED from the surveys.
+
+Those two are separate on purpose. The roster is declared: it says a person
+exists and how to spell their name. Participation is derived: it says what they
+actually did. The old roster mixed the two and recorded a volunteer as having
+surveyed six times when the record showed none.
+
+A person is joined by person_id, never by name. Names appear in three forms in
+this project -- "Sam O'Dell" in a log, "S O'Dell" on a museum label, a handle on
+iNaturalist -- and two people share a first name.
+
+
+THE SURVEYS
+===========
+
+  finding_project_info.R              builds the master survey record
+  finding_beeple_calendar.R           parses the volunteer calendar PDFs
+  resolve_beeple_transects_per_survey.R   which transect each survey covered
+
+review/ writes the QC files: date windows that do not line up, transects that
+overlap, iNat tags that matched no survey. Questions for a person, not errors.

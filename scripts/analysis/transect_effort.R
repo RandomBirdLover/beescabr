@@ -1,4 +1,5 @@
 # =============================================================
+# analysis/transect_effort.R
 # Per-transect sampling effort  (companion to rarefaction_{vegan,inext}.R)
 # beescabr / Cabrillo National Monument (CABR) native bees
 #

@@ -1,0 +1,84 @@
+WHAT THIS FOLDER IS
+===================
+
+All the code. Every number, figure and table in data/ was produced by something
+in here, and nothing in data/ should ever be edited by hand to fix a result --
+the fix goes in the script that wrote it.
+
+The folders mirror data/: scripts/specimens/ writes data/specimens/, and so on.
+
+
+THE THREE THINGS YOU RUN
+========================
+
+    Rscript scripts/run_data_cleaning_pipeline.R
+        Download from iNaturalist, clean the specimen workbook, rebuild the
+        taxonomy lookups and the checklists. Start here after new data arrives.
+
+    Rscript scripts/run_all_analysis_pipeline.R
+        Every figure and table, into data/analysis/. Reads only what the step
+        above produced, so it never touches the network.
+
+    Rscript scripts/run_publishing_materials_pipeline.R
+        The public website, into docs/.
+
+Run them in that order. Each is safe to re-run; they overwrite their own output.
+
+    BEESCABR_SKIP_INGEST=1 Rscript scripts/run_data_cleaning_pipeline.R
+        Same, but reuse the downloaded cache instead of calling the API. Much
+        faster, and what you want while testing.
+
+
+config.R
+========
+
+Every path, id and constant the project uses, in one file. If a script needs to
+know where something lives, it asks config.R -- no script hardcodes a path.
+
+It never installs anything. To set up a new machine:
+
+    Rscript scripts/utils/install_requirements.R
+
+
+THE FOLDERS
+===========
+
+  analysis/            One script per figure or table. The runner executes
+                       EVERY .R in here automatically, so a helper must be
+                       listed in .modules in run_all_analysis_pipeline.R or it
+                       will be run as if it were an analysis.
+
+  inat_observations/   The iNaturalist side. engine/ is the machinery (HTTP,
+                       DuckDB cache, ingest); the files above it clean and
+                       QC the downloaded records.
+
+  specimens/           Cleaning the specimen workbook.
+
+  project_info/        Who surveyed, when, where: the people roster, the
+                       survey log, and the calendar parsing behind them.
+
+  reference/           Taxonomy. Builds the lookups every other table joins
+                       against, and holds the interactive tools for resolving
+                       a name a machine could not.
+
+  checklists/          Builds the species lists from the cleaned tables.
+
+  spatial/             Loading and reprojecting the shapefiles.
+
+  publish/             Builds the public website into docs/.
+
+  utils/               Small shared helpers. Nothing here knows about bees.
+
+
+TESTS
+=====
+
+    Rscript -e 'library(testthat); test_dir("tests/testthat")'
+
+About 1500 of them, and they should all pass. They are the fastest way to find
+out whether a change broke something. Write the test first -- CLAUDE.md explains
+why, and the tests that already exist are the examples.
+
+
+For the stage-by-stage map of which script produces which file, see
+dev-docs/SCRIPTS_GUIDE.md.

@@ -1,0 +1,39 @@
+WHAT THIS FOLDER IS
+===================
+
+Small shared helpers. Nothing in here knows anything about bees -- that is the
+test for whether code belongs here.
+
+Writes nothing of its own.
+
+
+THE ONE YOU MIGHT RUN
+=====================
+
+    Rscript scripts/utils/install_requirements.R
+
+Installs the packages the project needs. Run it once on a new machine.
+
+The LIST of packages lives in config.R, not here. config.R is sourced by every
+script, so if it installed anything, every run would hit the network just to
+read a constant. The list is a constant; installing is a script you choose to
+run. To add a dependency, add it to BEESCABR_PACKAGES in config.R -- that is the
+whole change.
+
+
+THE REST
+========
+
+  utils.R           string and file helpers, sourced first by the runners
+  console.R         how the pipeline talks to you: phase banners, aligned
+                    detail lines, and the "NEEDS YOU" rollup at the end of a
+                    run. Output only, no logic
+  ingest_mode.R     the run-mode menu, so the pipeline's behaviour is a choice
+                    you make rather than an env-var flag you have to remember
+  credentials.R     reads the API credential belonging to whoever is running
+                    the pipeline, out loud rather than silently
+  analysis_run.R    runs one analysis script and attributes its warnings to it,
+                    so a warning names the script that caused it
+  people.R          the three written forms of one person's name -> one person
+  people_ids.R      person_id lookup and display
+  refresh_due.R     whether a cached online value is stale enough to refetch

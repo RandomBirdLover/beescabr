@@ -1,5 +1,5 @@
 # =============================================================
-# observations/inat_plant_clean.R
+# inat_observations/inat_plant_clean.R
 # beescabr -- turn the brain's per-obs answer key into an ANALYSIS-ready iNaturalist PLANT table.
 #
 # Parallel to inat_bee_clean.R, scoped to the SURVEYORS' Plantae observations. Same brain

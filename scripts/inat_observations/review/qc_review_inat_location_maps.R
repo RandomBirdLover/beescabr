@@ -1,5 +1,5 @@
 # =============================================================
-# observations/qc_review_inat_location_maps.R
+# inat_observations/review/qc_review_inat_location_maps.R
 # beescabr -- builds the LOCATION-REVIEW handoff folder: one self-contained iNaturalist
 # "pins to fix" map per observer, plus the two location_review CSVs and the shared
 # instruction page, all under data/inat_observations/review/location/.

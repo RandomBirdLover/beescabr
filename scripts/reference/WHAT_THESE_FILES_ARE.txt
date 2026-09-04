@@ -1,0 +1,46 @@
+WHAT THIS FOLDER IS
+===================
+
+Taxonomy. This folder decides what a name means, and builds the two lookups
+every other table in the project joins against.
+
+Writes to data/reference/.
+
+
+WHAT IT BUILDS
+==============
+
+  taxonomy_lookup_build.R        -> sd_bee_taxonomy_lookup_generated.csv
+  plant_taxonomy_lookup_build.R  -> cabr_plant_taxonomy_lookup_generated.csv
+  holway_reference_build.R       -> the county checklist, resolved to iNat ids
+  enrich_lookups.R               -> IUCN status + plant common names, cached
+
+Those lookups are the authority. Joins go on taxon_id, never on a name string:
+iNaturalist renames taxa, the checklists spell some genera their own way, and
+subspecies roll up to the parent. An id survives all three; a name does not.
+
+
+THE INTERACTIVE TOOLS
+=====================
+
+Some names a machine cannot resolve, so these ask a person and remember the
+answer in data/reference/hand_curated/:
+
+  manual_overrides.R      a name the automated search could not place
+  specimen_id_prompt.R    a specimen-only taxon that needs an iNat id
+  verify_prompt.R         confirm or reject a doubtful taxon
+
+They only prompt when run interactively; the pipeline skips them otherwise, so
+an unattended run never blocks waiting for input.
+
+
+THE ONLINE TOOLS
+================
+
+  refresh_iucn_status.R
+  refresh_plant_common_names.R
+
+These call an external API and are NOT part of a normal run -- the values are
+baked into the cleaned tables and cached. Refresh them deliberately:
+
+    BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R

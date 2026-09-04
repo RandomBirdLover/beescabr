@@ -1,5 +1,5 @@
 # =============================================================
-# api/inat_cache.R
+# inat_observations/engine/api/inat_cache.R
 # beescabr pipeline -- cache-first taxon access + taxonomy resolution
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #

@@ -1,5 +1,5 @@
 # =============================================================
-# publish_pages.R
+# publish/publish_pages.R
 # beescabr pipeline -- PUBLISH: copy the PUBLIC report HTML pages into docs/
 # (tracked) so GitHub Pages can serve them, build the Acknowledgements page, and
 # (re)build the docs/index.html landing page.

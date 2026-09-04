@@ -1,5 +1,5 @@
 # =============================================================
-# observations/build_field_id_map.R
+# inat_observations/build_field_id_map.R
 # One-time helper: the flattened export names obs-fields by TEXT name and drops
 # the numeric iNat field_id. This pulls the name -> field_id map back out of the
 # raw observation cache so the crosswalk can carry real IDs.

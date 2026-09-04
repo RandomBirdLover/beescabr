@@ -1,5 +1,5 @@
 # =============================================================
-# pipelines/ingest_inat.R
+# inat_observations/engine/pipelines/ingest_inat.R
 # beescabr pipeline -- populate the DuckDB observation cache from the API
 # Rewritten: 2026-07-13 (raw-body ingest; the fast path)
 #

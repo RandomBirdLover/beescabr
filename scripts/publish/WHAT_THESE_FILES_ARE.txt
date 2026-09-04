@@ -1,0 +1,30 @@
+WHAT THIS FOLDER IS
+===================
+
+Builds the public website.
+
+Writes to docs/, which is what GitHub Pages serves. This is the only folder in
+the project whose output is visible to the public, so a mistake here is visible
+to the public too.
+
+
+THE FILES
+=========
+
+  publish_pages.R        assembles docs/ from the analysis outputs
+  build_content_pages.R  the written pages (about, acknowledgements) as opposed
+                         to the generated tables and maps
+  citations.R            attribution for photographs and data sources
+
+
+RUN IT WITH
+===========
+
+    Rscript scripts/run_publishing_materials_pipeline.R
+
+Run the analysis pipeline first -- this one only copies and wraps what that
+produced, so anything stale there ends up on the site.
+
+Colors and styling come from scripts/analysis/theme_beescabr.R, the same source
+the figures use. Never write a hex code into a page template; reference a token,
+so the site and the figures cannot drift apart.

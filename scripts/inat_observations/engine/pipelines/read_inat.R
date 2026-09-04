@@ -1,5 +1,5 @@
 # =============================================================
-# pipelines/read_inat.R
+# inat_observations/engine/pipelines/read_inat.R
 # beescabr pipeline -- consume the cache into an export-shaped data frame
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #

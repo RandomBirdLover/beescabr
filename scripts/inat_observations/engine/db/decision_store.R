@@ -1,5 +1,5 @@
 # =============================================================
-# db/decision_store.R
+# inat_observations/engine/db/decision_store.R
 # beescabr pipeline -- persisted manual disambiguation decisions (DuckDB)
 # Created: 2026-07-13 (API + DuckDB rewrite)
 #
