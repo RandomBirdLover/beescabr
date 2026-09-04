@@ -39,6 +39,8 @@ TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
 # which paper each rarefaction dimension belongs to
 JOURNAL_DIMS  <- c("by_method", "by_observer")
+# journal-dimension rarefy tables, both ranks stacked; written once after the rank loop.
+VEG_ACC       <- new.env(parent = emptyenv())
 # ALL rarefaction is a richness-by-effort method, so every dimension (by_transect, by_year,
 # and the journal by_method/by_observer) lives together in richness/accumulation -- next to the
 # accumulation curves + Chao2. (It is NOT filed under richness/diversity, which holds the
@@ -115,7 +117,15 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
   outdir <- rare_base(dimdir); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
   vlab   <- if (dimdir %in% JOURNAL_DIMS) "_vegan" else ""
   pre    <- paste0("rarefaction_", dimdir)   # rank appended LAST, e.g. rarefaction_by_transect_bars_species
-  tab <- rarefy_table(M); write.csv(tab, file.path(outdir, paste0(pre, vlab, "_", rank, ".csv")), row.names = FALSE)
+  # A report dimension's table is the data behind its figure, so it stays paired with it,
+  # one file per rank. A JOURNAL dimension has no per-rank figure of its own (the combined
+  # figure carries both), so its ranks stack into one table -- four files become two.
+  tab <- rarefy_table(M)
+  if (dimdir %in% JOURNAL_DIMS) {
+    VEG_ACC[[dimdir]] <- rbind(VEG_ACC[[dimdir]], cbind(rank = rank, tab))
+  } else {
+    write.csv(tab, file.path(outdir, paste0(pre, vlab, "_", rank, ".csv")), row.names = FALSE)
+  }
   minN <- min(rowSums(M)); cdf <- curve_df(M)
   cap  <- scope_cap("survey records only", "lethal + non-lethal pooled", rank,
                     sig = bee_test("individual-based rarefaction to a common record count"))
@@ -276,6 +286,13 @@ bee_ggsave(file.path(rare_base("by_year"), "bee_richness_by_year_rarefaction.png
            width = 9, height = 4.8, bg = "white")
 message("  by_year combined (genus + species): bee_richness_by_year_rarefaction.png")
 
+# one vegan table per journal dimension, both ranks stacked
+for (dimdir in ls(VEG_ACC)) {
+  f <- file.path(rare_base(dimdir), paste0("rarefaction_", dimdir, "_vegan.csv"))
+  write.csv(VEG_ACC[[dimdir]], f, row.names = FALSE)
+  message(sprintf("  %-11s: %d rarefy rows -> %s", dimdir, nrow(VEG_ACC[[dimdir]]), basename(f)))
+}
+
 message("Wrote rarefaction_by_{transect,year}_bars_combined (report) + ",
-        "rarefaction_by_{method,observer}_vegan_*_{species,genus} (journal)\n",
+        "rarefaction_by_{method,observer}_vegan.csv (journal)\n",
         "  into richness/rarefaction/ of each paper.")

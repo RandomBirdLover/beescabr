@@ -141,7 +141,7 @@ fw("rarefaction_inext",
    "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
    c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
-   "richness/rarefaction/fair_method_2021_2023/rarefaction_by_{method,observer}_{species,genus}.png -- ONE figure per comparison, iNEXT curves with vegan points as the cross-check (+ the matching .csv, and _inext_asymptotic/_by_size/_by_coverage tables)")
+   "richness/rarefaction/fair_method_2021_2023/rarefaction_by_{method,observer}_{species,genus}.png -- ONE figure per comparison, iNEXT curves with vegan points as the cross-check (+ the matching .csv). rarefaction_by_{method,observer}_inext_estimates.csv holds both ranks and all three standardizations (asymptotic / equal_size / equal_coverage) in one table, keyed by a `basis` column")
 
 fw("rarefaction_vegan",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
@@ -149,7 +149,7 @@ fw("rarefaction_vegan",
    "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
    c("analysis" = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
-   "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves")
+   "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves; its rarefied numbers are in fair_method_2021_2023/rarefaction_by_{method,observer}_vegan.csv, both ranks in one table")
 
 fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",

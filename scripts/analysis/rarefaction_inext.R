@@ -34,6 +34,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("inext_estimates_tidy")) source("scripts/analysis/inext_estimates.R")
+
+# One tidy estimates table per DIMENSION, both ranks stacked, instead of three raw
+# iNEXT dumps per rank. run_inext() fills this; section 4 writes it out.
+EST_ACC <- new.env(parent = emptyenv())
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction/fair_method_2021_2023")  # iNEXT is JOURNAL-only; lives with the other rarefaction output
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # (report iNEXT is skipped -- report uses vegan rarefaction)
 SPECIES_RANKS <- c("species", "subspecies")
@@ -129,17 +134,14 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
   .cv <- out$iNextEst
   if (!is.null(.cv$size_based))     write.csv(.cv$size_based,     file.path(outsub, paste0(pre, "_curve_size_", rank, ".csv")),     row.names = FALSE)
   if (!is.null(.cv$coverage_based)) write.csv(.cv$coverage_based, file.path(outsub, paste0(pre, "_curve_coverage_", rank, ".csv")), row.names = FALSE)
-  # asymptotic diversity estimates (the extrapolated ceiling) + observed
-  write.csv(out$AsyEst, file.path(outsub, paste0(pre, "_asymptotic_", rank, ".csv")), row.names = FALSE)
-  # standardized to a common COVERAGE (default: the lowest coverage among groups) --
-  # this is the fairest apples-to-apples comparison
+  # Three standardizations of one comparison: the asymptotic ceiling, a common
+  # COVERAGE (the fairest apples-to-apples), and a common SAMPLE SIZE (the direct
+  # analogue of the vegan "rarefy to lowest" number). Same grain -- assemblage x q --
+  # so they accumulate into ONE table per dimension rather than three files per rank.
   estC <- iNEXT::estimateD(gl, q = QVALS, datatype = "abundance", base = "coverage")
-  write.csv(estC, file.path(outsub, paste0(pre, "_by_coverage_", rank, ".csv")), row.names = FALSE)
-  # ...and standardized to a common SAMPLE SIZE (the lowest group's n), the direct
-  # analogue of the vegan "rarefy to lowest" number
   minN <- min(vapply(gl, sum, numeric(1)))
   estS <- iNEXT::estimateD(gl, q = QVALS, datatype = "abundance", base = "size", level = minN)
-  write.csv(estS, file.path(outsub, paste0(pre, "_by_size_", rank, ".csv")), row.names = FALSE)
+  EST_ACC[[dimdir]] <- rbind(EST_ACC[[dimdir]], inext_estimates_tidy(out$AsyEst, estS, estC, rank))
   message(sprintf("  %-11s: iNEXT done (min n = %d). q0 by coverage:\n%s", key, minN,
                   paste(utils::capture.output(print(estC[estC$Order.q == 0,
                         c("Assemblage", "m", "SC", "qD")])), collapse = "\n")))
@@ -165,4 +167,10 @@ for (rk in names(RANKS)) {
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colors
 }
 
-message("Wrote rarefaction_by_{method,observer}_inext_*_{species,genus} into journal richness/rarefaction/ (iNEXT is journal-only)")
+# ---- 4. one estimates table per comparison (both ranks, all three bases) -----
+for (dimdir in ls(EST_ACC)) {
+  f <- file.path(OUT_JOURNAL, paste0("rarefaction_", dimdir, "_inext_estimates.csv"))
+  write.csv(EST_ACC[[dimdir]], f, row.names = FALSE)
+  message(sprintf("  %-11s: %d estimate rows -> %s", dimdir, nrow(EST_ACC[[dimdir]]), basename(f)))
+}
+message("Wrote rarefaction_by_{method,observer}_inext_estimates.csv into journal richness/rarefaction/ (iNEXT is journal-only)")
