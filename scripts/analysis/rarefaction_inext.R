@@ -169,9 +169,10 @@ for (rk in names(RANKS)) {
   run_inext(abun_list(w_obs, "surveyor", kc, rare_window("by_observer")$levels),
             paste0("by_observer_", rk), rare_window("by_observer")$title, rk,
             cols = BEE_OBSERVER_COL)   # declared in theme_beescabr.R: observer contrast, teal family, never the method colors
-  run_inext(abun_list(rec_fair, "obs_type", kc, c("observation", "specimen")),
-            paste0("by_method_", rk), "At equal effort, do photos or specimens find more bees?", rk,
-            cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colors
+  w_met <- rare_window_records(rec, "by_method")
+  run_inext(abun_list(w_met, rare_window("by_method")$group, kc, rare_window("by_method")$levels),
+            paste0("by_method_", rk), rare_window("by_method")$title, rk,
+            cols = BEE_METHOD_COL)   # keys are lethal / nonlethal, matching the window levels
 }
 
 # ---- 4. one estimates table per comparison (both ranks, all three bases) -----

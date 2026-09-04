@@ -4,9 +4,11 @@
 # three scripts write into this folder and the names must not drift apart again.
 source(file.path("..", "..", "scripts", "analysis", "rarefaction_names.R"))
 
+# The project says "lethal" / "non-lethal" everywhere -- BEE_METHOD_COL, the scope
+# captions, the efficiency figures. The rarefaction outputs say it too.
 test_that("a comparison is named by what it compares, not by the grouping column", {
-  expect_equal(rare_comparison("by_method"),   "photos_vs_specimens")
-  expect_equal(rare_comparison("method"),      "photos_vs_specimens")
+  expect_equal(rare_comparison("by_method"),   "lethal_vs_nonlethal")
+  expect_equal(rare_comparison("method"),      "lethal_vs_nonlethal")
   expect_equal(rare_comparison("by_observer"), "beeple_vs_interns")
   expect_equal(rare_comparison("observer"),    "beeple_vs_interns")
 })
@@ -18,9 +20,9 @@ test_that("report dimensions keep their existing names", {
 
 test_that("the figure and its table share one stem, so they sort together", {
   expect_equal(rare_out_name("method", "genus", "figure"),
-               "bee_richness_photos_vs_specimens_genus_rarefaction.png")
+               "bee_richness_lethal_vs_nonlethal_genus_rarefaction.png")
   expect_equal(rare_out_name("method", "genus", "table"),
-               "bee_richness_photos_vs_specimens_genus_rarefaction.csv")
+               "bee_richness_lethal_vs_nonlethal_genus_rarefaction.csv")
 })
 
 test_that("the two supporting tables say what standardization produced them", {

@@ -10,8 +10,16 @@ test_that("the observer contrast has declared colors, not inline hexes", {
   expect_true(all(grepl("^#[0-9A-Fa-f]{6}$", BEE_OBSERVER_COL)))
 })
 
-test_that("observer colors are the non-urgent TEAL family, never the urgent red", {
-  expect_true(all(BEE_OBSERVER_COL %in% BEE_TEAL))
+test_that("observer colors are two DIFFERENT hues, not two stops of one ramp", {
+  # two teals differing only in lightness read as washed out beside the method
+  # figure's red/periwinkle. Yellow vs purple is the high-contrast pair, and it
+  # survives red-green colour blindness, which green-vs-orange does not.
+  h <- grDevices::rgb2hsv(grDevices::col2rgb(BEE_OBSERVER_COL))["h", ]
+  expect_gt(min(abs(diff(h)), 1 - abs(diff(h))), 0.15)
+})
+
+test_that("observer colors stay clear of the RARE/urgent red family", {
+  expect_equal(length(intersect(tolower(BEE_OBSERVER_COL), tolower(BEE_RARE))), 0)
 })
 
 test_that("observer colors do not collide with the method colors", {
@@ -20,7 +28,7 @@ test_that("observer colors do not collide with the method colors", {
 
 test_that("the two observer colors are far enough apart to tell apart", {
   d <- grDevices::col2rgb(BEE_OBSERVER_COL)
-  expect_gt(sum(abs(d[, "beeple"] - d[, "intern"])), 120)
+  expect_gt(sum(abs(d[, "beeple"] - d[, "intern"])), 200)
 })
 
 test_that("observers have display labels a stranger can read", {

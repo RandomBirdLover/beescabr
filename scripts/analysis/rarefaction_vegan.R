@@ -198,9 +198,10 @@ for (rk in names(RANKS)) {
   draw(comm(w_obs, "surveyor", kc), paste0("by_observer_", rk),
        rare_window("by_observer")$title, rk, BEE_OBSERVER_COL)
   # 4. method: observations (iNaturalist) vs specimens (fair window)
-  draw(comm(rec_fair, "obs_type", kc), paste0("by_method_", rk),
-       "At equal effort, do photos or specimens find more bees?", rk,
-       c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))  # photo vermillion / net purple
+  w_met <- rare_window_records(rec, "by_method")
+  draw(comm(w_met, rare_window("by_method")$group, kc), paste0("by_method_", rk),
+       rare_window("by_method")$title, rk,
+       BEE_METHOD_COL)   # keys are lethal / nonlethal, matching the window levels
 }
 
 # ---- combined BY-TRANSECT figure: genus + species in ONE horizontal, faceted chart ----

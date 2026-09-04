@@ -32,8 +32,9 @@ test_that("the observer window is May-Sep 2024 and holds METHOD CONSTANT", {
 })
 
 test_that("the grouping column and its levels come with the window", {
-  expect_equal(rare_window("by_method")$group, "obs_type")
-  expect_equal(rare_window("by_method")$levels, c("observation", "specimen"))
+  # grouped on the method column itself, so the levels match BEE_METHOD_COL's keys
+  expect_equal(rare_window("by_method")$group, "method")
+  expect_equal(rare_window("by_method")$levels, c("nonlethal", "lethal"))
   expect_equal(rare_window("by_observer")$group, "surveyor")
   expect_equal(rare_window("by_observer")$levels, c("beeple", "intern"))
 })

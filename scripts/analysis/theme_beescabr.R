@@ -72,13 +72,18 @@ BEE_EVIDENCE       <- c(specimen = BEE_TEAL[[6]], research = BEE_TEAL[[4]], need
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
-# WHO surveyed: beeple (volunteers) vs interns (NPS). This is an OBSERVER contrast, not a
-# method contrast, so it takes the non-urgent TEAL family and deliberately shares no colour
-# with BEE_METHOD_COL. The two questions get drawn side by side -- "do photos or specimens
-# find more bees" and "do beeple or interns find more bees" -- and if they shared a palette
-# a reader would fuse them into one claim. Interns deep (the group under study), beeple pale
-# (the background they are measured against).
-BEE_OBSERVER_COL   <- c(beeple = BEE_TEAL[[2]], intern = BEE_TEAL[[5]])
+# WHO surveyed: beeple (volunteers) vs interns (NPS). A THIRD hue family, gold vs violet,
+# and deliberately so: the palette is organised by KIND OF COMPARISON, and this is a new
+# kind. Teal carries evidence and magnitude, red carries rarity and urgency, and neither
+# describes "which group of people was surveying". A new question earns its own family;
+# what is not allowed is a new family for a question one of the existing two already covers. Two stops of BEE_TEAL were tried first and read as washed out beside the
+# method figure's red/periwinkle, because they differ only in lightness. Yellow-violet is
+# the highest-contrast opposition available and, unlike green-orange, it survives red-green
+# colour blindness. It shares no colour with BEE_METHOD_COL on purpose: the two questions
+# are drawn side by side, and a shared palette would fuse them into one claim.
+# Gold is the Apidae gold already in BEE_FAMILY; violet is darker and redder than the
+# periwinkle in BEE_METHOD_COL, so the two do not read as the same series.
+BEE_OBSERVER_COL   <- c(beeple = "#E5B80B", intern = "#6A3D9A")
 BEE_OBSERVER_LABEL <- c(beeple = "beeple (volunteers)", intern = "interns (NPS)")
 # Interns netting (2021-2023) vs interns photographing (2024) gets NO palette of its own:
 # it is lethal-vs-non-lethal with the observer held constant, so it reuses BEE_METHOD_COL.
