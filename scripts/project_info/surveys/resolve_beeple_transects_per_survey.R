@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/resolve_beeple_transects_per_survey.R
+# project_info/surveys/resolve_beeple_transects_per_survey.R
 # beescabr -- pick the ONE transect that goes in master_per_survey_info_generated.csv for each
 # BEEPLE survey day.
 #

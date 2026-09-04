@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/roster_view.R
+# project_info/rosters/roster_view.R
 # beescabr -- the per-year view the tag rebuild needs, derived from inputs.
 #
 # The tag rebuild has to know who was a BEEPLE in a given year, because interns

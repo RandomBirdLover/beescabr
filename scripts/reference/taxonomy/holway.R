@@ -1,5 +1,5 @@
 # =============================================================
-# reference/holway.R
+# reference/taxonomy/holway.R
 # beescabr pipeline -- Holway v3 reference helpers
 # Created: 2026-07-13 (extracted from native_bee_checklist.R monolith)
 #

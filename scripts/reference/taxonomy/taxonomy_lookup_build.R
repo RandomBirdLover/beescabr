@@ -1,5 +1,5 @@
 # =============================================================
-# reference/taxonomy_lookup_build.R
+# reference/taxonomy/taxonomy_lookup_build.R
 # beescabr pipeline -- taxonomy LOOKUP builder (sd_bee_taxonomy_lookup_generated.csv)
 # Renamed 2026-07-15 from native_bee_checklist.R.
 #
@@ -41,7 +41,7 @@
 #            and LINKS parents that exist but NEVER fabricates a missing parent -- it returns
 #            those in $missing_parents (a missing GENUS is warned at build time).
 #
-# Run standalone: Rscript scripts/reference/taxonomy_lookup_build.R
+# Run standalone: Rscript scripts/reference/taxonomy/taxonomy_lookup_build.R
 #   BEESCABR_SKIP_INGEST=1 reuses the cache without hitting the API.
 # =============================================================
 
@@ -64,12 +64,12 @@ local({
   need("resolve_taxonomy",         "inat_observations/engine/api/inat_cache.R")
   need("ingest_observations",      "inat_observations/engine/pipelines/ingest_inat.R")
   need("read_observations_export", "inat_observations/engine/pipelines/read_inat.R")
-  need("load_holway",              "reference/holway.R")
+  need("load_holway",              "reference/taxonomy/holway.R")
   need("build_checklist",          "checklists/checklist_build.R")
-  need("build_bee_taxonomy_lookup","reference/taxonomy_reference.R")
-  need("resolve_missing_taxon_ids","reference/resolve_missing_ids.R")
-  need("apply_manual_overrides",   "reference/manual_overrides.R")
-  need("load_verified_taxa",       "reference/verify.R")
+  need("build_bee_taxonomy_lookup","reference/taxonomy/taxonomy_reference.R")
+  need("resolve_missing_taxon_ids","reference/taxonomy/resolve_missing_ids.R")
+  need("apply_manual_overrides",   "reference/prompts/manual_overrides.R")
+  need("load_verified_taxa",       "reference/taxonomy/verify.R")
 })
 
 # ------------------------------------------------------------

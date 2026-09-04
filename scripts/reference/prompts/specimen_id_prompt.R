@@ -1,5 +1,5 @@
 # =============================================================
-# reference/specimen_id_prompt.R
+# reference/prompts/specimen_id_prompt.R
 # beescabr -- INTERACTIVE taxon_id resolver for specimen-only additions.
 #
 # The automatic resolver (resolve_missing_ids.R) is deliberately conservative: it

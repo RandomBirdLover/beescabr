@@ -1,5 +1,5 @@
 # =============================================================
-# publish/citations.R
+# website/citations.R
 # beescabr -- data-source credits for the public site.
 #
 # The two sources are NOT equivalent, and the pages should not pretend they are:

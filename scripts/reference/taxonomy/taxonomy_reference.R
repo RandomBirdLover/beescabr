@@ -1,5 +1,5 @@
 # =============================================================
-# reference/taxonomy_reference.R
+# reference/taxonomy/taxonomy_reference.R
 # beescabr pipeline -- bee_taxonomy_lookup.csv builder
 # Created: 2026-07-13 (extracted from native_bee_checklist.R monolith, STEP 8)
 #
@@ -21,8 +21,8 @@
 library(dplyr)
 library(stringr)
 
-if (!exists("holway_name_sets")) source("scripts/reference/verify.R")
-if (!exists("split_holway_species")) source("scripts/reference/holway.R")
+if (!exists("holway_name_sets")) source("scripts/reference/taxonomy/verify.R")
+if (!exists("split_holway_species")) source("scripts/reference/taxonomy/holway.R")
 
 BEE_KINGDOM     <- "Animalia"
 BEE_PHYLUM      <- "Arthropoda"

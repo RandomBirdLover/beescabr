@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/build_people_roster.R
+# project_info/rosters/build_people_roster.R
 # beescabr -- merges the three hand-maintained rosters into ONE people table:
 #   surveyor_roster.csv + identifier_roster.csv + research_team_roster.csv
 #     -> data/project_info/rosters/people_manual.csv   (one row per human)
@@ -13,7 +13,7 @@
 # input and the three rosters are retired. Re-running it is safe (it rebuilds
 # from whatever rosters are present) but it is not part of the pipeline.
 #
-#   Rscript scripts/project_info/build_people_roster.R
+#   Rscript scripts/project_info/rosters/build_people_roster.R
 # =============================================================
 if (!exists("person_id_mint")) source("scripts/utils/people_ids.R")
 

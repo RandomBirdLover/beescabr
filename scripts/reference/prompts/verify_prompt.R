@@ -1,5 +1,5 @@
 # =============================================================
-# reference/verify_prompt.R
+# reference/prompts/verify_prompt.R
 # beescabr -- INTERACTIVE pass-2 VERIFICATION.
 #
 # Pass 1 (specimen_id_prompt.R) answers "which iNaturalist species is this?" (taxon_id).

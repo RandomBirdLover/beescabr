@@ -1,5 +1,5 @@
 # =============================================================
-# reference/holway_reference_build.R
+# reference/taxonomy/holway_reference_build.R
 # beescabr pipeline -- interactive Holway -> iNat taxon resolver
 # Created: 2026-07-13 (ported from the Python process_holway_data)
 #
@@ -14,7 +14,7 @@
 # so the auto-pick / auto-skip / needs-prompt branching is unit-tested;
 # the readline() prompting is the only impure part.
 #
-# Run: Rscript scripts/reference/holway_reference_build.R
+# Run: Rscript scripts/reference/taxonomy/holway_reference_build.R
 #   Set BEESCABR_NONINTERACTIVE=1 to auto-skip anything that would prompt
 #   (for unattended reruns -- ambiguous terms are left for a human pass).
 #
@@ -766,7 +766,7 @@ build_holway_reference <- function(con, holway_df,
   # == iNat 'minimus') win over the automated resolution, so a hand-recorded id + corrected name
   # land in the Holway reference table too -- not just the lookup. Sourced by the pipeline /
   # standalone runner; guarded so isolated unit tests that don't source it still run.
-  if (!exists("apply_manual_overrides")) source(file.path("scripts", "reference/manual_overrides.R"))
+  if (!exists("apply_manual_overrides")) source(file.path("scripts", "reference/prompts/manual_overrides.R"))
   ref <- apply_manual_overrides(ref)
   ref
 }
@@ -791,8 +791,8 @@ if (.holway_autorun_ok(environment())) {
   source("scripts/inat_observations/engine/db/store_conn.R"); source("scripts/inat_observations/engine/db/taxon_store.R")
   source("scripts/inat_observations/engine/db/decision_store.R"); source("scripts/inat_observations/engine/api/inat_http.R")
   source("scripts/inat_observations/engine/api/inat_flatten.R"); source("scripts/inat_observations/engine/api/inat_cache.R")
-  source("scripts/reference/holway.R")
-  source("scripts/reference/manual_overrides.R")
+  source("scripts/reference/taxonomy/holway.R")
+  source("scripts/reference/prompts/manual_overrides.R")
 
   con <- store_connect()
   on.exit(store_disconnect(con), add = TRUE)

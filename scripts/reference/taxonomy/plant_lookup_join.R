@@ -1,5 +1,5 @@
 # =============================================================
-# reference/plant_lookup_join.R
+# reference/taxonomy/plant_lookup_join.R
 # beescabr -- attach a flower's plant taxon_id + in-park flag from the lookup
 # Created: 2026-07-21
 #

@@ -1,5 +1,5 @@
 # =============================================================
-# reference/verify.R
+# reference/taxonomy/verify.R
 # beescabr pipeline -- "new-to-Holway" verification flagging (pure helpers)
 # Created: 2026-07-13
 #

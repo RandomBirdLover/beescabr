@@ -1,5 +1,5 @@
 # =============================================================
-# reference/resolve_missing_ids.R
+# reference/taxonomy/resolve_missing_ids.R
 # beescabr -- fill MISSING taxon_ids in the taxonomy lookup by looking the taxon up on iNaturalist.
 #
 # THE RULE (per Brandi): a lookup row that's identified to some rank but has no taxon_id -- take the

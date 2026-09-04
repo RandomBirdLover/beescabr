@@ -1,5 +1,5 @@
 # =============================================================
-# reference/enrich_lookups.R
+# reference/refresh/enrich_lookups.R
 # beescabr -- SHARED enrichment resolvers, run at DATA-CLEANING time (not analysis).
 #
 # One place that turns online reference lookups into cached, bakeable columns:
@@ -42,7 +42,7 @@ if (!exists("cred_get")) source("scripts/utils/credentials.R")
 IUCN_DIR        <- "data/checklists/iucn"
 IUCN_CACHE_FILE <- file.path(IUCN_DIR, "iucn_status_generated.csv")
 IUCN_VERSION_FILE <- file.path(IUCN_DIR, "iucn_redlist_version_generated.txt")  # the edition we cited
-if (!exists("citation_save_version")) source("scripts/publish/citations.R")
+if (!exists("citation_save_version")) source("scripts/website/citations.R")
 IUCN_SECRET     <- "data/secrets/iucn_api.env"          # gitignored -- paste token here
 IUCN_CODE_NAME  <- c(EX = "Extinct", EW = "Extinct in the Wild", RE = "Regionally Extinct",
                      CR = "Critically Endangered", EN = "Endangered", VU = "Vulnerable",

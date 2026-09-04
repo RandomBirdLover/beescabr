@@ -1,5 +1,5 @@
 # =============================================================
-# reference/manual_overrides.R
+# reference/prompts/manual_overrides.R
 # beescabr -- user-curated taxon-id overrides for NAME CHANGES / synonyms the automated
 # iNat name-search can't bridge (e.g. Holway 'Holcopasites minima' == iNat 'minimus').
 #

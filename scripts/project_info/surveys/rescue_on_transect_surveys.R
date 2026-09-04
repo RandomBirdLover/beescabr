@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/rescue_on_transect_surveys.R
+# project_info/surveys/rescue_on_transect_surveys.R
 # beescabr -- rescue accidentally-UNTAGGED survey observations.
 #
 # WHAT IT'S FOR

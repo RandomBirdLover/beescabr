@@ -1,5 +1,5 @@
 # =============================================================
-# publish/publish_pages.R
+# website/publish_pages.R
 # beescabr pipeline -- PUBLISH: copy the PUBLIC report HTML pages into docs/
 # (tracked) so GitHub Pages can serve them, build the Acknowledgements page, and
 # (re)build the docs/index.html landing page.
@@ -7,7 +7,7 @@
 # The generated report HTML lives under data/analysis/ (gitignored), so this
 # script copies the chosen public pages into docs/ with clean, stable filenames.
 # Run it after the pipeline whenever the pages change:
-#     Rscript scripts/publish/publish_pages.R
+#     Rscript scripts/website/publish_pages.R
 # then commit docs/ and push. GitHub Pages source = main branch, /docs folder.
 #
 # This is the R replacement for the old publish_pages.sh -- same docs/ output,
@@ -246,7 +246,7 @@ build_landing_html <- function(cards, date, hero_v) {
   # Data-source credits. IUCN REQUIRES a citation carrying the Red List version, which the
   # status refresh records to disk; iNaturalist asks for none, so it is credited instead.
   # An unknown version prints nothing rather than a citation that could be wrong.
-  if (!exists("iucn_citation")) source("scripts/publish/citations.R")
+  if (!exists("iucn_citation")) source("scripts/website/citations.R")
   .fill(.PAGE_TPL, herov = hero_v, cards = cards_html, date = date,
         inat_cite = inat_citation(date),
         iucn_cite = iucn_citation(citation_read_version(IUCN_VERSION_FILE), date))

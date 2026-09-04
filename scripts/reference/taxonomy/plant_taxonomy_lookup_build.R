@@ -1,5 +1,5 @@
 # =============================================================
-# reference/plant_taxonomy_lookup_build.R
+# reference/taxonomy/plant_taxonomy_lookup_build.R
 # beescabr pipeline -- PLANT taxonomy lookup builder
 # Created 2026-07-21  |  crosswalk-driven + broad truth + genus normalization
 #

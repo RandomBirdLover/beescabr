@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/build_participation.R
+# project_info/rosters/build_participation.R
 # beescabr -- participation_generated.csv: who was in the field, which year, in what capacity.
 #   master_per_survey_info_generated.csv + people_manual.csv  ->  participation_generated.csv
 #

@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/finding_beeple_calendar.R
+# project_info/surveys/finding_beeple_calendar.R
 # beescabr pipeline -- parse annual Cabrillo Bee Survey Calendar PDFs
 # Ported from the retired parse_beeple_calendars.py (pdfplumber) to pure R
 # using pdftools::pdf_data (positional tokens).
@@ -14,7 +14,7 @@
 # whichever transect header sits closest in x).
 #
 # In the pipeline as stage 2d (rebuilds the windows every run). Standalone:
-#   source("scripts/project_info/finding_beeple_calendar.R"); finding_beeple_calendar()
+#   source("scripts/project_info/surveys/finding_beeple_calendar.R"); finding_beeple_calendar()
 # =============================================================
 
 library(pdftools)

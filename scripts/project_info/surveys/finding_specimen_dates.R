@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/finding_specimen_dates.R
+# project_info/surveys/finding_specimen_dates.R
 # beescabr -- aggregate the lethal-net specimen record IN MEMORY for the brain.
 # Created 2026-07-18.
 #
@@ -12,7 +12,7 @@
 # directly to stamp n_speci on lethal survey days + add an intern row for any netting day
 # with no intern-log entry. Re-parses the xlsx on every brain run (small; ~1.4k rows).
 #
-#   source("scripts/project_info/finding_specimen_dates.R"); finding_specimen_dates()
+#   source("scripts/project_info/surveys/finding_specimen_dates.R"); finding_specimen_dates()
 # =============================================================
 suppressWarnings(suppressMessages({library(readxl); library(dplyr); library(tibble)}))
 if (!exists("read_latest") && file.exists("scripts/utils/utils.R")) {

@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/finding_survey_dates.R
+# project_info/surveys/finding_survey_dates.R
 # beescabr -- builds the per-survey record (master_per_survey_info_generated.csv): one row per
 # surveyor per survey DAY, BOTH methods (lethal net + non-lethal iNat) and BOTH roles
 # (intern + beeple). Split out of finding_project_info.R (the brain) on 2026-07-18.

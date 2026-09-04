@@ -1,10 +1,10 @@
 # =============================================================
-# scripts/publish/build_content_pages.R
+# scripts/website/build_content_pages.R
 # Generates the site's CONTENT pages (as opposed to the data/analysis pages):
 # currently the Acknowledgements page. Reads data/project_info/*_roster.csv so
 # the people lists stay in sync with the rosters. Matches the landing page look.
 #
-#   Rscript scripts/publish/build_content_pages.R        # writes docs/acknowledgements.html
+#   Rscript scripts/website/build_content_pages.R        # writes docs/acknowledgements.html
 #
 # About + Get-involved pages will join this file once their copy is written.
 # =============================================================

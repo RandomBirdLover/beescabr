@@ -1,5 +1,5 @@
 # =============================================================
-# project_info/build_identification_counts.R
+# project_info/rosters/build_identification_counts.R
 # beescabr -- how many identifications each person made ON CABRILLO RECORDS.
 #   the two observation caches + cabr_inat_raw_generated.csv (in_cabr)
 #     -> data/project_info/rosters/identification_counts_generated.csv
