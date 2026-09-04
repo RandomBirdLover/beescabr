@@ -54,7 +54,10 @@ test_that("the verify pass opens by saying what it is asking", {
                       rank = "subspecies", verified = FALSE, stringsAsFactors = FALSE)
   txt <- .said(resolve_verification_interactive(needs, prompt_fn = function(p) ""))
   expect_match(txt, "San Diego", fixed = TRUE)
-  expect_match(txt, "VERIFICATION.md", fixed = TRUE)   # where the full answer lives
+  # No pointer to a document. VERIFICATION.md was deleted because backing out of a
+  # prompt to read a file, then coming back, is how people start guessing instead.
+  # Everything needed to answer is printed here.
+  expect_false(grepl("VERIFICATION.md", txt, fixed = TRUE))
 })
 
 # There are two prompt passes and they ask different questions. Told apart, they

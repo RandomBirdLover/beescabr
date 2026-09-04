@@ -26,10 +26,6 @@ WHAT YOU MAINTAIN
   DATA_ACCESS.md       What is in this repository, what is kept out of it, and
                        how to get the data that is kept out.
 
-  VERIFICATION.md      The pipeline stops and asks you to confirm a bee it has
-                       not seen before. This is how to answer, and how the
-                       system works underneath.
-
   SPECIMEN_CHANGELOG.md  Version history of the specimen spreadsheet, and how to
                        bump it when you add specimens.
 

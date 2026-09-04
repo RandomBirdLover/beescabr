@@ -136,11 +136,10 @@ All of them live in `dev-docs/` unless noted.
 | 7 | *(generated)* | What every analysis output is: `data/analysis/<year>_generated/findings_index.csv`, one row per analysis, plus a note in each folder. |
 | 8 | **ANALYSIS_DECISIONS.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
 | 9 | **ARCGIS_SPATIAL_MAPPING.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
-| 10 | **VERIFICATION.md** | What the verification workflow is, and how to answer the prompt. |
-| 11 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
-| 12 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
-| 13 | **FUNCTIONS.md** | *(generated)* Every function called from more than one file: what it does and what to pass it. |
-| 14 | **TODO.md** | Open work, by area. |
+| 10 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
+| 11 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
+| 12 | **FUNCTIONS.md** | *(generated)* Every function called from more than one file: what it does and what to pass it. |
+| 13 | **TODO.md** | Open work, by area. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
 

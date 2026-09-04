@@ -99,7 +99,7 @@ Do not set `BEESCABR_SKIP_INGEST` or the other flags by hand. A flag left set fr
 an earlier run makes the pipeline skip this menu without saying so, which is the
 bug the menu was written to end.
 
-It stops to ask about unknown tags, new taxa (see `VERIFICATION.md`) and specimen
+It stops to ask about unknown tags, new taxa and specimen
 IDs. Unattended runs skip the prompts.
 
 ### Stage 2 — analyse
