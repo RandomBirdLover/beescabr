@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_offtransect.R
+# analysis/coverage/coverage_offtransect.R
 # Q6 -- Bees off-transect: what does the park hold that the transects miss?
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -28,7 +28,7 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SET")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_SET")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/off_transect")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")

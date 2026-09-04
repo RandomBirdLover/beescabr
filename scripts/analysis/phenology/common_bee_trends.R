@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/common_bee_trends.R
+# analysis/phenology/common_bee_trends.R
 # beescabr -- year-to-year trend of the park's MOST OBSERVED bee
 # (Augochlorella pomoniella, the Peridot Sweat Bee).
 #
@@ -17,11 +17,11 @@
 # and shelved; flip MAKE_DUO to regenerate it. The interactive trends
 # explorer (bee_trends_explorer.R) was likewise built and left unpublished.
 #
-# Run from the repo root:  Rscript scripts/analysis/common_bee_trends.R
+# Run from the repo root:  Rscript scripts/analysis/phenology/common_bee_trends.R
 # =============================================================
 suppressMessages({ library(dplyr); library(ggplot2); library(stringr) })
 if (!exists("PATHS"))       source("scripts/config.R")
-if (!exists("scope_cap"))   source("scripts/analysis/theme_beescabr.R")
+if (!exists("scope_cap"))   source("scripts/analysis/shared/theme_beescabr.R")
 
 OUT_DIR <- file.path(DIR_REPORT, "phenology")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

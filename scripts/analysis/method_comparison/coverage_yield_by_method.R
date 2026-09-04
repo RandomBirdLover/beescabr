@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_yield_by_method.R
+# analysis/method_comparison/coverage_yield_by_method.R
 # Q11 -- Yield of RECORDS: what each method / contributor turned up. SPLIT figure.
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -22,7 +22,7 @@
 #     same grand total. Three metrics per view: records, taxa recorded, group-exclusive.
 #     Run at BOTH species and genus rank.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage_yield_by_method.R
+# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_yield_by_method.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
@@ -33,7 +33,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "method_comparison/yield/fair_method_2021_2023")   # fair-window backing table
 OUT_REPORT    <- file.path(DIR_REPORT,  "method_comparison/yield")   # all-records contributor/method figures
 SPECIES_RANKS <- c("species", "subspecies")

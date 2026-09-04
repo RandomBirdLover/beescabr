@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/bee_plant_matrix.R
+# analysis/reference/bee_plant_matrix.R
 # beescabr -- WHICH PLANT GENERA DOES EACH BEE SPECIES VISIT?
 #
 # A presence matrix: one row per bee species, one column per plant genus, a check
@@ -19,7 +19,7 @@
 # analysis -- see forage_selectivity.R and the field guide's Forage preference column.
 #
 # Pure builders (bpm_*) are unit-tested in tests/testthat/test-bee-plant-matrix.R.
-# Run from the repo root:  Rscript scripts/analysis/bee_plant_matrix.R
+# Run from the repo root:  Rscript scripts/analysis/reference/bee_plant_matrix.R
 # =============================================================
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
@@ -118,9 +118,9 @@ bpm_summary <- function(pairs) {
 # ---- build (skipped when this file is merely sourced for its helpers) ----------
 if (!exists("BPM_SOURCED_FOR_HELPERS")) {
   if (!exists("PATHS"))       source("scripts/config.R")
-  if (!exists("scope_cap"))   source("scripts/analysis/theme_beescabr.R")
-  if (!exists("plant_label")) source("scripts/analysis/plant_names.R")
-  if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")
+  if (!exists("scope_cap"))   source("scripts/analysis/shared/theme_beescabr.R")
+  if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")
+  if (!exists("inat_photo_link")) source("scripts/analysis/shared/inat_taxon_links.R")
 
   OUT_DIR <- file.path(DIR_REPORT, "reference/nps_summary")   # lives with the other NPS summary tables
   dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

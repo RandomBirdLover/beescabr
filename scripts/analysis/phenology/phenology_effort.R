@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/phenology_effort.R
+# analysis/phenology/phenology_effort.R
 # Q13 -- Effort calendar: survey trips and records by month. SPLIT figure.
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -18,7 +18,7 @@
 #       picture, same method-color encoding.
 # "Observations" is renamed "Records" throughout. Descriptive counts -- no test.
 #
-# Run from the repo root:  Rscript scripts/analysis/phenology_effort.R
+# Run from the repo root:  Rscript scripts/analysis/phenology/phenology_effort.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -28,7 +28,7 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_SEQ")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL <- file.path(DIR_JOURNAL, "phenology/fair_method_2021_2023")   # fair-window effort calendar + grid
 OUT_REPORT  <- file.path(DIR_REPORT,  "phenology")   # all-records effort calendar + grid
 MONTH_ABB <- month.abb

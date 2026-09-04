@@ -248,7 +248,7 @@ PGC_CACHE_FILE <- file.path(PGC_DIR, "plant_genus_common_generated.csv")
 # local seed: names the in-park plant taxonomy files already carry (via plant_names.R)
 .pgc_local_map <- function() {
   if (!exists(".plant_common_map")) {
-    pn <- "scripts/analysis/plant_names.R"
+    pn <- "scripts/analysis/shared/plant_names.R"
     if (file.exists(pn)) suppressWarnings(try(source(pn), silent = TRUE))
   }
   if (exists(".plant_common_map")) tryCatch(.plant_common_map(), error = function(e) character(0)) else character(0)

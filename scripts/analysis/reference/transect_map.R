@@ -1,11 +1,11 @@
 # =============================================================
-# analysis/transect_map.R -- clean reference map of the 4 CABR bee survey transects.
+# analysis/reference/transect_map.R -- clean reference map of the 4 CABR bee survey transects.
 #
 # A house-styled remake of the ArcGIS transect map: SAME trail colors (BEE_TRANSECT) and a
 # topographic basemap, but drawn straight from the GIS shapefile so the lines are crisp, with the
 # full trail names + lengths. Interactive, self-contained HTML (like the bounty maps).
 #
-# Run from repo root:  Rscript scripts/analysis/transect_map.R
+# Run from repo root:  Rscript scripts/analysis/reference/transect_map.R
 # Depends on: sf, leaflet, htmlwidgets (+ config.R, theme_beescabr.R).
 # =============================================================
 
@@ -16,8 +16,8 @@ suppressPackageStartupMessages({ library(sf); library(leaflet) })
 # interactive pages live in a website/ subfolder beside the figures they came from
 .web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 if (!exists("PATHS"))        source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
-if (!exists("transects_in_year")) source("scripts/analysis/transect_years.R")
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")
+if (!exists("transects_in_year")) source("scripts/analysis/shared/transect_years.R")
 
 # ---- 1. transects + park boundary from the shapefiles (single source: data/spatial/shapefiles/) ----
 read_shp <- function(p) tryCatch(sf::st_read(p, quiet = TRUE), error = function(e) NULL)
@@ -145,7 +145,7 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
     "What is this folder?",
     "",
     "Downloaded map background images (\"tiles\") for the STATIC transect map PNG.",
-    "Written by scripts/analysis/transect_map.R via the ggspatial package.",
+    "Written by scripts/analysis/reference/transect_map.R via the ggspatial package.",
     "",
     "Reading the file names: 16_11424_26469.png",
     "  16     zoom level (higher = closer in)",

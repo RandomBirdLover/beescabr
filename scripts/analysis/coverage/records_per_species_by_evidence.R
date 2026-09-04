@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/records_per_species_by_evidence.R
+# analysis/coverage/records_per_species_by_evidence.R
 # beescabr pipeline -- CABR native bees: how many records back each SPECIES,
 # split by the two survey METHODS. Species-level companion to
 # records_per_genus_by_evidence.R (same look, one row per species).
@@ -11,7 +11,7 @@
 # record can't be placed on a species row. A species with few TOTAL records is flagged
 # (*) -- thin evidence base, read its composition with care (>=10-record rule of thumb).
 #
-# Run from the repo root:  Rscript scripts/analysis/records_per_species_by_evidence.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/records_per_species_by_evidence.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
@@ -22,7 +22,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/records_by_evidence/fair_method_2021_2023")
 OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/records_by_evidence")
 SPECIES_RANKS <- c("species", "subspecies")

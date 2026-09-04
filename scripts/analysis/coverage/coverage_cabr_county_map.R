@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_cabr_county_map.R
+# analysis/coverage/coverage_cabr_county_map.R
 # beescabr -- LOCATOR MAP: tiny Cabrillo National Monument on the San Diego County
 # map, marked with the biodiversity share it carries. The visual point: CABR is a
 # speck of the county by area yet holds a large share of its native-bee diversity.
@@ -8,7 +8,7 @@
 # Area % is measured straight from the polygons; species/genus shares are counted
 # from the CABR official checklist vs the Holway county checklist.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage_cabr_county_map.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_cabr_county_map.R
 # Depends on: sf, ggplot2, dplyr, stringr (+ config.R).
 # =============================================================
 
@@ -17,7 +17,7 @@ if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 suppressPackageStartupMessages({ library(sf); library(dplyr); library(stringr); library(ggplot2) })
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")
+if (!exists("BEE_SEQ")) source("scripts/analysis/shared/theme_beescabr.R")
 OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint"); dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 BND_COUNTY <- "data/spatial/shapefiles/boundaries/san_diego_county/sd_county_boundary.shp"

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/records_by_family_pie.R
+# analysis/coverage/records_by_family_pie.R
 # analysis/bee_family_share_of_records_pie.R
 # beescabr -- share of ALL bee records by FAMILY, as a pie/donut.
 #
@@ -17,7 +17,7 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_FAMILY")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_FAMILY")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_REPORT <- file.path(DIR_REPORT, "coverage/records_by_evidence")
 dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
 

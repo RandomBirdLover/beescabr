@@ -2,7 +2,7 @@
 # figures sitting side by side -- one colored by method, one by observer -- must
 # read as two different questions; sharing a palette is what makes a reader fuse
 # them into one.
-source(file.path("..", "..", "scripts", "analysis", "theme_beescabr.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "theme_beescabr.R"))
 
 test_that("the observer contrast has declared colors, not inline hexes", {
   expect_true(exists("BEE_OBSERVER_COL"))

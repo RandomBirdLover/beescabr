@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/rarefaction_combined.R
+# analysis/richness/rarefaction_combined.R
 # beescabr -- ONE figure and ONE table per rarefaction comparison, showing both
 # estimators together instead of eight separate files.
 #
@@ -19,8 +19,8 @@
 if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(ggplot2) })
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")
-if (!exists("rare_out_name")) source("scripts/analysis/rarefaction_names.R")
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")
+if (!exists("rare_out_name")) source("scripts/analysis/shared/rarefaction_names.R")
 
 # each comparison reads and writes inside the folder its window declares
 rc_dir <- function(dim) file.path(DIR_REPORT, "richness/rarefaction", rare_window_dir(dim))

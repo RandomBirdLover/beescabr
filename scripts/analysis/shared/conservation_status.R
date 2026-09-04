@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/conservation_status.R   (MODULE -- not a standalone figure)
+# analysis/shared/conservation_status.R   (MODULE -- not a standalone figure)
 #
 # Single source of truth for bee conservation status across the pipeline. Reads the
 # IUCN Red List cache (data/checklists/iucn/iucn_status_generated.csv, written by

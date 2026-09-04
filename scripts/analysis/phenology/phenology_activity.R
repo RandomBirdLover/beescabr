@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/phenology_activity.R
+# analysis/phenology/phenology_activity.R
 # beescabr pipeline -- seasonal activity phenology (Q12 + bee extension)
 # Created: 2026-07-22
 #
@@ -25,7 +25,7 @@
 # CAVEAT: interns survey ~Mar-Sep and beeple (non-lethal) run year-round, so the
 # winter tails partly reflect WHO was sampling, not just biology.
 #
-# Run from the repo root:  Rscript scripts/analysis/phenology_activity.R
+# Run from the repo root:  Rscript scripts/analysis/phenology/phenology_activity.R
 # Depends on: dplyr, stringr, ggplot2, ggridges (+ config.R).
 # =============================================================
 
@@ -38,8 +38,8 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style (ink tokens + >=10 rule)
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
+if (!exists("BEE_INK")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style (ink tokens + >=10 rule)
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")  # shared plant common-name labels
 OUT_DIR       <- file.path(DIR_REPORT, "phenology")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")

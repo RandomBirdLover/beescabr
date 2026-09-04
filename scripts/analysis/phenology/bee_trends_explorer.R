@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/bee_trends_explorer.R
+# analysis/phenology/bee_trends_explorer.R
 # beescabr -- INTERACTIVE year-trend explorer: pick any well-recorded bee and
 # see its share of the park's bee records move year to year.
 #
@@ -17,12 +17,12 @@
 #   <DIR_REPORT>/phenology/bee_trends_explorer.html   (DIR_REPORT = the season folder)
 # published to the site by publish_pages.R as bee_trends.html.
 #
-# Run from the repo root:  Rscript scripts/analysis/bee_trends_explorer.R
+# Run from the repo root:  Rscript scripts/analysis/phenology/bee_trends_explorer.R
 # =============================================================
 suppressMessages({ library(dplyr); library(stringr); library(jsonlite) })
 if (!exists("PATHS"))     source("scripts/config.R")
-if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")
-if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")   # iNat logo -> taxon photo page
+if (!exists("scope_cap")) source("scripts/analysis/shared/theme_beescabr.R")
+if (!exists("inat_photo_link")) source("scripts/analysis/shared/inat_taxon_links.R")   # iNat logo -> taxon photo page
 
 OUT      <- file.path(DIR_REPORT, "phenology/website/bee_trends_explorer.html")
 dir.create(dirname(OUT), recursive = TRUE, showWarnings = FALSE)

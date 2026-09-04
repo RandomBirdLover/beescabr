@@ -15,12 +15,12 @@
 # shared modules first: paths, palette, helpers (the figure scripts also
 # self-source these, but loading them once up front keeps things tidy + fast).
 source("scripts/config.R")
-source("scripts/analysis/theme_beescabr.R")
-source("scripts/analysis/utils_analysis.R")
-source("scripts/analysis/not_on_holway.R")
-source("scripts/analysis/conservation_status.R")   # shared IUCN / conservation lookups (one source)
-source("scripts/analysis/plant_names.R")           # shared plant-genus common-name labels (one source)
-source("scripts/analysis/forage_selectivity.R")    # shared bee-genus forage selectivity (one source)
+source("scripts/analysis/shared/theme_beescabr.R")
+source("scripts/analysis/shared/utils_analysis.R")
+source("scripts/analysis/shared/not_on_holway.R")
+source("scripts/analysis/shared/conservation_status.R")   # shared IUCN / conservation lookups (one source)
+source("scripts/analysis/shared/plant_names.R")           # shared plant-genus common-name labels (one source)
+source("scripts/analysis/shared/forage_selectivity.R")    # shared bee-genus forage selectivity (one source)
 
 # IUCN Red List status (per bee species) and plant-genus common names are no longer refreshed
 # here -- they are now BAKED INTO THE CLEANED TABLES + CHECKLISTS at data-cleaning time
@@ -40,7 +40,11 @@ RUNNING_ALL <- TRUE
               "explorer_photo_helpers.R", "inat_taxon_links.R", "transect_years.R", "inext_estimates.R", "rarefaction_names.R", "folder_readmes.R",
               "rarefaction_combined.R",   # runs AFTER both rarefaction scripts, not in the loop
               "findings_summaries.R")   # runs LAST (after every analysis) -- excluded from the auto-loop
-.scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
+# analysis/ is foldered by topic, mirroring data/analysis/. Recurse, and compare
+# against .modules by BASENAME so the module list stays a list of file names
+# rather than a second copy of the folder layout.
+.scripts <- sort(list.files("scripts/analysis", pattern = "\\.R$", recursive = TRUE))
+.scripts <- .scripts[!basename(.scripts) %in% .modules]
 
 # source each in the global env; a formal-arg closure keeps `nm` safe even if a
 # sourced script reuses common variable names. run_analysis_script() attributes each
@@ -64,7 +68,7 @@ if (!exists("run_analysis_script")) source("scripts/utils/analysis_run.R")
 # a master findings_index.csv (data/analysis/findings_generated/). Runs after the loop so it
 # can read the fresh per-analysis outputs it summarises. Best-effort like the rest.
 message("\n===== rarefaction_combined.R (one figure per comparison, both estimators) =====")
-tryCatch(source("scripts/analysis/rarefaction_combined.R"),
+tryCatch(source("scripts/analysis/richness/rarefaction_combined.R"),
          error = function(e) message("  rarefaction_combined failed: ", conditionMessage(e)))
 
 message("\n===== findings_summaries.R (plain-language finding rollups) =====")

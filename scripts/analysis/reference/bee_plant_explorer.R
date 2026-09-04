@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/bee_plant_explorer.R
+# analysis/reference/bee_plant_explorer.R
 # beescabr -- INTERACTIVE bee <-> plant explorer: which plant genera has each bee
 # been recorded on at the park, and which bees has each plant genus been recorded with.
 #
@@ -24,7 +24,7 @@
 #   <DIR_REPORT>/reference/bee_plant/bee_plant_explorer.html
 # published to the site by publish_pages.R as bee_plant_explorer.html.
 #
-# Run from the repo root:  Rscript scripts/analysis/bee_plant_explorer.R
+# Run from the repo root:  Rscript scripts/analysis/reference/bee_plant_explorer.R
 # =============================================================
 suppressMessages({ library(dplyr); library(stringr); library(jsonlite) })
 # interactive pages live in a website/ subfolder beside the figures they came from
@@ -65,15 +65,15 @@ bpe_order <- function(side) {
 # ---- build (skipped when a test sources this file for the helper) -------------
 if (!exists("BPE_SOURCED_FOR_HELPERS")) {
   if (!exists("PATHS"))           source("scripts/config.R")
-  if (!exists("scope_cap"))       source("scripts/analysis/theme_beescabr.R")
-  if (!exists("plant_label"))     source("scripts/analysis/plant_names.R")
-  if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")
+  if (!exists("scope_cap"))       source("scripts/analysis/shared/theme_beescabr.R")
+  if (!exists("plant_label"))     source("scripts/analysis/shared/plant_names.R")
+  if (!exists("inat_photo_link")) source("scripts/analysis/shared/inat_taxon_links.R")
 
   OUT_DIR <- file.path(DIR_REPORT, "reference/bee_plant")
   dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
   PAIRS <- file.path(DIR_REPORT, "reference/nps_summary/bee_plant_pairs.csv")
   if (!file.exists(PAIRS))
-    stop("bee_plant_pairs.csv not found. Run scripts/analysis/bee_plant_matrix.R first.")
+    stop("bee_plant_pairs.csv not found. Run scripts/analysis/reference/bee_plant_matrix.R first.")
 
   pairs <- read.csv(PAIRS, stringsAsFactors = FALSE)
   ix    <- bpe_index(pairs)

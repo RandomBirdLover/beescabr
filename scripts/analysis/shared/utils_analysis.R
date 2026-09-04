@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/utils_analysis.R
+# analysis/shared/utils_analysis.R
 # beescabr pipeline -- package guard for the ANALYSIS scripts
 # Created: 2026-07-21
 #
@@ -8,7 +8,7 @@
 # never pull analysis-only packages (vegan / igraph / bipartite). Source this
 # once before running the analysis scripts:
 #
-#   source("scripts/analysis/utils_analysis.R")
+#   source("scripts/analysis/shared/utils_analysis.R")
 #
 # ...or it is safe to source from the top of any analysis script (it no-ops when
 # everything is already installed). Same requireNamespace + try(install) pattern

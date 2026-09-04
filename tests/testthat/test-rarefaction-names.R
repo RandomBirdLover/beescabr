@@ -2,7 +2,7 @@
 # package names, not descriptions -- nobody reading the folder can tell what they
 # mean, so the filenames say what the file answers instead. One helper because
 # three scripts write into this folder and the names must not drift apart again.
-source(file.path("..", "..", "scripts", "analysis", "rarefaction_names.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "rarefaction_names.R"))
 
 # The project says "lethal" / "non-lethal" everywhere -- BEE_METHOD_COL, the scope
 # captions, the efficiency figures. The rarefaction outputs say it too.

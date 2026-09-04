@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/rarefaction_vegan.R
+# analysis/richness/rarefaction_vegan.R
 # Rarefaction (vegan) -- fair diversity by standardizing sampling effort
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -22,7 +22,7 @@
 # (vegan::rarefy, interpolation only). See the folder README for how this compares
 # to iNEXT's size-based and coverage-based standardization, and which to trust.
 #
-# Run from the repo root:  Rscript scripts/analysis/rarefaction_vegan.R
+# Run from the repo root:  Rscript scripts/analysis/richness/rarefaction_vegan.R
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 
@@ -32,14 +32,14 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL   <- function(dim) file.path(DIR_JOURNAL, "richness/rarefaction", rare_window_dir(dim))  # the rarefaction family, split out of accumulation (44 files in one folder);
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # the dimension is baked into each filename, no by_<dim>/ subfolders
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
 # which paper each rarefaction dimension belongs to
-if (!exists("rare_out_name")) source("scripts/analysis/rarefaction_names.R")
+if (!exists("rare_out_name")) source("scripts/analysis/shared/rarefaction_names.R")
 JOURNAL_DIMS  <- names(RARE_WINDOWS)
 # journal-dimension rarefy tables, both ranks stacked; written once after the rank loop.
 VEG_ACC       <- new.env(parent = emptyenv())

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_effort_by_method.R
+# analysis/method_comparison/coverage_effort_by_method.R
 # beescabr -- EFFORT by method: number of SURVEY TRIPS, lethal (net) vs non-lethal (photo).
 #
 # Effort = the sampling WORK done (survey trips), NOT the catch. It is the honest
@@ -16,14 +16,14 @@
 # understate lethal's per-trip coverage. Stated in the caption.
 #
 # SOURCE: the per-survey log (one row = one survey trip), which tags each trip's method.
-# Run from the repo root:  Rscript scripts/analysis/coverage_effort_by_method.R
+# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_effort_by_method.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_DIR <- file.path(DIR_JOURNAL, "method_comparison/effort/fair_method_2021_2023")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 

@@ -7,6 +7,21 @@ data/analysis/.
 Writes to data/analysis/<year>_generated/ -- never edit the output, edit the
 script.
 
+The subfolders mirror the topic folders in data/analysis/, so a script sits in
+the same folder its output does:
+
+    coverage/           how much was sampled, and what was missed
+    richness/           how many kinds, and the curves behind that number
+    phenology/          when bees and plants are active
+    interactions/       which bees visit which plants
+    method_comparison/  netting versus photographing
+    reference/          field guide, maps, explorers, NPS summary tables
+    shared/             helpers. These draw nothing; other scripts source them.
+
+At this level sit only findings_summaries.R, which runs last and writes the
+index a reader starts from, and render_palette.R, which draws the theme swatch
+into dev-docs/.
+
 
 THE RULE THAT WILL BITE YOU
 ===========================
@@ -16,7 +31,8 @@ Add a script here and it runs on the next pipeline run, with no registration
 step.
 
 That is convenient for an analysis and wrong for a HELPER. A file that only
-defines functions for another script to use must be listed in .modules in
+defines functions for another script to use belongs in shared/, AND must be
+listed in .modules in
 run_all_analysis_pipeline.R, or the runner will execute it as though it drew a
 figure. tests/testthat/test-analysis-modules.R checks the two agree, and fails
 if they drift -- which they already had, by three files, before the check

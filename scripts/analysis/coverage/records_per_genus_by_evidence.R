@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/records_per_genus_by_evidence.R
+# analysis/coverage/records_per_genus_by_evidence.R
 # beescabr pipeline -- CABR native bees: how much evidence backs each GENUS,
 # split by the two survey METHODS.
 # Created: 2026-07-30
@@ -16,7 +16,7 @@
 # A genus with few TOTAL records is flagged (*) -- its evidence base is thin, so
 # read its composition with care (matches the project's >=10-record rule of thumb).
 #
-# Run from the repo root:  Rscript scripts/analysis/records_per_genus_by_evidence.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/records_per_genus_by_evidence.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R, theme_beescabr.R).
 # =============================================================
 
@@ -27,7 +27,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL <- file.path(DIR_JOURNAL, "coverage/records_by_evidence/fair_method_2021_2023")
 OUT_REPORT  <- file.path(DIR_REPORT,  "coverage/records_by_evidence")
 MIN_REPORT  <- 50    # report (all records) figure cutoff

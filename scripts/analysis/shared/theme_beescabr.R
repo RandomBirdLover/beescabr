@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/theme_beescabr.R
+# analysis/shared/theme_beescabr.R
 # beescabr -- SHARED figure house style (the ONE source of truth).
 #
 # Every analysis script sources this so colors, fonts, and spacing are identical

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/nps_summary_tables.R
+# analysis/reference/nps_summary_tables.R
 # NPS summary tables -- descriptive data summaries ONLY (no interpretation)
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -14,7 +14,7 @@
 # SCOPE: all records (the report describes the whole dataset). Everything here is a
 # straight count -- deliberately no tests, rates, or interpretation.
 #
-# Run from the repo root:  Rscript scripts/analysis/nps_summary_tables.R
+# Run from the repo root:  Rscript scripts/analysis/reference/nps_summary_tables.R
 # Depends on: dplyr, stringr (+ config.R).
 # =============================================================
 
@@ -23,7 +23,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 .web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("iucn_code_of")) try(source("scripts/analysis/conservation_status.R"), silent = TRUE)   # IUCN status lookup (optional)
+if (!exists("iucn_code_of")) try(source("scripts/analysis/shared/conservation_status.R"), silent = TRUE)   # IUCN status lookup (optional)
 .iucn_of <- function(sp) if (exists("iucn_code_of")) iucn_code_of(sp) else rep("NE", length(sp))
 OUT_DIR       <- file.path(DIR_REPORT, "reference/nps_summary")
 SPECIES_RANKS <- c("species", "subspecies")
@@ -188,7 +188,7 @@ write.csv(plant_checklist, file.path(OUT_DIR, "nps_plant_checklist_genus.csv"), 
 #    scope caption (Scope | Method | Rank | Source) ABOVE each table. The CSVs above
 #    stay the machine-readable source; these are the read-and-cite version.
 # ============================================================================
-if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")   # shared scope-caption format
+if (!exists("scope_cap")) source("scripts/analysis/shared/theme_beescabr.R")   # shared scope-caption format
 esc <- function(x) { x <- gsub("&", "&amp;", x); x <- gsub("<", "&lt;", x); gsub(">", "&gt;", x) }
 # metric_key -> display label: title-case, iNaturalist re-cased, with a few hand-set overrides
 .metric_labels <- c(

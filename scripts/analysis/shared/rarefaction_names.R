@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/rarefaction_names.R
+# analysis/shared/rarefaction_names.R
 # beescabr -- output names and fair windows for the rarefaction comparisons
 # =============================================================
 

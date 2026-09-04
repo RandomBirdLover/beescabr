@@ -1,7 +1,7 @@
 # Each journal comparison needs its OWN window of records, and the window is the
 # whole reason the comparison is or is not valid -- so it lives beside the name
 # rather than inline in two scripts that can drift.
-source(file.path("..", "..", "scripts", "analysis", "rarefaction_names.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "rarefaction_names.R"))
 
 rec <- expand.grid(year = 2021:2025, month = 1:12,
                    surveyor = c("beeple", "intern"), method = c("lethal", "nonlethal"),

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/plant_names.R   (MODULE -- not a standalone figure)
+# analysis/shared/plant_names.R   (MODULE -- not a standalone figure)
 #
 # Single source of truth for PLANT-GENUS COMMON NAMES across the pipeline, so every
 # figure and field-guide table can show the reader-friendly common name of a plant

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/inext_estimates.R
+# analysis/shared/inext_estimates.R
 # beescabr -- tidy iNEXT's three result tables into one long table
 # =============================================================
 

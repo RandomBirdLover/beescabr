@@ -1,7 +1,7 @@
 # A per-folder WHAT_THESE_FILES_ARE.txt, but only in folders that hold several
 # different things. A folder with one analysis already explains itself through the
 # findings CSV sitting beside its outputs; a note there would be noise.
-source(file.path("..", "..", "scripts", "analysis", "folder_readmes.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "folder_readmes.R"))
 
 fnd <- list(
   list(name = "Bee activity by month", finding = "Most genera peak Apr-Jun. Two are autumn-only."),

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/rare_bee_plants.R
+# analysis/reference/rare_bee_plants.R
 # beescabr -- plants used by the park's RARE / at-risk native bees  (for management)
 #
 # THE QUESTION: which plants do the park's rare bees rely on, so management knows
@@ -21,7 +21,7 @@
 #      species use them. A plant feeding many rare bees is a conservation hub.
 #   B. THREATENED -- each IUCN-threatened bee's own plant list (per species).
 #
-# Run from the repo root:  Rscript scripts/analysis/rare_bee_plants.R
+# Run from the repo root:  Rscript scripts/analysis/reference/rare_bee_plants.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -31,9 +31,9 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
+if (!exists("BEE_SEQ")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
+if (!exists("iucn_table")) source("scripts/analysis/shared/conservation_status.R")   # shared IUCN lookups
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")          # shared plant common-name labels
 OUT_DIR <- file.path(DIR_REPORT, "reference/conservation")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 

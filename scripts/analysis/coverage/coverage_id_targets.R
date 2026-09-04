@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_id_targets.R
+# analysis/coverage/coverage_id_targets.R
 # Q7 -- Target-ID list: what needs identifying most?
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -27,7 +27,7 @@
 #
 # Descriptive counts -- no hypothesis test, so no p-value.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage_id_targets.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_id_targets.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -37,7 +37,7 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style (colors by method)
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style (colors by method)
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/id_resolution/fair_method_2021_2023")   # fair-window: completeness, targets(journal), specimen, photo
 OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/id_resolution")   # all-records: targets(report) + the keyable worklist CSV
 SPECIES_RANKS <- c("species", "subspecies")

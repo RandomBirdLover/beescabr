@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/interactions_network.R
+# analysis/interactions/interactions_network.R
 # beescabr pipeline -- plant-bee visitation networks (Q4 / Q3 support)
 # Created: 2026-07-21
 #
@@ -25,7 +25,7 @@
 #   * per-bee-species specialization table: how many plant genera each visits,
 #     its main forage, and rare/specialist flags (rare = low relative frequency)
 #
-# Run from the repo root:  Rscript scripts/analysis/interactions_network.R
+# Run from the repo root:  Rscript scripts/analysis/interactions/interactions_network.R
 # Depends on: dplyr, stringr, igraph, vegan, ggplot2. config.R for paths.
 # =============================================================
 
@@ -42,8 +42,8 @@ HAVE_VEGAN     <- requireNamespace("vegan",     quietly = TRUE)
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
+if (!exists("BEE_SEQ")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")  # shared plant common-name labels
 OUT_DIR       <- file.path(DIR_REPORT, "interactions/networks")
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -323,7 +323,7 @@ print(net_stats, row.names = FALSE)
 # plant-visit counts vs the community-wide plant-use marginal. Selective (p<0.05, enough
 # records) -> a distinct color; sparse or availability-driven -> neutral grey. The SAME
 # module also drives the genus field guide's preference column, so figures + guide agree.
-if (!exists("selective_genera")) source("scripts/analysis/forage_selectivity.R")
+if (!exists("selective_genera")) source("scripts/analysis/shared/forage_selectivity.R")
 MIN_COLOR_REC <- SELECT_MIN_REC
 GREY_LINK     <- BEE_GENUS_GREY   # non-selective/sparse grey -- single source from theme_beescabr.R
 sig_genera <- intersect(selective_genera(), colnames(Mg))         # module orders most-recorded first

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/rarefaction_inext.R
+# analysis/richness/rarefaction_inext.R
 # Rarefaction & extrapolation (iNEXT) -- Hill numbers, size- and coverage-based
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -22,7 +22,7 @@
 # so this script was NOT executed here -- it is written to run on your machine,
 # where iNEXT is installed. Run scripts/utils/install_requirements.R once per machine.
 #
-# Run from the repo root:  Rscript scripts/analysis/rarefaction_inext.R
+# Run from the repo root:  Rscript scripts/analysis/richness/rarefaction_inext.R
 # Depends on: dplyr, stringr, iNEXT, ggplot2 (+ config.R).
 # =============================================================
 
@@ -34,9 +34,9 @@ if (!requireNamespace("iNEXT", quietly = TRUE))
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-if (!exists("inext_estimates_tidy")) source("scripts/analysis/inext_estimates.R")
-if (!exists("rare_out_name")) source("scripts/analysis/rarefaction_names.R")
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
+if (!exists("inext_estimates_tidy")) source("scripts/analysis/shared/inext_estimates.R")
+if (!exists("rare_out_name")) source("scripts/analysis/shared/rarefaction_names.R")
 
 # One tidy estimates table per DIMENSION, both ranks stacked, instead of three raw
 # iNEXT dumps per rank. run_inext() fills this; section 4 writes it out.

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/genera_and_species_accumulation.R
+# analysis/richness/genera_and_species_accumulation.R
 # analysis/species_accumulation.R
 # beescabr pipeline -- native-bee species accumulation by SURVEY EFFORT
 # Created: 2026-07-21
@@ -37,7 +37,7 @@
 # uses more records, as it should.
 #
 # Run from the repo root:
-#   Rscript scripts/analysis/genera_and_species_accumulation.R
+#   Rscript scripts/analysis/richness/genera_and_species_accumulation.R
 # Figures + summary table are written to data/analysis/.
 # Depends on: vegan, dplyr, stringr (+ config.R for the cleaned-table paths).
 # =============================================================
@@ -64,7 +64,7 @@ PERMUTATIONS    <- 200                                    # specaccum random per
 set.seed(1)                                               # reproducible permutation curves
 
 # house style: colors + line-style come from the shared module (theme_beescabr.R)
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")
 COLS         <- BEE_TRANSECT      # transect color -> now TINTS each panel's title
 METHOD_COL   <- BEE_METHOD_COL    # curve color = method: poppy = net (lethal), teal = photo (non-lethal)
 LTY          <- BEE_METHOD_LTY    # secondary cue: solid = lethal, dashed = non-lethal

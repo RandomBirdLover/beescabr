@@ -9,7 +9,7 @@
 # About + Get-involved pages will join this file once their copy is written.
 # =============================================================
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
-if (!exists("beescabr_fill_colors")) source("scripts/analysis/theme_beescabr.R")  # palette is the only colour source
+if (!exists("beescabr_fill_colors")) source("scripts/analysis/shared/theme_beescabr.R")  # palette is the only colour source
 if (!exists("person_name_keys")) source("scripts/utils/people.R")  # name -> person (all three name shapes)
 suppressPackageStartupMessages(library(dplyr))
 

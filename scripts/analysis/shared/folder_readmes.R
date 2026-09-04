@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/folder_readmes.R
+# analysis/shared/folder_readmes.R
 # beescabr -- per-folder WHAT_THESE_FILES_ARE.txt for the analysis outputs
 # =============================================================
 

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/interactions_genus_species_webs.R
+# analysis/interactions/interactions_genus_species_webs.R
 # Per-bee-genus species -> plant-genus webs  (zoom-in on Q4)
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -24,7 +24,7 @@
 # resolved to bee species AND with a plant genus enter. Descriptive webs; the H2'
 # p-value is the one inferential piece.
 #
-# Run from the repo root:  Rscript scripts/analysis/interactions_genus_species_webs.R
+# Run from the repo root:  Rscript scripts/analysis/interactions/interactions_genus_species_webs.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -34,9 +34,9 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_INK")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")  # shared plant common-name labels
-if (!exists("selectivity_table_species")) source("scripts/analysis/forage_selectivity.R")  # species-level selectivity (for the hearts)
+if (!exists("BEE_INK")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")  # shared plant common-name labels
+if (!exists("selectivity_table_species")) source("scripts/analysis/shared/forage_selectivity.R")  # species-level selectivity (for the hearts)
 
 # species-level favorite plant, ONLY for statistically selective species (matched chi-square, p<0.05);
 # NA otherwise. Drives the red heart marking each selective species' availability-corrected favorite.

@@ -144,7 +144,7 @@ source("scripts/checklists/checklist_build.R")        # spatial_split / lookup_s
 source("scripts/checklists/cabr_bee_checklist.R")     # defines build_cabr_bee_checklists()
 source("scripts/checklists/pl_bee_checklist.R")       # defines build_pl_bee_checklists()
 source("scripts/checklists/sd_bee_checklist.R")       # defines build_sd_bee_checklists()
-source("scripts/analysis/not_on_holway.R")            # not_on_holway_bees() + format_new_bees() -- stage 11
+source("scripts/analysis/shared/not_on_holway.R")            # not_on_holway_bees() + format_new_bees() -- stage 11
 
 main <- function() {
   # ---- ASK, don't make anyone remember flag names. Interactive runs get a plain

@@ -38,7 +38,9 @@ test_that("every analysis helper is excluded from the auto-run loop", {
 })
 
 test_that("the exclusion list does not name files that no longer exist", {
-  gone <- setdiff(.declared_modules(), list.files(file.path(.root, "scripts/analysis"), pattern = "\\.R$"))
+  gone <- setdiff(.declared_modules(),
+                  basename(list.files(file.path(.root, "scripts/analysis"),
+                                      pattern = "\\.R$", recursive = TRUE)))
   expect_equal(gone, character(0),
                info = paste("listed but absent:", paste(gone, collapse = ", ")))
 })

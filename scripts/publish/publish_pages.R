@@ -18,7 +18,7 @@
 # Follow the season year from config.R so a new season needs no edit here. Set
 # BEESCABR_SEASON_YEAR=2026 to publish an older season.
 if (!exists("DIR_REPORT")) source("scripts/config.R")
-if (!exists("beescabr_fill_colors")) source("scripts/analysis/theme_beescabr.R")  # palette is the only colour source
+if (!exists("beescabr_fill_colors")) source("scripts/analysis/shared/theme_beescabr.R")  # palette is the only colour source
 IUCN_VERSION_FILE <- "data/checklists/iucn/iucn_redlist_version_generated.txt"  # written by the IUCN refresh
 SRC_DIR  <- DIR_REPORT
 DOCS_DIR <- "docs"

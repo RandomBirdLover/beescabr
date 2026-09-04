@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_method_venn.R
+# analysis/method_comparison/coverage_method_venn.R
 # beescabr pipeline -- lethal vs non-lethal taxa overlap (Q1)
 # Created: 2026-07-21
 #
@@ -29,7 +29,7 @@
 #   * _report  -> ALL RECORDS (every specimen vs every iNaturalist photo, no window,
 #                 casual public included) -- the park's full picture. NPS report.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage_method_venn.R
+# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_method_venn.R
 # Depends on: dplyr, stringr (+ config.R). Base-R Venn -- no extra packages.
 # =============================================================
 
@@ -40,7 +40,7 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 YIELD_SUB     <- "method_comparison/yield"   # concept path under each paper root (journal & report)
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")

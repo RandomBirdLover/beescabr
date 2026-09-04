@@ -1,7 +1,7 @@
 # A generated REFERENCES_CITED.txt for the whole analysis folder. The folder notes
 # carry a short citation; this is where the full reference lives, plus the software
 # versions the numbers were actually produced with.
-source(file.path("..", "..", "scripts", "analysis", "folder_readmes.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "folder_readmes.R"))
 
 test_that("every method source carries a full reference, not just a short form", {
   for (x in STAT_SOURCES) {

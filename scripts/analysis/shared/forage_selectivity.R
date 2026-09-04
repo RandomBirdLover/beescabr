@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/forage_selectivity.R   (MODULE -- not a standalone figure)
+# analysis/shared/forage_selectivity.R   (MODULE -- not a standalone figure)
 #
 # Single source of truth for bee-genus FORAGE SELECTIVITY: does a genus favor certain plants
 # BEYOND what was actually available to it? For each bee genus a Monte-Carlo chi-square

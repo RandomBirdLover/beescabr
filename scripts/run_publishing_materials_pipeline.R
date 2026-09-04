@@ -22,12 +22,12 @@
 # shared modules the public HTML scripts rely on (they also self-source these; loading
 # once up front keeps things tidy + fast).
 source("scripts/config.R")
-source("scripts/analysis/theme_beescabr.R")
-source("scripts/analysis/utils_analysis.R")
-source("scripts/analysis/plant_names.R")
-source("scripts/analysis/conservation_status.R")
-source("scripts/analysis/forage_selectivity.R")
-source("scripts/analysis/not_on_holway.R")
+source("scripts/analysis/shared/theme_beescabr.R")
+source("scripts/analysis/shared/utils_analysis.R")
+source("scripts/analysis/shared/plant_names.R")
+source("scripts/analysis/shared/conservation_status.R")
+source("scripts/analysis/shared/forage_selectivity.R")
+source("scripts/analysis/shared/not_on_holway.R")
 
 # the analysis scripts that emit a PUBLIC html page. ADD NEW PUBLIC PAGES HERE
 # (and add the matching row to PUBLISH_PAGES in scripts/publish/publish_pages.R).

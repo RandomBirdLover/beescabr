@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/transect_effort.R
+# analysis/coverage/transect_effort.R
 # Per-transect sampling effort  (companion to rarefaction_{vegan,inext}.R)
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -15,7 +15,7 @@
 #   effort-standardized richness story is told by rarefaction_{vegan,inext}.R by
 #   transect. The dead grid + map code was removed rather than left commented.)
 #
-# Run from the repo root:  Rscript scripts/analysis/transect_effort.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/transect_effort.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -25,7 +25,7 @@ suppressPackageStartupMessages({
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity/fair_method_2021_2023")           # fair-window per-transect effort
 COV_EFFORT    <- file.path(DIR_REPORT,  "coverage/transect_effort")     # sampling effort is a COVERAGE concept, not diversity
 SPECIES_RANKS <- c("species", "subspecies")

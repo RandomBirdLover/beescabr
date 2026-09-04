@@ -1,7 +1,7 @@
 # The subtitle has to STATE THE RESULT, not describe the method -- that is the
 # house standard every other report figure follows. Computed from the rarefied
 # numbers so it can never disagree with the figure under it.
-source(file.path("..", "..", "scripts", "analysis", "rarefaction_names.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "rarefaction_names.R"))
 
 veg <- data.frame(
   rank  = c("species", "species", "genus", "genus"),

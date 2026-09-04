@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/interactions_top_plants.R
+# analysis/interactions/interactions_top_plants.R
 # beescabr pipeline -- top plants bees visit (Q3)
 # Created: 2026-07-21
 #
@@ -18,7 +18,7 @@
 # easy to photograph. And the season window matters: interns survey ~Mar-Sep,
 # beeple (non-lethal) run year-round, so month coverage is uneven.
 #
-# Run from the repo root:  Rscript scripts/analysis/interactions_top_plants.R
+# Run from the repo root:  Rscript scripts/analysis/interactions/interactions_top_plants.R
 # Depends on: dplyr, stringr (+ config.R). Base-R plots -- no extra packages.
 # =============================================================
 
@@ -26,8 +26,8 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")          # shared plant common-name labels
 OUT_DIR   <- file.path(DIR_REPORT, "interactions/top_plants")
 TOP_N     <- 10          # top plants for the headline table/figure
 TOP_MONTH <- 10          # plants shown in the month heatmap (matched to TOP_N)

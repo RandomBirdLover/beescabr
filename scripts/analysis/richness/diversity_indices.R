@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/diversity_indices.R
+# analysis/richness/diversity_indices.R
 # beescabr pipeline -- bee community diversity (Q8)
 # Created: 2026-07-22
 #
@@ -26,7 +26,7 @@
 # total just reflects being surveyed on more days. Year comparisons are restricted
 # to the intern survey window (Mar-Sep) so seasonal coverage is comparable.
 #
-# Run from the repo root:  Rscript scripts/analysis/diversity_indices.R
+# Run from the repo root:  Rscript scripts/analysis/richness/diversity_indices.R
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 
@@ -37,7 +37,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity/fair_method_2021_2023")  # fair-window rank-abundance (method contrast)
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/diversity")  # evenness, NMDS/PERMANOVA, park-shape rank-abundance, backing CSVs
 SPECIES_RANKS <- c("species", "subspecies")

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/bee_bounties.R
+# analysis/coverage/bee_bounties.R
 # Bee Bounties -- actionable "go find this bee" lists from the method gaps
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -21,7 +21,7 @@
 # SCOPE: ALL records, both methods (a bounty is about finding the bee at all, not
 # standardized effort). Ranks: species AND genus. Descriptive -- no p-value.
 #
-# Run from the repo root:  Rscript scripts/analysis/bee_bounties.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/bee_bounties.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -33,8 +33,8 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 .web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R") # iNat logo -> taxon photo page
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
+if (!exists("inat_photo_link")) source("scripts/analysis/shared/inat_taxon_links.R") # iNat logo -> taxon photo page
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/bee_bounties")
 # quote-free aliases: the popup/JS strings below are double-quoted, so a BEE_HTML[["x"]]
 # subscript cannot be spliced into them directly. The palette is still the only source.
@@ -161,7 +161,7 @@ inat_geo <- inat %>% filter(!is.na(lat), !is.na(lon), transect %in% TR)
 
 # --- per-species popup detail (both maps): month WINDOW + one flower field -- the SELECTIVE favorite
 #     where the availability test can run (>= 50 flower-visit records), else the MOST-RECORDED plant. ---
-if (!exists("selectivity_table_species")) source("scripts/analysis/forage_selectivity.R")
+if (!exists("selectivity_table_species")) source("scripts/analysis/shared/forage_selectivity.R")
 .sel_fav <- { st <- selectivity_table_species()          # taxon -> selective favorite plant (NA if none)
   setNames(ifelse(st$selective & !is.na(st$preferred_plant), st$preferred_plant, NA_character_), st$taxon) }
 .detail_tbl <- function(src, taxa) {                       # window (month range) + top plant per taxon

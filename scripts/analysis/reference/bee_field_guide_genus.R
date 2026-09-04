@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/bee_field_guide_genus.R
+# analysis/reference/bee_field_guide_genus.R
 # beescabr -- GENUS-LEVEL companion to the species field guide.
 #
 # The species field guide (bee_field_guide.R) keeps only records identified to
@@ -22,7 +22,7 @@
 # pinned records; this = the whole genus). Outputs a CSV, a styled sortable HTML
 # table, and a PNG table image to data/analysis/reference/field_guide/.
 #
-# Run from the repo root:  Rscript scripts/analysis/bee_field_guide_genus.R
+# Run from the repo root:  Rscript scripts/analysis/reference/bee_field_guide_genus.R
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
 # =============================================================
 
@@ -30,11 +30,11 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 # interactive pages live in a website/ subfolder beside the figures they came from
 .web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
-if (!exists("forage_preference_label")) source("scripts/analysis/forage_selectivity.R")  # shared selectivity (likes vs available)
-if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")                     # shared scope-caption format
-if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")             # iNat logo -> taxon photo page
+if (!exists("iucn_table")) source("scripts/analysis/shared/conservation_status.R")   # shared IUCN lookups
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")          # shared plant common-name labels
+if (!exists("forage_preference_label")) source("scripts/analysis/shared/forage_selectivity.R")  # shared selectivity (likes vs available)
+if (!exists("scope_cap")) source("scripts/analysis/shared/theme_beescabr.R")                     # shared scope-caption format
+if (!exists("inat_photo_link")) source("scripts/analysis/shared/inat_taxon_links.R")             # iNat logo -> taxon photo page
 OUT_DIR       <- file.path(DIR_REPORT, "reference/field_guide")
 SPECIES_RANKS <- c("species", "subspecies")
 RARE_CUT      <- 15          # < this many records -> "rare" (rarely recorded here)

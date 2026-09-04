@@ -1,7 +1,7 @@
 # One tidy estimates table per comparison, instead of three raw iNEXT dumps per rank.
 # AsyEst and the two estimateD() tables are the SAME grain -- assemblage x Hill q --
 # so they belong in one long table with a `basis` column, not three files.
-source(file.path("..", "..", "scripts", "analysis", "inext_estimates.R"))
+source(file.path("..", "..", "scripts", "analysis", "shared", "inext_estimates.R"))
 
 asy <- data.frame(
   Assemblage = c("beeple", "beeple", "beeple", "intern", "intern", "intern"),

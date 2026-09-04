@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/explorer_photo_helpers.R
+# analysis/shared/explorer_photo_helpers.R
 # Representative-photo selection for the Bee Occurrence Explorer.
 #
 # Pure logic + injectable transport, so it is unit-testable without the network

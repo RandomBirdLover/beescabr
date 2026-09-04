@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/bee_occurrence_explorer.R
+# analysis/reference/bee_occurrence_explorer.R
 # Bee Occurrence Explorer -- interactive "where has this bee been found?" map
 # beescabr / Cabrillo National Monument (CABR) native bees
 #
@@ -12,7 +12,7 @@
 # Built as a self-contained HTML (Leaflet from CDN + embedded point data), so it
 # publishes to GitHub Pages like the bounty maps. Matches the site's green theme.
 #
-# Run from the repo root:  Rscript scripts/analysis/bee_occurrence_explorer.R
+# Run from the repo root:  Rscript scripts/analysis/reference/bee_occurrence_explorer.R
 # Depends on: dplyr, stringr, jsonlite, sf (+ config.R, theme_beescabr.R).
 # =============================================================
 
@@ -24,7 +24,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 .web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
+if (!exists("BEE_TRANSECT")) source("scripts/analysis/shared/theme_beescabr.R")
 OUT_DIR <- file.path(DIR_REPORT, "reference/occurrence_map")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 TRANSECTS     <- c("BST", "OT", "TP", "UPMON")
@@ -80,7 +80,7 @@ gs_list <- gs_list[sort(names(gs_list))]
 # taxon's default photo is tried first; if it is closed-license, the taxon's curated
 # photo list is searched for an open one (see explorer_photo_helpers.R).
 # Results (incl. "no open photo") are cached to disk so re-runs don't re-hit the API.
-if (!exists("fetch_taxon_photo")) source("scripts/analysis/explorer_photo_helpers.R")
+if (!exists("fetch_taxon_photo")) source("scripts/analysis/shared/explorer_photo_helpers.R")
 PHOTO_CACHE <- "data/inat_observations/cache/taxon_photos.json"
 photos <- if (file.exists(PHOTO_CACHE)) jsonlite::fromJSON(PHOTO_CACHE, simplifyVector = FALSE) else list()
 # Every taxon a selection can land on gets a representative photo: genus, each

@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_efficiency_by_method.R
+# analysis/method_comparison/coverage_efficiency_by_method.R
 # beescabr -- EFFICIENCY by method: richness at EQUAL sampling effort (rarefaction).
 #
 # The third tier of the method-comparison story (effort -> yield -> efficiency).
@@ -10,7 +10,7 @@
 # genus rank. (The full multi-way rarefaction lives in richness/rarefaction/.)
 #
 # Survey records only (matches the rarefaction analysis scope).
-# Run from the repo root:  Rscript scripts/analysis/coverage_efficiency_by_method.R
+# Run from the repo root:  Rscript scripts/analysis/method_comparison/coverage_efficiency_by_method.R
 # Depends on: dplyr, stringr, vegan, ggplot2 (+ config.R).
 # =============================================================
 
@@ -21,7 +21,7 @@ if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_METHOD_COL")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_DIR       <- file.path(DIR_JOURNAL, "method_comparison/efficiency/fair_method_2021_2023")
 SPECIES_RANKS <- c("species", "subspecies")
 WINDOW_MONTHS <- 3:10          # Mar-Oct: the lethal-netting season

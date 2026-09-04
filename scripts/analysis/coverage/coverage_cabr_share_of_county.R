@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/coverage_cabr_share_of_county.R
+# analysis/coverage/coverage_cabr_share_of_county.R
 # beescabr -- how much of San Diego County's native-bee diversity does tiny
 # Cabrillo National Monument carry?  (a "punches above its weight" stat.)
 #
@@ -15,7 +15,7 @@
 # Areas are fixed facts: CABR = 143.9 acres (NPS / Wikipedia); San Diego County =
 # ~4,526 sq mi. Everything else is counted from the checklists. Descriptive; no test.
 #
-# Run from the repo root:  Rscript scripts/analysis/coverage_cabr_share_of_county.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/coverage_cabr_share_of_county.R
 # Depends on: dplyr, stringr, ggplot2 (+ config.R).
 # =============================================================
 
@@ -25,7 +25,7 @@ beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2) })
 
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
+if (!exists("BEE_SEQ")) source("scripts/analysis/shared/theme_beescabr.R")   # shared house style
 OUT_DIR <- file.path(DIR_REPORT, "coverage/footprint")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 # scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).

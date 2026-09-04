@@ -137,8 +137,8 @@ fw("genera_and_species_accumulation",
 
 # The rarefaction headline, built from the rarefied numbers themselves so the
 # sentence in findings_index.csv can never disagree with the figure it describes.
-if (!exists("rare_window_dir")) source("scripts/analysis/rarefaction_names.R")
-if (!exists("BEE_METHOD_LABEL")) source("scripts/analysis/theme_beescabr.R")   # method keys -> reader spelling
+if (!exists("rare_window_dir")) source("scripts/analysis/shared/rarefaction_names.R")
+if (!exists("BEE_METHOD_LABEL")) source("scripts/analysis/shared/theme_beescabr.R")   # method keys -> reader spelling
 .rare_headline <- function(dimdir) {
   f <- file.path(DIR_REPORT, "richness/rarefaction", rare_window_dir(dimdir),
                  rare_out_name(dimdir, kind = "rarefied"))
@@ -377,5 +377,5 @@ message(sprintf("Wrote %d per-analysis findings summaries + findings_index.csv t
 # Runs here because this is the last analysis step, so every findings file it reads
 # is already on disk. FOLDER_NOTES is the "which folders get one" decision: a folder
 # holding a single analysis already explains itself through its findings CSV.
-if (!exists("write_folder_readmes")) source("scripts/analysis/folder_readmes.R")
+if (!exists("write_folder_readmes")) source("scripts/analysis/shared/folder_readmes.R")
 message(sprintf("Wrote %d folder notes (WHAT_THESE_FILES_ARE.txt)", write_folder_readmes(FIND_DIR)))

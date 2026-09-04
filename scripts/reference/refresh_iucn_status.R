@@ -41,7 +41,7 @@ message(sprintf("Done: %d species in the cache; %d threatened/near-threatened.",
 if (length(thr)) message("  Flagged: ", paste(sort(thr), collapse = ", "))
 
 # When run on its own, rebuild the species field guide so the refreshed column shows up.
-FIELD_GUIDE <- "scripts/analysis/bee_field_guide.R"
+FIELD_GUIDE <- "scripts/analysis/reference/bee_field_guide.R"
 if (!exists("RUNNING_ALL") && file.exists(FIELD_GUIDE)) {
   message("Rebuilding the field guide with the refreshed IUCN column...")
   source(FIELD_GUIDE)

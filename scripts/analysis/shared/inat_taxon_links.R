@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/inat_taxon_links.R
+# analysis/shared/inat_taxon_links.R
 # beescabr -- small iNaturalist logo links for the field guides.
 #
 # The guides never embed bee photos (licensing lives with iNaturalist); instead

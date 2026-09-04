@@ -1,5 +1,5 @@
 # =============================================================
-# analysis/least_sampled_bees.R
+# analysis/coverage/least_sampled_bees.R
 # beescabr -- the park's LEAST-SAMPLED native bees, in ONE go-find-it sheet.
 #
 # THE QUESTION: which bee species are barely sampled -- thin in specimens AND thin in
@@ -26,7 +26,7 @@
 # Outputs CSV + a styled sortable HTML table + a PNG table image to
 # data/analysis/coverage/least_sampled/.
 #
-# Run from the repo root:  Rscript scripts/analysis/least_sampled_bees.R
+# Run from the repo root:  Rscript scripts/analysis/coverage/least_sampled_bees.R
 # Depends on: dplyr, stringr (+ config.R). PNG needs gridExtra + ggplot2 (optional).
 # =============================================================
 
@@ -34,10 +34,10 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 # interactive pages live in a website/ subfolder beside the figures they came from
 .web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 if (!exists("PATHS")) source("scripts/config.R")
-if (!exists("iucn_table"))  try(source("scripts/analysis/conservation_status.R"), silent = TRUE)  # IUCN (optional)
-if (!exists("plant_label")) source("scripts/analysis/plant_names.R")                                # plant common names
-if (!exists("scope_cap"))   source("scripts/analysis/theme_beescabr.R")                              # shared scope-caption format
-if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")                        # iNat logo -> taxon photo page
+if (!exists("iucn_table"))  try(source("scripts/analysis/shared/conservation_status.R"), silent = TRUE)  # IUCN (optional)
+if (!exists("plant_label")) source("scripts/analysis/shared/plant_names.R")                                # plant common names
+if (!exists("scope_cap"))   source("scripts/analysis/shared/theme_beescabr.R")                              # shared scope-caption format
+if (!exists("inat_photo_link")) source("scripts/analysis/shared/inat_taxon_links.R")                        # iNat logo -> taxon photo page
 
 OUT_DIR       <- file.path(DIR_REPORT, "coverage/least_sampled")
 SPECIES_RANKS <- c("species", "subspecies")
