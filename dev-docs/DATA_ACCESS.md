@@ -12,8 +12,7 @@ every map, figure and table. Nothing to download.
 | **In the repo** | the code (`scripts/`), the website (`docs/`), the docs |
 | **NOT in the repo** | `data/` — all of it |
 
-`data/` is kept off GitHub for three reasons: it holds people's names and emails,
-it holds API keys, and much of it the pipeline rebuilds anyway.
+`data/` is kept off GitHub. Why, in full, is at the bottom of this page.
 
 ## Getting it
 
@@ -28,11 +27,14 @@ it holds API keys, and much of it the pipeline rebuilds anyway.
 
 Inside `data/`: `specimens/` (netted bees), `inat_observations/` (photographed
 bees), `project_info/` (survey logs, rosters), `spatial/` (park and transect
-maps), plus `checklists/`, `reference/`, `analysis/`.
+maps), plus `checklists/`, `reference/`, `analysis/` and `secrets/`.
 
 ## Running it yourself
 
 Needs R. Full walkthrough in `PIPELINE_GUIDE.md`; the short version:
+
+**Open `beescabr.Rproj` in RStudio first.** That sets the working directory, and
+every path in the project assumes it. Skip this and the first line fails.
 
 ```r
 source("scripts/utils/install_requirements.R")        # once
@@ -41,28 +43,32 @@ source("scripts/run_all_analysis_pipeline.R")
 source("scripts/run_publishing_materials_pipeline.R")
 ```
 
-To reuse the data you were given instead of re-downloading from iNaturalist:
+The cleaning pipeline **asks what kind of run you want** and prints the choices:
 
-```r
-Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")
-```
+| | | |
+|---|---|---|
+| 1 | Normal run | pull only what is new since last time (seconds) |
+| 2 | Bees only | plants skipped, so plant data goes stale |
+| 3 | **Offline run** | no iNaturalist calls at all — reuse what you were given |
+| 4 | Full rebuild | re-download everything, ~40+ min, needs bee expertise |
+
+**Pick 3 the first time.** It uses the `data/` you were handed and touches no API.
+
+You do not need to set any environment variable, and you should not: a flag left
+over from an earlier run makes the pipeline skip this menu without saying so.
 
 > `sf` and `ggspatial` sometimes need system libraries (GDAL, GEOS, PROJ). If they
 > fail: [r-spatial.github.io/sf](https://r-spatial.github.io/sf/)
 
-## Never make public
+## Why `data/` is not public
 
-| | Where |
+| | |
 |---|---|
-| **API keys** | `data/secrets/` |
-| **Rosters** (names, emails) | `data/project_info/rosters/` |
+| **It names people** | rosters carry the names and emails of volunteers and interns who signed up to survey bees, not to be published |
+| **It holds API keys** | a key in `data/secrets/` is a personal credential; a leaked one is used under its owner's name |
+| **Precise coordinates** | iNaturalist records carry GPS to the metre inside a national monument, including where the rare bees were found |
+| **It is not the record of truth** | most of `data/` is rebuilt from iNaturalist and the specimen sheet; publishing a stale copy invites someone to cite a number that has since changed |
 
-The whole `data/` folder is gitignored, so as long as you don't force it in,
-you're safe.
-
-## Questions
-
-| Who | For what |
-|---|---|
-| Brandi Sanchez — Conservation Legacy, Scientists in Parks | how the code and cleaned data work |
-| Taro Katayama — NPS, Cabrillo National Monument | holds the data; can send you `data/` |
+The whole folder is gitignored, so it stays out unless someone forces it in.
+Nothing is hidden about the *results*: every figure, map and table is on the
+public site. What is withheld is the personal and locational detail behind them.
