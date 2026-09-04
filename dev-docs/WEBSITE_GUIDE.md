@@ -15,6 +15,28 @@ data/analysis/<year>_generated/<topic>/website/some_page.html
 docs/some_page.html
 ```
 
+### Three folders are called "website". They are not the same thing.
+
+| | | in git? |
+|---|---|---|
+| `scripts/website/` | the **code** that builds and publishes pages | yes |
+| `data/**/website/` | **drafts** — each analysis writes its HTML beside the figures it came from | no |
+| `docs/` | the **live site** — what GitHub Pages serves | yes, committed |
+
+**Why `docs/` exists at all**, given the drafts are already HTML:
+
+1. **`data/` is gitignored**, so GitHub never sees it. A folder outside the repo
+   cannot be served.
+2. **`docs/` is a gate.** Building writes drafts; publishing copies them here;
+   committing and pushing makes them public. Three separate acts, so you can
+   rebuild and look before anything reaches a reader.
+3. **The names change.** Drafts are named for analysts, `docs/` names are URLs:
+   `bee_field_guide_species.html` → `field_guide_species.html`.
+
+`docs/` also holds pages with no analysis behind them — `index.html`,
+`acknowledgements.html` — built by `build_content_pages.R`. So the two folders
+never match one-for-one.
+
 **To add one:** write the script to output one self-contained HTML file, then add a
 row to `PUBLISH_PAGES` in `scripts/website/publish_pages.R` and to `PUBLIC_PAGES` in
 the publishing runner.

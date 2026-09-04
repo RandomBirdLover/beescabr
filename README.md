@@ -90,6 +90,7 @@ beescabr/
 
 - **GBIF = regional reference context only.** GBIF records are never used as CABR survey records. CABR specimens are being deposited to SDNHM (via Pam Horsley) and are not yet in GBIF.
 - **`data/` is gitignored** — no specimen, iNat, or personal data is on GitHub. Exception: shapefiles under `data/spatial/shapefiles/`.
+- **Before handing `data/` to anyone, delete `data/secrets/`.** It holds your iNaturalist and IUCN API keys. A key is personal: a pull runs as whoever signed in, and coordinate trust is granted by each observer to a specific account. The next person makes their own OAuth app under the park's iNaturalist account — the pipeline asks on their first run. See `dev-docs/DATA_ACCESS.md`.
 - **`data/analysis/` is generated.** Never edit output CSVs by hand — re-run the relevant script instead.
 - **Buffers are generated in R**, not stored as shapefiles. Do not commit `Buffer_10m.*` or any derived shapefile.
 

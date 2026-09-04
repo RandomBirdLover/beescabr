@@ -38,11 +38,3 @@ One line each. Done items are deleted, not archived — git remembers them.
   test against recorded v2 responses, and keep v1 working until v2 is proven — the
   cache is the system of record and a half-migrated ingest writes malformed rows.
   Pairs with JWT: v2 is the cleaner route to private coordinates.
-
-## Handoff
-
-- [ ] **Delete `data/secrets/` from any copy that leaves this machine.** A key is
-  personal; a pull runs as whoever signed in. The rest is already handled — `data/`
-  is gitignored, no names in the README or DATA_ACCESS.
-- [ ] Sweep the `.DS_Store` files under `data/`
-- [ ] Cut `PIPELINE_GUIDE.md` back to architecture

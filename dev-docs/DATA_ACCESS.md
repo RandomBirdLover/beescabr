@@ -68,6 +68,20 @@ stage 3 stops rather than publish a page older than the data.
 | **Precise coordinates** | iNaturalist records carry GPS to the metre inside a national monument, including where the rare bees were found |
 | **It is not the record of truth** | most of `data/` is rebuilt from iNaturalist and the specimen sheet; publishing a stale copy invites someone to cite a number that has since changed |
 
+## Handing the data to someone else
+
+**Delete `data/secrets/` from any copy that leaves your machine.** A key is personal:
+an iNaturalist pull runs as whoever signed in, and coordinate trust is granted by each
+observer to a specific account. The next operator makes **their own OAuth app under the
+park's iNaturalist account** — not a new account of their own, which would get obscured
+coordinates until every observer trusted it separately. The pipeline asks for the values
+on their first run and saves them to their own `data/secrets/`.
+
+Nothing else needs removing. `data/` is gitignored, and no names appear in the README
+or in this file.
+
+---
+
 The whole folder is gitignored, so it stays out unless someone forces it in.
 Nothing is hidden about the *results*: every figure, map and table is on the
 public site. What is withheld is the personal and locational detail behind them.
