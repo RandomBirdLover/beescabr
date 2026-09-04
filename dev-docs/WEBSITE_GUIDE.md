@@ -2,6 +2,10 @@
 
 **[randombirdlover.github.io/beescabr](https://randombirdlover.github.io/beescabr/)**
 
+*That is the upstream site. A fork publishes its own, at
+`https://<owner>.github.io/beescabr` — the publish pipeline prints yours on the
+first build.*
+
 GitHub Pages serves `docs/` from `main`. No build step, no framework — each page is
 one self-contained HTML file.
 
@@ -91,6 +95,12 @@ Your site then appears at `https://<you>.github.io/beescabr`.
 Forking gives the fork its own `docs/` and its own Pages URL. Both sites stay live
 and neither updates the other — they are separate publications of the same code.
 
+**A fork does not sync itself.** It is a copy taken the moment it was forked.
+Pushing to the upstream repo changes nothing in the fork until somebody presses
+**Sync fork** on GitHub, or runs `git pull upstream main`. So if the fork's site is
+the official link, it shows whatever it showed on the day of the fork until someone
+syncs it — while the upstream keeps quietly rebuilding pages nobody sees.
+
 | | |
 |---|---|
 | **Code** | flows one way: fork → pull request → upstream. Only merged changes reach everyone. |
@@ -105,6 +115,12 @@ pages. A stale public page is worse than no page: nothing on it says how old it 
 If both keep publishing, keep `docs/` out of pull requests. Two people rebuilding
 the same twelve HTML files guarantees a conflict on every merge, and resolving it
 by hand is how a half-built page reaches a reader.
+
+**The simplest fix is one repository, not two.** If the fork's site is the official
+one, the person maintaining the code should be a collaborator *on that repo* and work
+there directly — one `docs/`, one site, nothing to sync and nothing to drift. A second
+repo only earns its keep when two people genuinely need to publish two different
+things.
 
 ```r
 source("scripts/run_publishing_materials_pipeline.R")   # build only

@@ -8,6 +8,10 @@ Browse the public field guides, checklists, and interactive maps online — no c
 
 **https://randombirdlover.github.io/beescabr/**
 
+*That is the upstream site. A fork publishes its own, at
+`https://<owner>.github.io/beescabr` — the publish pipeline prints yours on the
+first build.*
+
 Includes the bee field guides (species + genus), park summary tables, least-sampled bees, the survey-transect and bee-bounty maps, and an interactive **Bee Occurrence Explorer** (filter every record by genus, species, transect, and method).
 
 The site is built by stage 3 of the pipeline, below. `docs/` is committed to git,

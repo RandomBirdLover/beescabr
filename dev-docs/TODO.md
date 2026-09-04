@@ -32,6 +32,13 @@ One line each. Done items are deleted, not archived — git remembers them.
 
 ## Pipeline
 
+- [ ] **Move the repo off a personal GitHub account.** The site is
+  `randombirdlover.github.io/beescabr`, and Taro's fork publishes a second one at his.
+  Either is a personal account, so the public URL dies when that person leaves — and
+  the project has already changed hands once. An NPS or park-owned organisation account
+  gives one stable URL that survives staff turnover. Until then, agree which of the two
+  is the one to link from anything official.
+
 - [ ] **Name one `data/` folder as the copy of record.** There are three (Brandi, Taro,
   James) and no way to tell which is current. `data/` is gitignored, so git cannot
   arbitrate and a clone gets none of it. Pick one location the park keeps — an NPS
