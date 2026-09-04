@@ -340,7 +340,7 @@ build_plant_taxonomy_lookup <- function(all_taxa_path  = PLT_ALL_TAXA,
   # just get in_bee_forage = TRUE for provenance.
   forage_names <- if (!is.null(forage_fn)) forage_fn() else {
     if (!file.exists(forage_path)) {
-      if (!exists("write_bee_forage")) try(source("scripts/inat_observations/bee_forage.R"), silent = TRUE)
+      if (!exists("write_bee_forage")) try(source("scripts/inat_observations/clean/bee_forage.R"), silent = TRUE)
       if (exists("write_bee_forage")) try(write_bee_forage(out_path = forage_path, verbose = verbose), silent = TRUE)
     }
     plt_load_forage(forage_path)

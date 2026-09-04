@@ -1,5 +1,5 @@
 # =============================================================
-# inat_observations/inat_bee_clean.R
+# inat_observations/clean/inat_bee_clean.R
 # beescabr -- turn the brain's per-obs answer key into an ANALYSIS-ready iNaturalist BEE table.
 #
 # WHAT IT'S FOR
@@ -42,7 +42,7 @@
 #          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (Humphreys Rd walk-in)
 # OUTPUT   data/inat_observations/inat_clean/cabr_inat_bee_clean_generated.csv        (one labeled CABR table)
 #
-# Run: source("scripts/inat_observations/inat_bee_clean.R"); inat_bee_clean()
+# Run: source("scripts/inat_observations/clean/inat_bee_clean.R"); inat_bee_clean()
 # =============================================================
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(sf)}))

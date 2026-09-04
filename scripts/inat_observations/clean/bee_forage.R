@@ -1,5 +1,5 @@
 # =============================================================
-# inat_observations/bee_forage.R
+# inat_observations/clean/bee_forage.R
 # beescabr -- BEE-OBS FORAGE PLANTS extractor
 # Created 2026-07-21
 #
@@ -17,7 +17,7 @@
 # Dependency-light on purpose (dplyr/readr only, no sf) so the lookup builder can
 # source it cheaply.
 #
-# Run: source("scripts/inat_observations/bee_forage.R"); write_bee_forage()
+# Run: source("scripts/inat_observations/clean/bee_forage.R"); write_bee_forage()
 # =============================================================
 suppressWarnings(suppressMessages({ library(dplyr); library(readr) }))
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")

@@ -117,10 +117,10 @@ source("scripts/project_info/finding_beeple_calendar.R")  # defines finding_beep
 source("scripts/project_info/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
 source("scripts/project_info/review/qc_review_mastercrosswalk.R")         # interactive review of unknown tags + fields
 source("scripts/project_info/review/qc_review_survey_windows.R")           # interactive review of survey-date windows
-source("scripts/inat_observations/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
-source("scripts/inat_observations/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
+source("scripts/inat_observations/clean/inat_bee_clean.R")           # defines inat_bee_clean() -- stage 7 (clean, taxonomy-filled)
+source("scripts/inat_observations/clean/inat_plant_clean.R")         # defines inat_plant_clean() -- stage 8 (surveyors' plant table)
 source("scripts/inat_observations/review/qc_review_inat_location_maps.R") # defines build_location_review_maps() -- stage 7d (per-observer maps)
-source("scripts/inat_observations/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
+source("scripts/inat_observations/clean/bee_forage.R")               # defines write_bee_forage() -- stage 5b2 (bee-obs forage plants)
 source("scripts/inat_observations/review/qc_review_inat_misid.R")         # defines inat_misid_qc() -- stage 10 (misID review queue)
 # ---- TAXONOMY + SPECIMENS + CHECKLISTS ----
 # Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in

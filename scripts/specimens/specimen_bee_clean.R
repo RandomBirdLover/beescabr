@@ -179,8 +179,8 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
 
     tax_check <- lookup |> filter(!is.na(genus), genus != "") |>
       mutate(genus = str_to_title(genus), species = str_to_lower(species))
-    inat_species <- if (file.exists(PATHS$checklist_sd_county_inat)) {
-      suppressMessages(read_csv(PATHS$checklist_sd_county_inat, show_col_types = FALSE)) |>
+    inat_species <- if (file.exists(PATHS$checklist_sd_inat)) {
+      suppressMessages(read_csv(PATHS$checklist_sd_inat, show_col_types = FALSE)) |>
         filter(!is.na(genus), genus != "", !is.na(species), species != "") |>
         mutate(genus = str_to_title(genus), species = str_to_lower(species)) |> distinct(genus, species)
     } else tibble(genus = character(), species = character())
