@@ -346,3 +346,10 @@ idx <- idx[order(match(idx$type, c("inferential", "estimator", "descriptive")), 
 write.csv(idx, file.path(FIND_DIR, "findings_index.csv"), row.names = FALSE)
 message(sprintf("Wrote %d per-analysis findings summaries + findings_index.csv to %s",
                 nrow(idx), FIND_DIR))
+
+# ---- a note in the folders that hold several different things ----------------
+# Runs here because this is the last analysis step, so every findings file it reads
+# is already on disk. FOLDER_NOTES is the "which folders get one" decision: a folder
+# holding a single analysis already explains itself through its findings CSV.
+if (!exists("write_folder_readmes")) source("scripts/analysis/folder_readmes.R")
+message(sprintf("Wrote %d folder notes (WHAT_THESE_FILES_ARE.txt)", write_folder_readmes(FIND_DIR)))
