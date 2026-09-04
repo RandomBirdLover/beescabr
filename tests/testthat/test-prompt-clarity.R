@@ -196,7 +196,7 @@ test_that("it distinguishes ignoring a field from excluding an observation", {
 test_that("the Holway second pass says what it is doing and where to look", {
   r <- list(source_sheet = "Described", genus = "Stelis", species_raw = "anthocopae",
             subgenus = "(Stelis)")
-  txt <- .said(.second_pass_prompt(r))
+  txt <- paste(.said(.second_pass_banner(1L)), .said(.second_pass_item(r, 1L, 1L)))
   expect_match(txt, "checklist", ignore.case = TRUE)          # what the step is
   expect_match(txt, "inaturalist.org/search", fixed = TRUE)   # where to look, 1
   expect_match(txt, "itis.gov", fixed = TRUE)                 # where to look, 2
@@ -207,7 +207,7 @@ test_that("the Holway second pass says what it is doing and where to look", {
 test_that("it explains what a taxon_id looks like", {
   r <- list(source_sheet = "Described", genus = "Stelis", species_raw = "anthocopae",
             subgenus = NA_character_)
-  txt <- .said(.second_pass_prompt(r))
+  txt <- .said(.second_pass_banner(1L))
   expect_match(txt, "taxa/", fixed = TRUE)   # the number in an iNaturalist URL
 })
 
@@ -285,5 +285,79 @@ test_that("the flower explanation names the actual iNaturalist fields to add", {
 
 test_that("it says what to do when the bee was not on a flower", {
   w <- .review_what_inat()
-  expect_match(w[1], "no flower|not on a flower", perl = TRUE)
+  expect_match(w[1], "No flower is a real answer", fixed = TRUE)
+})
+
+# The correction example read as a real name -- "Stelis foo" looks like something
+# you could type -- rather than as a slot to fill. Use the genus actually being
+# asked about, with an obvious placeholder for the part they supply.
+test_that("the correction example uses the real genus, not a stand-in", {
+  r <- list(source_sheet = "Described", genus = "Stelis", species_raw = "anthocopae",
+            subgenus = NA_character_)
+  txt <- .said(.second_pass_banner(1L))
+  expect_false(grepl("Stelis foo", txt, fixed = TRUE))
+  expect_match(txt, "<corrected", fixed = TRUE)
+})
+
+# CLAUDE.md's rule for exactly this decision: "a wrong id is worse than none".
+# Someone who does not know the taxon should be told that skipping is the SAFE
+# answer, not left to guess because guessing feels more helpful than pressing Enter.
+test_that("skipping is recommended when unsure, and says why", {
+  txt <- .said(.second_pass_banner(1L))
+  expect_match(txt, "not sure", ignore.case = TRUE)
+  expect_match(txt, "worse than none|wrong id", perl = TRUE)
+})
+
+# The banner repeated in full for every unresolved name -- six names, six copies of
+# the same twenty lines -- while the other taxon prompt prints it once and then a
+# compact "[1/17] name" card. One long explanation, then short cards, is right.
+test_that("the second-pass banner is separate from the per-name card", {
+  b <- .said(.second_pass_banner(6L))
+  expect_match(b, "WHAT THIS STEP IS DOING", fixed = TRUE)
+  expect_match(b, "6", fixed = TRUE)                 # how many are coming
+
+  r <- list(genus = "Atoposmia", species_raw = "copelandica arefacta",
+            subgenus = "(Hexosmia)")
+  card <- .said(.second_pass_item(r, 2L, 6L))
+  expect_match(card, "[2/6]", fixed = TRUE)          # position in the queue
+  expect_match(card, "Atoposmia+copelandica+arefacta", fixed = TRUE)   # both links
+  expect_match(card, "itis.gov", fixed = TRUE)
+  expect_false(grepl("WHAT THIS STEP IS DOING", card, fixed = TRUE))   # not repeated
+})
+
+# The specimen gate names a path but not what any row MEANS or how to fix it, and
+# "the raw .xlsx" is one of nineteen versioned workbooks. Taro: "this needs more
+# explanation on how to fix it."
+test_that("each specimen review row explains itself", {
+  w <- .review_what_specimens()
+  expect_equal(length(w), 4L)
+  expect_match(w[2], "same", ignore.case = TRUE)      # duplicate IDs: two rows share a number
+  expect_true(all(nchar(w) > 60))                     # each says something
+})
+
+test_that("the specimen fix hint names the newest workbook, not 'the raw .xlsx'", {
+  h <- .specimen_fix_hint(c("cabr_bee_specimens_record_V18_2026_08_18.xlsx",
+                            "cabr_bee_specimens_record_V19_2026_09_02.xlsx"))
+  expect_match(h, "V19", fixed = TRUE)
+  expect_false(grepl("V18", h, fixed = TRUE))
+  expect_match(h, "new version", ignore.case = TRUE)  # never edit an old one
+})
+
+# Two rows sharing one fix printed the whole fix twice -- a wall of text where one
+# short block would do. Identical explanations collapse to one.
+test_that("a shared explanation prints once, not per row", {
+  it <- data.frame(label = c("a", "b"), count = c(4L, 20L), file = c("a.csv", "b.csv"),
+                   what = c("SAME EXPLANATION", "SAME EXPLANATION"), stringsAsFactors = FALSE)
+  txt <- .said(resolve_review_gate(it, "review", interactive_ok = FALSE))
+  expect_equal(lengths(regmatches(txt, gregexpr("SAME EXPLANATION", txt)))[[1]], 1L)
+  expect_match(txt, "review/a.csv", fixed = TRUE)   # both paths still shown
+  expect_match(txt, "review/b.csv", fixed = TRUE)
+})
+
+test_that("different explanations still each appear", {
+  it <- data.frame(label = c("a", "b"), count = c(1L, 1L), file = c("a.csv", "b.csv"),
+                   what = c("FIRST THING", "SECOND THING"), stringsAsFactors = FALSE)
+  txt <- .said(resolve_review_gate(it, "review", interactive_ok = FALSE))
+  expect_match(txt, "FIRST THING", fixed = TRUE)
+  expect_match(txt, "SECOND THING", fixed = TRUE)
 })

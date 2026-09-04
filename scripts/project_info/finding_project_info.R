@@ -404,7 +404,9 @@ finding_project_info <- function(write = TRUE) {
     .fpi_review_summary(nrow(unknown_tags), nrow(unknown_fields), nrow(review_windows))
     if (!is.null(mistags)) bx_cont(nrow(mistags), " stray transect tags to fix")
     if (!is.null(ties) && nrow(ties)) bx_cont(nrow(ties), " tie day(s) to rule")
-    bx_out("master_per_survey_info_generated.csv, cabr_inat_raw_generated.csv (+ review files)")
+    bx_out(FPI_SURVEY_DATES)   # data/project_info/surveys/master_per_survey_info_generated.csv
+    bx_out(FPI_MEMBERSHIP)     # data/inat_observations/inat_raw/cabr_inat_raw_generated.csv
+    bx_cont("review files, if any, are listed above with their full paths")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  mistags = mistags, ties = ties, unknown_tags = unknown_tags, unknown_fields = unknown_fields))

@@ -260,6 +260,53 @@ resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
   c("flower not recorded on the observation (survey)",
     "flower not recorded on the observation (non-survey)")
 
+.review_what_inat <- function() {
+  fix <- paste(
+    "HOW TO FIX: open each row's URL on iNaturalist and set both fields --",
+    "\n     Insect on flower                -> Yes / No",
+    "\n     Interaction->Visited flower of  -> the plant",
+    "\n  No flower is a real answer: set the first to No and leave the plant blank.",
+    "\n  Do the survey rows first; the non-survey ones can wait.")
+  c(fix, fix)   # one shared block; the gate prints it once
+}
+
+#' What each specimen review row means, and how to fix it
+#'
+#' A label like "duplicate IDs" names a symptom. These say what went wrong and what
+#' to change, in the order the review_items table lists them.
+#'
+#' @return Four strings: unknown names, duplicate IDs, missing lat/long, missing specimens.
+.review_what_specimens <- function() c(
+  paste("A name on the sheet is not in the taxonomy lookup. Usually a typo to correct;",
+        "sometimes a real bee that is simply new, in which case it gets added on the",
+        "next rebuild and needs nothing from you."),
+  paste("Two rows carry the same museum number, so one specimen's records would be",
+        "credited to the other. Give one of them its own number, or delete the row if",
+        "it is a duplicate entry rather than a duplicate specimen."),
+  paste("No coordinates, so the record cannot be placed on a transect and drops out of",
+        "every map and per-transect count. Fill latitude and longitude from the",
+        "collection plot."),
+  paste("Marked as missing from the physical collection. Nothing to fix in the data --",
+        "either find the specimen or leave the flag as the record that it is gone."))
+
+#' Name the workbook to edit, rather than "the raw .xlsx"
+#'
+#' There are nineteen versions on disk. Naming the newest, and saying to save a new
+#' one rather than edit it, is the difference between a fix and a lost correction.
+#'
+#' @param files Workbook filenames; the highest V number is taken as current.
+#' @return A sentence naming the file and the rule.
+.specimen_fix_hint <- function(files = NULL) {
+  if (is.null(files))
+    files <- list.files("data/specimens/records", pattern = "^cabr_bee_specimens_record_V[0-9]+_.*[.]xlsx$")
+  if (!length(files)) return("the specimen workbook in data/specimens/records/")
+  v <- suppressWarnings(as.integer(sub(".*_V([0-9]+)_.*", "\\1", files)))
+  newest <- files[which.max(v)]
+  paste0("data/specimens/records/", newest,
+         " -- find each row by ucsd_id / sdnhm_id. Save a NEW version when done ",
+         "(next number, today's date); never edit an old one.")
+}
+
 #' One review checkpoint, so nothing in a review folder is silently missed
 #'
 #' Prints each outstanding issue with a path you can open and, where given, a
@@ -283,29 +330,23 @@ resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
 #' site, taken from the crosswalk (`bee_on_flower`, `flower_visited`).
 #'
 #' @return Two strings: the survey explanation, then the non-survey one.
-.review_what_inat <- function() {
-  fix <- paste(
-    "On iNaturalist the flower a bee was on lives in an observation field, and",
-    "these records have none. Open the URL on each row and add BOTH:",
-    "\n           Insect on flower              -> Yes / No",
-    "\n           Interaction->Visited flower of -> the plant's name",
-    "\n         If the bee genuinely was not on a flower, set Insect on flower to No",
-    "\n         and leave the plant blank -- that is a real answer, not a gap.")
-  c(paste("Survey records, so these matter most.", fix),
-    paste("Records that were not part of a survey. Same fix, lower priority.", fix))
-}
-
 resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = readline,
                                 fix_hint = "the raw .xlsx", blocking = TRUE) {
   items <- items[!is.na(items$count) & items$count > 0, , drop = FALSE]
   if (!nrow(items)) return("clean")
   message("\n  ⚠ REVIEW NEEDED")
   for (i in seq_len(nrow(items))) {
-    message(sprintf("     %s  (%d)", items$label[i], items$count[i]))
-    if ("what" %in% names(items) && !is.na(items$what[i]) && nzchar(items$what[i]))
-      message("         ", items$what[i])
+    message(sprintf("     %-52s (%d)", items$label[i], items$count[i]))
     # a path you can open, not a folder plus a filename to join up yourself
-    message("         ", file.path(review_dir, items$file[i]))
+    message("        ", file.path(review_dir, items$file[i]))
+  }
+  # Two rows often share one fix. Printing it per row turns a short instruction
+  # into a wall of text, so identical explanations collapse to one block.
+  if ("what" %in% names(items)) {
+    for (w in unique(items$what[!is.na(items$what) & nzchar(items$what)])) {
+      message("")
+      for (ln in strsplit(w, "\n", fixed = TRUE)[[1]]) message("     ", ln)
+    }
   }
   if (!interactive_ok) { message("     (batch mode: logged above, continuing)"); return("continue") }
   if (!blocking) {   # heads-up only -- the run never stops here; the fix happens elsewhere, later
