@@ -216,6 +216,27 @@ build_taxonomy_lookup <- function(con) {
     bee_taxonomy_lookup <- dplyr::relocate(bee_taxonomy_lookup, in_cabr_specimens, .after = in_holway)
   # LAST STEP: backfill blank ancestor ranks (specimen-only leaves can arrive missing intermediate
   # ranks their genus/family rows already carry). Adds no taxa; only fills gaps.
+  # Promote the subspecies iNaturalist already gave us. Every cached taxon record
+  # carries its children, so this reads what is on disk -- no API call, and a species
+  # with no cache entry is skipped. Before this, a specimen keyed to a subspecies had
+  # no node to match even when iNat had published one (Colletes hyalinus gaudialis,
+  # 345235, sat in the cache unused while 60 specimens went unresolved).
+  bee_taxonomy_lookup <- tryCatch({
+    if (!exists("subspecies_from_cache")) source("scripts/reference/taxonomy/subspecies_from_cache.R")
+    if (!exists("taxon_cache_get"))       source("scripts/inat_observations/engine/db/taxon_store.R")
+    if (!exists("store_connect"))         source("scripts/inat_observations/engine/db/store_conn.R")
+    con <- store_connect(read_only = TRUE)          # DB_CACHE_PATH, the bee cache
+    on.exit(try(store_disconnect(con), silent = TRUE), add = TRUE)
+    fetch <- function(id) {
+      rec <- taxon_cache_get(con, paste0("id:", id))
+      if (is.null(rec)) NULL else if (!is.null(rec$results)) rec$results[[1]] else rec
+    }
+    before <- nrow(bee_taxonomy_lookup)
+    out <- subspecies_from_cache(bee_taxonomy_lookup, fetch)
+    bx_kv("Subspecies from cache", nrow(out) - before, " added")
+    out
+  }, error = function(e) { bx_note("subspecies-from-cache skipped: ", conditionMessage(e)); bee_taxonomy_lookup })
+
   bee_taxonomy_lookup <- backfill_parent_taxonomy(bee_taxonomy_lookup)
   write_fresh(decorate_complex_name(decorate_complex(bee_taxonomy_lookup)), PATHS$taxonomy_lookup, na = "")
   bx_kv("Bee lookup", format(nrow(bee_taxonomy_lookup), big.mark = ","), " rows (",

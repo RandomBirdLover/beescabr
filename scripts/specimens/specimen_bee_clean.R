@@ -171,6 +171,18 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   if (n_pre_apis - nrow(df) > 0)
     bx_cont("honey-bee filter: dropped ", n_pre_apis - nrow(df), " Apis mellifera (non-native) specimen(s)")
 
+  # --- complex match (needs the internal complex map from stage 5) ---
+  # BEFORE the taxonomy attach, deliberately. The complex is taxonomic identity, and
+  # attach_lookup_taxonomy() resolves identity -- so a complex the MAP supplies (rather
+  # than one typed into the workbook) has to exist by the time that runs, or it cannot
+  # be used to place the specimen. It used to run 49 lines later, which worked only
+  # because every complex in the record happens to be hand-typed.
+  if (file.exists(PATHS$complex_map)) {
+    cmap <- read.csv(PATHS$complex_map)
+    require_columns(cmap, c("genus", "species", "complex", "complex_taxon_id"), "complex_map")
+    df <- match_specimen_complex(df, build_complex_lookup(cmap))
+  } else if (!"complex" %in% names(df)) df$complex <- NA_character_
+
   # --- taxon_id + full taxonomy + spell-check (needs the lookup) ---
   n_taxonomy <- 0L
   if (file.exists(PATHS$taxonomy_lookup)) {
@@ -186,7 +198,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
     } else tibble(genus = character(), species = character())
     known <- build_known_names(tax_check, inat_species)
     flags <- compute_taxonomy_flags(df, known$genera, known$genus_species,
-                                    known$subgenera, known$complexes)
+                                    known$subgenera, known$complexes, known$subspecies)
     write_fresh(flags, flags_out, row.names = FALSE)
     n_taxonomy <- nrow(flags)
     bx_cont("taxonomy spell-check: ", n_taxonomy, " flag(s) -> ", basename(flags_out))
@@ -219,13 +231,6 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   bx_cont("transect: ", sum(!is.na(by_plot)), " from plot, ",
           sum(need_sp & !is.na(by_spatial)), " from lat/long, ",
           sum(is.na(df$transect)), " unresolved")
-
-  # --- complex match (needs the internal complex map from stage 5) ---
-  if (file.exists(PATHS$complex_map)) {
-    cmap <- read.csv(PATHS$complex_map)
-    require_columns(cmap, c("genus", "species", "complex", "complex_taxon_id"), "complex_map")
-    df <- match_specimen_complex(df, build_complex_lookup(cmap))
-  } else if (!"complex" %in% names(df)) df$complex <- NA_character_
 
   # --- schema columns ---
   df$observer   <- df$collector

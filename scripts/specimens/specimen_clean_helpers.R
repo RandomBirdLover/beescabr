@@ -154,8 +154,14 @@ build_known_names <- function(tax_check, inat_species) {
   known_complexes <- if ("complex" %in% names(tax_check))
     tax_check |> mutate(complex = .strip_cx(complex)) |> filter(complex != "") |> distinct(genus, complex)
   else tibble(genus = character(), complex = character())
+  # the subspecies the lookup carries, keyed by its full genus+species+subspecies:
+  # a subspecies epithet alone is not an identity (several species have a "californica")
+  known_subspecies <- if ("subspecies" %in% names(tax_check))
+    tax_check |> filter(!is.na(subspecies), subspecies != "") |> distinct(genus, species, subspecies)
+  else tibble(genus = character(), species = character(), subspecies = character())
   list(genera = known_genera, genus_species = known_genus_species,
-       subgenera = known_subgenera, complexes = known_complexes)
+       subgenera = known_subgenera, complexes = known_complexes,
+       subspecies = known_subspecies)
 }
 
 # Spell-check + NEW-taxon detection. Flags, per specimen, the FINEST-rank determination
@@ -168,27 +174,38 @@ build_known_names <- function(tax_check, inat_species) {
 # (an unknown genus is reported as such, not as an unknown subgenus). Returns one row per
 # flagged specimen. known_subgenera / known_complexes default to none (species-only mode).
 compute_taxonomy_flags <- function(df, known_genera, known_genus_species,
-                                   known_subgenera = NULL, known_complexes = NULL) {
+                                   known_subgenera = NULL, known_complexes = NULL,
+                                   known_subspecies = NULL) {
   .strip_cx <- function(x) trimws(sub("^\\s*\\([^)]*\\)\\s*", "", ifelse(is.na(x), "", as.character(x))))
   ksub <- if (!is.null(known_subgenera) && nrow(known_subgenera))
     tolower(paste(known_subgenera$genus, known_subgenera$subgenus)) else character(0)
   kcx  <- if (!is.null(known_complexes)  && nrow(known_complexes))
     tolower(paste(known_complexes$genus,  known_complexes$complex))  else character(0)
+  kss  <- if (!is.null(known_subspecies) && nrow(known_subspecies))
+    tolower(paste(known_subspecies$genus, known_subspecies$species, known_subspecies$subspecies)) else character(0)
   d  <- df |> filter(!is.na(genus), genus != "")
   sg <- if ("subgenus" %in% names(d)) ifelse(is.na(d$subgenus), "", trimws(as.character(d$subgenus))) else rep("", nrow(d))
   cx <- if ("complex"  %in% names(d)) .strip_cx(d$complex) else rep("", nrow(d))
   sp <- if ("species"  %in% names(d)) ifelse(is.na(d$species),  "", trimws(as.character(d$species)))  else rep("", nrow(d))
+  ss <- if ("subspecies" %in% names(d)) ifelse(is.na(d$subspecies), "", trimws(as.character(d$subspecies))) else rep("", nrow(d))
   unk_g  <- !(d$genus %in% known_genera)
   unk_sp <- !unk_g & sp != "" & !(paste(d$genus, sp) %in% paste(known_genus_species$genus, known_genus_species$species))
   unk_cx <- !unk_g & sp == "" & cx != "" & !(tolower(paste(d$genus, cx)) %in% kcx)   # complex-only, complex not known
   unk_sg <- !unk_g & sp == "" & cx == "" & sg != "" & !(tolower(paste(d$genus, sg)) %in% ksub)  # subgenus-only, subgenus not known
-  keep <- unk_g | unk_sp | unk_cx | unk_sg
+  # A SUBSPECIES the lookup does not carry. Without this the row passes every check --
+  # its genus and its species are both known -- so nothing is flagged, nobody is asked,
+  # and the subspecies id is never captured. That is how 60 Colletes hyalinus gaudialis
+  # specimens went unnoticed while their iNat id sat unused in the local cache.
+  unk_ss <- !unk_g & !unk_sp & sp != "" & ss != "" &
+            !(tolower(paste(d$genus, sp, ss)) %in% kss)
+  keep <- unk_g | unk_sp | unk_cx | unk_sg | unk_ss
   d <- d[keep, , drop = FALSE]
   d$flag_reason <- dplyr::case_when(
     unk_g[keep]  ~ "genus not in taxonomy lookup",
     unk_sp[keep] ~ "genus+species combo not in taxonomy lookup",
     unk_cx[keep] ~ "complex not in taxonomy lookup",
-    unk_sg[keep] ~ "subgenus not in taxonomy lookup")
+    unk_sg[keep] ~ "subgenus not in taxonomy lookup",
+    unk_ss[keep] ~ "subspecies not in taxonomy lookup")
   d |>
     select(any_of(c("ucsd_id", "sdnhm_id")), genus, any_of(c("subgenus", "complex")),
            any_of("species"), any_of("subspecies"), flag_reason) |>
@@ -443,6 +460,73 @@ ABOVE_GENUS_RANKS <- c("subtribe", "tribe", "subfamily", "epifamily", "family",
                        "superfamily", "infraorder", "suborder", "order",
                        "subclass", "class", "subphylum", "phylum", "kingdom")
 
+# ---- rolling an unresolvable ID back to its parent taxon ---------------------
+#
+# A specimen is identified to whatever rank the determiner could reach: a subspecies,
+# a species, a species complex, a subgenus, a genus, or only a tribe. Whichever it is,
+# if the reference lookup has no node at that exact rank the record must still be
+# placed as precisely as the taxonomy allows -- otherwise it comes out with no id AND
+# no lineage, which is what happened to 60 Colletes rows.
+#
+# THE LADDER, finest to coarsest. This is the whole ordering, in one place: adding a
+# rung is a line here, not a new branch in a function.
+#
+#   keyed_by_genus  below the genus, a rank value only means something WITH its genus
+#                   (Dialictus is a subgenus of Lasioglossum; the name alone is not an
+#                   identity). At and above the genus, the rank column stands alone.
+#   strip_prefix    the record writes a complex as "(Complex) Colletes hyalinus".
+TAXON_LADDER <- c(
+  list(list(rank = "species",  keyed_by_genus = TRUE),
+       list(rank = "complex",  keyed_by_genus = TRUE, strip_prefix = TRUE),
+       list(rank = "subgenus", keyed_by_genus = TRUE),
+       list(rank = "genus",    keyed_by_genus = FALSE)),
+  lapply(ABOVE_GENUS_RANKS, function(r) list(rank = r, keyed_by_genus = FALSE))
+)
+
+# rollback_to_parent_taxon(): PURE. For row `i`, try each rung of `rungs` (an ordered
+# subset of TAXON_LADDER) and take the FIRST that resolves to exactly one taxon in the
+# lookup. Ambiguity resolves nothing -- two candidate ids means we do not know which,
+# and a wrong id is worse than none. Fills taxon_id, taxon_rank, the names, and any
+# ancestor rank the specimen itself left blank. Returns df unchanged if nothing hits.
+rollback_to_parent_taxon <- function(df, lookup, i, rungs, lk = NULL) {
+  b2na <- function(x) { x <- as.character(x); ifelse(is.na(x) | trimws(x) == "", NA_character_, trimws(x)) }
+  norm <- function(x) tolower(b2na(x))
+  strip <- function(x) { x <- b2na(x); tolower(trimws(sub("^\\s*\\([^)]*\\)\\s*", "", x))) }
+  col  <- function(d, n) if (n %in% names(d)) d[[n]] else rep(NA_character_, nrow(d))
+  if (is.null(lk)) lk <- list(rank = norm(lookup$rank),
+                              id   = suppressWarnings(as.integer(lookup$taxon_id)),
+                              genus = norm(col(lookup, "genus")))
+  fill_cols <- intersect(intersect(names(df), names(lookup)), SPECIMEN_LOOKUP_RANKS)
+  gi <- norm(col(df, "genus")[i])[1]
+
+  for (rg in rungs) {
+    r <- rg$rank
+    if (!r %in% names(lookup)) next
+    want <- if (isTRUE(rg$strip_prefix)) strip(col(df, r)[i])[1] else norm(col(df, r)[i])[1]
+    if (r == "genus") want <- gi                       # the genus rung keys on the genus itself
+    if (is.na(want)) next
+    have <- if (isTRUE(rg$strip_prefix)) strip(lookup[[r]]) else norm(lookup[[r]])
+    m <- lk$rank == r & have == want
+    if (isTRUE(rg$keyed_by_genus)) m <- m & lk$genus == gi
+    hit <- which(m & !is.na(lk$id))
+    ids <- unique(lk$id[hit])
+    if (length(ids) != 1L) next                        # 0 = no node, >1 = ambiguous
+    j1 <- hit[1]
+    df$taxon_id[i]   <- ids
+    df$taxon_rank[i] <- r
+    if ("scientific_name" %in% names(lookup)) df$scientific_name[i] <- as.character(lookup$scientific_name[j1])
+    if ("common_name"     %in% names(lookup)) df$common_name[i]     <- as.character(lookup$common_name[j1])
+    for (fc in fill_cols) if (is.na(b2na(df[[fc]][i]))) df[[fc]][i] <- as.character(lookup[[fc]][j1])
+    break                                              # finest match wins
+  }
+  df
+}
+
+# the rungs at or below the genus, and the rungs above it
+.ladder_below_genus <- function() Filter(function(x) x$rank %in% c("species","complex","subgenus","genus"), TAXON_LADDER)
+.ladder_above_genus <- function() Filter(function(x) x$rank %in% ABOVE_GENUS_RANKS, TAXON_LADDER)
+
+
 # fill_above_genus_ids(): PURE. For rows STILL missing taxon_id AND with no genus,
 # resolve taxon_id / taxon_rank / scientific_name / common_name from the lookup's row
 # at the specimen's FINEST filled above-genus rank (e.g. tribe Halictini -> 335597).
@@ -451,62 +535,32 @@ ABOVE_GENUS_RANKS <- c("subtribe", "tribe", "subfamily", "epifamily", "family",
 # the genus join and are left untouched here -- a species not in the lookup stays
 # blank, it is NOT coarsened up to its family.
 fill_above_genus_ids <- function(df, lookup) {
+  # Rows keyed ABOVE the genus (family / subfamily / tribe only). The walk itself is
+  # rollback_to_parent_taxon(); this decides only WHICH rows and WHICH rungs.
   if (!"taxon_id"        %in% names(df)) df$taxon_id        <- NA_integer_
   if (!"taxon_rank"      %in% names(df)) df$taxon_rank      <- NA_character_
   if (!"scientific_name" %in% names(df)) df$scientific_name <- NA_character_
   if (!"common_name"     %in% names(df)) df$common_name     <- NA_character_
   df$taxon_id <- suppressWarnings(as.integer(df$taxon_id))
   if (is.null(lookup) || !nrow(lookup) || !"rank" %in% names(lookup)) return(df)
-  norm <- function(x) tolower(trimws(as.character(x)))
-  b2na <- function(x) { x <- as.character(x); ifelse(is.na(x) | trimws(x) == "", NA_character_, x) }
-  fill_cols <- intersect(intersect(names(df), names(lookup)), SPECIMEN_LOOKUP_RANKS)  # ancestor ranks to backfill
   g <- if ("genus" %in% names(df)) as.character(df$genus) else rep(NA_character_, nrow(df))
-  has_genus <- !is.na(g) & trimws(g) != ""
-  need <- which(is.na(df$taxon_id) & !has_genus)
-  if (!length(need)) return(df)
-  lk_rank <- norm(lookup$rank)
-  lk_id   <- suppressWarnings(as.integer(lookup$taxon_id))
-  for (i in need) {
-    rk <- NA_character_; val <- NA_character_
-    for (r in ABOVE_GENUS_RANKS) {
-      if (!r %in% names(df)) next
-      v <- as.character(df[[r]][i])
-      if (!is.na(v) && trimws(v) != "") { rk <- r; val <- v; break }
-    }
-    if (is.na(rk) || !rk %in% names(lookup)) next          # finest rank unresolvable -> leave blank
-    hit <- lk_rank == rk & norm(lookup[[rk]]) == norm(val)
-    ids <- unique(lk_id[hit & !is.na(lk_id)])
-    if (length(ids) == 1L) {
-      j1 <- which(hit & lk_id == ids)[1]
-      df$taxon_id[i]        <- ids
-      df$taxon_rank[i]      <- rk
-      if ("scientific_name" %in% names(lookup)) df$scientific_name[i] <- as.character(lookup$scientific_name[j1])
-      if ("common_name"     %in% names(lookup)) df$common_name[i]     <- as.character(lookup$common_name[j1])
-      # backfill the ancestor lineage (kingdom..the matched rank) from the node -- a tribe/family-only
-      # specimen carries no higher ranks in the raw record, so pull them in (blanks only; own values win).
-      for (fc in fill_cols) if (is.na(b2na(df[[fc]][i]))) df[[fc]][i] <- as.character(lookup[[fc]][j1])
-    }
-  }
+  for (i in which(is.na(df$taxon_id) & (is.na(g) | trimws(g) == "")))
+    df <- rollback_to_parent_taxon(df, lookup, i, .ladder_above_genus())
   df
 }
 
-# fill_coarse_ids(): PURE. Resolve specimens ID'd only to a COARSE below-genus rank --
-# a genus, a subgenus, or a named species-complex, all with a BLANK species. These
-# can't use the exact (genus, species, subspecies) join, and MUST NOT collide with a
-# same-genus child: a blank-species ID keyed on genus alone matched every same-genus
-# blank-species lookup row and grabbed the first (typically a complex), fabricating a
-# specific taxon the collector never wrote (e.g. a genus-only Colletes stamped as the
-# "Colletes americanus" complex, a subgenus-only Dialictus as "Lasioglossum gemmatum").
-#
-# Fix: match the lookup NODE AT THE SPECIMEN'S OWN RANK. Walk the filled ranks from
-# FINEST (complex) up to genus and take the FIRST that matches a lookup node -- so an
-# unrecognised complex ROLLS BACK to its subgenus/genus parent instead of being pinned
-# onto a sibling complex. Complex names match by their bare binomial (a leading
-# "(Complex) " tag is stripped on both sides). Only rows with a genus AND a blank
-# species are touched: species/subspecies IDs stay with the exact join (never demoted),
-# blank-genus IDs stay with fill_above_genus_ids. Never guesses -- an ambiguous
 # rank+name (>1 distinct id) or no match at any rank leaves the row unresolved.
 fill_coarse_ids <- function(df, lookup) {
+  # Rows keyed AT OR BELOW the genus. Two shapes, and they walk differently:
+  #
+  #   keyed BELOW species (a subspecies the lookup lacks) -> may claim its own SPECIES
+  #        and nothing coarser. Rolling a species-level record back to the genus would
+  #        overstate what is unknown; test-specimen.R protects that rule.
+  #   species BLANK (complex / subgenus / genus only) -> may walk complex -> subgenus
+  #        -> genus, all honest statements of the same coarse ID.
+  #
+  # A row with a species and NO subspecies is left alone: the exact join already had
+  # its chance, and a miss there means the NAME is wrong, not the rank.
   if (!"taxon_id"        %in% names(df)) df$taxon_id        <- NA_integer_
   if (!"taxon_rank"      %in% names(df)) df$taxon_rank      <- NA_character_
   if (!"scientific_name" %in% names(df)) df$scientific_name <- NA_character_
@@ -515,38 +569,16 @@ fill_coarse_ids <- function(df, lookup) {
   if (is.null(lookup) || !nrow(lookup) || !"rank" %in% names(lookup)) return(df)
 
   b2na <- function(x) { x <- as.character(x); ifelse(is.na(x) | trimws(x) == "", NA_character_, trimws(x)) }
-  norm <- function(x) tolower(b2na(x))
-  cxnorm <- function(x) { x <- b2na(x); tolower(trimws(sub("^\\s*\\([^)]*\\)\\s*", "", x))) }  # drop a leading "(Complex) "
   col  <- function(d, n) if (n %in% names(d)) d[[n]] else rep(NA_character_, nrow(d))
+  g <- b2na(col(df, "genus")); sp <- b2na(col(df, "species")); ss <- b2na(col(df, "subspecies"))
 
-  g  <- col(df, "genus"); sg <- col(df, "subgenus"); cx <- col(df, "complex"); sp <- col(df, "species")
-  need <- which(is.na(df$taxon_id) & !is.na(b2na(g)) & is.na(b2na(sp)))   # genus present, species blank
-  if (!length(need)) return(df)
+  species_rung <- Filter(function(x) x$rank == "species", TAXON_LADDER)
+  coarse_rungs <- Filter(function(x) x$rank %in% c("complex", "subgenus", "genus"), TAXON_LADDER)
 
-  lk_rank <- norm(lookup$rank)
-  lk_g    <- norm(col(lookup, "genus")); lk_sg <- norm(col(lookup, "subgenus")); lk_cx <- cxnorm(col(lookup, "complex"))
-  lk_id   <- suppressWarnings(as.integer(lookup$taxon_id))
-  fill_cols <- intersect(intersect(names(df), names(lookup)), SPECIMEN_LOOKUP_RANKS)  # lineage the specimen doesn't already have
-  for (i in need) {
-    gi <- norm(g[i])[1]
-    cand <- list()                                             # FINEST -> coarsest
-    if (!is.na(cxnorm(cx[i])[1])) cand <- c(cand, list(list(rk = "complex",  m = lk_rank == "complex"  & lk_g == gi & lk_cx == cxnorm(cx[i])[1])))
-    if (!is.na(norm(sg[i])[1]))   cand <- c(cand, list(list(rk = "subgenus", m = lk_rank == "subgenus" & lk_g == gi & lk_sg == norm(sg[i])[1])))
-    cand <- c(cand, list(list(rk = "genus", m = lk_rank == "genus" & lk_g == gi)))
-    for (c1 in cand) {
-      hit <- which(c1$m & !is.na(lk_id))
-      ids <- unique(lk_id[hit])
-      if (length(ids) == 1L) {
-        j1 <- hit[1]
-        df$taxon_id[i]        <- ids
-        df$taxon_rank[i]      <- c1$rk
-        if ("scientific_name" %in% names(lookup)) df$scientific_name[i] <- as.character(lookup$scientific_name[j1])
-        if ("common_name"     %in% names(lookup)) df$common_name[i]     <- as.character(lookup$common_name[j1])
-        for (fc in fill_cols) if (is.na(b2na(df[[fc]][i]))) df[[fc]][i] <- as.character(lookup[[fc]][j1])
-        break                                                  # finest match wins; stop walking up
-      }
-    }
-  }
+  for (i in which(is.na(df$taxon_id) & !is.na(g) & !is.na(sp) & !is.na(ss)))
+    df <- rollback_to_parent_taxon(df, lookup, i, species_rung)
+  for (i in which(is.na(df$taxon_id) & !is.na(g) & is.na(sp)))
+    df <- rollback_to_parent_taxon(df, lookup, i, coarse_rungs)
   df
 }
 
