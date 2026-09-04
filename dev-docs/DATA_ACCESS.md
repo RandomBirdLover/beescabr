@@ -31,34 +31,11 @@ maps), plus `checklists/`, `reference/`, `analysis/` and `secrets/`.
 
 ## Running it yourself
 
-Needs R. Full walkthrough in `PIPELINE_GUIDE.md`; the short version:
+Needs R, and `beescabr.Rproj` opened in RStudio first — that sets the working
+directory every path assumes.
 
-**Open `beescabr.Rproj` in RStudio first.** That sets the working directory, and
-every path in the project assumes it. Skip this and the first line fails.
-
-```r
-source("scripts/utils/install_requirements.R")        # once
-source("scripts/run_data_cleaning_pipeline.R")
-source("scripts/run_all_analysis_pipeline.R")
-source("scripts/run_publishing_materials_pipeline.R")
-```
-
-The cleaning pipeline **asks what kind of run you want** and prints the choices:
-
-| | | |
-|---|---|---|
-| 1 | Normal run | pull only what is new since last time (seconds) |
-| 2 | Bees only | plants skipped, so plant data goes stale |
-| 3 | **Offline run** | no iNaturalist calls at all — reuse what you were given |
-| 4 | Full rebuild | re-download everything, ~40+ min, needs bee expertise |
-
-**Pick 3 the first time.** It uses the `data/` you were handed and touches no API.
-
-You do not need to set any environment variable, and you should not: a flag left
-over from an earlier run makes the pipeline skip this menu without saying so.
-
-> `sf` and `ggspatial` sometimes need system libraries (GDAL, GEOS, PROJ). If they
-> fail: [r-spatial.github.io/sf](https://r-spatial.github.io/sf/)
+**Everything else is in `PIPELINE_GUIDE.md`**: installing, API keys, the run menu
+(pick **Offline run** to use the `data/` you were handed), and the three stages.
 
 ## Why `data/` is not public
 

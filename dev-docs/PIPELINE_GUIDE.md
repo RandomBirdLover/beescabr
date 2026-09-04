@@ -23,6 +23,9 @@ Stage 1 is the only slow one, and the only one that asks questions.
 source("scripts/utils/install_requirements.R")
 ```
 
+> `sf` and `ggspatial` sometimes need system libraries (GDAL, GEOS, PROJ). If they
+> fail to install: [r-spatial.github.io/sf](https://r-spatial.github.io/sf/)
+
 Then two API keys. **They are personal — never use someone else's, and never copy
 another person's `data/secrets/`.** A pull runs as whoever signed in, and that
 account's trust level decides what comes back.
@@ -68,14 +71,19 @@ Full list and rules: `MANUAL_INPUTS.md`.
 
 ### Stage 1 — clean
 
-Opens with a menu. Choose **1 (Normal run)** unless you have a reason not to.
+Opens with a menu. Choose **1** unless you have a reason not to — or **3** if you
+were handed a `data/` folder and just want to see the pipeline run.
 
-| Mode | When |
-|---|---|
-| Normal | the usual |
-| Skip ingest | reuse the cache, no API calls — fast, good for testing |
-| Full re-walk | re-fetch everything from scratch — slow, once a year |
-| Refresh | re-check IUCN + plant names online |
+| | Mode | When |
+|---|---|---|
+| 1 | Normal run | the usual: pull only what is new since last time (seconds) |
+| 2 | Bees only | normal bee pull, plants skipped — leaves plant data stale |
+| 3 | Offline run | no iNaturalist calls at all, reuse what is cached |
+| 4 | Full rebuild | re-download everything, ~40+ min, once a year, **needs bee expertise** |
+
+Do not set `BEESCABR_SKIP_INGEST` or the other flags by hand. A flag left set from
+an earlier run makes the pipeline skip this menu without saying so, which is the
+bug the menu was written to end.
 
 It stops to ask about unknown tags, new taxa (see `VERIFICATION.md`) and specimen
 IDs. Unattended runs skip the prompts.
