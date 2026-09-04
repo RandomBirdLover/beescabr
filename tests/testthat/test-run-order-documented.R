@@ -8,7 +8,8 @@
              "run_all_analysis_pipeline.R",
              "run_publishing_materials_pipeline.R")
 
-.DOCS <- c("README.md", "dev-docs/PIPELINE_GUIDE.md", "dev-docs/DATA_ACCESS.md")
+.DOCS <- c("README.md", "CLAUDE.md",
+           "dev-docs/PIPELINE_GUIDE.md", "dev-docs/DATA_ACCESS.md")
 
 test_that("the runners the docs name all exist", {
   for (s in .STAGES)
@@ -32,7 +33,10 @@ test_that("every run doc lists the three stages, in order", {
 test_that("no run doc tells a reader to source config.R as a step", {
   # Every script sources config.R itself. Listing it as a command to type invents
   # a fourth step that does nothing on its own.
-  for (d in .DOCS) {
+  # CLAUDE.md is excluded: it shows `source("scripts/config.R")` as the guard line
+  # a NEW MODULE writes, which is code guidance, not an instruction to a person
+  # running the pipeline.
+  for (d in setdiff(.DOCS, "CLAUDE.md")) {
     txt <- paste(readLines(file.path(.root, d), warn = FALSE), collapse = "\n")
     expect_false(grepl('source\\("scripts/config\\.R"\\)', txt, perl = TRUE),
                  info = paste(d, "tells the reader to run config.R"))

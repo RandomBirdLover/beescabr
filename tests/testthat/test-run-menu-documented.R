@@ -31,8 +31,8 @@ test_that("the doc lists no run mode the pipeline does not offer", {
 
 test_that("the doc does not tell a reader to set an ingest flag by hand", {
   # Setting one is what makes ingest_mode.R skip the menu without saying so.
-  for (f in c("PIPELINE_GUIDE.md", "DATA_ACCESS.md")) {
-    body <- paste(readLines(file.path("..", "..", "dev-docs", f), warn = FALSE),
+  for (f in c("dev-docs/PIPELINE_GUIDE.md", "dev-docs/DATA_ACCESS.md", "CLAUDE.md")) {
+    body <- paste(readLines(file.path("..", "..", f), warn = FALSE),
                   collapse = "\n")
     for (flag in INGEST_MODE_FLAGS)
       expect_false(grepl(paste0("Sys.setenv\\s*\\(\\s*", flag), body, perl = TRUE),

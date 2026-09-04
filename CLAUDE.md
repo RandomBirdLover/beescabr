@@ -178,11 +178,17 @@ CRAN call and makes a fresh machine harder to set up. This is why the project st
 
 ## Running the pipeline
 
+```r
+source("scripts/run_data_cleaning_pipeline.R")          # 1. ingest + clean   (asks questions)
+source("scripts/run_all_analysis_pipeline.R")           # 2. figures + tables
+source("scripts/run_publishing_materials_pipeline.R")   # 3. the public site
 ```
-source("scripts/run_data_cleaning_pipeline.R")              # ingest + checklists + clean
-Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")   # reuse cache, no API
-Sys.setenv(BEESCABR_FULL_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")   # re-fetch everything
-```
+
+Stage 1 opens a menu: **1** normal, **2** bees only, **3** offline (no API calls),
+**4** full rebuild. **Do not set `BEESCABR_SKIP_INGEST` / `BEESCABR_FULL_INGEST`
+by hand.** `utils/ingest_mode.R` reads a pre-set flag as "the operator knows what
+they are doing" and skips the menu without saying so — which is how a leftover
+flag turned every later run into a 40-minute rebuild.
 
 ## Style
 

@@ -33,12 +33,35 @@ date formats · package namespace clashes
 | Problem | Scale |
 |---|---|
 | `flower_flowering` almost never filled | 68 of 9,243 rows |
+| `is_10min` never filled | 0 of 11,396 rows — record it and the 10-minute survey becomes analysable |
+| No camera / device recorded | camera-vs-phone quality is not answerable from these records |
 | Intern practice photos not flagged | can't separate from real surveys |
 | Un-attributed on-transect records | ~3,868 with no `surveyor_type` |
 | Photos stall above species | *Lasioglossum*, *Ceratina* — a real detection limit |
 | Specimen ID backlog | 204 keyable at genus |
 | Photo-only taxa with no voucher | 30 species, 8 genera |
 | Casual iNat coordinate precision | varies to hundreds of metres |
+
+## The plants are a bee project's by-catch, not a plant project
+
+Plant records exist to say what a bee was on. They were never collected as a
+plant survey, and three limits follow from that:
+
+| | |
+|---|---|
+| **No plant checklist** | only a genus → common-name map. Bees have tiered checklists; plants do not. |
+| **Phenology cannot be computed** | `flower_flowering` is filled on 68 of 9,243 rows, so bloom timing is not measurable from this data |
+| **Availability is use-derived** | the selectivity test uses what the bee community was *recorded on* as the proxy for what was in bloom. That is circular, and it is the honest limit of by-catch data. |
+
+**A plant project of its own would fix all three**, and is the right place to
+build real phenology: a plant-side cleaning pipeline, bloom recorded on the
+survey walk whether or not a bee was on it, and its own checklist. Threatened
+plants would use `private_latitude` / `private_longitude` under the project's own
+account, which is also the more secure route — obscured coordinates stay
+obscured to everyone else.
+
+Until then, treat every plant result here as *what bees were seen on*, never as
+*what was available*.
 
 ## Structural confounds — state them, don't try to fix them
 

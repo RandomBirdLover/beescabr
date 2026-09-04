@@ -17,6 +17,7 @@ These hold everywhere unless the table below overrides them.
 | **Specimen coordinates are transect centroids** | ~980 specimens fall on ~18 points, so a specimen map is misleading |
 | **Off-transect specimens are not surveys** | 115 of 980. They count toward park totals, but are excluded from per-survey effort. |
 | **Show every genus** | No arbitrary top-N in genus figures |
+| **On-transect means within 50 m** | `IBC_OFF_TRANSECT_M`. Casual iNaturalist coordinates drift to hundreds of metres, so a tighter buffer would drop real survey records. 7,440 of 11,396 records resolve to a transect. |
 
 ## The three fair windows
 
