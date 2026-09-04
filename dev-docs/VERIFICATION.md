@@ -1,154 +1,52 @@
 # Verification
 
-Two things, in one place: **what to do** when the pipeline asks you to verify a bee,
-and **how the verification system works** underneath.
-
-If you are sitting at the prompt right now, read Part 1 and stop there.
-
----
-
-## Part 1 — At the prompt: how to check a flagged bee
-
-**When:** the pipeline's pass‑2 prompt shows a taxon that is *new to the Holway San Diego
-baseline* and asks:
+The pipeline stops and asks you to confirm a bee it has not seen before:
 
 ```
-Andrena cerasifolii (id 1538175, complex).  Real ID / genuine SD record?  [y verify / r reject / Enter skip / x stop]:
+Andrena cerasifolii (id 1538175, complex).
+Real ID / genuine SD record?  [y verify / r reject / Enter skip / x stop]
 ```
 
-**The question you're answering:** *does this bee genuinely occur in San Diego County?*
+**The question:** does this bee genuinely occur in San Diego County?
 
-**The rule:** a taxon counts as a real SD record if it has **at least one *verifiable*
-observation inside San Diego County** — the county boundary itself, **not** a mileage
-radius around it.
+## Answer it in 4 steps
 
----
+```
+1.  Take the id from the prompt                      1538175
+2.  Open  inaturalist.org/observations?taxon_id=1538175
+3.  Filters:  Show -> Verifiable
+              More Filters -> Place -> "San Diego County, CA, US"
+4.  Count what comes back
+```
 
-## Steps
+| Result | Answer |
+|---|---|
+| **1 or more observations** | `y` — real SD bee |
+| **none** | `Enter` to skip (returns next run), or `r` to reject |
 
-1. **Grab the `id` from the prompt.** That number is the iNaturalist **taxon_id**
-   (e.g. `1538175`). Using the id is more reliable than typing the name — it avoids
-   name/spelling ambiguity, especially for *complex* taxa.
+## Two traps
 
-2. **Open that taxon's observations on iNaturalist.** Easiest:
-   paste this into your browser, swapping in the id —
-   `https://www.inaturalist.org/observations?taxon_id=1538175`
-   (or search the name under **Explore**).
+| | |
+|---|---|
+| **Use `Place`, not the top `Location` box** | Location attaches a pin + radius and leaks in Imperial, Orange, Riverside. Place uses the real county boundary. |
+| **`Verifiable`, not `Any`** | Verifiable = Research Grade + Needs ID. It excludes Casual — drawer photos, no date, captive. That is exactly what shouldn't count. |
 
-3. **Open `Filters` and set two things:**
-   - Under **Show**, check **Verifiable**. (*Verifiable* = **Research Grade + Needs ID**;
-     it **excludes Casual** records — single specimen‑drawer photos, no date/location,
-     captive/cultivated, out‑of‑range junk. That casual stuff is exactly what we don't
-     want to count.)
-   - Click **More Filters**, and under **Place** type `San Diego County` and select
-     **“San Diego County, CA, US”**. Then hit **Update Search**.
+## How it works underneath
 
-4. **Use the `Place` filter — NOT the top `Location` box.** The **Place** field uses the
-   real **county boundary**; the top Location box can attach a pin + mileage radius
-   (e.g. “25 mi”), which leaks in neighboring counties (Imperial, Orange, Riverside).
-   County boundary only.
+```
+iNat observation
+      ↓
+  is its genus / subgenus / complex / species / subspecies
+  in the Holway San Diego reference?
+      ↓ no
+  flag it  →  prompt you  →  save the answer
+      ↓
+  verified_taxa.csv   or   rejected_taxa.csv
+      (data/reference/hand_curated/)
+```
 
-5. **Read the result and answer the prompt:**
-
-   | What you see in SD County (Verifiable) | Answer |
-   |---|---|
-   | **≥ 1 observation shows up** | **`y` verify** — real SD bee, add to the checklist |
-   | **0 observations** | **`Enter` skip** now (comes back next run), or **`r` reject‑for‑now** once that option is live in your session |
-
----
-
-## Notes & edge cases
-
-- **Complex / subspecies flags** (e.g. *Bombus fervidus* complex, *Andrena cerasifolii*
-  complex) are auto‑flagged because Holway has **no complex/subspecies concept** — not
-  because they're suspicious. If the complex (or its common member — e.g. the *B. fervidus*
-  complex's *B. californicus*, the California Bumble Bee) has verifiable SD‑County records → **`y`**.
-
-- **Wrong‑county leaks** (e.g. *Perdita larreae*, whose only "record" was a **casual photo
-  of an Imperial County museum specimen**) → nothing verifiable shows up in SD County → **reject**.
-
-- **When unsure, skip.** A skipped taxon returns next run, so deferring costs nothing.
-
-- **`r` = reject‑for‑now is remembered, not deleted.** A rejected taxon is re‑shown next
-  run flagged *"you rejected this before — verified now?"*, so if it's ever confirmed later
-  you just hit `y`. To forget a rejection entirely, delete its row from
-  `data/reference/hand_curated/rejected_taxa.csv`.
-
-- **Specimen vs photo:** Chris's **specimen** determinations you can trust directly. The
-  iNaturalist check above is mainly for the **photo (iNat)** taxa — like *Perdita larreae*,
-  which turned out to be an out‑of‑county casual photo.
-
----
-
-*This is pass 2 of two. Pass 1 (the taxon_id prompt) answers "which iNaturalist species is
-this?"; pass 2 (here) answers "is that ID actually right for San Diego?" Your `y` / `r` /
-skip calls are what curate the confirmed San Diego bee checklist.*
-
----
-
-## Part 2 — How it works
-
-Plain-English notes on the verification workflow and the taxonomy tables it
-uses. (Added 2026-07.)
-
-## What "verification" means here
-
-When a bee turns up on iNaturalist whose **genus, subgenus, complex, species,
-or subspecies is not in the Holway reference**, it's something we haven't seen
-before, and a human needs to check that the iNaturalist photo/ID is actually
-correct. Holway is the trusted baseline; anything beyond it is flagged until
-you verify it. Verification is **manual** — the pipeline just surfaces what
-needs a look and remembers what you've cleared.
-
-## Renamed files
-
-- `bee_taxonomy_lookup.csv` → **`sd_bee_taxonomy_lookup_generated.csv`** (Holway + iNat)
-- `holway_reference_checklist.csv` → **`holway_sd_bee_reference_table.csv`**
-  (Holway only, from the occasional interactive builder)
-
-## `sd_bee_taxonomy_lookup_generated.csv`
-
-- Now includes **iNat-observed species**, not just Holway's list.
-- Keeps Holway's **Tentative** and **Unpublished** rows; the `holway_status`
-  column shows `Described` / `Tentative` / `Unpublished` (blank = not from
-  Holway, i.e. an iNat-only name).
-- `verified` column: TRUE if the taxon is in Holway **or** you've verified it.
-- **Source-membership columns** (yes/no): `in_holway`, `in_inat`,
-  `in_cabr_specimens`. `in_cabr_specimens` is all FALSE until
-  `specimen_bee_clean.R` has produced the cleaned specimen file.
-- Column order: `taxon_id, scientific_name, rank, verified, holway_status,
-  in_holway, in_inat, in_cabr_specimens`, then the taxonomic hierarchy kingdom
-  → phylum → class → order → superfamily → family → subfamily → tribe →
-  subtribe → genus → subgenus → complex → species → subspecies, then
-  `complex_taxon_id, common_name`.
-- **To find iNat-only species:** filter `in_inat == TRUE & in_holway == FALSE`.
-
-## Flagging in `inat_bee_clean.R`
-
-- `needs_verification` = TRUE when any of genus/subgenus/complex/species/
-  subspecies is new to Holway and not yet verified.
-- `new_at_rank` = which level(s) are new (e.g. "genus,species").
-- `cabr_inat_to_verify.csv` (in `data/inat_observations/inat_clean/qc/`) = just the
-  flagged observations — your worklist.
-
-## Recording your checks
-
-`data/reference/hand_curated/verified_taxa.csv` — a simple list you maintain.
-Columns: `taxon_id, verified`. Once you've confirmed a bee's photo/ID, add its
-`taxon_id` (verified = `Y`). It stops being flagged on the next run.
-
-## "Updated since last time" refresh
-
-The ingest now also re-pulls observations that were **re-identified or edited
-on iNaturalist since the last run** (not just brand-new ones), so a scientist
-fixing an ID flows back into your data. The cutoff time is stored in
-`data/inat_observations/cache/last_ingest.txt`. To re-pull everything from scratch:
-`BEESCABR_FULL_INGEST=1`.
-
-## Run order (RStudio)
-
-1. `run_data_cleaning_pipeline.R` — ingest + checklists; builds `sd_bee_taxonomy_lookup_generated.csv`
-   and refreshes the cache.
-2. The clean step → `cabr_inat_bee_clean_generated.csv` + `cabr_inat_to_verify.csv`.
-3. Check the photos in the to-verify list; add confirmed `taxon_id`s to
-   `verified_taxa.csv`; re-run — they drop off the flag list.
+| | |
+|---|---|
+| Your answers are **remembered** | You are never asked about the same taxon twice |
+| Rejecting is **not deleting** | The record stays in the data, just off the checklist |
+| Run it when? | Part of the cleaning pipeline, interactively. An unattended run skips the prompts. |

@@ -1,27 +1,8 @@
 # TODO
 
-## iNaturalist API v2 migration (from the official v2 docs)
+**41 open items.** Completed work is not kept here -- the git history has it.
 
-Facts that shape the work, taken from <https://api.inaturalist.org/v2/docs/>:
-
-- **v2 returns almost nothing by default.** Every endpoint returns a minimal response (often
-  just the UUID) unless you pass a `fields` parameter. Migration is therefore not a URL
-  swap: every call has to declare the fields it needs. RISON is their preferred encoding
-  (`?fields=(species_guess:!t,user:(login:!t))`); `fields=all` exists for exploring.
-- **Auth is the same JWT we already use.** OAuth-authenticated request to
-  `https://www.inaturalist.org/users/api_token`, sent as a Bearer token.
-- **Each JWT expires after 24 hours.** Our cache is per R session, so a run longer than a
-  day would need a refresh.
-- **Rate limits:** 100 requests/minute hard, 60/minute requested, 10,000/day. Blocks may be
-  applied without notice. `INAT_THROTTLE_SEC` is pinned at 1.0s to stay at 60/minute, and
-  a test in `test-config.R` guards it.
-- Obscured coordinates still depend on per-observer trust of the signed-in account, not on
-  the API version.
-
-Open work by area. Merged 2026-08-24 (the README's TODO section and this file
-were two separate lists covering the same project).
-
-### Data — iNat bees
+## Data — iNat bees
 
 - [ ] **Obscured-location survey windows.** When a surveyor obscures their bee
   obs (Elena's 2022 was open, but others may not be), iNat fuzzes the coordinates
@@ -31,7 +12,6 @@ were two separate lists covering the same project).
   hand. Long term (real fix): get true coords via an iNat project the surveyors
   trust with hidden coordinates (or user-to-user trust), then re-ingest and read
   `private_latitude` / `private_longitude`.
-
 - [ ] **iNat observation cleanup** (beeple all years; worst: 2022 & 2025). Note: casual grade and obscured obs get dropped by the R pipeline, so these must be fixed on-platform first.
   1. **Pull + sort (R):** SD County Anthophila + target plants, Quality Grade = Any. Sort by tier (CABR box / Point Loma / SD County), by user (beeple + interns), and by date → rounds (define what a round is first).
   2. **Flag (R) — output 5 lists:** (a) missing tags on round dates, (b) tag ≠ location (spatial-join mismatch), (c) missing IDs (e.g. *Agapostemon* at genus), (d) missing obs fields (bee "visited flower?" / plant "flowering?"), (e) casual pile — set aside, don't fix in R.
@@ -40,7 +20,7 @@ were two separate lists covering the same project).
   - Involves Jess, Patricia, James Hung, John Ascher. Coordination approach (claimed batches, ID disagreement process) and obs only the original observer can fix are still open questions.
 - [ ] **Fix observations placed in the ocean:** some beeple/intern observations have GPS coordinates landing in water. Correct on iNat (original observer or curator) or flag in the pipeline for manual review.
 
-### Data — iNat plants
+## Data — iNat plants
 
 - [ ] **Plant iNat export:** pull via "Point Loma Peninsula" place (~40k obs, under 200k cap). Add observation fields at download (this was missed last time). Quality grade = Any. **Scope: Point Loma / CABR only** — no SD County plant tier (county-wide plants exceed 200k cap; site level is the correct scope anyway). Don't treat iNat's place as ground truth — clip to own boundary in R via `st_within()`. *(Export pulled; `inat_plant_clean.R` not yet run.)*
 - [ ] **Obscured plants:** for your own threatened plants, use `private_latitude`/`private_longitude` columns (true coords). Other people's obscured obs aren't exportable — get via project trust or add known species to checklist by hand. Host-plant ID use case: obscuration doesn't matter (name is visible).
@@ -48,14 +28,14 @@ were two separate lists covering the same project).
 - [ ] Plant checklist
 - [ ] Plant phenology
 
-### Bee Specimens
+## Bee Specimens
 
 - [ ] **Dr. Doug Yanega (UCR):** (a) 4 specimens to add to the official checklist — Jess says don't add to physical collection, add as "x" (museum specimen record only). (b) Needs to identify 70 *Colletes*, 10 *Hylaeus*, 15 *Perdita*, and 1 *Andrena* to species — requires an in-person trip to UCR.
 - [ ] **Physical specimen box audit:** check boxes for duplicate specimens and remove any physical error flags. Identify any unidentified specimens still in box.
 - [ ] **Get new SDNHM IDs from Shahan** to replace the 29 sdnhm_ids zeroed out in V13 (duplicate tags that need new labels).
 - [ ] Formal specimen deposit to SDNHM (Shahan Derkarabetian)
 
-### Pipeline design
+## Pipeline design
 
 - [ ] **Migrate the iNaturalist API from v1 to v2.** Everything currently goes through
   `https://api.inaturalist.org/v1/` (see `INAT_API_VERSION` in `scripts/config.R`).
@@ -72,8 +52,6 @@ were two separate lists covering the same project).
       half-migrated ingest could write malformed rows into it.
   Pairs with the JWT authentication item: v2 is also the cleaner path to private
   coordinates for obscured observations.
-
-
 - [ ] **Fold survey-tag QC into the inat_bee_clean.R rewrite.** When
   `inat_observations/inat_bee_clean.R` is rewritten, add back the two cross-checks the
   retired `survey_tag_qc.R` did (deleted; recoverable from git history):
@@ -124,17 +102,16 @@ were two separate lists covering the same project).
   genus/subgenus. Double-check against the saved baseline copies of
   holway_sd_bee_reference_table_v3_generated.csv + sd_bee_taxonomy_lookup_generated.csv (esp. that no id-less
   Holway rows disappear). API fallback (`/taxa?q=&rank=`) for any rank with no observed descendant.
-
 - [ ] **Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run silently skips the write and you get stale data. Delete the relevant generated files (under `data/inat_observations/inat_clean/`, `data/checklists/`, `data/analysis/`) before each run until this is fixed.
 - [ ] **Ask Mitchell Nuckols:** does the interactive "did you review tags/fields?" prompt in `inat_bee_clean.R` conflict with how Taro wants to use this? If Taro just wants one button that runs everything and produces outputs (which is what the Rmd suggests), then stopping mid-run for user input breaks that. May need a different approach — e.g. always output the QC files and let the Rmd surface a warning instead of stopping.
 
-### Spatial / infrastructure
+## Spatial / infrastructure
 
 - [ ] Spatial join: assign observations to transects using `buffer_10m`
 - [ ] **Infer `end_transect` for non-lethal intern surveys:** use iNat obs timestamps + spatial join with transect shapefiles to determine which transect each intern finished on. Update `cabr_bee_survey_dates.csv` once inferred.
 - [ ] **Casual-grade observations missing from export:** "Quality Grade = Any" does not appear to include Casual obs in the downloaded CSV (known iNat issue #4186). Need a second export pass with `quality_grade = Casual` and merge with main export.
 
-### Analysis
+## Analysis
 
 - [ ] **Wire the genera/species accumulation analysis into `run_data_cleaning_pipeline.R`.**
   Built and tested, deliberately run BY HAND for now (like the notes reviewer):
@@ -147,9 +124,6 @@ were two separate lists covering the same project).
   To wire in: add a final analysis stage to `run_data_cleaning_pipeline.R` that sources it after the
   clean stage (guard on the three inputs existing; needs vegan/dplyr/stringr). Depends on
   `master_per_survey_info_generated.csv` being regenerated in the new format (see that item above).
-
----
-
 - [ ] **Reconstruction of bee identifications:** specimens help identify non-IDed iNat obs; iNat helps direct future collecting efforts.
 - [ ] **Independent bloom phenology for the availability baseline (refinement).** The selectivity test uses the community's realized plant *use* per cell as the availability proxy. A stronger version would build availability from the survey plant-bloom data (`phenology_activity.R`'s flowering records) so it's an independent bloom census rather than use-derived — this would also be the only real handle on the plant-detectability confound. (Note: as of 2026-08 no prepared plant-bloom dataset is available.)
 - [ ] Bee phenology vs. plant phenology
@@ -160,87 +134,29 @@ were two separate lists covering the same project).
 - [ ] 10-minute survey analysis
 - [ ] What should we target specifically for future collecting?
 
-### Writing / presentation
+## Writing / presentation
 
 - [ ] **Literature review:** read community science projects
 - [ ] **Writing:** how many different bee species found at different geographic/taxonomic levels using iNaturalist
 - [ ] Presentation
 
-### Future
+## Future
 
 - [ ] Update methods and use iNat projects
 
-### Handoff cleanup (opened 2026-09-03)
-
-The tail end of the file/folder reorganisation. Data items first, docs last, because
-the docs describe the layout and should be written once it has stopped moving.
-
-**Data**
+## Handoff cleanup (opened 2026-09-03)
 
 - [ ] **Sweep the 50 `.DS_Store` files under `data/`.** Gitignored, so they never reach
   Taro through git, but they ride along in a folder copy or a zip. One `find -delete`,
   and they regenerate harmlessly.
-
 - [ ] **Decide what happens to `id_count`** in `people_manual.csv`. It is a hand-typed
   iNaturalist statistic (Jessica 8,258, Jon 12,173), stale the moment it is written, and
   it only orders the identifier list on the acknowledgements page. Three ways out:
   leave it, drop it and sort the list some other way, or DERIVE it by counting
   identifications per person from the observation cache. The cache holds 245,946
   identifications, so the data is already there -- the same JSON we decided not to prune.
-
-**Docs** (do these LAST, once the layout has settled)
-
-- [x] **`PEOPLE_ROSTER_BRIEF.md` deleted (2026-09-04).** It is a design brief for the people
-  redesign that has since been BUILT, and its six "open decisions" are all settled.
-  As written it reads like a live proposal. Either close it out with what was chosen
-  and why, or delete it and let the explainers carry the reasoning.
-
-- [x] **Merged into `VERIFICATION.md` (2026-09-04).** Two files on
-  one subject.
-
 - [ ] **Merge `ANALYSIS_DECISIONS.md` + `ANALYSIS_ROADMAP.md`.** Same.
-
 - [ ] **Cut `PIPELINE_GUIDE.md` back to architecture.** It has accumulated
   task-level detail that now lives in the runbook and the per-folder explainers.
-
 - [ ] **Triage this file.** 52 items, never reviewed; several are certainly done.
   Move anything finished to "Done" with the date.
-
-**Decided, not open** -- recorded so they are not re-opened as bugs:
-
-- `CSBI Interns` credits nobody on 800 of 1,145 specimens. Which interns netted those
-  days was never written down, so there is nothing to recover. Do not guess names in.
-- The transect map now keeps each report year's own transects (OT established 2024), so
-  a 2023 report no longer gains a transect it never had.
-
-### Done
-
-- [x] **Rewrite the beeple-calendar parser in R.** DONE — `project_info/finding_beeple_calendar.R`
-  now rebuilds the beeple window table from the calendar PDFs on every run (pipeline
-  stage 2d). The Python helper has been removed. Whole project is one language.
-- [x] **Wire the plant ingest.** DONE 2026-07-17 -- `engine/pipelines/ingest_plants.R`
-  pulls vascular plants (Tracheophyta 211194) for Point Loma (place 132551) into a
-  SEPARATE cache (`data/inat_observations/cache/inat_cache_plant.duckdb`) -> `export_flat_plant.rds`;
-  run_pipeline step 2b runs it; `FPI_EXPORTS` has the `kind="plant"` slot (absent
-  export guarded). Sandbox-tested: plant obs confirm survey days (e.g. Jorge's
-  plant-only days) with the bee results untouched. REMAINING on the first real run:
-  sanity-check the pull count / taxon id, and file the plant obs-fields
-  (phenology / flowering) that surface in the field review.
-
-- [x] iNat observation IDs — *Agapostemon* (genus-only) and *Augochlorella* (mislabeled) resolved
-- [x] Gymnosperms covered — plant export uses Plantae/vascular plants, not Angiospermae
-- [x] SDNHM museum specimens — asked Shahan Derkarabetian; no relevant holdings to add
-- [x] *Andrena cerasifolii* / *Andrena impolita* complex — confirmed both under Complex *Andrena cerasifolii*; no specimens of either in collection currently
-- [x] Integrate `read_latest()` into `native_bee_data_analysis.Rmd`
-- [x] Add `complex` column to specimen sheet (V9); renamed to bare `complex` pipeline-wide (2026-06-24)
-- [x] Point Loma/CABR/SD County boundary shapefiles + CABR survey box
-- [x] iNat export → spatial split into three geographic tiers (implemented 2026-06-23)
-- [x] TIER 2 merged checklists in Holway format (implemented 2026-06-24)
-- [x] Subgenus rank correctly populated for taxa identified directly to subgenus level (fixed 2026-06-25)
-- [x] iNat observation-field discovery via API integrated into `inat_bee_clean.R` (2026-07-06)
-- [x] **Matched forage-selectivity test (month + year + method)** — `forage_selectivity.R` matches each genus's expected plant use to what the community recorded in the same (month, year, survey-method) cells (leave-one-out, method-preserving fallback); controls phenology, climate-year, and net-vs-photo method. The selective set is stable across all control levels; drives the field-guide *Forage preference* column and web colors; keeps the overall-abundance p for comparison. Confounder audit for the whole pipeline written into the README (2026-08-02)
-- [x] **Confounder-aware H2′ null** — `interactions_genus_species_webs.R` replaced the fixed-marginal `r2dtable` null with a permutation of species labels *within month × method strata*, so within-genus niche-partitioning is only called real beyond what flight-season/method differences explain. Under it, Melissodes and Habropoda drop to non-significant; power (`n_permutable`) reported per genus (2026-08-02)
-
----
-
-*This README will be expanded further as the project progresses.*

@@ -1,137 +1,188 @@
-# beescabr pipeline — session guide
+# The pipeline
 
-A guide to the API + DuckDB pipeline: what changed, how it's structured, how to
-extend it, and how to direct Claude to change it efficiently. See also
-`CLAUDE.md` (agent rules).
+**Part 1** — running it. **Part 2** — how it works.
 
-## 1. How the pipeline is built
+---
 
-The pipeline is cached, modular and API-driven. It was reworked from an earlier
-CSV-export + monolith design; the notes below explain the shape it has now and
-why each piece exists.
+# Part 1 — Running it
 
-- **Data source: iNaturalist API → DuckDB cache** (the CSV export is retired).
-  Observations are pulled once into `data/inat_observations/cache/inat_cache.duckdb`, with a
-  spatial `location` geometry column so you can run manual `ST_*` queries. The
-  same DuckDB file caches taxon requests.
-- **Monolith split.** The 1,300-line `native_bee_checklist.R` was broken into
-  focused modules under `reference/` (Holway helpers, taxonomy reference, the
-  taxonomy-lookup orchestrator) and `checklists/`. All tag / survey-membership
-  logic later moved OUT of `inat_bee_clean.R` into the provenance "brain",
-  `project_info/finding_project_info.R`; the clean scripts now just look up each
-  observation's answer by `obs_id`.
-- **One command.** `scripts/run_data_cleaning_pipeline.R` ingests once, then builds
-  checklists and cleans, reading the same fresh cache.
-- **Ingest performance.** Raw API responses go straight to DuckDB, which parses
-  + inserts + reports the pagination cursor in C++ — no R-side JSON parse or
-  re-serialize. Pages insert as they arrive (flat memory) inside a transaction
-  committed every N pages. Geometry is built with `ST_Point(lon,lat)`.
-- **Robust flatten.** A malformed observation field (e.g. a `taxon` that's a
-  bare id string) no longer crashes the read; a safe accessor yields `NA`.
-- **Batched taxonomy.** Taxon resolution uses `/taxa/{ids}` (≤30 ids/request)
-  with a throttle, instead of one request per taxon — fixes rate limiting.
-- **Tests.** ~860 testthat assertions; pure logic runs anywhere, DB/network
-  tests use temp DuckDB + injected fakes and skip when `duckdb` is absent.
-
-## 2. Project structure
-
-```
-scripts/
-  config.R                       constants: ids, CRS, paths, throttle, field map
-  run_data_cleaning_pipeline.R   single entrypoint (ingest → brain → clean → checklists)
-  utils/utils.R                  shared helpers (read_latest, …)
-  observations/
-    engine/
-      db/store_conn.R            DuckDB connect + spatial/json + schema
-      db/observations_store.R    obs upsert (raw page → DuckDB) + geometry + reads
-      db/taxon_store.R           taxon request cache (id:/name: keys)
-      db/decision_store.R        persisted Holway manual-disambiguation decisions
-      api/inat_http.R            transport: retry/backoff; parsed + raw-text GETs
-      api/inat_flatten.R         PURE: JSON → tibble, ofvs branch, taxon ancestry
-      api/inat_cache.R           cache-first taxa + batched resolve_taxonomy
-      pipelines/ingest_inat.R    THE bee fetch: API → DuckDB (incremental)
-      pipelines/ingest_plants.R  plant fetch → separate plant cache
-      pipelines/read_inat.R      DuckDB → export-shaped data frame (.rds)
-    inat_bee_clean.R             bee clean table (looks up membership by obs_id)
-    inat_plant_clean.R           plant clean table
-    qc_review_inat_location_maps.R per-observer "pins to fix" maps (stage 7d)
-    bee_forage.R                 bee-obs flower_visited plants
-    build_field_id_map.R         iNat obs-field id map
-    qc/qc_review_inat_misid.R           likely-misID review queue
-  project_info/                  THE BRAIN + its reviewers
-    finding_project_info.R       provenance: membership + unknown tags/fields/notes
-    finding_survey_dates.R       master_per_survey_info_generated.csv (per-survey record)
-    finding_specimen_dates.R     specimen-record aggregation (in-memory)
-    finding_beeple_calendar.R    beeple calendar PDFs → windows
-    resolve_beeple_transects_per_survey.R  majority-transect resolver
-    rescue_on_transect_surveys.R   on-transect untagged obs → surveys
-    qc_review_mastercrosswalk.R / qc_review_survey_windows.R / qc_review_mastercrosswalk_notes.R  interactive reviewers
-    collect_plant_names.R        plant-name review
-  reference/                     taxonomy + Holway
-    holway.R / holway_reference_build.R  Holway backfill + interactive resolver
-    taxonomy_reference.R         bee taxonomy lookup builder (PURE)
-    taxonomy_lookup_build.R      orchestrator: sd_bee_taxonomy_lookup_generated.csv
-    manual_overrides.R / resolve_missing_ids.R / verify.R
-    plant_lookup_join.R / plant_taxonomy_lookup_build.R
-  checklists/
-    checklist_build.R            spatial_split / lookup_subtree / combine (PURE)
-    cabr_bee_checklist.R / pl_bee_checklist.R / sd_bee_checklist.R
-  analysis/
-    coverage_cabr_vs_holway.R / not_on_holway.R
-  specimens/
-    specimen_clean_helpers.R             specimen QC transforms + review gate (PURE)
-    specimen_bee_clean.R         orchestrator: clean_specimens() (interactive gate)
-    specimen_raw_worklist.R      raw specimen worklist (by hand)
-  spatial/spatial_utils.R        boundaries, PROJECT_CRS
-tests/testthat/                  one test-<module>.R per module + fixtures/
+```r
+source("scripts/run_data_cleaning_pipeline.R")        # 1. ingest + clean   (slow, interactive)
+source("scripts/run_all_analysis_pipeline.R")         # 2. figures + tables (fast, silent)
+source("scripts/run_publishing_materials_pipeline.R") # 3. the public site  (fast, silent)
 ```
 
-Data flow: `ingest_inat` / `ingest_plants` (API→cache) → `read_inat`
-(cache→export-shaped `.rds`) → the **brain** `finding_project_info` decides
-survey membership once → `inat_bee_clean` / `inat_plant_clean` look that up by
-`obs_id` → `reference/*` (taxonomy, Holway), `checklists/*`, and `analysis/*`
-consume the clean tables. Taxonomy is resolved from the taxon cache during the read.
+Open `beescabr.Rproj` in RStudio first — that sets the working directory, which
+every path assumes.
 
-The export-shaped frame is **memoized** to `data/inat_observations/cache/export_flat.rds`, keyed
-by a content fingerprint of the observation + taxon caches. Re-runs that don't
-change those inputs skip the (slow) flatten entirely; the two consumers in one
-run share the in-memory copy. Force a rebuild with `BEESCABR_REFRESH_FLAT=1` or
-by deleting the RDS.
+Stage 1 is the only slow one, and the only one that asks questions.
 
-## 3. Running it
+## First run on a new machine
 
-```
-source("scripts/run_data_cleaning_pipeline.R")                       # full run
-Sys.setenv(BEESCABR_SKIP_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")  # reuse cache only
-Sys.setenv(BEESCABR_FULL_INGEST = "1"); source("scripts/run_data_cleaning_pipeline.R")  # re-fetch all obs
-library(testthat); test_dir("tests/testthat")   # tests
+```r
+source("scripts/utils/install_requirements.R")
 ```
 
-Tuning: `INAT_THROTTLE_SEC` (pause between API calls) and `commit_every` /
-`per_page` / `TAXA_BATCH_SIZE` control request rate and batch sizes.
+Then two API keys. **They are personal — never use someone else's, and never copy
+another person's `data/secrets/`.** A pull runs as whoever signed in, and that
+account's trust level decides what comes back.
 
-## 4. Adding or modifying a module (test-first)
+| Service | Unlocks | Needed? |
+|---|---|---|
+| **iNaturalist** | true coordinates for sensitive taxa (*Bombus crotchii* etc.) | Strongly recommended |
+| **IUCN Red List** | conservation status on the field guides | Optional — column reads "not evaluated" without it |
 
-The repo is TDD (see `CLAUDE.md`). To add a function — say a new obs-field
-transform:
+The pipeline **asks for anything missing on the first run** and offers to save it
+to `data/secrets/` (gitignored, readable only by you).
 
-1. Decide the layer. A pure transform → `inat_observations/engine/api/inat_flatten.R`
-   or a `reference/*` / `checklists/*` file. Cache/DB behavior →
-   `inat_observations/engine/db/*` or `inat_observations/engine/api/inat_cache.R`. Survey /
-   tag / membership logic → the brain, `project_info/finding_project_info.R`.
-2. **Write the test first** in the matching `tests/testthat/test-<module>.R`,
-   with normal and edge cases. Run it and confirm it **fails**.
-3. Implement the function in the module. Keep it pure if it can be; if it needs
-   the API or DB, take a `request_fn` / `con` parameter so tests can inject a
-   fake / temp store.
-4. Loop the module tests red → green, then run the full suite.
+**Setting up iNaturalist, once:**
 
-To modify existing behavior: add/adjust the test to pin the new behavior
-(watch it fail), then change the implementation until green. The tests encode
-hard-won data quirks (join semantics, NA handling, malformed records) — if one
-fails after your change, understand why before "fixing" the test.
+```
+1. Sign in as the account observers already trust  (the park's account)
+2. inaturalist.org/oauth/applications/new
+3. Name it e.g. officialbeescabr
+4. Callback URL:  http://localhost:3000/beescabr
+5. Copy the Client ID + Secret -- the pipeline will ask
+```
 
-## 5. Directing Claude efficiently
+> Coordinate trust is granted by each observer **to a specific account**. It does
+> not transfer. A brand-new account gets obscured coordinates until every observer
+> trusts it separately, which is not realistic. Use the park account.
+
+The first run opens a browser once to Authorize. Later runs are silent.
+
+## Before you run: the files only a person can update
+
+Full list and rules: `MANUAL_INPUTS.md`.
+
+| What | File | When |
+|---|---|---|
+| Everyone | `project_info/rosters/people_manual.csv` | anyone new, **before** their first season |
+| Intern survey dates | `.../survey_date_sources/master_intern_survey_log_manual.csv` | each intern trip |
+| Beeple calendar | `.../beeple_calendar_windows/YYYY Cabrillo Bee Survey Calendar.pdf` | each new season |
+| Specimens | `specimens/records/cabr_bee_specimens_record_V{n}_{date}.xlsx` | after netting or a new determination |
+
+**Anything ending `_generated` is written by the pipeline. Never edit it.**
+
+## The three stages
+
+### Stage 1 — clean
+
+Opens with a menu. Choose **1 (Normal run)** unless you have a reason not to.
+
+| Mode | When |
+|---|---|
+| Normal | the usual |
+| Skip ingest | reuse the cache, no API calls — fast, good for testing |
+| Full re-walk | re-fetch everything from scratch — slow, once a year |
+| Refresh | re-check IUCN + plant names online |
+
+It stops to ask about unknown tags, new taxa (see `VERIFICATION.md`) and specimen
+IDs. Unattended runs skip the prompts.
+
+### Stage 2 — analyse
+
+Runs every script in `scripts/analysis/`, writes into `data/analysis/`. Silent,
+a few minutes, no network.
+
+### Stage 3 — publish
+
+Rebuilds the public pages into `docs/`. **Building is not publishing** — commit and
+push `docs/` when you are happy with it. See `WEBSITE_GUIDE.md`.
+
+## Where the work lands
+
+```
+  data/analysis/<year>_generated/
+        findings_index.csv        <-- START HERE: one sentence per analysis
+        coverage/  richness/  phenology/  interactions/
+        method_comparison/  reference/
+  docs/                           <-- the public site
+```
+
+Each folder has a `WHAT_THESE_FILES_ARE.txt`.
+
+## Checking your work
+
+```r
+library(testthat); test_dir("tests/testthat")
+```
+
+Then read `findings_index.csv` — 28 sentences. If one reads wrong, open that
+analysis's `_findings.csv`, which sits beside its outputs.
+
+## Starting a new season
+
+| | |
+|---|---|
+| **Drop in this year's calendar PDF** | the easy one to forget — without it the season has no survey windows |
+| **Add anyone new to the roster** | before their first survey |
+| **Add intern trips to the log** | as they happen |
+| **Save a new specimen version** | after netting or a determination |
+
+**Once a year:** a full re-walk with a bee person present (taxonomy moves), a
+reference refresh, and re-read `LIMITATIONS.md`.
+
+## When something breaks
+
+| Symptom | Look at |
+|---|---|
+| A stage failed but the run continued | the `note:` lines — a stage can fail quietly |
+| A number looks wrong | the analysis script, never the output file |
+| A path error after moving files | `library(testthat); test_dir("tests/testthat")` catches these |
+| Nothing downloads | your API keys, and whether you are signed in as the park account |
+| A page did not rebuild | stage 3 now stops on this rather than publishing stale |
+
+---
+
+# Part 2 — How it works
+
+## The shape
+
+```
+  iNaturalist API
+        |  pulled once, straight into DuckDB (no R-side JSON parse)
+        v
+  data/inat_observations/cache/inat_cache.duckdb
+        |  taxa resolved in batches of 30, throttled
+        v
+  the brain: project_info/finding_project_info.R
+        |  decides who surveyed, when, and where -- ONCE
+        v
+  clean scripts look up each observation's answer by obs_id
+```
+
+| Design rule | Why |
+|---|---|
+| **One fetch entrypoint** | Only `engine/pipelines/ingest_inat.R` calls the observations API. One place to reason about rate limits. |
+| **Layers point downward** | `config.R` → `db/` → `api/` → `pipelines/` → `checklists/` & `clean/`. Never upward. |
+| **Constants live in `config.R`** | No script hardcodes a path. |
+| **Membership logic lives in the brain** | It used to be spread through the clean scripts. Now they just look up an answer. |
+| **Source guards** | `if (!exists("sym")) source(...)` so a file can be sourced alone or by the runner. |
+
+## Where things live
+
+Folder layout: `scripts/WHAT_THESE_FILES_ARE.txt` and the note in each folder.
+Running it: Part 1.
+
+## Adding or changing a module
+
+**Test first — always.** `CLAUDE.md` has the rule; the short version:
+
+```
+1. Write the test          tests/testthat/test-<module>.R
+2. Run it, watch it FAIL   a test that passes before the code is not testing anything
+3. Write the minimum       to make it pass
+4. Run the whole suite     library(testthat); test_dir("tests/testthat")
+```
+
+| Testing what | How |
+|---|---|
+| Pure logic | in-memory fixtures |
+| Network code | inject a fake through `request_fn` — **never** hit the real API |
+| DuckDB | a temp database — **never** the real cache |
+
+## Working with Claude here
 
 This codebase is structured so an agent can make surgical changes. When asking
 Claude to work here:
@@ -163,7 +214,7 @@ then implement, then run the full suite."*
 
 ---
 
-## 6. iNaturalist API — what calls what
+## The iNaturalist API
 
 **API versions this pipeline depends on** (constants live in `scripts/config.R`):
 
@@ -190,57 +241,57 @@ Two scripts pull from the API rather than the CSV export:
 
 ---
 
-## 7. Reviewing unknown tags and fields
+## Unknown tags and fields
 
-Both `inat_bee_clean.R` and `inat_plant_clean.R` triage observations against the crosswalk. Anything unrecognized is ignored, but the console prints an **ACTION NEEDED** block and writes QC files. Check after each run.
+The clean scripts triage every observation against the crosswalk.
 
-### Unknown tags
+### Unknown tags → normal, mostly harmless
 
-**`data/inat_observations/inat_clean/qc/cabr_inat_bee_unknown_tags.csv`** (bees) and **`cabr_inat_plant_unknown_tags.csv`** (plants).
+Camera and lens tags (`D500`, `300mm f/4`), species names, place names. Written to
+`qc/cabr_inat_bee_unknown_tags.csv`.
 
-This list is normally long and mostly harmless — camera/lens tags (`D500`, `300mm f/4`), species names, photo filenames, `City Nature Challenge`, etc. Ignore those. Scan for one thing only: a tag that looks like a **missed survey tag** — a new typo or new survey year. If you spot one, add it as an `inat_variant` on the matching crosswalk row, re-run, and those observations move from `flag` to `keep`.
+**This list will not trend to zero, and should not.** Skim it for a real project
+tag that was mistyped; ignore the rest.
 
-This list won't trend to zero and shouldn't.
+### Unknown fields → ACTION NEEDED
 
-### Unknown fields
+Structured key-value fields, which *do* need a decision:
 
-A separate **ACTION NEEDED** block covers unknown observation fields — structured key-value fields (e.g. `Nesting bee`, `on ground?`) with no crosswalk row. Unlike unknown tags, this list **should trend toward zero**: every field observers actually use should eventually have a row telling the script what to do with it.
+```
+1. Look the field up on iNat, by id or name
+2. Add a row to the crosswalk:
+       relevant      ->  type = obs_field
+       not relevant  ->  type = ignore
+3. Re-run -- it disappears from the block
+```
 
-When you see an unknown field:
-1. Look it up on iNat by field ID or name.
-2. Decide: relevant? Add a row with `type = obs_field`. Not relevant? Add a row with `type = ignore`.
-3. Re-run — it should disappear from the ACTION NEEDED block.
+## Console prompt keys
 
----
+One consistent set, everywhere.
 
----
+**Decision gates** — stop, or carry on:
 
-## 8. Console prompts — standard keys
+| Key | Does |
+|---|---|
+| `skip` / `s` / `c` / `go` / `ok` / `y` | continue past, leave it for later |
+| `stop` / `x` | halt so you can fix it now |
+| *anything else, or bare Enter* | **re-asks** — it never guesses |
 
-Every interactive prompt in the pipeline uses one consistent set of keys, so you never have to guess what `Enter` will do. There are two kinds.
+**Item-by-item reviewers** (`review_crosswalk`, `review_windows`, transect ties):
 
-**Decision gates — stop, or keep going.** These appear when a run hits something you might want to fix first (duplicate specimen IDs, off-transect survey pins, spell-check flags). They all use the same words:
+| Key | Does |
+|---|---|
+| `<Enter>` | accept the highlighted `*` suggestion |
+| `s` | skip this item — it returns next run |
+| `q` | save everything and quit |
+| `?` | show the keys again |
 
-- Type **`skip`** to continue past the gate (leave it for later), or **`stop`** to halt the run so you can fix it now.
-- Case-insensitive, and common synonyms work: `s` / `continue` / `c` / `go` / `ok` / `y` / `yes` all continue; `x` / `halt` / `fix` / `n` / `no` all stop.
-- A bare **Enter**, or anything the prompt doesn't recognize, **re-asks** instead of guessing — so a stray keystroke can never silently skip a real problem or halt the run.
+Each reviewer adds its own keys on top — windows also takes `y`/`n`/`u` and
+`l` to list URLs.
 
-**Heads-up prompts — nothing to decide.** When a step is only telling you something (e.g. "here are the maps to send your surveyors"), it ends with **"Press Enter to continue"**, and there `Enter` always means continue.
+**Heads-up prompts** have nothing to decide: any key continues.
 
-**Item-by-item reviewers** — `review_crosswalk`, `review_windows` (and transect ties), 
-
-- **`<Enter>`** — accept the highlighted (`*`) suggestion, where one is shown.
-- **`s`** — skip this item for now (it comes back next run).
-- **`q`** — save everything and quit the reviewer.
-- **`?`** — show the key help again.
-
-Each reviewer adds its own action keys on top of those — e.g. windows: `y`/`n`/`u` and `l`=list URLs; crosswalk: `i`=ignore, `n`=new concept, `1,2`=file under concepts; plant names: `a`=add-as-new, or a number to file under a canonical — all listed in that reviewer's on-screen legend.
-
----
-
----
-
-## 9. The crosswalk reference (project_tags_fields.csv)
+## The crosswalk
 
 `data/project_info/project_tags_fields.csv` controls `inat_bee_clean.R` and `inat_plant_clean.R`. Adding or editing rows changes script behavior without touching any R code.
 
@@ -280,7 +331,7 @@ Each reviewer adds its own action keys on top of those — e.g. windows: `y`/`n`
 
 ---
 
-## 10. Complex rank handling
+## Complex ranks
 
 iNaturalist uses **Complex** for cryptic species groups that can't be distinguished from photos (e.g. *Andrena osmioides*, *Diadasia australis*).
 
