@@ -92,9 +92,9 @@ Everything lands under `data/analysis/<year>_generated/`. One folder per questio
 type, its key finding in a sentence, and the file holding the numbers. Each folder
 also has its own `WHAT_THESE_FILES_ARE.txt`.
 
-**Two comparisons run here, and they are not the same question.** *Method* is nets
-vs photos; *observer* is beeple vs interns. They were confounded before 2024 — only
-interns netted, only beeple photographed — so each has its own window below, and the
+**Two comparisons run here, and they are not the same question.** *Method* is lethal
+vs non-lethal; *observer* is beeple vs interns. They were confounded before 2024 —
+only interns netted, only beeple photographed — so each has its own window below, and the
 observer results live under `richness/rarefaction/fair_observer_2024/` rather than in
 `method_comparison/`. Read them together: lethal beats non-lethal, but with method
 held constant beeple beat interns, so the gap is the netting rather than the people.
