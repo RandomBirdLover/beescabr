@@ -15,7 +15,7 @@
 #
 #   source("scripts/project_info/rosters/build_people_roster.R")
 # =============================================================
-if (!exists("person_id_mint")) source("scripts/utils/people_ids.R")
+if (!exists("person_id_mint")) source("scripts/utils/people.R")
 
 PEOPLE_COLUMNS <- c("person_id", "first_name", "last_name", "inaturalist_username",
                     "email", "phone_number", "affiliation", "collector_code",

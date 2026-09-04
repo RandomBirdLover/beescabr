@@ -29,7 +29,6 @@ pkgs_missing <- function(pkgs, have_fn = function(p) requireNamespace(p, quietly
 # Anything still missing afterwards is named rather than swallowed: a silent failure here
 # turns into a confusing error much later, in a script that looks unrelated.
 install_requirements <- function(pkgs = BEESCABR_PACKAGES,
-                                 optional = BEESCABR_PACKAGES_OPTIONAL,
                                  have_fn = function(p) requireNamespace(p, quietly = TRUE),
                                  install_fn = function(p, ...) install.packages(p, repos = CRAN),
                                  say = message) {
@@ -46,16 +45,16 @@ install_requirements <- function(pkgs = BEESCABR_PACKAGES,
     say("  Some of these need system libraries (sf and pdftools are the usual culprits).")
     say("  On macOS:  brew install gdal proj geos poppler")
   }
-  opt_miss <- pkgs_missing(optional, have_fn)
-  if (length(opt_miss)) {
-    say("")
-    say("  Optional, not installed: ", paste(opt_miss, collapse = ", "))
-    say("  askpass/getPass hide an API key as you type it; ragg improves figure text.")
-  }
-  invisible(list(missing = miss, failed = failed, optional_missing = opt_miss))
+  invisible(list(missing = miss, failed = failed))
 }
 
-if (sys.nframe() == 0) {
+# RUN ON SOURCE. This used to read `if (sys.nframe() == 0)`, meaning "only when this
+# is the top-level script" -- but sys.nframe() is 0 only at the true top level and
+# source() adds frames, so the documented command
+#     source("scripts/utils/install_requirements.R")
+# defined these functions and installed nothing, silently. Sourcing IS how this file
+# is run; a test that only wants the functions sets the flag below.
+if (!exists("INSTALL_SOURCED_FOR_HELPERS")) {
   message("Checking the ", length(BEESCABR_PACKAGES), " packages beescabr needs...")
   install_requirements()
 }

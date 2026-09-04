@@ -142,9 +142,11 @@ Why it matters, and the drift it already caused, is in `dev-docs/WEBSITE_GUIDE.m
 
 **`config.R` holds the list. It never installs anything.**
 
-- `BEESCABR_PACKAGES` (required) and `BEESCABR_PACKAGES_OPTIONAL` (nice to have) live in
-  `config.R`, because that is the constants file and one list means one place to edit when
-  a dependency is added.
+- `BEESCABR_PACKAGES` lives in `config.R`, because that is the constants file and one
+  list means one place to edit when a dependency is added. **There is exactly one list
+  and nothing is optional.** A second "optional" list existed; `install_requirements.R`
+  named those packages and then walked past them, so a fresh machine finished setup
+  still missing something and only found out later, in a script that looked unrelated.
 - `scripts/utils/install_requirements.R` does the installing, and is run deliberately:
   `source("scripts/utils/install_requirements.R")`.
 

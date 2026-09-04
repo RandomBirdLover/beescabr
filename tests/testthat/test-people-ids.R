@@ -4,7 +4,7 @@
 # a new iNat handle, or a differently-spelled museum label breaks no join. Same
 # rule taxon_id follows (CLAUDE.md).
 
-src("utils/people_ids.R")
+src("utils/people.R")
 
 .people <- data.frame(
   person_id            = c("p001", "p002", "p003", "p004"),

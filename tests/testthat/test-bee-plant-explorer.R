@@ -2,8 +2,8 @@
 # genera, or pick a plant genus and see the bees on it. The second direction is the
 # restoration question ("what should we plant?") and a matrix hides it.
 
-BPE_SOURCED_FOR_HELPERS <- TRUE
-src("analysis/bee_plant_explorer.R")
+# helpers only; the flag must reach globalenv (see test-helper-flag-reaches-script.R)
+src_helpers("analysis/bee_plant_explorer.R", "BPE_SOURCED_FOR_HELPERS")
 
 pairs <- function() data.frame(
   bee   = c("Bombus vosnesenskii","Bombus vosnesenskii","Andrena baeriae","Halictus ligatus"),

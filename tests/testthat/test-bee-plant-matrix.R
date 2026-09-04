@@ -3,8 +3,10 @@
 # that plant. Pooled across both methods (photo + specimen) because the question is
 # "what does this bee use", not "how hard did we look".
 
-BPM_SOURCED_FOR_HELPERS <- TRUE   # helpers only; do not run the build
-src("analysis/bee_plant_matrix.R")
+# helpers only; do not run the build. The flag MUST be set in globalenv or the
+# script cannot see it and the build runs against the real data/ folder --
+# see tests/testthat/test-helper-flag-reaches-script.R.
+src_helpers("analysis/bee_plant_matrix.R", "BPM_SOURCED_FOR_HELPERS")
 
 # The reference lookup (sd_bee_taxonomy_lookup_generated.csv) is the authority: records carry a
 # taxon_id, and the lookup turns it into a canonical genus + species. That is how a

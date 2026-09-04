@@ -11,7 +11,6 @@
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(tibble); library(tidyr)}))
 if (!exists("person_name")) source("scripts/utils/people.R")
-if (!exists("people_display")) source("scripts/utils/people_ids.R")
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 # ------------------------------------------------------------

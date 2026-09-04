@@ -34,6 +34,6 @@ THE REST
                     the pipeline, out loud rather than silently
   analysis_run.R    runs one analysis script and attributes its warnings to it,
                     so a warning names the script that caused it
-  people.R          the three written forms of one person's name -> one person
-  people_ids.R      person_id lookup and display
+  people.R          who a person is: the three written forms of one name -> one
+                    person, and the stable person_id that identity is stored under
   refresh_due.R     whether a cached online value is stale enough to refetch

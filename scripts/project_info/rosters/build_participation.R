@@ -17,7 +17,7 @@
 # survey day came from: the intern log and specimen labels make an intern, a
 # tagged observation makes a beeple.
 # =============================================================
-if (!exists("person_id_keys")) source("scripts/utils/people_ids.R")
+if (!exists("person_id_keys")) source("scripts/utils/people.R")
 
 PARTICIPATION_COLUMNS <- c("person_id", "year", "role", "method")
 

@@ -95,7 +95,7 @@ BEESCABR_SOURCED_BY_RUNNER <- TRUE
 RUNNING_ALL <- TRUE
 
 source("scripts/utils/ingest_mode.R")   # the run-mode menu (asks instead of requiring flag names)
-source("scripts/utils/refresh_due.R")   # "is the cached IUCN / plant-name reference stale?"   # the run-mode menu (asks instead of requiring flag names)
+source("scripts/utils/refresh_due.R")   # "is the cached IUCN / plant-name reference stale?"
 source("scripts/config.R")
 source("scripts/utils/utils.R")
 source("scripts/utils/console.R")                # phase banners + key/value reporter + NEEDS-YOU rollup

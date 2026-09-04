@@ -78,3 +78,22 @@ test_that("omitting the code argument entirely still works", {
   k <- person_name_keys("Sam O'Dell", "Sam", "O'Dell")
   expect_equal(unname(k[["s o'dell"]]), "Sam O'Dell")
 })
+
+# people.R and people_ids.R were two files splitting one idea: who is this person.
+# people.R turned the three name shapes ("Sam O'Dell" / "S O'Dell" / an iNat handle)
+# into one identity; people_ids.R minted and resolved the stable person_id that
+# identity is stored under. Neither is usable without the other, and a caller had
+# to know which half held the function it wanted. One file, one subject.
+test_that("people.R alone provides both the name keys and the person_id functions", {
+  e <- new.env()
+  old <- setwd(.beescabr_root()); on.exit(setwd(old), add = TRUE)
+  sys.source("scripts/utils/people.R", e)
+  for (f in c("person_name_keys", "person_name",
+              "person_id_keys", "person_id_mint", "people_display"))
+    expect_true(exists(f, envir = e), info = paste(f, "missing from people.R"))
+})
+
+test_that("the old split file is gone", {
+  expect_false(file.exists(file.path(.beescabr_root(), "scripts/utils", "people_ids.R")))
+  expect_true(file.exists(file.path(.beescabr_root(), "scripts/utils", "people.R")))
+})

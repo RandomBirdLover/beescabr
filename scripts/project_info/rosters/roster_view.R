@@ -16,7 +16,7 @@
 # Beeple never net (0 of 46 person-years in six seasons), so their method is
 # fixed; an intern's comes from the log row, which records what they actually did.
 # =============================================================
-if (!exists("person_id_keys")) source("scripts/utils/people_ids.R")
+if (!exists("person_id_keys")) source("scripts/utils/people.R")
 
 #' Assemble the per-year view of who surveyed
 #'

@@ -42,7 +42,12 @@ BEESCABR_PACKAGES <- c(
   # reference data + docs
   "rredlist", "pdftools", "rmarkdown",
   # tests
-  "testthat", "withr")
+  "testthat", "withr",
+  # quality-of-life: askpass/getPass hide an API key while it is typed, ragg
+  # renders figure text better. These were once a separate "optional" list that
+  # install_requirements.R named and then walked past, so a fresh machine finished
+  # setup still missing them. One list, everything installed.
+  "askpass", "getPass", "ragg")
 
 # beescabr_require(): the per-script dependency guard. CHECKS, never installs.
 #
@@ -67,11 +72,6 @@ beescabr_require <- function(pkgs = BEESCABR_PACKAGES,
             call. = FALSE)
   invisible(TRUE)
 }
-
-# Not required, but each removes a rough edge. The pipeline runs without them.
-#   askpass / getPass -- hide an API key while it is being typed
-#   ragg              -- better PNG text rendering for the figures
-BEESCABR_PACKAGES_OPTIONAL <- c("askpass", "getPass", "ragg")
 
 INAT_API_VERSION <- "v1"
 IUCN_API_VERSION <- "v4"
