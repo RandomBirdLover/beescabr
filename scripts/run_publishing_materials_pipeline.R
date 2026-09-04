@@ -43,10 +43,25 @@ unlink("data/spatial/basemap_tiles", recursive = TRUE)
 message("==> STAGE 3: regenerating public report HTML")
 ok <- vapply(PUBLIC_PAGES, function(nm) {
   message("    ", nm)
-  tryCatch({ source(file.path("scripts/analysis", nm)); TRUE },
+  # PUBLIC_PAGES holds FILE NAMES, not paths: scripts/analysis/ is foldered by
+  # topic, and a page script moving between topics must not break this list.
+  hit <- list.files("scripts/analysis", pattern = paste0("^", nm, "$"),
+                    recursive = TRUE, full.names = TRUE)
+  if (length(hit) != 1L) {
+    message("      !! ", if (!length(hit)) "NOT FOUND" else "AMBIGUOUS", " under scripts/analysis/")
+    return(FALSE)
+  }
+  tryCatch({ source(hit); TRUE },
            error = function(e) { message("      !! FAILED: ", conditionMessage(e)); FALSE })
 }, logical(1))
-if (any(!ok)) message("  (failed: ", paste(PUBLIC_PAGES[!ok], collapse = ", "), ")")
+# A page that did not rebuild would be published STALE, silently. Stop instead:
+# the site is the one output the public sees, and a half-built one is worse than
+# none. (This is the same swallow-and-continue that hid a broken specimen stage
+# for a week.)
+if (any(!ok))
+  stop("These public pages failed to rebuild: ", paste(PUBLIC_PAGES[!ok], collapse = ", "),
+       "\nFix them before publishing -- docs/ would otherwise go out with stale pages.",
+       call. = FALSE)
 
 message("\n==> Publishing into docs/")
 pub <- tryCatch(system2("Rscript", "scripts/website/publish_pages.R", stdout = TRUE, stderr = TRUE),

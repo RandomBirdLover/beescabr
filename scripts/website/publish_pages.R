@@ -372,7 +372,7 @@ publish_pages <- function() {
   # build_content_pages.R writes docs/acknowledgements.html directly from the
   # rosters (self-contained; emails are never output). Sourced in its own
   # environment so its helpers do not leak into this one.
-  source(file.path("scripts", "publish", "build_content_pages.R"), local = new.env())
+  source(file.path("scripts", "website", "build_content_pages.R"), local = new.env())
   add_favicon(file.path(DOCS_DIR, "acknowledgements.html"))
   message("published  acknowledgements.html")
 
