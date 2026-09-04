@@ -159,5 +159,5 @@ test_that("PASS 2 says answers are saved and not asked again", {
                       rank = "subspecies", verified = FALSE, stringsAsFactors = FALSE)
   txt <- .said(resolve_verification_interactive(needs, prompt_fn = function(p) ""))
   expect_match(txt, "verified_taxa.csv", fixed = TRUE)
-  expect_match(txt, "never asked", ignore.case = TRUE)
+  expect_match(txt, "not asked again", ignore.case = TRUE)
 })

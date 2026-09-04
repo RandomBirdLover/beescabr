@@ -137,7 +137,7 @@ All of them live in `dev-docs/` unless noted.
 | 8 | **ANALYSIS_DECISIONS.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
 | 9 | **ARCGIS_SPATIAL_MAPPING.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
 | 10 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
-| 11 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
+| 11 | **TESTS_GUIDE.md** | What the test suite covers and how to run it. |
 | 12 | **FUNCTIONS.md** | *(generated)* Every function called from more than one file: what it does and what to pass it. |
 | 13 | **TODO.md** | Open work, by area. |
 

@@ -80,5 +80,5 @@ out whether a change broke something. Write the test first -- CLAUDE.md explains
 why, and the tests that already exist are the examples.
 
 
-For the stage-by-stage map of which script produces which file, see
-dev-docs/SCRIPTS_GUIDE.md.
+For the stage-by-stage map of which script produces which file, see Part 2 of
+dev-docs/PIPELINE_GUIDE.md.

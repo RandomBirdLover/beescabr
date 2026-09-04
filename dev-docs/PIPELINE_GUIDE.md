@@ -159,20 +159,41 @@ reference refresh, and re-read `LIMITATIONS.md`.
 
 # Part 2 — How it works
 
-## The shape
+## The flow
 
+```mermaid
+flowchart TD
+  API[iNaturalist API] --> ENG[engine: ingest to DuckDB]
+  SPEC[(specimen .xlsx)] --> BRAIN
+  CAL[beeple calendar PDFs] --> BRAIN
+  ENG --> BRAIN[the brain: who surveyed, when, where]
+  BRAIN --> CLEAN[clean: bee + plant + specimen tables]
+  CLEAN --> REF[taxonomy lookups]
+  REF --> CHK[checklists]
+  CHK --> ANA[analysis: figures + tables]
+  ANA --> WEB[docs/ the public site]
 ```
-  iNaturalist API
-        |  pulled once, straight into DuckDB (no R-side JSON parse)
-        v
-  data/inat_observations/cache/inat_cache.duckdb
-        |  taxa resolved in batches of 30, throttled
-        v
-  the brain: project_info/finding_project_info.R
-        |  decides who surveyed, when, and where -- ONCE
-        v
-  clean scripts look up each observation's answer by obs_id
-```
+
+Three things that shape hold:
+
+- the API is pulled **once**, straight into DuckDB — no R-side JSON parse;
+- taxa are resolved in batches of 30, throttled;
+- **the brain decides who surveyed, when and where exactly once.** Every clean
+  script then looks that answer up by `obs_id` rather than working it out again.
+
+## Stage by stage
+
+| # | Stage | Script | Writes |
+|---|---|---|---|
+| 1–2 | Ingest | `inat_observations/engine/**` | the DuckDB cache |
+| 2b | Plants | `engine/pipelines/ingest_plants.R` | plant cache |
+| 2c | Field map | `inat_observations/build_field_id_map.R` | `inat_field_id_map_generated.csv` |
+| 2d | Calendars | `project_info/surveys/finding_beeple_calendar.R` | `beeple_calendar_windows_generated.csv` |
+| 3 | **The brain** | `project_info/finding_project_info.R` | `master_per_survey_info_generated.csv` + review queues |
+| 3b | Review *(interactive)* | `project_info/review/*` | updates the crosswalk |
+| 4 | Clean | `inat_observations/clean/*`, `specimens/specimen_bee_clean.R` | the `*_clean_generated.csv` tables |
+| 5 | Taxonomy | `reference/taxonomy/*` | `sd_bee_taxonomy_lookup_generated.csv` |
+| 6 | Checklists | `checklists/*` | `data/checklists/**` |
 
 | Design rule | Why |
 |---|---|
@@ -186,6 +207,11 @@ reference refresh, and re-read `LIMITATIONS.md`.
 
 Folder layout: `scripts/WHAT_THESE_FILES_ARE.txt` and the note in each folder.
 Running it: Part 1.
+
+**A normal run is offline.** IUCN status and plant common names come from a cache;
+anything a year old is refreshed automatically. Forcing a live re-check is a recovery
+hatch, not a run mode — see the flags in the header of
+`scripts/run_data_cleaning_pipeline.R`.
 
 ## Adding or changing a module
 
