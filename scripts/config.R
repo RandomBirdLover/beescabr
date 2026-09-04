@@ -68,8 +68,9 @@ BEESCABR_PACKAGES <- c(
   "rredlist", "pdftools", "rmarkdown",
   # tests
   "testthat", "withr",
-  # quality-of-life: askpass/getPass hide an API key while it is typed, ragg
-  # renders figure text better. These were once a separate "optional" list that
+  # quality of life
+  # askpass/getPass hide an API key while it is typed, ragg renders figure text
+  # better. These were once a separate "optional" list that
   # install_requirements.R named and then walked past, so a fresh machine finished
   # setup still missing them. One list, everything installed.
   "askpass", "getPass", "ragg")

@@ -69,3 +69,11 @@ test_that("no rendered description repeats its own function name", {
   bad <- api$name[mapply(function(n, t) startsWith(t, paste0(n, "(")), api$name, api$title)]
   expect_equal(sort(bad), character(0))
 })
+
+# "regenerate" is an instruction only if the reader already knows the command.
+# The file says not to edit it, so it has to say what to do instead.
+test_that("the header gives the command that regenerates the file", {
+  md <- paste(functions_md(file.path(.root, "scripts")), collapse = "\n")
+  expect_match(md, "write_functions_md()", fixed = TRUE)
+  expect_match(md, "source(\"scripts/utils/function_docs.R\")", fixed = TRUE)
+})

@@ -139,7 +139,8 @@ All of them live in `dev-docs/` unless noted.
 | 10 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
 | 11 | **TESTS_GUIDE.md** | What the test suite covers and how to run it. |
 | 12 | **FUNCTIONS.md** | *(generated)* Every function called from more than one file: what it does and what to pass it. |
-| 13 | **TODO.md** | Open work, by area. |
+| 13 | **PACKAGES.md** | *(generated)* Every R package the pipeline needs, grouped, and how to install them. |
+| 14 | **TODO.md** | Open work, by area. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
 
