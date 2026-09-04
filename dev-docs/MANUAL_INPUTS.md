@@ -85,6 +85,3 @@ pipeline keeps getting wrong.
 | Calendars | `YYYY Cabrillo Bee Survey Calendar.pdf` |
 | Columns | bare rank names — `genus`, not `taxon_genus` |
 | Suffixes | `_manual` = yours · `_generated` = the pipeline's |
-
-> iNaturalist and GBIF **exports are retired**. Do not drop export files in — the
-> pipeline pulls from the API itself.

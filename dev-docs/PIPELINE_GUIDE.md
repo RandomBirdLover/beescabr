@@ -1,6 +1,7 @@
 # The pipeline
 
-**Part 1** — running it. **Part 2** — how it works.
+**Part 1** — running it. **Part 2** — answering what it asks.
+**Part 3** — how it works, for anyone changing the code.
 
 ---
 
@@ -157,7 +158,110 @@ reference refresh, and re-read `LIMITATIONS.md`.
 
 ---
 
-# Part 2 — How it works
+# Part 2 — Answering the prompts
+
+Stage 1 stops and asks. These are the reference tables for answering.
+
+## Console prompt keys
+
+One consistent set, everywhere.
+
+**Decision gates** — stop, or carry on:
+
+| Key | Does |
+|---|---|
+| `skip` / `s` / `c` / `go` / `ok` / `y` | continue past, leave it for later |
+| `stop` / `x` | halt so you can fix it now |
+| *anything else, or bare Enter* | **re-asks** — it never guesses |
+
+**Item-by-item reviewers** (`review_crosswalk`, `review_windows`, transect ties):
+
+| Key | Does |
+|---|---|
+| `<Enter>` | accept the highlighted `*` suggestion |
+| `s` | skip this item — it returns next run |
+| `q` | save everything and quit |
+| `?` | show the keys again |
+
+Each reviewer adds its own keys on top — windows also takes `y`/`n`/`u` and
+`l` to list URLs.
+
+**Heads-up prompts** have nothing to decide: any key continues.
+
+## Unknown tags and fields
+
+The clean scripts triage every observation against the crosswalk.
+
+### Unknown tags → normal, mostly harmless
+
+Camera and lens tags (`D500`, `300mm f/4`), species names, place names. Written to
+`qc/cabr_inat_bee_unknown_tags.csv`.
+
+**This list will not trend to zero, and should not.** Skim it for a real project
+tag that was mistyped; ignore the rest.
+
+### Unknown fields → ACTION NEEDED
+
+Structured key-value fields, which *do* need a decision:
+
+```
+1. Look the field up on iNat, by id or name
+2. Add a row to the crosswalk:
+       relevant      ->  type = obs_field
+       not relevant  ->  type = ignore
+3. Re-run -- it disappears from the block
+```
+
+## The crosswalk
+
+`data/project_info/project_tags_fields.csv` controls `inat_bee_clean.R` and `inat_plant_clean.R`. Adding or editing rows changes script behavior without touching any R code.
+
+### Column reference
+
+| Column | What it holds |
+|--------|---------------|
+| `name` | Human-readable tag or field name |
+| `field_id` | iNat observation field ID(s); blank for tags and derived fields |
+| `category` | Grouping label (Transect, Beeple, Intern, Exclude, Field, Timing-Weather, Derived, Location) |
+| `type` | Controls how the script handles this row — see Type values below |
+| `datatype` | Expected value type: `text`, `taxon`, `numeric`, `time` |
+| `allowed_values` | Pipe-separated valid values; `"fill in"` = auto-fetch from iNat API on next run |
+| `applies_to` | Which export this row applies to: `bee`, `plant`, `both`, or `exclude` |
+| `method_context` | Survey method(s): `non-lethal`, `lethal`, `both`, or `n/a` |
+| `current_location` | Where the script looks for this value: `tag_list`, `obs_field`, `description (notes)`, `tag_list (photo-metadata tags)` |
+| `inat_variants` | Known alternate spellings/capitalizations in raw iNat data |
+| `specimen_plot_variants` | How this tag/field appears in physical plot or specimen sheets |
+| `verified` | `TRUE` = confirmed against real data; `FALSE` = added but not yet spot-checked |
+| `notes` | What this tag/field means and when to use it |
+| `script_rules` | Logic the script applies beyond allowed_values (normalization, derivation heuristics, overrides) |
+
+### Type values
+
+| type | Meaning |
+|------|---------|
+| `tag` | iNat observation tag (free-text label). Script looks in `tag_list`. |
+| `obs_field` | iNat observation field (structured key-value). Script looks in `ofvs` from the API. |
+| `notes_field` | Value extracted from the free-text description/notes field. |
+| `derived` | Computed by the script from other data; not directly from iNat. |
+| `ignore` | **Field exists in iNat data but is not processed. The observation is kept — only this field is skipped.** Use for survey-irrelevant fields (e.g. `Fasciation`, `Leaf aroma`). |
+| `exclude` | **Tag marks an entire observation to be dropped.** The observation is removed, not just the field. Use for non-Cabrillo projects swept in by the SD County pull, or pilot data excluded by the PI. |
+
+`ignore` and `exclude` are deliberately different: `ignore` = keep the obs, skip the field; `exclude` = drop the obs entirely.
+
+---
+
+## Complex ranks
+
+iNaturalist uses **Complex** for cryptic species groups that can't be distinguished from photos (e.g. *Andrena osmioides*, *Diadasia australis*).
+
+- Each taxon has `complex` (complex name) and `complex_taxon_id` columns in the checklist.
+- Complexes are not excluded from richness counts — each unique `taxon_id` counts as one taxon.
+- `complex` is the join key for matching iNat photo observations against museum specimens. Exact `taxon_id` match is preferred; complex-level matches are flagged separately.
+- In Tier 2 / Holway-format outputs, `Complex` values are prefixed `"(Complex) "` (e.g. `"(Complex) Diadasia australis"`) so they aren't misread as confirmed species binomials.
+
+---
+
+# Part 3 — How it works
 
 ## The flow
 
@@ -230,38 +334,6 @@ hatch, not a run mode — see the flags in the header of
 | Network code | inject a fake through `request_fn` — **never** hit the real API |
 | DuckDB | a temp database — **never** the real cache |
 
-## Working with Claude here
-
-This codebase is structured so an agent can make surgical changes. When asking
-Claude to work here:
-
-- **Name the module and its test file.** "In `inat_observations/engine/api/inat_flatten.R`,
-  add X; put tests in `test-flatten.R`" beats "add X somewhere."
-- **Ask for test-first explicitly** (it's the default per `CLAUDE.md`, but
-  restating reinforces it): "write the failing test first, confirm red, then
-  implement to green."
-- **Specify inputs/outputs** for pure functions: shape in, shape out, edge
-  cases. That's what the test will encode.
-- **For API/DB work, say "inject a fake `request_fn` / use a temp DuckDB"** so
-  the agent doesn't reach for the network or the real cache.
-- **Point at the layer.** "This is transport, so it goes in `inat_http.R`,
-  not the ingest loop" keeps changes in the right place.
-- **Batch related edits and ask for one suite run at the end** rather than many
-  round-trips.
-- **Reference this guide** (and the header comment block at the top of the
-  relevant module) so the agent loads the conventions instead of re-deriving them.
-- **For iterative work, ask Claude to keep a scratch driver** (like the smoke
-  run) to exercise the change end-to-end when the real API/DB isn't reachable.
-
-Example prompt: *"Add an `updated_since` incremental mode to
-`ingest_inat.R` so we can refresh edited observations. Test-first in
-`test-db.R` with an injected fake `request_text_fn`; confirm the test fails,
-then implement, then run the full suite."*
-
----
-
----
-
 ## The iNaturalist API
 
 **API versions this pipeline depends on** (constants live in `scripts/config.R`):
@@ -287,105 +359,16 @@ Two scripts pull from the API rather than the CSV export:
 
 ---
 
----
+## Working with Claude here
 
-## Unknown tags and fields
+The rules live in `CLAUDE.md` and Claude reads them itself. What helps most in a
+request:
 
-The clean scripts triage every observation against the crosswalk.
+- **Name the module and its test file** — "in `inat_flatten.R`, tests in
+  `test-flatten.R`" beats "add X somewhere".
+- **Point at the layer** — "this is transport, so `inat_http.R`, not the ingest loop".
+- **Say inject a fake** for anything touching the API or DuckDB.
 
-### Unknown tags → normal, mostly harmless
-
-Camera and lens tags (`D500`, `300mm f/4`), species names, place names. Written to
-`qc/cabr_inat_bee_unknown_tags.csv`.
-
-**This list will not trend to zero, and should not.** Skim it for a real project
-tag that was mistyped; ignore the rest.
-
-### Unknown fields → ACTION NEEDED
-
-Structured key-value fields, which *do* need a decision:
-
-```
-1. Look the field up on iNat, by id or name
-2. Add a row to the crosswalk:
-       relevant      ->  type = obs_field
-       not relevant  ->  type = ignore
-3. Re-run -- it disappears from the block
-```
-
-## Console prompt keys
-
-One consistent set, everywhere.
-
-**Decision gates** — stop, or carry on:
-
-| Key | Does |
-|---|---|
-| `skip` / `s` / `c` / `go` / `ok` / `y` | continue past, leave it for later |
-| `stop` / `x` | halt so you can fix it now |
-| *anything else, or bare Enter* | **re-asks** — it never guesses |
-
-**Item-by-item reviewers** (`review_crosswalk`, `review_windows`, transect ties):
-
-| Key | Does |
-|---|---|
-| `<Enter>` | accept the highlighted `*` suggestion |
-| `s` | skip this item — it returns next run |
-| `q` | save everything and quit |
-| `?` | show the keys again |
-
-Each reviewer adds its own keys on top — windows also takes `y`/`n`/`u` and
-`l` to list URLs.
-
-**Heads-up prompts** have nothing to decide: any key continues.
-
-## The crosswalk
-
-`data/project_info/project_tags_fields.csv` controls `inat_bee_clean.R` and `inat_plant_clean.R`. Adding or editing rows changes script behavior without touching any R code.
-
-### Column reference
-
-| Column | What it holds |
-|--------|---------------|
-| `name` | Human-readable tag or field name |
-| `field_id` | iNat observation field ID(s); blank for tags and derived fields |
-| `category` | Grouping label (Transect, Beeple, Intern, Exclude, Field, Timing-Weather, Derived, Location) |
-| `type` | Controls how the script handles this row — see Type values below |
-| `datatype` | Expected value type: `text`, `taxon`, `numeric`, `time` |
-| `allowed_values` | Pipe-separated valid values; `"fill in"` = auto-fetch from iNat API on next run |
-| `applies_to` | Which export this row applies to: `bee`, `plant`, `both`, or `exclude` |
-| `method_context` | Survey method(s): `non-lethal`, `lethal`, `both`, or `n/a` |
-| `current_location` | Where the script looks for this value: `tag_list`, `obs_field`, `description (notes)`, `tag_list (photo-metadata tags)` |
-| `inat_variants` | Known alternate spellings/capitalizations in raw iNat data |
-| `specimen_plot_variants` | How this tag/field appears in physical plot or specimen sheets |
-| `verified` | `TRUE` = confirmed against real data; `FALSE` = added but not yet spot-checked |
-| `notes` | What this tag/field means and when to use it |
-| `script_rules` | Logic the script applies beyond allowed_values (normalization, derivation heuristics, overrides) |
-
-### Type values
-
-| type | Meaning |
-|------|---------|
-| `tag` | iNat observation tag (free-text label). Script looks in `tag_list`. |
-| `obs_field` | iNat observation field (structured key-value). Script looks in `ofvs` from the API. |
-| `notes_field` | Value extracted from the free-text description/notes field. |
-| `derived` | Computed by the script from other data; not directly from iNat. |
-| `ignore` | **Field exists in iNat data but is not processed. The observation is kept — only this field is skipped.** Use for survey-irrelevant fields (e.g. `Fasciation`, `Leaf aroma`). |
-| `exclude` | **Tag marks an entire observation to be dropped.** The observation is removed, not just the field. Use for non-Cabrillo projects swept in by the SD County pull, or pilot data excluded by the PI. |
-
-`ignore` and `exclude` are deliberately different: `ignore` = keep the obs, skip the field; `exclude` = drop the obs entirely.
-
----
-
----
-
-## Complex ranks
-
-iNaturalist uses **Complex** for cryptic species groups that can't be distinguished from photos (e.g. *Andrena osmioides*, *Diadasia australis*).
-
-- Each taxon has `complex` (complex name) and `complex_taxon_id` columns in the checklist.
-- Complexes are not excluded from richness counts — each unique `taxon_id` counts as one taxon.
-- `complex` is the join key for matching iNat photo observations against museum specimens. Exact `taxon_id` match is preferred; complex-level matches are flagged separately.
-- In Tier 2 / Holway-format outputs, `Complex` values are prefixed `"(Complex) "` (e.g. `"(Complex) Diadasia australis"`) so they aren't misread as confirmed species binomials.
-
----
+Example: *"Add an `updated_since` incremental mode to `ingest_inat.R`. Test-first in
+`test-db.R` with an injected fake `request_text_fn`; confirm red, then implement,
+then run the full suite."*
