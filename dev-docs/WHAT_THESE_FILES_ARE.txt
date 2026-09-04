@@ -12,9 +12,6 @@ docs/ for the public website. Each of those folders has its own note.
 START HERE
 ==========
 
-  HANDOFF_CHECKLIST.md What to hand over, and what the next person needs on
-                       day one.
-
 If you are running the program and nothing has gone wrong, you do not need this
 folder at all -- the README covers a whole season, start to finish.
 

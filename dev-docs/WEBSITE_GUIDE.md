@@ -86,6 +86,26 @@ remember them.
 
 Your site then appears at `https://<you>.github.io/beescabr`.
 
+### A fork publishes its own site. Decide which one is the real one.
+
+Forking gives the fork its own `docs/` and its own Pages URL. Both sites stay live
+and neither updates the other — they are separate publications of the same code.
+
+| | |
+|---|---|
+| **Code** | flows one way: fork → pull request → upstream. Only merged changes reach everyone. |
+| **`docs/`** | does **not** flow. Each repo publishes whatever is in its own `docs/`. |
+| **Data** | never in git at all, so nothing about it is shared by forking. |
+
+So agree who publishes. The sensible answer is **whoever currently runs the
+project** — its site is the one to link from anywhere official, and the other
+should stop publishing rather than drift into a second, older version of the same
+pages. A stale public page is worse than no page: nothing on it says how old it is.
+
+If both keep publishing, keep `docs/` out of pull requests. Two people rebuilding
+the same twelve HTML files guarantees a conflict on every merge, and resolving it
+by hand is how a half-built page reaches a reader.
+
 ```r
 source("scripts/run_publishing_materials_pipeline.R")   # build only
 ```

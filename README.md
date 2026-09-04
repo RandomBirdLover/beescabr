@@ -119,7 +119,6 @@ All of them live in `dev-docs/` unless noted.
 | 12 | **SCRIPTS_GUIDE.md** · **TESTS_GUIDE.md** | Notes on the script layout and the test suite. |
 | 13 | **FUNCTIONS.md** | *(generated)* Every function called from more than one file: what it does and what to pass it. |
 | 14 | **TODO.md** | Open work, by area. |
-| 15 | **HANDOFF_CHECKLIST.md** | What to hand over, and what the next person needs on day one. |
 
 Agent instructions live in **CLAUDE.md** (rules) and **AGENTS.md** (a pointer to it).
 
