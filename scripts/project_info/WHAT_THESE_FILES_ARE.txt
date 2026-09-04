@@ -7,11 +7,25 @@ observations into "a survey somebody did on a date along a transect".
 Writes to data/project_info/.
 
 
+THE FOLDERS
+===========
+
+They mirror data/project_info/, so a script sits where its output does:
+
+    rosters/    the people roster and what is derived from it
+    surveys/    the survey record: dates, calendars, transects
+    review/     the QC files a person looks at
+
+At this level sit finding_project_info.R, the orchestrator that builds the
+master survey record and writes into all three of those, and
+collect_plant_names.R, which gathers plant names into the crosswalk.
+
+
 THE PEOPLE
 ==========
 
-  build_people_roster.R   ONE ROW PER HUMAN, with a stable person_id.
-  build_participation.R   who actually took part, DERIVED from the surveys.
+  rosters/build_people_roster.R   ONE ROW PER HUMAN, with a stable person_id.
+  rosters/build_participation.R   who actually took part, DERIVED from the surveys.
 
 Those two are separate on purpose. The roster is declared: it says a person
 exists and how to spell their name. Participation is derived: it says what they
@@ -26,9 +40,10 @@ iNaturalist -- and two people share a first name.
 THE SURVEYS
 ===========
 
-  finding_project_info.R              builds the master survey record
-  finding_beeple_calendar.R           parses the volunteer calendar PDFs
-  resolve_beeple_transects_per_survey.R   which transect each survey covered
+  finding_project_info.R                       builds the master survey record
+  surveys/finding_beeple_calendar.R            parses the volunteer calendar PDFs
+  surveys/finding_survey_dates.R               when each survey happened
+  surveys/resolve_beeple_transects_per_survey.R  which transect each survey covered
 
 review/ writes the QC files: date windows that do not line up, transects that
 overlap, iNat tags that matched no survey. Questions for a person, not errors.

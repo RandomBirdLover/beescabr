@@ -281,7 +281,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
 
   # plant_genus + full-binomial plant_species (the plant IS the taxon here) -- uniform
   # with the bee + specimen tables so analysis can group on the same two columns everywhere.
-  if (!exists("plant_name_parts")) source("scripts/reference/plant_lookup_join.R")
+  if (!exists("plant_name_parts")) source("scripts/reference/taxonomy/plant_lookup_join.R")
   .pp <- plant_name_parts(df$scientific_name)
   df$plant_genus <- .pp$plant_genus; df$plant_species <- .pp$plant_species
 
@@ -289,7 +289,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
 
   # bake the genus-level common name onto each plant record (fetched once from iNaturalist,
   # cache-backed, offline-safe) so figures/field guides read a column, never the network.
-  if (!exists("enrich_plant_common_column")) source("scripts/reference/enrich_lookups.R")
+  if (!exists("enrich_plant_common_column")) source("scripts/reference/refresh/enrich_lookups.R")
   clean <- tryCatch(enrich_plant_common_column(clean),
                     error = function(e) { message("  !! common-name enrichment skipped: ", conditionMessage(e)); clean })
 

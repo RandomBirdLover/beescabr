@@ -16,7 +16,7 @@
 suppressWarnings(suppressMessages({library(dplyr); library(readr)}))
 if (!exists("lookup_subtree"))   source("scripts/checklists/checklist_build.R")
 if (!exists("cabr_survey_box"))  source("scripts/spatial/spatial_utils.R")
-if (!exists("enrich_iucn_columns")) source("scripts/reference/enrich_lookups.R")  # bake IUCN status
+if (!exists("enrich_iucn_columns")) source("scripts/reference/refresh/enrich_lookups.R")  # bake IUCN status
 
 CABR_OUT_DIR <- "data/checklists/cabr"
 

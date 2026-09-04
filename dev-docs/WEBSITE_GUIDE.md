@@ -24,7 +24,7 @@ Rscript scripts/run_publishing_materials_pipeline.R    # copies them into docs/ 
 git add -A && git commit && git push                   # GitHub Pages serves the new docs/
 ```
 
-The publisher is `scripts/publish/publish_pages.R`. It copies each page named in
+The publisher is `scripts/website/publish_pages.R`. It copies each page named in
 `PUBLISH_PAGES` from the season folder into `docs/`, injects the "Back to main page"
 pill, and rebuilds `index.html` from the manifest.
 

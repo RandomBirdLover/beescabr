@@ -113,7 +113,7 @@ source("scripts/inat_observations/engine/pipelines/ingest_plants.R")  # plant pu
 source("scripts/inat_observations/build_field_id_map.R")             # defines build_field_id_map() -- stage 2c
 # reference/ (holway.R, taxonomy_reference.R, verify.R) is pulled in by taxonomy_lookup_build.R (stage 5).
 source("scripts/spatial/spatial_utils.R")          # boundaries, PROJECT_CRS (once)
-source("scripts/project_info/finding_beeple_calendar.R")  # defines finding_beeple_calendar() -- stage 2d
+source("scripts/project_info/surveys/finding_beeple_calendar.R")  # defines finding_beeple_calendar() -- stage 2d
 source("scripts/project_info/finding_project_info.R")     # THE brain: provenance + unknowns + survey_dates
 source("scripts/project_info/review/qc_review_mastercrosswalk.R")         # interactive review of unknown tags + fields
 source("scripts/project_info/review/qc_review_survey_windows.R")           # interactive review of survey-date windows
@@ -126,17 +126,17 @@ source("scripts/inat_observations/review/qc_review_inat_misid.R")         # defi
 # Both the interactive Holway->iNat resolver AND the non-interactive lookup builder run in
 # the pipeline now (stages 4 + 5); they pull their own deps (holway.R, taxonomy_reference.R,
 # verify.R, checklist_build.R) via need().
-source("scripts/reference/manual_overrides.R")        # apply_manual_overrides / write_review_worklist (name-change fixes)
-source("scripts/reference/holway_reference_build.R")  # defines build_holway_reference() -- stage 4 (interactive)
-source("scripts/reference/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
-source("scripts/reference/verify_prompt.R")           # defines prompt_verify_taxa() -- pass-2 verification
-source("scripts/reference/plant_lookup_join.R")           # attach_flower_ids() -- flower taxon_id + in_park
-source("scripts/reference/plant_taxonomy_lookup_build.R") # defines build_plant_taxonomy_lookup() -- stage 5c
+source("scripts/reference/prompts/manual_overrides.R")        # apply_manual_overrides / write_review_worklist (name-change fixes)
+source("scripts/reference/taxonomy/holway_reference_build.R")  # defines build_holway_reference() -- stage 4 (interactive)
+source("scripts/reference/taxonomy/taxonomy_lookup_build.R")   # defines build_taxonomy_lookup() -- stage 5
+source("scripts/reference/prompts/verify_prompt.R")           # defines prompt_verify_taxa() -- pass-2 verification
+source("scripts/reference/taxonomy/plant_lookup_join.R")           # attach_flower_ids() -- flower taxon_id + in_park
+source("scripts/reference/taxonomy/plant_taxonomy_lookup_build.R") # defines build_plant_taxonomy_lookup() -- stage 5c
 source("scripts/project_info/collect_plant_names.R")      # defines review_plant_names() -- stage 7b
 source("scripts/specimens/specimen_clean_helpers.R")          # pure specimen-cleaning helpers
 source("scripts/specimens/specimen_bee_clean.R")      # defines clean_specimens() -- stage 6b
 source("scripts/specimens/specimen_raw_worklist.R")      # defines tidy_raw_specimens() -- stage 6a raw worklist
-source("scripts/reference/specimen_id_prompt.R")      # defines resolve_specimen_taxa() -- stage 6c interactive taxon-id resolve
+source("scripts/reference/prompts/specimen_id_prompt.R")      # defines resolve_specimen_taxa() -- stage 6c interactive taxon-id resolve
 # CHECKLISTS (stage 9): normalized-tree builder + the 3 per-scope orchestrators. Sourced here so
 # the whole pipeline runs end-to-end with NO manual steps (cabr_inat / cabr_specimen / cabr_official /
 # pl_inat / sd_holway / sd_inat / sd_holway_and_inat -- parent taxa as their own rows).
@@ -227,9 +227,9 @@ main <- function() {
     bx_kv("Refresh", if (.forced) "forcing a full re-check against the live APIs (BEESCABR_REFRESH=1)…"
                      else sprintf("%d cache(s) past %d days — re-checking against the live APIs…",
                                   length(.overdue), REFRESH_MAX_AGE_DAYS))
-    tryCatch(source("scripts/reference/refresh_iucn_status.R"),
+    tryCatch(source("scripts/reference/refresh/refresh_iucn_status.R"),
              error = function(e) bx_note("IUCN refresh failed (", conditionMessage(e), ") — kept the existing cache."))
-    tryCatch(source("scripts/reference/refresh_plant_common_names.R"),
+    tryCatch(source("scripts/reference/refresh/refresh_plant_common_names.R"),
              error = function(e) bx_note("plant-name refresh failed (", conditionMessage(e), ") — kept the existing cache."))
   }
 

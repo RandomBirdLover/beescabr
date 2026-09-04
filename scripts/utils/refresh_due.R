@@ -39,9 +39,9 @@ refresh_due <- function(path, max_age_days = REFRESH_MAX_AGE_DAYS,
 # The reference caches a normal run depends on, in the order they matter.
 REFRESH_CACHES <- list(
   list(key = "IUCN Red List status", path = "data/checklists/iucn/iucn_status_generated.csv",
-       tool = "scripts/reference/refresh_iucn_status.R", needs = "internet + a free IUCN token"),
+       tool = "scripts/reference/refresh/refresh_iucn_status.R", needs = "internet + a free IUCN token"),
   list(key = "plant common names",   path = "data/checklists/plants/plant_genus_common_generated.csv",
-       tool = "scripts/reference/refresh_plant_common_names.R", needs = "internet")
+       tool = "scripts/reference/refresh/refresh_plant_common_names.R", needs = "internet")
 )
 
 # Report any cache past its age limit. Returns a list (empty = all current) so the

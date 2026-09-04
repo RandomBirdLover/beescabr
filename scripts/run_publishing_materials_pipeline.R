@@ -9,8 +9,8 @@
 #
 # This stage re-renders ONLY the pages that go PUBLIC (field guides, park summary,
 # least-sampled, the transect + bee-bounty maps, and the occurrence explorer), then
-# copies them into docs/ and rebuilds the landing page (via scripts/publish/). The
-# publish modules live in scripts/publish/, the way cleaning lives in scripts/clean/
+# copies them into docs/ and rebuilds the landing page (via scripts/website/). The
+# publish modules live in scripts/website/, the way cleaning lives in scripts/clean/
 # and analysis in scripts/analysis/.
 #
 #   Rscript scripts/run_publishing_materials_pipeline.R                     # rebuild docs/ (then git push to deploy)
@@ -30,7 +30,7 @@ source("scripts/analysis/shared/forage_selectivity.R")
 source("scripts/analysis/shared/not_on_holway.R")
 
 # the analysis scripts that emit a PUBLIC html page. ADD NEW PUBLIC PAGES HERE
-# (and add the matching row to PUBLISH_PAGES in scripts/publish/publish_pages.R).
+# (and add the matching row to PUBLISH_PAGES in scripts/website/publish_pages.R).
 PUBLIC_PAGES <- c(
   "bee_field_guide.R", "bee_field_guide_genus.R", "nps_summary_tables.R",
   "least_sampled_bees.R", "bee_bounties.R", "transect_map.R",
@@ -49,7 +49,7 @@ ok <- vapply(PUBLIC_PAGES, function(nm) {
 if (any(!ok)) message("  (failed: ", paste(PUBLIC_PAGES[!ok], collapse = ", "), ")")
 
 message("\n==> Publishing into docs/")
-pub <- tryCatch(system2("Rscript", "scripts/publish/publish_pages.R", stdout = TRUE, stderr = TRUE),
+pub <- tryCatch(system2("Rscript", "scripts/website/publish_pages.R", stdout = TRUE, stderr = TRUE),
                 error = function(e) conditionMessage(e))
 message(paste(pub, collapse = "\n"))
 

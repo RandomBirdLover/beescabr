@@ -13,7 +13,7 @@ OUT <- "dev-docs"; dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 
 # ---- website design colors, parsed LIVE from their sources so the sheet never goes stale ----
 # landing page CSS variables live in publish_pages.R (:root light set first, dark set second)
-.pp <- readLines("scripts/publish/publish_pages.R", warn = FALSE)
+.pp <- readLines("scripts/website/publish_pages.R", warn = FALSE)
 .vars <- regmatches(.pp, gregexpr("--[a-z0-9-]+ *: *#[0-9a-fA-F]{3,8}", .pp))
 .vars <- unlist(.vars)
 .vn <- sub(" *:.*$", "", .vars); .vh <- sub("^.*: *", "", .vars)

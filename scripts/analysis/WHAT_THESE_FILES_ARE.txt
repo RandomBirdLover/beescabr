@@ -16,11 +16,41 @@ the same folder its output does:
     interactions/       which bees visit which plants
     method_comparison/  netting versus photographing
     reference/          field guide, maps, explorers, NPS summary tables
-    shared/             helpers. These draw nothing; other scripts source them.
+    shared/             helpers. Sourced by other scripts; produce nothing.
 
-At this level sit only findings_summaries.R, which runs last and writes the
-index a reader starts from, and render_palette.R, which draws the theme swatch
-into dev-docs/.
+WHERE A NEW FILE GOES, IN ONE RULE
+----------------------------------
+
+    a topic folder     it produces that topic's output
+    shared/            it produces NOTHING -- other scripts source it for its
+                       functions. Sourcing a file in here must never write
+                       anything to disk. Any write call lives inside a function
+                       body, so nothing happens until a caller asks for it.
+    this level         it produces output that belongs to no single topic
+
+That is why findings_summaries.R and render_palette.R sit at the top rather than
+in shared/: both of them RUN. findings_summaries.R writes a findings file into
+every topic folder plus the index a reader starts from; render_palette.R draws
+the theme swatch into dev-docs/. Filing either under shared/ would make the
+folder stop meaning anything -- you would have to open a file to find out
+whether sourcing it has side effects.
+
+
+SOME OF THESE PRODUCE WEB PAGES, AND THAT IS FINE
+=================================================
+
+About ten scripts here write .html as well as .png and .csv -- the explorers,
+the field guide, the bounty tables, the transect map. They still belong here,
+not in scripts/website/.
+
+A script that computes a page is an analysis. It writes into
+data/analysis/<topic>/website/, beside the CSV of the same numbers. Afterwards
+scripts/website/publish_pages.R copies those pages into docs/ and wraps them in
+the site -- that folder is the only thing that writes into docs/.
+
+Rule of thumb: if you are changing what a page SAYS, the fix is here, in the
+script that computed it. If you are changing how the SITE is assembled, the fix
+is in scripts/website/.
 
 
 THE RULE THAT WILL BITE YOU

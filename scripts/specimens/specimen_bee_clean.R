@@ -244,7 +244,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
   df$flower_visited     <- .sbc_flower_from_method(df$method_or_plant)
   df$flower_visited_raw <- df$flower_visited                                              # the intern's label, verbatim
   df$flower_visited     <- normalize_flower_name(df$flower_visited, plant_variant_map(cw)) # -> canonical name via master_crosswalk
-  if (!exists("attach_flower_ids")) source("scripts/reference/plant_lookup_join.R")
+  if (!exists("attach_flower_ids")) source("scripts/reference/taxonomy/plant_lookup_join.R")
   df <- attach_flower_ids(df)                                                             # flower_taxon_id + flower_in_park from the plant lookup
   df <- mask_out_of_park_flowers(df)                                                      # not-in-park plants -> "flower - angiosperm" (don't show scientists an out-of-park ID)
   df$bee_situation  <- sbc_bee_situation(df)   # on_flower / on_ground / aerial (mirrors inat_bee_clean)
@@ -298,7 +298,7 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
 
   # bake the current IUCN Red List status onto each species (fetched once, cache-backed,
   # offline-safe) so the analysis layer reads a column instead of hitting the network.
-  if (!exists("enrich_iucn_columns")) source("scripts/reference/enrich_lookups.R")
+  if (!exists("enrich_iucn_columns")) source("scripts/reference/refresh/enrich_lookups.R")
   clean <- tryCatch(enrich_iucn_columns(clean),
                     error = function(e) { message("  !! IUCN enrichment skipped: ", conditionMessage(e)); clean })
 

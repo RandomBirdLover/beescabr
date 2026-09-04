@@ -418,7 +418,7 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   if (!"survey_source" %in% names(df)) df$survey_source <- NA_character_   # tag / inferred_on_transect
   df$survey_method <- "nonlethal"   # iNaturalist observations are the NON-lethal survey
   df$bee_situation <- ibc_bee_situation(df)   # on_flower / on_ground / nest / missing
-  if (!exists("attach_flower_ids")) source("scripts/reference/plant_lookup_join.R")
+  if (!exists("attach_flower_ids")) source("scripts/reference/taxonomy/plant_lookup_join.R")
   df <- attach_flower_ids(df)                 # flower_taxon_id + flower_in_park from the plant lookup
 
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))

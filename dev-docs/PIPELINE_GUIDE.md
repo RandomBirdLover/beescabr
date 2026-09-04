@@ -176,7 +176,7 @@ then implement, then run the full suite."*
 Two scripts pull from the API rather than the CSV export:
 
 - `scripts/inat_observations/inat_bee_clean.R` — fetches survey observations, tags, and observation fields via `/v1/observations`.
-- `scripts/reference/taxonomy_lookup_build.R` — per-taxon taxonomy/ancestry lookups (~400 calls, ~3–4 min), via the v1 taxa endpoints.
+- `scripts/reference/taxonomy/taxonomy_lookup_build.R` — per-taxon taxonomy/ancestry lookups (~400 calls, ~3–4 min), via the v1 taxa endpoints.
 
 **Endpoint:** `https://api.inaturalist.org/v1/observations`. Read-only; no authentication required. Max `per_page = 200`; `inat_bee_clean.R` pages with an `id_above` cursor. Rate limit: ~1 request/second; scripts include `Sys.sleep(1)`.
 

@@ -43,9 +43,9 @@
 # =============================================================
 
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
-if (!exists("build_participation")) source("scripts/project_info/build_participation.R")
-if (!exists("build_identification_counts")) source("scripts/project_info/build_identification_counts.R")
-if (!exists("roster_view")) source("scripts/project_info/roster_view.R")
+if (!exists("build_participation")) source("scripts/project_info/rosters/build_participation.R")
+if (!exists("build_identification_counts")) source("scripts/project_info/rosters/build_identification_counts.R")
+if (!exists("roster_view")) source("scripts/project_info/rosters/roster_view.R")
 library(dplyr)
 library(stringr)
 library(tidyr)
@@ -56,10 +56,10 @@ if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/
 
 # transect resolver (majority rule) -- defines resolve_transects(); guarded so the
 # brain still runs if the file isn't present.
-if (file.exists("scripts/project_info/resolve_beeple_transects_per_survey.R")) source("scripts/project_info/resolve_beeple_transects_per_survey.R")
-if (file.exists("scripts/project_info/finding_survey_dates.R")) source("scripts/project_info/finding_survey_dates.R")
-if (file.exists("scripts/project_info/finding_specimen_dates.R")) source("scripts/project_info/finding_specimen_dates.R")
-if (file.exists("scripts/project_info/rescue_on_transect_surveys.R")) source("scripts/project_info/rescue_on_transect_surveys.R")
+if (file.exists("scripts/project_info/surveys/resolve_beeple_transects_per_survey.R")) source("scripts/project_info/surveys/resolve_beeple_transects_per_survey.R")
+if (file.exists("scripts/project_info/surveys/finding_survey_dates.R")) source("scripts/project_info/surveys/finding_survey_dates.R")
+if (file.exists("scripts/project_info/surveys/finding_specimen_dates.R")) source("scripts/project_info/surveys/finding_specimen_dates.R")
+if (file.exists("scripts/project_info/surveys/rescue_on_transect_surveys.R")) source("scripts/project_info/surveys/rescue_on_transect_surveys.R")
 
 # ---- paths ----
 # Every export listed here is pooled through the SAME membership + survey-date
@@ -280,7 +280,7 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
 }
 
 # ------------------------------------------------------------
-# survey_dates + review_windows live in scripts/project_info/finding_survey_dates.R
+# survey_dates + review_windows live in scripts/project_info/surveys/finding_survey_dates.R
 #   fpi_survey_dates() + fpi_norm_transect() -- sourced at the top of this file.
 # ------------------------------------------------------------
 
