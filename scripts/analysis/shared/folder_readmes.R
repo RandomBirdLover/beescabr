@@ -172,7 +172,8 @@ FOLDER_NOTES <- list(
     "Which bees visit which plants. The networks subfolder holds the whole web and",
     "its statistics; top_plants ranks the plants that carry the most bee visits."),
   "method_comparison" = paste(
-    "Netting versus photographing. Everything here is restricted to a like-for-like",
+    "Lethal (netting) versus non-lethal (photographing). Everything here is",
+    "restricted to a like-for-like",
     "window so the two methods are compared on equal footing rather than on how many",
     "records each happened to produce.",
     "\n\nTwo different comparisons run in this project and only one of them is here.",

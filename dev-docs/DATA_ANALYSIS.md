@@ -35,7 +35,7 @@ flowchart TD
     P3[survey effort by month] ~~~ P4[most-observed bee,<br/>year to year]
   end
 
-  subgraph METH[method_comparison/ — nets vs photos]
+  subgraph METH[method_comparison/ — lethal vs non-lethal]
     direction LR
     M1[yield<br/>by method AND contributor] ~~~ M2[effort<br/>trips per method]
     M3[efficiency<br/>rarefied to equal effort]
@@ -121,7 +121,8 @@ These hold everywhere unless the table below overrides them.
 |---|---|
 | **Both ranks, always** | Every diversity / accumulation / interaction result runs at genus *and* species |
 | **Scope is stated on every figure** | Never mixed silently. `scope_cap()` prints it. |
-| **Method routing** | lethal = specimen table (net) · non-lethal = iNaturalist (photo) |
+| **Method routing** | lethal = specimen table · non-lethal = iNaturalist |
+| **Say lethal / non-lethal** | That is how the data is coded (`survey_method`) and how figures are labelled (`BEE_METHOD_LABEL`). Gloss it as "(net)" and "(photo)" on first use in a document, then stay with the coded terms. Do not switch to "specimen vs photo" or "nets vs photos" mid-way — a reader cannot tell whether a new pair of words means a new comparison. |
 | **Season window** | Year-to-year comparisons clipped to `WINDOW_MONTHS` |
 | **Transects** | BST, UPMON, TP, OT. TP is not oversampled — it is walked in both directions. |
 | **Specimen coordinates are transect centroids** | ~980 specimens fall on ~18 points, so a specimen map is misleading |
