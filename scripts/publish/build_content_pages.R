@@ -77,7 +77,13 @@ ids <- if (!is.null(id) && nrow(id)) {
   # plant-only identifiers sort AFTER everyone else (the bulk of the work is bees);
   # within each group, order by combined ID effort most->least. id_count is sort-only
   # metadata (never displayed, like email); blanks last. "both" stays in the bee group.
-  cnt <- if ("id_count" %in% names(id)) suppressWarnings(as.integer(id$id_count)) else rep(NA_integer_, nrow(id))
+  # identification counts are DERIVED (identification_counts_generated.csv, CABR
+  # records only), not typed: the survey team beside this list is already ranked by
+  # a counted figure, and a hand-typed one drifts every time somebody makes an ID.
+  .idc <- rd(PATHS$identification_counts)
+  cnt <- if (!is.null(.idc) && nrow(.idc))
+           suppressWarnings(as.integer(.idc$total[match(id$person_id, .idc$person_id)])) else
+           rep(NA_integer_, nrow(id))
   cnt[is.na(cnt)] <- -1L
   plant_last <- as.integer(tolower(sq(id$taxa_identified)) == "plant")
   id[order(plant_last, -cnt, tolower(sq(id$last_name)), tolower(id$name)), , drop = FALSE]

@@ -31,7 +31,7 @@ on their own from `scripts/reference/`.
 | `inat_observations/engine/` | `data/inat_observations/cache/` | shared machine: `api/` (HTTP, flatten, cache), `db/` (DuckDB stores), `pipelines/` (ingest + export) |
 | `project_info/` | `data/project_info/` | the "brain" (survey membership), survey record, calendar parsing, interactive review |
 | `specimens/` | `data/specimens/` | specimen-record cleaning |
-| `reference/` | `data/reference/` | `holway.R`, `holway_reference_build.R` (interactive Holway→iNat resolver, with parent **roll-up** — complex→subgenus→genus), `taxonomy_reference.R`, `verify.R`, `taxonomy_lookup_build.R` (builds `sd_bee_taxonomy_lookup.csv`), `enrich_lookups.R`, plant/taxonomy lookup builders, **plus the online refresh tools `refresh_iucn_status.R` + `refresh_plant_common_names.R`** (run via `BEESCABR_REFRESH=1`, or standalone) |
+| `reference/` | `data/reference/` | `holway.R`, `holway_reference_build.R` (interactive Holway→iNat resolver, with parent **roll-up** — complex→subgenus→genus), `taxonomy_reference.R`, `verify.R`, `taxonomy_lookup_build.R` (builds `sd_bee_taxonomy_lookup_generated.csv`), `enrich_lookups.R`, plant/taxonomy lookup builders, **plus the online refresh tools `refresh_iucn_status.R` + `refresh_plant_common_names.R`** (run via `BEESCABR_REFRESH=1`, or standalone) |
 | `checklists/` | `data/checklists/` | shared helper `checklist_build.R`, plus **rough-draft** region builders `cabr_bee_checklist.R`, `pl_bee_checklist.R`, `sd_bee_checklist.R` (not sourced until built) |
 | `spatial/` | `data/spatial/shapefiles/` | `spatial_utils.R` — loads/reprojects boundary + transect layers and applies buffers (in-memory; never written) |
 | `analysis/` | — | figure + table scripts, all driven by `scripts/run_all_analysis_pipeline.R` |
@@ -45,12 +45,12 @@ The runner sources modules in this order and calls them from `main()`:
 |---|---|---|---|
 | 1–2 | **Ingest + export** | `inat_observations/engine/**` | `inat_observations/cache/inat_cache.duckdb`, `export_flat.rds` |
 | 2b | **Plants** | `inat_observations/engine/pipelines/ingest_plants.R` | `inat_observations/cache/export_flat_plant.rds` |
-| 2c | **Field map** | `inat_observations/build_field_id_map.R` | `inat_observations/reference/inat_field_id_map.csv` |
+| 2c | **Field map** | `inat_observations/build_field_id_map.R` | `inat_observations/reference/inat_field_id_map_generated.csv` |
 | 2d | **Beeple calendars** | `project_info/finding_beeple_calendar.R` | `project_info/survey_date_sources/beeple_calendar_windows/beeple_calendar_windows_generated.csv` |
-| 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `inat_observations/cabr_inat_raw.csv`, `project_info/surveys/master_per_survey_info_generated.csv`, the review queues |
+| 3 | **Brain** (membership, provenance, survey record) | `project_info/finding_project_info.R` → sources `project_info/resolve_beeple_transects_per_survey.R`, `project_info/finding_survey_dates.R`, `project_info/finding_specimen_dates.R` | `inat_observations/inat_raw/cabr_inat_raw_generated.csv`, `project_info/surveys/master_per_survey_info_generated.csv`, the review queues |
 | 3b–3e | **Review** (interactive) | `project_info/qc_review_mastercrosswalk.R`, `project_info/qc_review_survey_windows.R` (+ optional y/N notes review → `project_info/qc_review_mastercrosswalk_notes.R`) | updates `project_info/master_crosswalk_manual.csv` + `*/review/*` |
-| 4 | **Clean** | `inat_observations/inat_bee_clean.R` (live) · `specimens/specimen_bee_clean.R` (stub) | `inat_observations/inat_clean/cabr_inat_bee_clean.csv` (bee; plant + specimen pending) |
-| 5 | **Reference / taxonomy** (restored) | `reference/taxonomy_lookup_build.R` → `build_taxonomy_lookup()` (non-interactive, wired here). The interactive `reference/holway_reference_build.R` (Holway→iNat resolver, **parent roll-up**) is run **by hand**; helpers `holway.R`, `taxonomy_reference.R`, `verify.R` load via its `need()` block | `reference/holway_sd_bee_reference_table_v3.csv` (by hand), `reference/sd_bee_taxonomy_lookup.csv` |
+| 4 | **Clean** | `inat_observations/inat_bee_clean.R` (live) · `specimens/specimen_bee_clean.R` (stub) | `inat_observations/inat_clean/cabr_inat_bee_clean_generated.csv` (bee; plant + specimen pending) |
+| 5 | **Reference / taxonomy** (restored) | `reference/taxonomy_lookup_build.R` → `build_taxonomy_lookup()` (non-interactive, wired here). The interactive `reference/holway_reference_build.R` (Holway→iNat resolver, **parent roll-up**) is run **by hand**; helpers `holway.R`, `taxonomy_reference.R`, `verify.R` load via its `need()` block | `reference/holway_sd_bee_reference_table_v3_generated.csv` (by hand), `reference/sd_bee_taxonomy_lookup_generated.csv` |
 | 5+ | **Checklists** *(rough drafts — run LAST, not sourced yet)* | `checklists/cabr_bee_checklist.R`, `pl_bee_checklist.R`, `sd_bee_checklist.R` on shared helper `checklist_build.R` | (pending) `data/checklists/{cabr,point_loma,sd_county}/…_native_bee_checklist.csv` |
 
 ```mermaid
@@ -60,9 +60,9 @@ flowchart TD
   SPEC[(specimen record .xlsx)] --> BRAIN
   CAL[beeple calendar PDFs] --> BRAIN
   BRAIN --> PSI[/project_info/surveys/master_per_survey_info_generated.csv/]
-  BRAIN --> RAW[/observations/cabr_inat_raw.csv/]
+  BRAIN --> RAW[/observations/cabr_inat_raw_generated.csv/]
   BRAIN --> REV[review queues] --> RW[project_info/review/qc_review_*.R] --> BRAIN
-  ENG -.rebuild pending.-> REF[reference/ taxonomy<br/>rebuild pending] --> LOOK[/reference/sd_bee_taxonomy_lookup.csv/]
+  ENG -.rebuild pending.-> REF[reference/ taxonomy<br/>rebuild pending] --> LOOK[/reference/sd_bee_taxonomy_lookup_generated.csv/]
   HOL[Holway v3 checklist] -.-> REF
   REF -.rebuild pending.-> CHK[data/checklists/**]
 ```
@@ -73,8 +73,8 @@ flowchart TD
   and reference scripts do no file I/O of their own — they inherit paths from here.
 - **`need()` / `src()`** helpers resolve script paths relative to the **repo root**
   (`file.path("scripts", rel)`), so scripts run from the repo root regardless of folder.
-- **`inat_observations/inat_bee_clean.R`** (stage 4, live): reads the brain's `cabr_inat_raw.csv`,
-  joins coords + `taxon_id` from the export, writes `cabr_inat_bee_clean.csv` (one labeled CABR
+- **`inat_observations/inat_bee_clean.R`** (stage 4, live): reads the brain's `cabr_inat_raw_generated.csv`,
+  joins coords + `taxon_id` from the export, writes `cabr_inat_bee_clean_generated.csv` (one labeled CABR
   bee table; taxonomy columns are blank until the lookup rebuild). It also uses the transect +
   `access_routes_to_transects/cabr_survey_access_routes.shp` (Humphreys Rd) layers to re-mark
   **walk-in** obs — tagged but off every transect and on the access road — as `is_survey = FALSE`

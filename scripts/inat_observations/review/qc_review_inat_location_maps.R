@@ -21,15 +21,15 @@ suppressWarnings(suppressMessages({library(dplyr); library(readr); library(jsonl
 
 BLRM_DIR        <- "data/inat_observations/review/location"
 BLRM_MAPS_DIR   <- file.path(BLRM_DIR, "by_surveyors")   # the per-surveyor maps live here; CSVs + instructions stay at the top of review/location/
-BLRM_BEE_CSV    <- file.path(BLRM_DIR, "qc_review_inat_bee_location.csv")
-BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "qc_review_inat_plant_location.csv")
+BLRM_BEE_CSV    <- file.path(BLRM_DIR, "qc_review_inat_bee_location_generated.csv")
+BLRM_PLANT_CSV  <- file.path(BLRM_DIR, "qc_review_inat_plant_location_generated.csv")
 BLRM_ROSTER     <- PATHS$people
 BLRM_MASTER     <- PATHS$per_survey
 BLRM_TRANSECTS  <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"
 BLRM_BOUNDARY   <- "data/spatial/shapefiles/boundaries/cabr/nps_official/cabr_boundary_nps_official.shp"
 BLRM_ASSETS     <- "scripts/inat_observations/assets"
 BLRM_TEMPLATE   <- file.path(BLRM_ASSETS, "location_map_template.html")
-BLRM_INSTRUCT   <- file.path(BLRM_ASSETS, "cabr_fix_instructions.html")
+BLRM_INSTRUCT   <- file.path(BLRM_ASSETS, "cabr_inat_location_fixing_instructions.html")
 BLRM_LEAFLET    <- file.path(BLRM_ASSETS, "leaflet")
 BLRM_OFF_M      <- 50   # on-transect buffer radius (metres) -- matches IBC_OFF_TRANSECT_M
 
@@ -242,12 +242,12 @@ build_location_review_maps <- function(write = TRUE) {
   }
 
   if (write && file.exists(BLRM_INSTRUCT))
-    file.copy(BLRM_INSTRUCT, file.path(BLRM_DIR, "cabr_fix_instructions.html"), overwrite = TRUE)
+    file.copy(BLRM_INSTRUCT, file.path(BLRM_DIR, "cabr_inat_location_fixing_instructions.html"), overwrite = TRUE)
 
   n_bee <- length(bee); n_plant <- length(plant)
   message(sprintf("  %d bee + %d plant survey pins sit >50 m from any transect — still in the clean data, just flagged to re-check on iNaturalist.",
                   n_bee, n_plant))
-  message(sprintf("  Built a 'pins to fix' map per surveyor (+ cabr_fix_instructions.html) in %s/", BLRM_DIR))
+  message(sprintf("  Built a 'pins to fix' map per surveyor (+ cabr_inat_location_fixing_instructions.html) in %s/", BLRM_DIR))
   if (length(made)) {
     message("  → SEND each surveyor their own map (with the instructions page) so they can re-check theirs — biggest lists first:")
     ord <- order(-vapply(made, function(s) s$n, numeric(1)))          # biggest lists first (Tom / Phil at the top)

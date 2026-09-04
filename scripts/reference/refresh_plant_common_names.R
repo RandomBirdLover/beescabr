@@ -11,7 +11,7 @@
 #
 # Run this only to RE-CHECK genera already cached (e.g. iNat added a preferred common name that
 # was missing before). It forces a full re-query and rewrites
-# data/checklists/plants/plant_genus_common.csv. Needs internet; NO token.
+# data/checklists/plants/plant_genus_common_generated.csv. Needs internet; NO token.
 #
 #   From the repo root:  Rscript scripts/reference/refresh_plant_common_names.R
 #   Or inside the pipeline:  BEESCABR_REFRESH=1 Rscript scripts/run_data_cleaning_pipeline.R

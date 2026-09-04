@@ -77,8 +77,8 @@ Two reference tables are the **authority** on what a taxon is:
 
 | what | table (`PATHS` key) | join key |
 |---|---|---|
-| bees | `data/reference/sd_bee_taxonomy_lookup.csv` (`taxonomy_lookup`) | `taxon_id` |
-| plants | `data/reference/cabr_plant_taxonomy_lookup.csv` (`plant_taxonomy_lookup`) | `taxon_id` |
+| bees | `data/reference/sd_bee_taxonomy_lookup_generated.csv` (`taxonomy_lookup`) | `taxon_id` |
+| plants | `data/reference/cabr_plant_taxonomy_lookup_generated.csv` (`plant_taxonomy_lookup`) | `taxon_id` |
 
 Rules, in order of how often they get broken:
 

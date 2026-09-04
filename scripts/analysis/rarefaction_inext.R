@@ -34,8 +34,8 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/accumulation")  # iNEXT is JOURNAL-only; consolidated with accumulation
-OUT_REPORT    <- file.path(DIR_REPORT,  "richness/accumulation")  # (report iNEXT is skipped -- report uses vegan rarefaction)
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction")  # iNEXT is JOURNAL-only; lives with the other rarefaction output
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # (report iNEXT is skipped -- report uses vegan rarefaction)
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
@@ -158,4 +158,4 @@ for (rk in names(RANKS)) {
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colors
 }
 
-message("Wrote rarefaction_by_{method,observer}_inext_*_{species,genus} into journal richness/accumulation/ (iNEXT is journal-only)")
+message("Wrote rarefaction_by_{method,observer}_inext_*_{species,genus} into journal richness/rarefaction/ (iNEXT is journal-only)")

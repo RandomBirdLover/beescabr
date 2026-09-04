@@ -3,8 +3,8 @@
 #
 # "Every analysis has a summary." For each analysis in the pipeline this writes a small,
 # plain-language FINDINGS summary -- a field/value table (question, method, what it controls
-# for, the headline finding, caveats, outputs) -- into data/analysis/findings/, and then a
-# master data/analysis/findings/findings_index.csv with one row per analysis (name, type,
+# for, the headline finding, caveats, outputs) -- into data/analysis/findings_generated/, and then a
+# master data/analysis/findings_generated/findings_index.csv with one row per analysis (name, type,
 # one-line key finding). The point: the write-up lives WITH the data, not only in the README.
 #
 # Where a headline number is cheap to read live (from an analysis's own output CSV) it is
@@ -16,8 +16,39 @@
 # =============================================================
 
 if (!exists("DIR_REPORT")) source("scripts/config.R")   # DIR_REPORT / DIR_JOURNAL paper roots
-FIND_DIR <- file.path(dirname(DIR_REPORT), "findings")   # cross-cutting index -> sits ABOVE both papers, in data/analysis/
+# Each analysis's findings file is written NEXT TO the outputs it describes, so the
+# summary is found by whoever opens that folder. Only the cross-cutting index sits
+# at the top of the season folder, as the way in.
+FIND_DIR <- DIR_REPORT
 dir.create(FIND_DIR, recursive = TRUE, showWarnings = FALSE)
+
+# where does this analysis actually write? Find its first named output in the tree.
+.all_outputs <- NULL
+.find_home <- function(outputs) {
+  txt <- as.character(outputs)
+  # many entries name their folder outright ("method_comparison/yield/x.png")
+  dirs <- regmatches(txt, gregexpr("[a-z_]+/[a-z_]+(/[a-z_]+)*", txt))[[1]]
+  for (d in dirs) {                                # the match may swallow the filename too
+    while (grepl("/", d)) {
+      if (dir.exists(file.path(DIR_REPORT, d))) return(file.path(DIR_REPORT, d))
+      d <- sub("/[^/]*$", "", d)
+    }
+  }
+  fs <- trimws(strsplit(txt, ";")[[1]])
+  fs <- fs[!is.na(fs) & grepl("[.](csv|png|html)$", fs)]
+  if (!length(fs)) return(FIND_DIR)
+  if (is.null(.all_outputs))
+    .all_outputs <<- list.files(DIR_REPORT, recursive = TRUE, full.names = TRUE)
+  for (f in fs) {                                  # some names are braced globs or prose
+    hit <- .all_outputs[basename(.all_outputs) == f]
+    if (!length(hit)) {                            # "x.csv/png" shorthand -> match the stem
+      stem <- sub("[.](csv|png|html).*$", "", f)
+      if (nzchar(stem)) hit <- .all_outputs[startsWith(basename(.all_outputs), stem)]
+    }
+    if (length(hit)) return(dirname(hit[[1]]))
+  }
+  FIND_DIR
+}
 .today <- as.character(Sys.Date())
 
 # best-effort read of an output CSV (NULL if absent) + a couple of tiny extractors
@@ -33,7 +64,9 @@ fw <- function(name, title, type, key_finding, details = character(0), outputs =
     field = c("analysis name", "type", "key_finding", names(details), "outputs", "data_as_of"),
     value = c(title, type, key_finding, unname(details), outputs, .today),
     stringsAsFactors = FALSE)
-  write.csv(df, file.path(FIND_DIR, paste0(name, "_findings.csv")), row.names = FALSE)
+  home <- .find_home(outputs)
+  dir.create(home, recursive = TRUE, showWarnings = FALSE)
+  write.csv(df, file.path(home, paste0(name, "_findings.csv")), row.names = FALSE)
   .index[[length(.index) + 1]] <<- data.frame(analysis = title, type = type,
                                               key_finding = key_finding,
                                               findings_file = paste0(name, "_findings.csv"),
@@ -102,7 +135,7 @@ fw("rarefaction_inext",
    "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
    c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
-   "journal richness/accumulation/: rarefaction_by_{method,observer}_inext_{size,coverage}_{species,genus}.png (+ _asymptotic/_by_size/_by_coverage _{species,genus}.csv)")
+   "journal richness/rarefaction/: rarefaction_by_{method,observer}_inext_{size,coverage}_{species,genus}.png (+ _asymptotic/_by_size/_by_coverage _{species,genus}.csv)")
 
 fw("rarefaction_vegan",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
@@ -110,7 +143,7 @@ fw("rarefaction_vegan",
    "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
    c("analysis" = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
-   "richness/accumulation/: report rarefaction_by_{transect,year}_{curves,bars}_{species,genus}.png (+ .csv); journal same as *_vegan_*")
+   "richness/rarefaction/: report rarefaction_by_{transect,year}_{curves,bars}_{species,genus}.png (+ .csv); journal same as *_vegan_*")
 
 fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",
@@ -166,14 +199,14 @@ fw("rare_bee_plants",
    c(recorded_vs_preferred = "bars = recorded-on (availability-blended); PREFERRED (starred) = availability-corrected, shown only where n>=20 -- same matched test as the genus webs",
      note = "low counts: read as 'where the few sightings concentrate', not visit rates or preference",
      threatened_source = "IUCN threatened set read live from the IUCN cache"),
-   "plants_anchoring_rare_bees.csv/png; rare_bee_forage_preference.csv/png")
+   "reference/conservation/plants_anchoring_rare_bees.csv/png; rare_bee_forage_preference.csv/png")
 
 fw("bee_bounties",
    "Collecting / photo bounties (method gaps)",
    "descriptive",
    "Taxa recorded by one method but not the other -- worklist for what to net (voucher) or photograph next.",
    c(note = "gap = present in one method, absent in the other; directs future effort"),
-   "specimen_bee_bounty.csv/png; inaturalist_bee_bounty.csv/png; *_bounty_map.png")
+   "coverage/bee_bounties/specimen_bee_bounty.csv/png; inaturalist_bee_bounty.csv/png; *_bounty_map.png")
 
 fw("coverage_cabr_vs_holway",
    "CABR bees not on the Holway county checklist",

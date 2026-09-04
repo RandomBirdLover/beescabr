@@ -120,7 +120,7 @@ review_windows <- function(path = RW_PATH, prompt_fn = readline, write = TRUE, m
 # guess; it writes the day to qc_review_survey_transect_overlap_generated.csv with the per-transect
 # tag counts. This walks those ties so you can rule each one:
 #   <TP|UPMON|...>  the whole day was really this ONE transect -> stamped on every obs,
-#                   the other tag's obs go to qc_review_inat_mistagged_transects_manual.csv
+#                   the other tag's obs go to qc_review_inat_mistagged_transects_generated.csv
 #   b  both         a genuine two-transect day -> obs keep their own tags (stays split)
 # Your ruling persists in the file's `decision` column and is applied on the next brain
 # run; blank/unsure ties resurface, ruled ones don't.
@@ -144,7 +144,7 @@ RTT_PATH <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_
   cat("   A beeple's obs for one day are tagged EVENLY across two transects, as if they\n")
   cat("   walked both. The counts show exactly what they tagged. Decide what it really was:\n\n")
   cat("   TP / UPMON / ...  pick the ONE real transect -> the WHOLE day is stamped that;\n")
-  cat("                     the other tag's obs -> qc_review_inat_mistagged_transects_manual.csv\n")
+  cat("                     the other tag's obs -> qc_review_inat_mistagged_transects_generated.csv\n")
   cat("   b  both     -- a genuine two-transect day; keep every obs on its own tag\n")
   cat("   u  unsure   -- revisit next run\n")
   cat("   s  skip     -- leave blank, revisit next run\n")

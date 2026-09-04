@@ -3,7 +3,7 @@
 # beescabr -- turn the brain's per-obs answer key into an ANALYSIS-ready iNaturalist PLANT table.
 #
 # Parallel to inat_bee_clean.R, scoped to the SURVEYORS' Plantae observations. Same brain
-# membership file (cabr_inat_raw.csv, filtered kind=="plant"), same spatial survey refinement,
+# membership file (cabr_inat_raw_generated.csv, filtered kind=="plant"), same spatial survey refinement,
 # same is_survey marking -- but PLANT-shaped:
 #   * SCOPE: only the surveyors' plant obs -- observer is on the surveyor roster
 #     (people_manual.csv, surveyor = TRUE). Public plant obs in the box are dropped.
@@ -15,13 +15,13 @@
 #   * is_survey marks whether each obs was part of a survey (tagged keep, on-transect) vs the
 #     surveyor's non-survey plant obs; walk-in / bad-coord handled exactly as in the bee cleaner.
 #
-# INPUTS   data/inat_observations/cabr_inat_raw.csv                 (brain per-obs lookup; kind=="plant")
+# INPUTS   data/inat_observations/inat_raw/cabr_inat_raw_generated.csv                 (brain per-obs lookup; kind=="plant")
 #          data/inat_observations/cache/export_flat_plant.rds       (taxonomy + coords + fields/tags)
 #          data/project_info/crosswalk/master_crosswalk_manual.csv              (flowering field variants)
 #          data/project_info/rosters/people_manual.csv                 (surveyor usernames -> scope)
 #          data/spatial/shapefiles/transects/cabr_bee_transects.shp       (off-transect test)
 #          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (walk-in)
-# OUTPUT   data/inat_observations/inat_clean/cabr_inat_plant_clean.csv
+# OUTPUT   data/inat_observations/inat_clean/cabr_inat_plant_clean_generated.csv
 #
 # Run: source("scripts/inat_observations/inat_plant_clean.R"); inat_plant_clean()
 # =============================================================
@@ -29,7 +29,7 @@ if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATH
 suppressWarnings(suppressMessages({library(dplyr); library(readr); library(sf); library(stringr)}))
 if (!exists("bx_kv") && file.exists("scripts/utils/console.R")) source("scripts/utils/console.R")
 
-IPC_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"
+IPC_MEMBERSHIP     <- "data/inat_observations/inat_raw/cabr_inat_raw_generated.csv"
 IPC_EXPORT         <- "data/inat_observations/cache/export_flat_plant.rds"
 IPC_CROSSWALK      <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 IPC_ROSTER         <- PATHS$people          # one row per human; `surveyor` flag scopes it
@@ -37,7 +37,7 @@ IPC_TRANSECTS      <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"
 IPC_ROAD           <- "data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp"
 IPC_OUT_CLEAN      <- PATHS$inat_plant_clean
 IPC_ALL_TAXA       <- PATHS$plant_all_taxa  # ALL in-box plant taxa, ANY observer -- in-park truth for the plant lookup
-IPC_LOCATION_REVIEW <- "data/inat_observations/review/location/qc_review_inat_plant_location.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
+IPC_LOCATION_REVIEW <- "data/inat_observations/review/location/qc_review_inat_plant_location_generated.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
 IPC_OFF_TRANSECT_M <- 50
 IPC_ROAD_BUFFER_M  <- 10
 

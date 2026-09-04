@@ -31,7 +31,7 @@ test_that("imq_flag: species/subspecies + non-research + unvouchered + not-on-Ho
   spec <- imq_ref_set(tibble(scientific_name = "Halictus vouched", taxon_id = "13"))  # #3 vouchered
   hol  <- imq_ref_set(tibble(scientific_name = "Bombus known",     taxon_id = "12"))  # #2 on Holway
   out  <- imq_flag(inat, spec, hol)
-  expect_setequal(out$obs_id, c("1", "5"))                       # species + subspecies, unvouched, not-holway
+  expect_setequal(out$obs_id, c("1", "5"))                       # species + subspecies, no specimen, not-holway
   expect_false(any(c("2", "3", "4", "6") %in% out$obs_id))       # holway / vouched / genus / research excluded
   expect_true(all(grepl("verify", out$reason)))
 })

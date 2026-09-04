@@ -35,10 +35,10 @@ deduped. **The roster is the sole authority for *who*; the effort log is for
 
 **What to edit when**
 
-- **New beeple (community scientist):** add them to `surveyor_roster.csv` only.
+- **New beeple (community scientist):** add them to `people_manual.csv` only (surveyor = TRUE, surveyor_type = beeple).
   Their survey dates flow in automatically from their tagged iNaturalist
   observations.
-- **New intern:** add them to `surveyor_roster.csv` **and** add their net/photo
+- **New intern:** add them to `people_manual.csv` (surveyor_type = intern) **and** add their net/photo
   days to `sources/master_intern_survey_log_manual.csv`. Intern days are not all
   tag-derivable, so the log is their source of truth.
 - **More survey dates for existing interns:** add them to
@@ -82,8 +82,8 @@ manual entry is needed for those.
 
 | File | Path | What it is | How it enters | Note |
 |---|---|---|---|---|
-| `San Diego County Bee Species Checklist, v3.xlsx` (+ `…README.docx`) | `data/reference/source/holway_2026/` | Holway's authoritative county bee checklist. | Downloaded | Rebuilt into the generated `holway_v3_combined.csv` / `holway_sd_bee_reference_table_v3.csv` by running with `BEESCABR_REBUILD_HOLWAY_REF=1`. When Holway ships a new version, drop it here and rebuild. |
-| `iucn_status.csv` | `data/checklists/iucn/` | IUCN conservation status per taxon (drives the "Endangered" badges, e.g. Crotch's bumble bee). | Hand-maintained / downloaded | |
+| `San Diego County Bee Species Checklist, v3.xlsx` (+ `…README.docx`) | `data/reference/source/holway_2026/` | Holway's authoritative county bee checklist. | Downloaded | Rebuilt into the generated `holway_v3_combined.csv` / `holway_sd_bee_reference_table_v3_generated.csv` by running with `BEESCABR_REBUILD_HOLWAY_REF=1`. When Holway ships a new version, drop it here and rebuild. |
+| `iucn_status_generated.csv` | `data/checklists/iucn/` | IUCN conservation status per taxon (drives the "Endangered" badges, e.g. Crotch's bumble bee). | Hand-maintained / downloaded | |
 | iNaturalist data | (via API) | Bee + plant observations. | **Pulled via the iNaturalist API**, not a manual file drop | The README's older "download a CSV and drop it in `data/cabr_surveys/nonlethal/inat_bee/`" instructions point at a folder that no longer exists. If you still use manual exports, that path needs fixing. |
 | GBIF export | (not in active use) | County bee occurrences. | Optional / future (`rgbif`) | Listed as "optional, for later GBIF work" only. |
 
@@ -95,22 +95,40 @@ manual entry is needed for those.
 | `specimen_additions.csv` | `data/reference/hand_curated/` | Specimen-only species merged into the taxonomy lookup. |
 | `plant_park_confirmed.csv` | `data/reference/hand_curated/` | Plants a botanist confirms are actually in the park. |
 | `plant_specimen_overrides.csv` | `data/reference/hand_curated/` | Expert corrections for plants named on specimen labels. |
-| `plant_genus_common.csv` | `data/checklists/plants/` | Plant genus → common-name lookup. |
+| `plant_genus_common_generated.csv` | `data/checklists/plants/` | Plant genus → common-name lookup. |
 | `verified_taxa.csv` | `data/reference/hand_curated/` | Taxa you have manually verified. |
 | `rejected_taxa.csv` | `data/reference/hand_curated/` | Taxa you have manually rejected. |
 
-## 6. iNaturalist QC / review overrides (human-in-the-loop corrections)
+## 6. iNaturalist QC / review files — GENERATED, do not maintain
 
-These are hand-maintained files the observation pipeline reads as override truth.
+Everything under `data/inat_observations/` is written by the pipeline and read back by
+nothing. An earlier version of this section listed the files below as "hand-maintained
+files the observation pipeline reads as override truth". That was wrong in both halves,
+and it told you to maintain files that are overwritten on every run.
 
-| File | Path | What it is |
+The loop is not "edit the CSV". It is:
+
+    pipeline flags something  ->  you fix it ON iNaturalist  ->  the next ingest picks it up
+
+| File | Path | What it is telling you |
 |---|---|---|
-| `qc_review_inat_misid.csv` | `data/inat_observations/review/` | Misidentifications to correct. |
-| `qc_review_inat_new_bees_not_on_holway.csv` | `data/inat_observations/review/` | New bees not on the Holway checklist (candidate county additions). |
-| `qc_review_inat_mistagged_transects_manual.csv` | `data/inat_observations/review/` | Records tagged to the wrong transect. |
-| `qc_review_inat_bee_behavior_survey.csv` / `…_nonsurvey.csv` | `data/inat_observations/review/` | Behavior/foraging corrections (survey vs non-survey). |
-| `qc_review_inat_bee_location.csv`, `qc_review_inat_plant_location.csv` | `data/inat_observations/review/location/` | Location fixes for bee / plant observations. |
-| `inat_field_id_map.csv` | `data/inat_observations/reference/` | Maps iNaturalist observation-field IDs. |
+| `qc_review_inat_misid_generated.csv` | `data/inat_observations/review/` | Species-level IDs with no specimen and not on Holway's checklist. Check them on iNaturalist. |
+| `qc_review_inat_new_bees_not_on_holway_generated.csv` | `data/inat_observations/review/` | Bees recorded here that Holway's county checklist does not have. Candidate county additions. |
+| `qc_review_inat_mistagged_transects_generated.csv` | `data/inat_observations/review/` | Observations whose transect tag was outvoted by the rest of that day. Retag them on iNaturalist. |
+| `qc_review_inat_bee_behavior_*_generated.csv` | `data/inat_observations/review/` | Missing or contradictory flower/behavior fields. |
+| `qc_review_inat_*_location_generated.csv` | `data/inat_observations/review/location/` | Pins that fall outside the survey box. `by_surveyors/` holds one map per person to send them. |
+| `inat_field_id_map_generated.csv` | `data/inat_observations/reference/` | Observation-field name to iNaturalist id. Rebuilt from the cache each run. |
+
+The only hand-maintained crosswalk is `master_crosswalk_manual.csv` in
+`data/project_info/crosswalk/`, listed in section 5.
+
+---|---|---|
+| `qc_review_inat_misid_generated.csv` | `data/inat_observations/review/` | Misidentifications to correct. |
+| `qc_review_inat_new_bees_not_on_holway_generated.csv` | `data/inat_observations/review/` | New bees not on the Holway checklist (candidate county additions). |
+| `qc_review_inat_mistagged_transects_generated.csv` | `data/inat_observations/review/` | Records tagged to the wrong transect. |
+| `qc_review_inat_bee_behavior_survey_generated.csv` / `…_nonsurvey.csv` | `data/inat_observations/review/` | Behavior/foraging corrections (survey vs non-survey). |
+| `qc_review_inat_bee_location_generated.csv`, `qc_review_inat_plant_location_generated.csv` | `data/inat_observations/review/location/` | Location fixes for bee / plant observations. |
+| `inat_field_id_map_generated.csv` | `data/inat_observations/reference/` | Maps iNaturalist observation-field IDs. |
 | `master_crosswalk_manual.csv` | `data/project_info/` | iNaturalist project tags/fields crosswalk (the `project_tags_fields` reference). |
 
 ---
@@ -160,10 +178,10 @@ Two special cases:
 Listed because they look like inputs but are rebuilt every run. Editing them is wasted work; change the manual source instead.
 
 - `beeple_calendar_windows_generated.csv` — parsed from the calendar PDFs by `scripts/project_info/finding_beeple_calendar.R` (pipeline stage 2d). Edit the PDFs, not this.
-- `cabr_official_native_bee_checklist.csv` — written by `scripts/checklists/cabr_bee_checklist.R`.
-- `holway_v3_combined.csv`, `holway_sd_bee_reference_table_v3.csv` — built from the Holway `.xlsx` source.
+- `cabr_official_native_bee_checklist_generated.csv` — written by `scripts/checklists/cabr_bee_checklist.R`.
+- `holway_v3_combined.csv`, `holway_sd_bee_reference_table_v3_generated.csv` — built from the Holway `.xlsx` source.
 - Everything in `data/reference/generated/`.
 - Everything in `data/inat_observations/inat_clean/`.
-- `data/specimens/specimens_clean/cabr_specimen_bee_clean.csv`.
+- `data/specimens/specimens_clean/cabr_specimen_bee_clean_generated.csv`.
 - Everything in `data/analysis/**` (the figures, tables, and pages the pipeline produces).
 

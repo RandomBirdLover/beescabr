@@ -11,7 +11,7 @@
 #
 # Run this only to RE-CHECK species already in the cache (IUCN publishes a couple of updates a
 # year, so an existing NE / LC could change). It forces a full re-query of every species and
-# rewrites data/checklists/iucn/iucn_status.csv. Needs internet + a free token (see
+# rewrites data/checklists/iucn/iucn_status_generated.csv. Needs internet + a free token (see
 # data/secrets/iucn_api.env or the IUCN_REDLIST_KEY env var; free at https://api.iucnredlist.org).
 #
 #   From the repo root:  Rscript scripts/reference/refresh_iucn_status.R

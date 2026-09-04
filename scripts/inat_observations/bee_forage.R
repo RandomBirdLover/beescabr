@@ -37,7 +37,7 @@ BF_CROSSWALK  <- "data/project_info/crosswalk/master_crosswalk_manual.csv"
 # the brain's per-obs CABR membership (obs_id + status + kind). REQUIRED: forage
 # must be scoped to bees INSIDE the park, not the whole county export -- an
 # unscoped pull would import plants bees visit anywhere in San Diego.
-BF_MEMBERSHIP <- "data/inat_observations/cabr_inat_raw.csv"
+BF_MEMBERSHIP <- "data/inat_observations/inat_raw/cabr_inat_raw_generated.csv"
 BF_OUT        <- .bf_path("inat_bee_forage", PATHS$inat_bee_forage)
 
 # bee_forage_names(): distinct flower_visited PLANT names + obs counts from the
@@ -80,7 +80,7 @@ bee_forage_names <- function(export_path = BF_EXPORT, crosswalk_path = BF_CROSSW
     count(scientific_name, name = "n_obs", sort = TRUE)
 }
 
-# write the forage list to cabr_inat_bee_forage.csv (the lookup's in-park source).
+# write the forage list to cabr_inat_bee_forage_generated.csv (the lookup's in-park source).
 write_bee_forage <- function(export_path = BF_EXPORT, crosswalk_path = BF_CROSSWALK,
                              membership_path = BF_MEMBERSHIP, out_path = BF_OUT, verbose = TRUE) {
   fg <- bee_forage_names(export_path, crosswalk_path, membership_path)

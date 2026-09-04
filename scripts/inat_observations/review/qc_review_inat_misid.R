@@ -20,7 +20,7 @@
 # Match: normalized scientific_name, its rolled binomial (so a subspecies matches its
 # vouchered species), OR taxon_id.
 #
-# OUTPUT  data/inat_observations/review/qc_review_inat_misid.csv
+# OUTPUT  data/inat_observations/review/qc_review_inat_misid_generated.csv
 #   obs_id, observed_on, observer, scientific_name, taxon_rank, quality_grade, reason, url
 #
 # Run: source("scripts/inat_observations/review/qc_review_inat_misid.R"); inat_misid_qc()
@@ -42,7 +42,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (is.null(a) || length(a) == 0) 
 IMQ_INAT     <- .imq_path("inat_clean",       PATHS$inat_clean)
 IMQ_SPECIMEN <- .imq_path("specimen_clean",   PATHS$specimen_clean)
 IMQ_HOLWAY   <- .imq_path("holway_reference", PATHS$holway_reference)
-IMQ_OUT      <- "data/inat_observations/review/qc_review_inat_misid.csv"
+IMQ_OUT      <- "data/inat_observations/review/qc_review_inat_misid_generated.csv"
 IMQ_OUT_COLS <- c("obs_id", "observed_on", "observer", "scientific_name",
                   "taxon_rank", "quality_grade", "reason", "url")
 IMQ_REASON   <- "species-level iNat ID, not research-grade, no specimen voucher + not on Holway -- verify (misID or new record?)"
@@ -89,7 +89,7 @@ inat_misid_qc <- function(inat_path = IMQ_INAT, specimen_path = IMQ_SPECIMEN,
   rc <- function(p) suppressWarnings(suppressMessages(read_csv(p, show_col_types = FALSE, col_types = cols(.default = "c"))))
   inat <- rc(inat_path)
   require_columns(inat, c("obs_id", "scientific_name", "taxon_id", "taxon_rank", "quality_grade",
-                          "observer", "observed_on", "url"), "cabr_inat_bee_clean.csv")
+                          "observer", "observed_on", "url"), "cabr_inat_bee_clean_generated.csv")
 
   spec_ref <- if (file.exists(specimen_path)) imq_ref_set(rc(specimen_path)) else list(names = character(0), ids = character(0))
   hol_ref  <- if (file.exists(holway_path))   imq_ref_set(rc(holway_path))   else list(names = character(0), ids = character(0))

@@ -312,7 +312,7 @@ resolve_holway_row <- function(con, source_sheet, genus, species_raw,
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
 
 # ------------------------------------------------------------
-# Clean reference-table layout -- mirrors sd_bee_taxonomy_lookup.csv (minus the
+# Clean reference-table layout -- mirrors sd_bee_taxonomy_lookup_generated.csv (minus the
 # lookup-only computed columns verified/holway_status/in_*): taxon_id,
 # scientific_name, common_name, rank, then the 19 taxonomic levels in order,
 # complex_taxon_id, source_sheet, resolved. (2026-07: added subphylum, subclass,

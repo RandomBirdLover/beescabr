@@ -15,8 +15,7 @@ beescabr_require()
 suppressPackageStartupMessages({ library(sf); library(leaflet) })
 if (!exists("PATHS"))        source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
-OUT_DIR <- file.path(DIR_REPORT, "reference/transects")
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+if (!exists("transects_in_year")) source("scripts/analysis/transect_years.R")
 
 # ---- 1. transects + park boundary from the shapefiles (single source: data/spatial/shapefiles/) ----
 read_shp <- function(p) tryCatch(sf::st_read(p, quiet = TRUE), error = function(e) NULL)
@@ -29,6 +28,12 @@ tran$name  <- unname(BEE_TRANSECT_NAME[tran$code])
 tran$col   <- unname(BEE_TRANSECT[tran$code])
 tran <- sf::st_transform(tran, 4326)
 if (!is.null(park)) park <- sf::st_transform(park, 4326)
+
+# Everything below draws ONE map. It is called twice: once for the overall map
+# (every transect that has ever existed) and once for the report year, so a
+# published report keeps the transects of its own season. See transect_years.R.
+render_transect_map <- function(tran, OUT_DIR, span_label) {
+  dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # midpoint of each line (project to metres, interpolate to 50%, back to WGS84) -> permanent labels
 .midpt <- function(g) { g <- sf::st_line_merge(sf::st_transform(g, 3310))
@@ -44,8 +49,8 @@ CARD <- sprintf("background:%s;border:1px solid %s;border-radius:12px;box-shadow
 title <- paste0('<div style="', CARD, ';padding:9px 15px;max-width:360px">',
   sprintf('<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:%s;margin-bottom:2px">Cabrillo National Monument</div>', BEE_HTML_GREEN[["mid"]]),
   sprintf('<div style="font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap;color:%s">Native Bee Survey Transects</div>', BEE_HTML_GREEN[["deep"]]),
-  sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">Four fixed walking transects, sampled 2021\u20132026<br>%s m surveyed in total</div>',
-          BEE_HTML[["sub"]], format(sum(tran$len_m), big.mark = ",", trim = TRUE)),
+  sprintf('<div style="font-size:11.5px;color:%s;margin-top:3px;line-height:1.35">%s<br>%s m surveyed in total</div>',
+          BEE_HTML[["sub"]], span_label, format(sum(tran$len_m), big.mark = ",", trim = TRUE)),
   # Brief provenance, matching the other maps: where the lines come from, and lengths
   # are measured off those lines rather than from a field odometer.
   sprintf('<div style="font-size:10px;color:%s;margin-top:6px;padding-top:6px;border-top:1px solid %s;line-height:1.35">Transect lines from the park&rsquo;s survey layer (data/spatial/shapefiles), with lengths measured along them. Source: Cabrillo National Monument.</div>',
@@ -187,3 +192,21 @@ if (requireNamespace("ggspatial", quietly = TRUE) && requireNamespace("prettymap
                                      if (identical(ty, BASE)) "CartoDB Voyager" else ty, " base) to ", OUT_DIR); break }
   }
 } else message("  (ggspatial/prettymapr not available -- skipped static PNG; HTML written)")
+}
+
+# ---- 6. the two maps ------------------------------------------------------------
+# OVERALL: what exists now. Lives in data/spatial/ beside the shapefile it is drawn
+# from, and is free to change whenever the park adds or retires a transect.
+render_transect_map(tran, "data/spatial/transect_map_generated",
+                    sprintf("%d fixed walking transects, all seasons", nrow(tran)))
+
+# THIS REPORT'S YEAR: only the transects that existed that season. OT was first
+# surveyed in 2024, so a 2023 report must not show it -- an empty transect on the
+# map reads as "nobody surveyed it", which is not what happened.
+.yrs   <- read_transect_years()
+.codes <- transects_in_year(BEESCABR_SEASON, .yrs)
+.tran_y <- if (length(.codes)) tran[tran$code %in% .codes, , drop = FALSE] else tran
+if (!length(.codes))
+  message("  transect_map: no transect_years_manual.csv -- report map shows all transects")
+render_transect_map(.tran_y, file.path(DIR_REPORT, "reference/transects"),
+                    sprintf("%d transects surveyed in %d", nrow(.tran_y), BEESCABR_SEASON))

@@ -14,11 +14,11 @@ needs a look and remembers what you've cleared.
 
 ## Renamed files
 
-- `bee_taxonomy_lookup.csv` → **`sd_bee_taxonomy_lookup.csv`** (Holway + iNat)
+- `bee_taxonomy_lookup.csv` → **`sd_bee_taxonomy_lookup_generated.csv`** (Holway + iNat)
 - `holway_reference_checklist.csv` → **`holway_sd_bee_reference_table.csv`**
   (Holway only, from the occasional interactive builder)
 
-## `sd_bee_taxonomy_lookup.csv`
+## `sd_bee_taxonomy_lookup_generated.csv`
 
 - Now includes **iNat-observed species**, not just Holway's list.
 - Keeps Holway's **Tentative** and **Unpublished** rows; the `holway_status`
@@ -59,8 +59,8 @@ fixing an ID flows back into your data. The cutoff time is stored in
 
 ## Run order (RStudio)
 
-1. `run_data_cleaning_pipeline.R` — ingest + checklists; builds `sd_bee_taxonomy_lookup.csv`
+1. `run_data_cleaning_pipeline.R` — ingest + checklists; builds `sd_bee_taxonomy_lookup_generated.csv`
    and refreshes the cache.
-2. The clean step → `cabr_inat_bee_clean.csv` + `cabr_inat_to_verify.csv`.
+2. The clean step → `cabr_inat_bee_clean_generated.csv` + `cabr_inat_to_verify.csv`.
 3. Check the photos in the to-verify list; add confirmed `taxon_id`s to
    `verified_taxa.csv`; re-run — they drop off the flag list.

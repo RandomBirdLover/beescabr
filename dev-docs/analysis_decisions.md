@@ -58,7 +58,7 @@ targeted off-transect netting, 114 of them from 2021) have coordinates but no
 transect. As of the specimen-clean fix they are marked `is_survey = FALSE`: they
 **count toward park totals** (all-records analyses) but are **excluded from
 survey-only and per-transect analyses**. A survey specimen must sit on a transect.
-Re-run the pipeline's specimen stage to regenerate `cabr_specimen_bee_clean.csv`
+Re-run the pipeline's specimen stage to regenerate `cabr_specimen_bee_clean_generated.csv`
 with this labeling, then re-run the analyses.
 
 **Show every genus — no arbitrary top-N.** Genus-level figures display **all

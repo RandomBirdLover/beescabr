@@ -46,14 +46,16 @@ produce last season's answer:
 
 | what | file | when it changes |
 |---|---|---|
-| who surveyed | `data/project_info/rosters/surveyor_roster.csv` | any new intern or beeple |
-| who identified | `data/project_info/rosters/identifier_roster.csv` | a new identifier contributes |
+| everyone: who surveyed, identified, researched | `data/project_info/rosters/people_manual.csv` | anyone new, BEFORE their first season |
 | survey dates | `data/project_info/surveys/survey_date_sources/master_intern_survey_log_manual.csv` | each intern survey trip |
-| trip-level effort | `data/project_info/surveys/master_per_survey_info_generated.csv` | each survey trip |
 | beeple calendar | `data/project_info/surveys/survey_date_sources/beeple_calendar_windows/YYYY Cabrillo Bee Survey Calendar.pdf` | each new season |
 | specimens | `data/specimens/records/cabr_bee_specimens_record_V{n}_{YYYY_MM_DD}.xlsx` | after netting or a new determination |
 
-The roster and the survey log are **two separate files that must stay in sync**.
+A person is typed in ONCE, in `people_manual.csv`, whoever they are. The intern log
+refers to them by `person_id`, never by name. A returning beeple needs no edit at
+all: their tagged observations become that season's surveys on their own.
+
+Anything ending `_generated` is written by the pipeline. Never edit it.
 A new person means editing the roster. A new survey date means editing the log.
 A new intern means editing both. People are counted from the roster and effort
 from the logs, never the other way around.
@@ -191,10 +193,10 @@ half-updated:
 Outputs go to a per-year folder, taken from today's date:
 
 ```
-data/analysis/nps_report_2026/
+data/analysis/2026_generated/
 ```
 
-So 2027's run writes `nps_report_2027/` and leaves 2026 alone. Nothing is
+So 2027's run writes `2027_generated/` and leaves 2026 alone. Nothing is
 overwritten across seasons.
 
 To rebuild an earlier season, set the year explicitly:

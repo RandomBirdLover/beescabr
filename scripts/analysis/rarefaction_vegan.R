@@ -32,8 +32,8 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/accumulation")  # consolidated with accumulation (richness-by-effort family);
-OUT_REPORT    <- file.path(DIR_REPORT,  "richness/accumulation")  # the dimension is baked into each filename, no by_<dim>/ subfolders
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction")  # the rarefaction family, split out of accumulation (44 files in one folder);
+OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # the dimension is baked into each filename, no by_<dim>/ subfolders
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
@@ -278,4 +278,4 @@ message("  by_year combined (genus + species): bee_richness_by_year_rarefaction.
 
 message("Wrote rarefaction_by_{transect,year}_bars_combined (report) + ",
         "rarefaction_by_{method,observer}_vegan_*_{species,genus} (journal)\n",
-        "  into richness/accumulation/ of each paper.")
+        "  into richness/rarefaction/ of each paper.")

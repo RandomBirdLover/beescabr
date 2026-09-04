@@ -34,7 +34,7 @@
 # date -- fell through every crack). Edit intern dates in master_intern_survey_log_manual.csv, NOT the master.
 #
 # OUTPUTS
-#   data/inat_observations/cabr_inat_raw.csv  <- NEW: the per-obs lookup
+#   data/inat_observations/inat_raw/cabr_inat_raw_generated.csv  <- NEW: the per-obs lookup
 #   data/project_info/surveys/master_per_survey_info_generated.csv                      <- built upon in place
 #   data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags_generated.csv        <- unrecognized hashtags
 #   data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields_generated.csv      <- unrecognized obs-field names
@@ -44,6 +44,7 @@
 
 if (!exists("PATHS")) source("scripts/config.R")   # centralized paths (see PATHS in config.R)
 if (!exists("build_participation")) source("scripts/project_info/build_participation.R")
+if (!exists("build_identification_counts")) source("scripts/project_info/build_identification_counts.R")
 if (!exists("roster_view")) source("scripts/project_info/roster_view.R")
 library(dplyr)
 library(stringr)
@@ -74,11 +75,11 @@ FPI_WINDOWS   <- "data/project_info/surveys/survey_date_sources/beeple_calendar_
 FPI_BOUNDARY  <- "data/spatial/shapefiles/boundaries/cabr/cabr_survey_box.shp"
 FPI_TRANSECTS <- "data/spatial/shapefiles/transects/cabr_bee_transects.shp"  # rescue: on-transect untagged obs
 
-FPI_MEMBERSHIP     <- "data/inat_observations/cabr_inat_raw.csv"  # the per-obs lookup
+FPI_MEMBERSHIP     <- "data/inat_observations/inat_raw/cabr_inat_raw_generated.csv"  # the per-obs lookup
 FPI_SURVEY_DATES   <- PATHS$per_survey
 FPI_INTERN_LOG     <- "data/project_info/surveys/survey_date_sources/master_intern_survey_log_manual.csv"  # curated intern survey-day log (SOURCE OF TRUTH -- edit intern days HERE, not in the generated master)
 FPI_REVIEW         <- "data/project_info/surveys/review/qc_review_survey_beeple_date_windows_generated.csv"   # beeple windows to rule on (persistent)
-FPI_MISTAGS        <- "data/inat_observations/review/qc_review_inat_mistagged_transects_manual.csv"  # stray transect tags outvoted by the day's majority
+FPI_MISTAGS        <- "data/inat_observations/review/qc_review_inat_mistagged_transects_generated.csv"  # stray transect tags outvoted by the day's majority
 FPI_TIES           <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_generated.csv"  # equal-split days to rule (review_transect_ties)
 FPI_UNKNOWN_TAGS   <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_tags_generated.csv"    # unknown hashtags
 FPI_UNKNOWN_FIELDS <- "data/project_info/crosswalk/review/qc_review_mastercrosswalk_inat_unknown_fields_generated.csv"  # unknown obs-field NAMES
@@ -212,7 +213,7 @@ fpi_unknown_fields <- function(df, crosswalk, our_users) {
   }) |> filter(n_our > 0) |> arrange(desc(n_our), desc(n_obs))
 
   # attach real iNat field IDs if the map has been built (build_field_id_map.R)
-  idmap_path <- "data/inat_observations/reference/inat_field_id_map.csv"
+  idmap_path <- "data/inat_observations/reference/inat_field_id_map_generated.csv"
   if (nrow(res) && file.exists(idmap_path)) {
     idmap <- read_csv(idmap_path, show_col_types = FALSE) |>
       transmute(k = tolower(trimws(field_name)), inat_field_id)
@@ -363,6 +364,8 @@ finding_project_info <- function(write = TRUE) {
     # participation falls out of the survey record: declared identity (people_manual.csv),
     # derived activity. Written after the master because it reads it back.
     .part <- tryCatch(build_participation(), error = function(e) { bx_note("participation: ", conditionMessage(e)); NULL })
+    # identifications per person, CABR records only -- the identifier list orders on it
+    invisible(tryCatch(build_identification_counts(), error = function(e) bx_note("id counts: ", conditionMessage(e))))
     bx_kv("Classified", format(nrow(membership), big.mark = ","), " observations (bees + plants)")
     bx_kv("Surveys", nrow(survey_dates), " confirmed")
     if (!is.null(.part)) bx_kv("Participation", nrow(.part), paste0(" person-years \U00B7 ",
@@ -370,7 +373,7 @@ finding_project_info <- function(write = TRUE) {
     bx_kv("Review queue", nrow(unknown_tags), " unknown tags · ", nrow(unknown_fields), " fields · ", nrow(review_windows), " windows")
     if (!is.null(mistags)) bx_cont(nrow(mistags), " stray transect tags to fix")
     if (!is.null(ties) && nrow(ties)) bx_cont(nrow(ties), " tie day(s) to rule")
-    bx_out("master_per_survey_info_generated.csv, cabr_inat_raw.csv (+ review files)")
+    bx_out("master_per_survey_info_generated.csv, cabr_inat_raw_generated.csv (+ review files)")
   }
   invisible(list(membership = membership, survey_dates = survey_dates, review_windows = review_windows,
                  mistags = mistags, ties = ties, unknown_tags = unknown_tags, unknown_fields = unknown_fields))

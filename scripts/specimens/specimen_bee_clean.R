@@ -9,7 +9,7 @@
 #   attaches taxon_id + full taxonomy from the taxonomy lookup (by name), resolves
 #   the transect from the `plot` text (via the master_crosswalk specimen_label_variants,
 #   with a lat/long spatial fallback for plain "Cabrillo NM"), pulls the visited
-#   plant out of method_or_plant, and writes cabr_specimen_bee_clean.csv plus
+#   plant out of method_or_plant, and writes cabr_specimen_bee_clean_generated.csv plus
 #   QC side files (taxonomy flags, missing, duplicates).
 #
 # COLUMN MAP (iNat -> specimen)
@@ -21,7 +21,7 @@
 #   flower_visited    -> the "ex. <plant>" value of method_or_plant (methods -> blank)
 #   cabr_bee_lethal_collection -> TRUE      the 8 other behavior flags -> blank
 #   (specimens with missing lat/long are NOT a column -- they go to the review folder:
-#    data/specimens/specimens_clean/review/qc_review_specimen_location_missing.csv)
+#    data/specimens/specimens_clean/review/qc_review_specimen_location_missing_generated.csv)
 #   taxon_id/taxon_rank + taxonomy -> from the lookup by name       sex -> kept
 #   is_10min / is_metadata / quality_grade / positional_accuracy / url -> blank
 #
@@ -133,10 +133,10 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
                             prompt_fn = readline, verbose = TRUE) {
   cleaned_dir <- "data/specimens/specimens_clean"
   review_dir  <- file.path(cleaned_dir, "review")   # QC side files, grouped for someone to review
-  flags_out    <- file.path(review_dir, "qc_review_specimen_taxonomy_flags.csv")
-  missing_out  <- file.path(review_dir, "qc_review_specimen_missing.csv")
-  dupes_out    <- file.path(review_dir, "qc_review_specimen_duplicates.csv")
-  locmiss_out  <- file.path(review_dir, "qc_review_specimen_location_missing.csv")
+  flags_out    <- file.path(review_dir, "qc_review_specimen_taxonomy_flags_generated.csv")
+  missing_out  <- file.path(review_dir, "qc_review_specimen_missing_generated.csv")
+  dupes_out    <- file.path(review_dir, "qc_review_specimen_duplicates_generated.csv")
+  locmiss_out  <- file.path(review_dir, "qc_review_specimen_location_missing_generated.csv")
   clean_out    <- PATHS$specimen_clean
   dir.create(review_dir, recursive = TRUE, showWarnings = FALSE)
 

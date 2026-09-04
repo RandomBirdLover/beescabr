@@ -108,14 +108,14 @@ test_that("a normal publish with pages is allowed", {
 })
 
 test_that("the refusal message names the season and what to run", {
-  msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027")
+  msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027_generated")
   expect_true(grepl("2027", msg, fixed = TRUE))
   expect_true(grepl("analysis", msg, ignore.case = TRUE))
   expect_true(grepl("run_all_analysis_pipeline", msg, fixed = TRUE))
 })
 
 test_that("the message says the existing site was left alone", {
-  msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027")
+  msg <- publish_empty_message(src_dir = "data/analysis/nps_report_2027_generated")
   expect_true(grepl("unchanged|left|untouched", msg, ignore.case = TRUE))
 })
 

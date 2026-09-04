@@ -31,8 +31,13 @@ source("scripts/analysis/forage_selectivity.R")    # shared bee-genus forage sel
 #   Rscript scripts/reference/refresh_iucn_status.R  |  Rscript scripts/reference/refresh_plant_common_names.R
 RUNNING_ALL <- TRUE
 
+# HELPERS, not analyses: other scripts source them, so the auto-loop must not run
+# them as if they wrote figures. test-analysis-modules.R derives this list from the
+# actual source() calls and fails if the two disagree -- it had already drifted by
+# three files, which is why the check exists.
 .modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",
               "conservation_status.R", "plant_names.R", "forage_selectivity.R",
+              "explorer_photo_helpers.R", "inat_taxon_links.R", "transect_years.R",
               "findings_summaries.R")   # runs LAST (after every analysis) -- excluded from the auto-loop
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
 
@@ -55,7 +60,7 @@ if (!exists("run_analysis_script")) source("scripts/utils/analysis_run.R")
 .failed <- .scripts[!unlist(.ok)]
 
 # LAST: roll up every analysis into plain-language <name>_findings.csv tables +
-# a master findings_index.csv (data/analysis/findings/). Runs after the loop so it
+# a master findings_index.csv (data/analysis/findings_generated/). Runs after the loop so it
 # can read the fresh per-analysis outputs it summarises. Best-effort like the rest.
 message("\n===== findings_summaries.R (plain-language finding rollups) =====")
 tryCatch(source("scripts/analysis/findings_summaries.R"),

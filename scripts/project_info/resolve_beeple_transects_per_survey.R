@@ -15,7 +15,7 @@
 #     * membership -- every beeple obs re-stamped with its day's resolved `transect` (the raw tag
 #       is kept in `transect_tagged`). finding_survey_dates.R then groups these per surveyor-day,
 #       so the resolved value becomes the `transects` cell in master_per_survey_info_generated.csv.
-#     * mistags    -- outvoted obs -> qc_review_inat_mistagged_transects_manual.csv (obs URL, tagged vs should_be).
+#     * mistags    -- outvoted obs -> qc_review_inat_mistagged_transects_generated.csv (obs URL, tagged vs should_be).
 #     * ties       -- no clear majority (looks like two transects in a day) -> qc_review_survey_transect_overlap_generated.csv;
 #       rule it in review_transect_ties() ("both" keeps a genuine two-transect day). If you rule any,
 #       the brain re-runs at stage 3f so master_per_survey_info_generated.csv reflects it THIS run.
@@ -28,7 +28,7 @@
 # =============================================================
 suppressWarnings(suppressMessages({library(dplyr); library(tibble); library(readr)}))
 
-ST_MISTAG_OUT <- "data/inat_observations/review/qc_review_inat_mistagged_transects_manual.csv"
+ST_MISTAG_OUT <- "data/inat_observations/review/qc_review_inat_mistagged_transects_generated.csv"
 ST_TIES_OUT   <- "data/project_info/surveys/review/qc_review_survey_transect_overlap_generated.csv"
 
 st_norm_transect <- function(x) {

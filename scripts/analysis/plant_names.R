@@ -11,9 +11,9 @@
 # genus with no known common name anywhere falls back to just the Latin ("Sairocarpus").
 #
 # Sources, merged (later wins), so it works offline AND improves when refreshed:
-#   1. data/reference/cabr_plant_taxonomy_lookup.csv  (in-park plant taxonomy; genus rows)
-#   2. data/inat_observations/reference/cabr_inat_plant_all_taxa.csv (all in-park plant taxa)
-#   3. data/checklists/plants/plant_genus_common.csv  (the refreshable cache written by
+#   1. data/reference/cabr_plant_taxonomy_lookup_generated.csv  (in-park plant taxonomy; genus rows)
+#   2. data/inat_observations/reference/cabr_inat_plant_all_taxa_generated.csv (all in-park plant taxa)
+#   3. data/checklists/plants/plant_genus_common_generated.csv  (the refreshable cache written by
 #      scripts/refresh_plant_common_names.R -- fills genera the two local files miss, via
 #      the iNaturalist taxa API). Authoritative: its entries override the local seed.
 #
@@ -26,7 +26,7 @@
 suppressPackageStartupMessages({ library(stringr) })
 if (!exists("PATHS")) source("scripts/config.R")
 
-PLANT_COMMON_CACHE_FILE <- "data/checklists/plants/plant_genus_common.csv"
+PLANT_COMMON_CACHE_FILE <- "data/checklists/plants/plant_genus_common_generated.csv"
 
 # --- read genus -> raw common-name pairs from one "taxonomy" style CSV ---------
 # Handles either a `rank` or a `taxon_rank` column; keeps only genus rows that have a

@@ -241,7 +241,7 @@ seed_additions_from_flags <- function(flags, record, existing = NULL) {
 # I/O is isolated here; the pieces above are pure + unit-tested.
 resolve_specimen_taxa <- function(record_df,
                                   additions_path = if (exists("PATHS")) PATHS$specimen_additions else PATHS$specimen_additions,
-                                  flags_path = "data/specimens/specimens_clean/review/qc_review_specimen_taxonomy_flags.csv",
+                                  flags_path = "data/specimens/specimens_clean/review/qc_review_specimen_taxonomy_flags_generated.csv",
                                   fetch_fn = NULL, prompt_fn = readline, interactive_ok = TRUE,
                                   write = TRUE, verbose = TRUE) {
   if (!interactive_ok) return(invisible(NULL))

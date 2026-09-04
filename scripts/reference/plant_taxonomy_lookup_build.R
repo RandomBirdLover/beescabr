@@ -3,14 +3,14 @@
 # beescabr pipeline -- PLANT taxonomy lookup builder
 # Created 2026-07-21  |  crosswalk-driven + broad truth + genus normalization
 #
-# Builds data/reference/cabr_plant_taxonomy_lookup.csv: a NORMALIZED plant tree
+# Builds data/reference/cabr_plant_taxonomy_lookup_generated.csv: a NORMALIZED plant tree
 # where EVERY genus and EVERY species (from iNat obs + specimen labels) gets its
 # own row, its own iNat taxon_id, and an in_cabr_park_at_all (T/F) flag. Basic
-# ranks only (kingdom..species). Plant analogue of sd_bee_taxonomy_lookup.csv
+# ranks only (kingdom..species). Plant analogue of sd_bee_taxonomy_lookup_generated.csv
 # (in_holway -> in_cabr_park_at_all).
 #
 # Sources:
-#   * IN-PARK TRUTH  cabr_inat_plant_all_taxa.csv -- every plant taxon observed
+#   * IN-PARK TRUTH  cabr_inat_plant_all_taxa_generated.csv -- every plant taxon observed
 #     anywhere in the CABR boundary by ANY observer (not just surveyors), with
 #     iNat taxon_id + ranks.  -> in_observations = TRUE, in_park = TRUE.
 #   * SPECIMEN PLANTS  master_crosswalk_manual.csv (what_for == "plant_taxon") -- the
@@ -176,7 +176,7 @@ plt_roll_to_species <- function(name) {
   x
 }
 
-# distinct bee-forage plant names (from cabr_inat_bee_forage.csv): the plants bees
+# distinct bee-forage plant names (from cabr_inat_bee_forage_generated.csv): the plants bees
 # were recorded foraging on inside the park -> a second in-park truth source.
 plt_load_forage <- function(forage_path = PLT_FORAGE) {
   if (!file.exists(forage_path)) return(character(0))

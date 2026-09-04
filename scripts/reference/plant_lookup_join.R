@@ -4,7 +4,7 @@
 # Created: 2026-07-21
 #
 # attach_flower_ids(df): given a cleaned bee/specimen table with a flower_visited
-# column (a plant name), joins it to cabr_plant_taxonomy_lookup.csv by
+# column (a plant name), joins it to cabr_plant_taxonomy_lookup_generated.csv by
 # scientific_name and adds:
 #   flower_taxon_id  -- the plant's iNat taxon_id
 #   flower_in_park   -- TRUE/FALSE: is that plant in the park (from the lookup)

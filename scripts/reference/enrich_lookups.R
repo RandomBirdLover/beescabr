@@ -15,8 +15,8 @@
 #     unresolved rows fall back to "NE" / the Latin genus, so cleaning always completes.
 #
 # Caches (also the single fetch ledger, shared across the two bee tables):
-#   data/checklists/iucn/iucn_status.csv           (scientific_name, iucn_code, ...)
-#   data/checklists/plants/plant_genus_common.csv  (genus, common_name, source, ...)
+#   data/checklists/iucn/iucn_status_generated.csv           (scientific_name, iucn_code, ...)
+#   data/checklists/plants/plant_genus_common_generated.csv  (genus, common_name, source, ...)
 #
 # Depends on: dplyr, stringr; httr2 (common names); rredlist (IUCN, optional). + config.R.
 # =============================================================
@@ -40,8 +40,8 @@ if (!exists("cred_get")) source("scripts/utils/credentials.R")
 # IUCN Red List status  (per bee species)
 # =====================================================================================
 IUCN_DIR        <- "data/checklists/iucn"
-IUCN_CACHE_FILE <- file.path(IUCN_DIR, "iucn_status.csv")
-IUCN_VERSION_FILE <- file.path(IUCN_DIR, "iucn_redlist_version.txt")  # the edition we cited
+IUCN_CACHE_FILE <- file.path(IUCN_DIR, "iucn_status_generated.csv")
+IUCN_VERSION_FILE <- file.path(IUCN_DIR, "iucn_redlist_version_generated.txt")  # the edition we cited
 if (!exists("citation_save_version")) source("scripts/publish/citations.R")
 IUCN_SECRET     <- "data/secrets/iucn_api.env"          # gitignored -- paste token here
 IUCN_CODE_NAME  <- c(EX = "Extinct", EW = "Extinct in the Wild", RE = "Regionally Extinct",
@@ -236,7 +236,7 @@ enrich_iucn_columns <- function(df, species_col = "scientific_name", rank_col = 
 # Plant-genus common names  (public iNaturalist taxa API, no token)
 # =====================================================================================
 PGC_DIR        <- "data/checklists/plants"
-PGC_CACHE_FILE <- file.path(PGC_DIR, "plant_genus_common.csv")
+PGC_CACHE_FILE <- file.path(PGC_DIR, "plant_genus_common_generated.csv")
 
 .pgc_read_cache <- function() {
   if (!file.exists(PGC_CACHE_FILE))

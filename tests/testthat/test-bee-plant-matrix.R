@@ -6,7 +6,7 @@
 BPM_SOURCED_FOR_HELPERS <- TRUE   # helpers only; do not run the build
 src("analysis/bee_plant_matrix.R")
 
-# The reference lookup (sd_bee_taxonomy_lookup.csv) is the authority: records carry a
+# The reference lookup (sd_bee_taxonomy_lookup_generated.csv) is the authority: records carry a
 # taxon_id, and the lookup turns it into a canonical genus + species. That is how a
 # subspecies rolls up to its species -- its own row in the lookup names the parent
 # species -- rather than by chopping strings.

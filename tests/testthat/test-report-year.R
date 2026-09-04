@@ -18,10 +18,16 @@ test_that("a nonsense override is ignored rather than trusted", {
   expect_equal(beescabr_season_year(override = "",       today = as.Date("2026-05-01")), 2026L)
 })
 
-test_that("the output folders carry the season year", {
-  expect_equal(beescabr_report_dir(2026L),  "data/analysis/nps_report_2026")
-  expect_equal(beescabr_journal_dir(2026L), "data/analysis/journal_paper_2026")
-  expect_equal(beescabr_report_dir(2027L),  "data/analysis/nps_report_2027")
+test_that("the output folder carries the season year", {
+  expect_equal(beescabr_analysis_dir(2026L), "data/analysis/2026_generated")
+  expect_equal(beescabr_analysis_dir(2027L), "data/analysis/2027_generated")
+})
+
+test_that("the report and the paper share one folder per season", {
+  # they are two framings of the same year, not two analyses -- 11 scripts write to
+  # both. Journal figures are told apart by "_journal" in the FILENAME, not by folder.
+  expect_equal(beescabr_report_dir(2026L), beescabr_journal_dir(2026L))
+  expect_equal(beescabr_report_dir(2026L), beescabr_analysis_dir(2026L))
 })
 
 test_that("the live constants track whatever season this run is", {

@@ -2,7 +2,7 @@
 # analysis/conservation_status.R   (MODULE -- not a standalone figure)
 #
 # Single source of truth for bee conservation status across the pipeline. Reads the
-# IUCN Red List cache (data/checklists/iucn/iucn_status.csv, written by
+# IUCN Red List cache (data/checklists/iucn/iucn_status_generated.csv, written by
 # scripts/refresh_iucn_status.R) and exposes the lookups used by BOTH field guides AND
 # the rare-species plant figure -- so all three flag the SAME species from the SAME
 # live data, with no hardcoded threatened list anywhere downstream.
@@ -16,7 +16,7 @@
 
 suppressPackageStartupMessages({ library(stringr) })
 
-IUCN_CACHE_FILE   <- "data/checklists/iucn/iucn_status.csv"
+IUCN_CACHE_FILE   <- "data/checklists/iucn/iucn_status_generated.csv"
 IUCN_THREAT_CODES <- c("CR", "EN", "VU")            # IUCN "threatened"
 IUCN_ATRISK_CODES <- c("CR", "EN", "VU", "NT")      # threatened + near threatened
 

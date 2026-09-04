@@ -5,7 +5,7 @@
 # THE QUESTION: which plants do the park's rare bees rely on, so management knows
 # what to protect and plant? "Rare" here is two things:
 #   (a) THREATENED bees on the IUCN Red List (categories CR/EN/VU), read live from the
-#       IUCN cache (data/checklists/iucn/iucn_status.csv, written by refresh_iucn_status.R)
+#       IUCN cache (data/checklists/iucn/iucn_status_generated.csv, written by refresh_iucn_status.R)
 #       so a newly listed species is picked up automatically; and
 #   (b) every bee species we have FEWER THAN `RARE_CUT` records of (rarely seen here).
 #

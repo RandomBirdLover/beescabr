@@ -25,7 +25,7 @@ Started 2026-08-25.
       answered 2026-08-26: Taro Katayama will BOTH run it each season and take over the code; comfortable with R and git.
 - [x] **Roster affiliations** — Patricia, Sofia, Diego, Toby have blank  
       done -- all 16 identifier rows carry an affiliation.
-- [x] **`@itazura` has no name** in `identifier_roster.csv` (first and last blank).  
+- [x] **`@itazura` has a name now** (Jack), in `people_manual.csv`.  
       resolved -- affiliation reads 'Grade school student', so the name is deliberately withheld.
 - [x] **Two placeholders in `DATA_ACCESS.md`** — the public site URL and a contact  
       done -- site URL verified live, contacts are Brandi Sanchez and Taro Katayama.

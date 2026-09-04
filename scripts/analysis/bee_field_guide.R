@@ -130,7 +130,7 @@ ss_rows <- lapply(sort(unique(rec_ss$species)), function(k) {
 tbl <- do.call(rbind, c(rows, ss_rows)) %>% arrange(genus, bee)
 
 # ---- IUCN Red List status from the shared conservation module (one source) ----
-# conservation_status.R reads data/checklists/iucn/iucn_status.csv (written by
+# conservation_status.R reads data/checklists/iucn/iucn_status_generated.csv (written by
 # refresh_iucn_status.R); the IUCN column shows when that cache exists.
 HAVE_IUCN        <- iucn_cache_exists()
 # IUCN is a SPECIES-level determination -> look it up on the binomial (tbl$lookup), so a
@@ -194,7 +194,7 @@ def_row <- paste0('<tr class="def"><td class="def"></td>', iucn_def,
   '<td class="def">seen on most</td><td class="def">favorite, availability-corrected</td></tr>')
 note_txt <- if (HAVE_IUCN) {
   "The IUCN column shows each bee's Red List status. Codes: NE (Not Evaluated), DD Data Deficient, LC Least Concern, NT Near Threatened, VU Vulnerable, EN Endangered, CR Critically Endangered. Source: IUCN Red List API v4."
-} else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status.csv). Run refresh_iucn_status.R to populate the full IUCN column."
+} else "* IUCN threatened / near-threatened species, from the last IUCN Red List pull (data/checklists/iucn/iucn_status_generated.csv). Run refresh_iucn_status.R to populate the full IUCN column."
 # Records/Status caveat -- this guide pools ALL data (no survey-only filter), so those two
 # columns reflect detection/photo effort, not a survey-controlled abundance estimate.
 status_note <- sprintf("Because casual public photos count too, Status shows how often a bee is noticed rather than how many there are. A showy bee near a busy trail can read as common on public photos alone, so treat rare, uncommon, and common as recording frequency rather than true density. The cut-offs are rare below %d records, uncommon %d to %d, and common %d or more. Diet is only stated at %d or more records.",

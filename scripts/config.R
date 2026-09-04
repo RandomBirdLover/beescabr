@@ -20,7 +20,7 @@
 #   a deliberate migration (see dev-docs/TODO.md).
 # IUCN Red List: API v4, reached through the rredlist R package rather than raw HTTP.
 #   Requires a free token (data/secrets/iucn_api.env or IUCN_REDLIST_KEY). Recorded in
-#   the source column of data/checklists/iucn/iucn_status.csv on every fetch, so each
+#   the source column of data/checklists/iucn/iucn_status_generated.csv on every fetch, so each
 #   cached status carries the API version it came from.
 # ---- Packages the pipeline needs ---------------------------------------------
 # THE LIST lives here because config.R is the constants file; INSTALLING lives in
@@ -150,8 +150,12 @@ beescabr_season_year <- function(override = Sys.getenv("BEESCABR_SEASON_YEAR", "
   if (!is.na(y) && y > 1900L && y < 2200L) return(y)
   as.integer(format(today, "%Y"))
 }
-beescabr_report_dir  <- function(year = beescabr_season_year()) sprintf("data/analysis/nps_report_%d", year)
-beescabr_journal_dir <- function(year = beescabr_season_year()) sprintf("data/analysis/journal_paper_%d", year)
+# ONE folder per season. The report and the paper are two framings of the same
+# year's data, not two analyses -- 11 scripts write to both -- so they share a tree.
+# Journal figures are told apart by "_journal" in the filename, never by folder.
+beescabr_analysis_dir <- function(year = beescabr_season_year()) sprintf("data/analysis/%d_generated", year)
+beescabr_report_dir  <- beescabr_analysis_dir
+beescabr_journal_dir <- beescabr_analysis_dir
 
 BEESCABR_SEASON <- beescabr_season_year()
 DIR_REPORT  <- beescabr_report_dir(BEESCABR_SEASON)
@@ -213,7 +217,7 @@ NESTING_SOURCES <- c("field:nest", "field:nesting")
 # Centralized so renames happen in one spot (the old scripts hardcoded these
 # inline in many places).
 PATHS <- list(
-  taxonomy_lookup = "data/reference/sd_bee_taxonomy_lookup.csv",
+  taxonomy_lookup = "data/reference/sd_bee_taxonomy_lookup_generated.csv",
   # Internal-only: species -> species-complex taxon_id map. complex_taxon_id is
   # an iNat implementation detail (it looks identical to a species scientific
   # name and confuses non-scientists), so it's stripped from the public
@@ -222,32 +226,32 @@ PATHS <- list(
   # Built ONCE from Holway's v3 checklist (resolving names -> iNat taxon_ids is
   # slow + interactive), then reused every run. Bump the version suffix only when
   # Holway ships a new checklist and you rebuild (BEESCABR_REBUILD_HOLWAY_REF=1).
-  holway_reference = "data/reference/holway_sd_bee_reference_table_v3.csv",
+  holway_reference = "data/reference/holway_sd_bee_reference_table_v3_generated.csv",
   # Your verify/reject decisions. They live in curated/ because a human wrote them:
   # the pipeline appends to them, it does not derive them.
   verified_taxa = "data/reference/hand_curated/verified_taxa.csv",
   rejected_taxa = "data/reference/hand_curated/rejected_taxa.csv",
   specimen_additions = "data/reference/hand_curated/specimen_additions.csv",   # curated specimen-only species merged into the lookup
-  plant_taxonomy_lookup = "data/reference/cabr_plant_taxonomy_lookup.csv",       # basic-rank plant lookup (obs + specimen flowers)
+  plant_taxonomy_lookup = "data/reference/cabr_plant_taxonomy_lookup_generated.csv",       # basic-rank plant lookup (obs + specimen flowers)
   plant_specimen_overrides = "data/reference/hand_curated/plant_specimen_overrides.csv",      # curated expert corrections for specimen-label plants
   plant_not_in_park = "data/reference/generated/cabr_plant_specimen_not_in_park.csv",       # worklist: specimen-label plants not confirmed in park
   plant_name_cache = "data/reference/generated/plant_name_resolution_cache.csv",           # name -> iNat taxon resolution cache
-  plant_all_taxa = "data/inat_observations/reference/cabr_inat_plant_all_taxa.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
+  plant_all_taxa = "data/inat_observations/reference/cabr_inat_plant_all_taxa_generated.csv",   # ALL in-park plant taxa (any observer) -- in-park truth
   plant_park_confirmed = "data/reference/hand_curated/plant_park_confirmed.csv",               # curated: species the botanist confirms are in the park (e.g. obscured threatened taxa)
-  inat_bee_forage = "data/inat_observations/reference/cabr_inat_bee_forage.csv",       # plants bees were recorded foraging on in-park (bee-obs flower_visited) -- in-park truth
+  inat_bee_forage = "data/inat_observations/reference/cabr_inat_bee_forage_generated.csv",       # plants bees were recorded foraging on in-park (bee-obs flower_visited) -- in-park truth
 # Checklists. These names are the CURRENT ones on disk (the earlier
   # cabr_inat_bee_checklist / *_combined_* / *_v2 keys pointed at filenames that no
   # longer exist and nothing read them -- removed 2026-08-25).
-  checklist_cabr_official   = "data/checklists/cabr/cabr_official_native_bee_checklist.csv",
-  checklist_cabr_raw_inat   = "data/checklists/cabr/cabr_raw_inat_native_bee_checklist.csv",
-  checklist_cabr_specimen   = "data/checklists/cabr/cabr_specimen_native_bee_checklist.csv",
-  checklist_pl_raw_inat     = "data/checklists/point_loma/pl_raw_inat_native_bee_checklist.csv",
-  checklist_sd_holway       = "data/checklists/sd_county/sd_holway_native_bee_checklist.csv",
-  checklist_sd_raw_inat     = "data/checklists/sd_county/sd_raw_inat_native_bee_checklist.csv",
-  checklist_sd_holway_inat  = "data/checklists/sd_county/sd_holway_and_raw_inat_native_bee_checklist.csv",
-  inat_clean = "data/inat_observations/inat_clean/cabr_inat_bee_clean.csv",
-  inat_plant_clean = "data/inat_observations/inat_clean/cabr_inat_plant_clean.csv",
-  specimen_clean = "data/specimens/specimens_clean/cabr_specimen_bee_clean.csv",
+  checklist_cabr_official   = "data/checklists/cabr/cabr_official_native_bee_checklist_generated.csv",
+  checklist_cabr_inat   = "data/checklists/cabr/cabr_inat_native_bee_checklist_generated.csv",
+  checklist_cabr_specimen   = "data/checklists/cabr/cabr_specimen_native_bee_checklist_generated.csv",
+  checklist_pl_inat     = "data/checklists/point_loma/pl_inat_native_bee_checklist_generated.csv",
+  checklist_sd_holway       = "data/checklists/sd_county/sd_holway_native_bee_checklist_generated.csv",
+  checklist_sd_inat     = "data/checklists/sd_county/sd_inat_native_bee_checklist_generated.csv",
+  checklist_sd_holway_inat  = "data/checklists/sd_county/sd_holway_and_inat_native_bee_checklist_generated.csv",
+  inat_clean = "data/inat_observations/inat_clean/cabr_inat_bee_clean_generated.csv",
+  inat_plant_clean = "data/inat_observations/inat_clean/cabr_inat_plant_clean_generated.csv",
+  specimen_clean = "data/specimens/specimens_clean/cabr_specimen_bee_clean_generated.csv",
   holway_combined = "data/reference/source/holway_2026/holway_v3_combined.csv",
   # Project effort + roster. per_survey is the trip-level log (one row per survey
   # trip) -- use it for EFFORT metrics only (trip counts, days, method split), never
@@ -265,6 +269,11 @@ PATHS <- list(
   people = "data/project_info/rosters/people_manual.csv",
   # who was in the field, which year, in what capacity -- GENERATED from the survey record
   participation = "data/project_info/rosters/participation_generated.csv",
+  # identifications each person made ON CABRILLO RECORDS -- GENERATED, replaced a
+  # hand-typed id_count that drifted. Orders the identifier list on the site.
+  identification_counts = "data/project_info/rosters/identification_counts_generated.csv",
+  # the brain's per-observation lookup (carries the in_cabr flag)
+  inat_raw_membership = "data/inat_observations/inat_raw/cabr_inat_raw_generated.csv",
 
   # project_info is organised into three jobs, each with its own review/ folder, the same
   # shape inat_observations/ and specimens/ already use: rosters (who), surveys (when and
@@ -332,6 +341,8 @@ PATH_KIND <- list(
   # --- outputs: the pipeline writes these ---
   per_survey               = "output",   # finding_project_info.R rebuilds it every run
   participation            = "output",   # derived from per_survey: declared identity, derived activity
+  identification_counts    = "output",
+  inat_raw_membership      = "output",
   taxonomy_lookup          = "output",
   holway_reference         = "output",
   plant_taxonomy_lookup    = "output",
@@ -341,11 +352,11 @@ PATH_KIND <- list(
   inat_plant_clean         = "output",
   specimen_clean           = "output",
   checklist_cabr_official  = "output",
-  checklist_cabr_raw_inat  = "output",
+  checklist_cabr_inat  = "output",
   checklist_cabr_specimen  = "output",
-  checklist_pl_raw_inat    = "output",
+  checklist_pl_inat    = "output",
   checklist_sd_holway      = "output",
-  checklist_sd_raw_inat    = "output",
+  checklist_sd_inat    = "output",
   checklist_sd_holway_inat = "output",
   # --- optional: caches + on-demand reviewer worklists ---
   complex_map              = "optional",

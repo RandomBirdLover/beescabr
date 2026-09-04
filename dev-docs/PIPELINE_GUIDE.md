@@ -70,7 +70,7 @@ scripts/
   reference/                     taxonomy + Holway
     holway.R / holway_reference_build.R  Holway backfill + interactive resolver
     taxonomy_reference.R         bee taxonomy lookup builder (PURE)
-    taxonomy_lookup_build.R      orchestrator: sd_bee_taxonomy_lookup.csv
+    taxonomy_lookup_build.R      orchestrator: sd_bee_taxonomy_lookup_generated.csv
     manual_overrides.R / resolve_missing_ids.R / verify.R
     plant_lookup_join.R / plant_taxonomy_lookup_build.R
   checklists/
@@ -170,7 +170,7 @@ then implement, then run the full suite."*
 | Service | Version | How we reach it | Notes |
 | --- | --- | --- | --- |
 | iNaturalist | **v1** | direct HTTP, `https://api.inaturalist.org/v1/` | observations, taxa, observation fields. iNat also has a v2 we deliberately do **not** use — moving would change response shapes and needs a planned migration. |
-| IUCN Red List | **v4** | the `rredlist` R package (1.1.1) | needs a free token in `data/secrets/iucn_api.env` or `IUCN_REDLIST_KEY`. Every cached status records its API version in the `source` column of `iucn_status.csv`. |
+| IUCN Red List | **v4** | the `rredlist` R package (1.1.1) | needs a free token in `data/secrets/iucn_api.env` or `IUCN_REDLIST_KEY`. Every cached status records its API version in the `source` column of `iucn_status_generated.csv`. |
 
 
 Two scripts pull from the API rather than the CSV export:

@@ -3,7 +3,7 @@
 # Point Loma native-bee checklist (normalized tree -- parent taxa as their own rows, from lookup).
 #
 # INPUTS -> OUTPUTS (data/checklists/point_loma/):
-#   4. pl_raw_inat_native_bee_checklist.csv  <- RAW iNat bee obs clipped to the Point Loma boundary,
+#   4. pl_inat_native_bee_checklist_generated.csv  <- RAW iNat bee obs clipped to the Point Loma boundary,
 #      expanded to the lookup subtree (leaves + ancestor rows). The ONLY source for Point Loma
 #      (no Dorey / GBIF / SDNHM). NOT inat_bee_clean.R.
 #
@@ -22,7 +22,7 @@ build_pl_bee_checklists <- function(bees_sf, lookup) {
   obs <- spatial_split(bees_sf, point_loma_boundary, "Point Loma")
   ids <- unique(as.character(obs$taxon_id)); ids <- ids[!is.na(ids) & ids != ""]
   pl_inat <- lookup_subtree(lookup, lookup |> filter(taxon_id %in% ids), "Point Loma iNat")
-  write_csv(pl_inat, file.path(PL_OUT_DIR, "pl_raw_inat_native_bee_checklist.csv"), na = "")
+  write_csv(pl_inat, file.path(PL_OUT_DIR, "pl_inat_native_bee_checklist_generated.csv"), na = "")
 
   invisible(pl_inat)
 }

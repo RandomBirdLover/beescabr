@@ -104,7 +104,7 @@ were two separate lists covering the same project).
   computed in-memory from the newest specimen `.xlsx`, the 11 specimen-only intern
   rows (source == "specimen-record"), and the `n/a` cells (non-lethal -> no specimens,
   lethal -> no iNat obs).
-- [ ] **Give intermediate-rank rows their iNat taxon_id in `sd_bee_taxonomy_lookup.csv` (id-first backbone).**
+- [ ] **Give intermediate-rank rows their iNat taxon_id in `sd_bee_taxonomy_lookup_generated.csv` (id-first backbone).**
   Bug: rank rows between genus and species (subgenus, tribe, ...) get a NAME but a
   blank `taxon_id` -- e.g. subgenus `Amblyapis` has a row but no id, though iNat has
   it (700707) and 5 of its species resolved (arida 1308040, ilicifoliae 361626,
@@ -122,7 +122,7 @@ were two separate lists covering the same project).
   already passes NA-`taxon_id` rows through, which is what protects unpublished "sp. nov."
   names (e.g. Hesperapis cactorum) from being dropped -- they then slot under a now-id'd
   genus/subgenus. Double-check against the saved baseline copies of
-  holway_sd_bee_reference_table_v3.csv + sd_bee_taxonomy_lookup.csv (esp. that no id-less
+  holway_sd_bee_reference_table_v3_generated.csv + sd_bee_taxonomy_lookup_generated.csv (esp. that no id-less
   Holway rows disappear). API fallback (`/taxa?q=&rank=`) for any rank with no observed descendant.
 
 - [ ] **Output files must be manually deleted before re-running.** `write_fresh()` does not overwrite existing CSVs — if a prior output exists, the new run silently skips the write and you get stale data. Delete the relevant generated files (under `data/inat_observations/inat_clean/`, `data/checklists/`, `data/analysis/`) before each run until this is fixed.
@@ -139,7 +139,7 @@ were two separate lists covering the same project).
 - [ ] **Wire the genera/species accumulation analysis into `run_data_cleaning_pipeline.R`.**
   Built and tested, deliberately run BY HAND for now (like the notes reviewer):
   `scripts/analysis/genera_and_species_accumulation.R` reads the three
-  cleaned tables (`cabr_inat_bee_clean.csv`, `cabr_specimen_bee_clean.csv`,
+  cleaned tables (`cabr_inat_bee_clean_generated.csv`, `cabr_specimen_bee_clean_generated.csv`,
   `master_per_survey_info_generated.csv`) and writes the two survey-effort accumulation figures
   (cumulative species + genera, each with 8 lines = 4 transects x 2 methods: color =
   transect, solid = non-lethal photo / dashed = lethal net; no CI band) plus
@@ -169,6 +169,49 @@ were two separate lists covering the same project).
 ### Future
 
 - [ ] Update methods and use iNat projects
+
+### Handoff cleanup (opened 2026-09-03)
+
+The tail end of the file/folder reorganisation. Data items first, docs last, because
+the docs describe the layout and should be written once it has stopped moving.
+
+**Data**
+
+- [ ] **Sweep the 50 `.DS_Store` files under `data/`.** Gitignored, so they never reach
+  Taro through git, but they ride along in a folder copy or a zip. One `find -delete`,
+  and they regenerate harmlessly.
+
+- [ ] **Decide what happens to `id_count`** in `people_manual.csv`. It is a hand-typed
+  iNaturalist statistic (Jessica 8,258, Jon 12,173), stale the moment it is written, and
+  it only orders the identifier list on the acknowledgements page. Three ways out:
+  leave it, drop it and sort the list some other way, or DERIVE it by counting
+  identifications per person from the observation cache. The cache holds 245,946
+  identifications, so the data is already there -- the same JSON we decided not to prune.
+
+**Docs** (do these LAST, once the layout has settled)
+
+- [ ] **`PEOPLE_ROSTER_BRIEF.md` is stale.** It is a design brief for the people
+  redesign that has since been BUILT, and its six "open decisions" are all settled.
+  As written it reads like a live proposal. Either close it out with what was chosen
+  and why, or delete it and let the explainers carry the reasoning.
+
+- [ ] **Merge `VERIFICATION_DESIGN.md` + `verification_guide.md`.** Two files on
+  one subject.
+
+- [ ] **Merge `analysis_decisions.md` + `analysis_roadmap.md`.** Same.
+
+- [ ] **Cut `PIPELINE_GUIDE.md` back to architecture.** It has accumulated
+  task-level detail that now lives in the runbook and the per-folder explainers.
+
+- [ ] **Triage this file.** 52 items, never reviewed; several are certainly done.
+  Move anything finished to "Done" with the date.
+
+**Decided, not open** -- recorded so they are not re-opened as bugs:
+
+- `CSBI Interns` credits nobody on 800 of 1,145 specimens. Which interns netted those
+  days was never written down, so there is nothing to recover. Do not guess names in.
+- The transect map now keeps each report year's own transects (OT established 2024), so
+  a 2023 report no longer gains a transect it never had.
 
 ### Done
 

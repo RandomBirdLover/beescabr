@@ -25,7 +25,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr) })
 
 # ---- pure: records -> long bee/plant pairs with a visit count ------------------
 # Identity comes from taxon_id joined to the reference lookup, NOT from pasting the
-# record's genus + species strings together. The lookup (sd_bee_taxonomy_lookup.csv)
+# record's genus + species strings together. The lookup (sd_bee_taxonomy_lookup_generated.csv)
 # is the project's authority for what a taxon_id means, so:
 #   * a subspecies rolls up to its species because its lookup row names the parent
 #     species (Anthophora urbana ssp. clementina -> Anthophora urbana), and

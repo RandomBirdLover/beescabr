@@ -1,6 +1,6 @@
 # =============================================================
 # reference/taxonomy_lookup_build.R
-# beescabr pipeline -- taxonomy LOOKUP builder (sd_bee_taxonomy_lookup.csv)
+# beescabr pipeline -- taxonomy LOOKUP builder (sd_bee_taxonomy_lookup_generated.csv)
 # Renamed 2026-07-15 from native_bee_checklist.R.
 #
 # The old orchestrator (build_all_checklists) built the taxonomy lookup AND the
@@ -9,7 +9,7 @@
 # built). This file now builds ONLY the lookup + its internal artifacts.
 #
 # Exposes build_taxonomy_lookup(con): from a populated observation cache builds
-#   - sd_bee_taxonomy_lookup.csv   the taxonomy reference table (the deliverable)
+#   - sd_bee_taxonomy_lookup_generated.csv   the taxonomy reference table (the deliverable)
 #   - the internal complex map     bare genus/species/complex + complex_taxon_id;
 #                                  specimen_bee_clean.R reads it to roll specimen
 #                                  IDs up to iNat's complex-level observations
@@ -28,11 +28,11 @@
 # species -- NOT Holway + iNat only. STEP 5 below merges them every build.
 #   * WHY  : specimen_bee_clean.R nets real bees the Holway checklist AND the iNat SD obs
 #            both miss (species no one photographed). They surface in
-#            data/specimens/specimens_clean/review/qc_review_specimen_taxonomy_flags.csv as
+#            data/specimens/specimens_clean/review/qc_review_specimen_taxonomy_flags_generated.csv as
 #            "genus+species combo not in taxonomy lookup".
 #   * WHERE: a curated specimen_additions.csv, MERGED here at build time (STEP 5 via
 #            load_specimen_additions + specimen_additions_to_lookup). Do NOT hand-edit
-#            sd_bee_taxonomy_lookup.csv -- it is rewritten every run and any manual row is
+#            sd_bee_taxonomy_lookup_generated.csv -- it is rewritten every run and any manual row is
 #            wiped; edit specimen_additions.csv instead.
 #   * IDS  : the interactive pass-1 prompt (specimen_id_prompt.R, run_pipeline stage 6c)
 #            resolves each addition's iNat taxon_id with full parent lineage and writes it to
@@ -73,7 +73,7 @@ local({
 })
 
 # ------------------------------------------------------------
-# build_taxonomy_lookup(con): build sd_bee_taxonomy_lookup.csv (+ the internal
+# build_taxonomy_lookup(con): build sd_bee_taxonomy_lookup_generated.csv (+ the internal
 # complex map) against a populated cache. Returns an invisible summary list.
 # backfill_parent_taxonomy() lives in reference/taxonomy_reference.R (sourced above via need()).
 # ------------------------------------------------------------
@@ -138,7 +138,7 @@ build_taxonomy_lookup <- function(con) {
   # in at STEP 5 below (specimen_additions_to_lookup). Broader CABR specimen evidence still
   # lives downstream in the checklists (built from the cleaned specimen record), not here.
 
-  # STEP 5: sd_bee_taxonomy_lookup.csv (with source-membership columns).
+  # STEP 5: sd_bee_taxonomy_lookup_generated.csv (with source-membership columns).
   # The enriched Holway reference table (holway_sd_bee_reference_table.csv, built
   # by holway_reference_build.R earlier in run_data_cleaning_pipeline.R) is the BASE of the
   # lookup -- it supplies iNat taxon_ids + scientific names for Holway species,

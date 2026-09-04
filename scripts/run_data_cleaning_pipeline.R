@@ -15,7 +15,7 @@
 #                re-run brain. Then [3d] eyeball the survey-date windows with no tagged
 #                survey nearby (heads-up only, no re-run) and [3e] rule any equal-split
 #                transect ties. Skipped non-interactive.
-#   4.  CLEAN    cabr_inat_bee_clean.csv (labeled CABR bee table; walk-in re-marked not-survey)
+#   4.  CLEAN    cabr_inat_bee_clean_generated.csv (labeled CABR bee table; walk-in re-marked not-survey)
 #   5.  CHECKLIST STUFF (LAST): Holway reference -> taxonomy lookup -> the new
 #                per-source checklists (parked until built)
 #
@@ -139,7 +139,7 @@ source("scripts/specimens/specimen_raw_worklist.R")      # defines tidy_raw_spec
 source("scripts/reference/specimen_id_prompt.R")      # defines resolve_specimen_taxa() -- stage 6c interactive taxon-id resolve
 # CHECKLISTS (stage 9): normalized-tree builder + the 3 per-scope orchestrators. Sourced here so
 # the whole pipeline runs end-to-end with NO manual steps (cabr_inat / cabr_specimen / cabr_official /
-# pl_raw_inat / sd_holway / sd_raw_inat / sd_holway_and_raw_inat -- parent taxa as their own rows).
+# pl_inat / sd_holway / sd_inat / sd_holway_and_inat -- parent taxa as their own rows).
 source("scripts/checklists/checklist_build.R")        # spatial_split / lookup_subtree / combine_checklists
 source("scripts/checklists/cabr_bee_checklist.R")     # defines build_cabr_bee_checklists()
 source("scripts/checklists/pl_bee_checklist.R")       # defines build_pl_bee_checklists()
@@ -282,10 +282,10 @@ main <- function() {
   }
 
   # ---- 2c. FIELD MAP: refresh the obs-field name -> iNat id map from the cache ----
-  # Keeps data/inat_observations/reference/inat_field_id_map.csv (the crosswalk's stable-id
+  # Keeps data/inat_observations/reference/inat_field_id_map_generated.csv (the crosswalk's stable-id
   # reference) in step with freshly-ingested fields. Cheap DuckDB query; skipped when ingest
   # was skipped and the map already exists. Reuses the bee `con` (2b used its own plant con).
-  FIELD_MAP_PATH <- "data/inat_observations/reference/inat_field_id_map.csv"
+  FIELD_MAP_PATH <- "data/inat_observations/reference/inat_field_id_map_generated.csv"
   if (Sys.getenv("BEESCABR_SKIP_INGEST", "0") != "1" || !file.exists(FIELD_MAP_PATH)) {
     build_field_id_map(con = con)
   }  # else: silently reused (ingest skipped and the map already exists)
@@ -315,7 +315,7 @@ main <- function() {
 
   # ---- 3. BRAIN: provenance + unknown tags/fields/notes + survey_dates ----
   # finding_project_info() decides survey membership from master_crosswalk_manual.csv, writes
-  # cabr_inat_raw.csv, the THREE unknown reports (review them by
+  # cabr_inat_raw_generated.csv, the THREE unknown reports (review them by
   # hand in order -> update crosswalk_master -> re-run), and builds master_per_survey_info_generated.csv
   # (+ the beeple review queue). Taxonomy-blind, so it needs no Holway/lookup.
   bx_phase(2, "SURVEY BRAIN — who surveyed, when, which transect")
@@ -373,7 +373,7 @@ main <- function() {
   }
 
   # ---- 4. HOLWAY REFERENCE (interactive: resolves Holway -> iNat; prompts as needed) ----
-  # Rebuilds holway_sd_bee_reference_table_v3.csv EVERY run so any Holway change is caught.
+  # Rebuilds holway_sd_bee_reference_table_v3_generated.csv EVERY run so any Holway change is caught.
   # Decisions are cached (holway_decisions) so a normal run mostly replays them -- you're only
   # prompted for the unresolved-"Described" second pass + anything new. Wrapped so an abort or
   # failure keeps the existing table and never kills the run.
@@ -389,7 +389,7 @@ main <- function() {
                                  ") — kept the existing table."))
 
   # ---- 5. TAXONOMY LOOKUP ----
-  # Reads the Holway reference table (step 4) + the cache, writes sd_bee_taxonomy_lookup.csv
+  # Reads the Holway reference table (step 4) + the cache, writes sd_bee_taxonomy_lookup_generated.csv
   # (+ the internal complex map). Wrapped so a taxonomy failure never kills the run.
   if (file.exists(PATHS$holway_reference)) {
     tryCatch(build_taxonomy_lookup(con),
@@ -422,7 +422,7 @@ main <- function() {
   # ---- 6. SPECIMENS (lethal-survey record) ----
   # 6a. Raw hygiene worklist (non-ID'd / missing / duplicate rows to fix by hand).
   # 6b. Clean -- taxon_id + taxonomy from the lookup (step 5), transect, visited plant ->
-  #     cabr_specimen_bee_clean.csv (mirrors the iNat bee schema).
+  #     cabr_specimen_bee_clean_generated.csv (mirrors the iNat bee schema).
   tryCatch(tidy_raw_specimens(),
            error = function(e) bx_note("raw specimen worklist failed: ", conditionMessage(e)))
   tryCatch(clean_specimens(interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1"),
@@ -440,7 +440,7 @@ main <- function() {
   }, error = function(e) bx_note("specimen taxon-id resolve failed: ", conditionMessage(e)))
 
   # ---- 7. CLEAN: labeled iNat BEE table (taxonomy filled from the lookup) ----
-  # Reads the brain's cabr_inat_raw.csv, joins coords + taxon_id, fills taxonomy from the
+  # Reads the brain's cabr_inat_raw_generated.csv, joins coords + taxon_id, fills taxonomy from the
   # lookup (step 5) by taxon_id, re-marks Humphreys Rd walk-ins. AFTER the lookup so its
   # taxonomy columns are populated.
   tryCatch(inat_bee_clean(),
@@ -453,7 +453,7 @@ main <- function() {
            error = function(e) bx_note("plant-name review failed: ", conditionMessage(e)))
 
   # ---- 7c. OBSERVATION REVIEW: prompt for the iNat obs that need fixing ON iNaturalist ----
-  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + qc_review_inat_mistagged_transects_manual.csv
+  # cabr_inat_bee_fix_behavior.csv (wrong/missing flower field) + qc_review_inat_mistagged_transects_generated.csv
   # (stray transect tag) + the bee/plant location_review files (survey pins far from any transect).
   # Each row carries the observation's url, so you open it and fix it there; the next iNat pull picks
   # up your fix. Non-blocking: surfaces + prompts, then continues.
@@ -464,10 +464,10 @@ main <- function() {
     obs_rev   <- "data/inat_observations/review"
     obs_items <- data.frame(
       label = c("bee behavior to fix (survey)", "bee flowers to add (non-survey)", "stray transect tags"),
-      count = c(.n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_survey.csv")),
-                .n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_nonsurvey.csv")),
-                .n_rows(file.path(obs_rev, "qc_review_inat_mistagged_transects_manual.csv"))),
-      file  = c("qc_review_inat_bee_behavior_survey.csv", "qc_review_inat_bee_behavior_nonsurvey.csv", "qc_review_inat_mistagged_transects_manual.csv"),
+      count = c(.n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_survey_generated.csv")),
+                .n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_nonsurvey_generated.csv")),
+                .n_rows(file.path(obs_rev, "qc_review_inat_mistagged_transects_generated.csv"))),
+      file  = c("qc_review_inat_bee_behavior_survey_generated.csv", "qc_review_inat_bee_behavior_nonsurvey_generated.csv", "qc_review_inat_mistagged_transects_generated.csv"),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
@@ -487,7 +487,7 @@ main <- function() {
   # ---- 9. CHECKLISTS: cabr / pl / sd native-bee checklists (normalized tree from the lookup) ----
   # Each checklist carries parent taxa as their own rows (taxon_id/taxon_rank/names/taxonomy from the
   # lookup), like Holway. iNat lists clip the RAW bee export to each boundary; the specimen + Holway
-  # subtrees come from cabr_specimen_bee_clean.csv + the Holway reference. Runs LAST (needs stages 5-8).
+  # subtrees come from cabr_specimen_bee_clean_generated.csv + the Holway reference. Runs LAST (needs stages 5-8).
   bx_phase(6, "CHECKLISTS & QC")
   tryCatch({
     .lk <- suppressMessages(readr::read_csv(PATHS$taxonomy_lookup, show_col_types = FALSE)) |>
@@ -529,8 +529,8 @@ main <- function() {
         dir.create("data/inat_observations/review", showWarnings = FALSE, recursive = TRUE)
         write.csv(.newbees[, c("scientific_name", "taxon_rank", "group", "n_inat_records",
                                "n_inat_research_grade", "n_specimen_records", "taxon_id")],
-                  "data/inat_observations/review/qc_review_inat_new_bees_not_on_holway.csv", row.names = FALSE, na = "")
-        bx_out("data/inat_observations/review/qc_review_inat_new_bees_not_on_holway.csv")
+                  "data/inat_observations/review/qc_review_inat_new_bees_not_on_holway_generated.csv", row.names = FALSE, na = "")
+        bx_out("data/inat_observations/review/qc_review_inat_new_bees_not_on_holway_generated.csv")
       } else bx_kv("New bees", "none — every CABR bee with iNat records is on Holway")
     } else bx_kv("New bees", "skipped (need the CABR checklist + cleaned specimen/iNat tables)")
   }, error = function(e) bx_note("new-bees review failed: ", conditionMessage(e)))
@@ -543,8 +543,8 @@ main <- function() {
   if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), "review/location/by_surveyors/")
   .n_tax <- .n_rows("data/reference/generated/cabr_taxon_ids_needs_review.csv")
   if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax), "cabr_taxon_ids_needs_review.csv")
-  .n_dupe <- .n_rows("data/specimens/specimens_clean/review/qc_review_specimen_duplicates.csv")
-  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "qc_review_specimen_duplicates.csv")
+  .n_dupe <- .n_rows("data/specimens/specimens_clean/review/qc_review_specimen_duplicates_generated.csv")
+  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "qc_review_specimen_duplicates_generated.csv")
 
   message("")
   bx_rule()
@@ -567,7 +567,7 @@ bx_analysis_files <- function() {
   message("  FILES FOR ANALYSIS")
   grp("checklists")
   item(PATHS$checklist_cabr_official)
-  item(PATHS$checklist_cabr_raw_inat)
+  item(PATHS$checklist_cabr_inat)
   item(PATHS$checklist_cabr_specimen)
   grp("cleaned observations")
   item(PATHS$inat_clean)
