@@ -155,7 +155,7 @@ fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",
    "estimator",
    "Diversity indices and community composition (NMDS) by transect and year.",
-   c("analysis" = "Shannon/Simpson/evenness + rank-abundance + NMDS ordination",
+   c("analysis" = "Shannon and Simpson diversity, Pielou evenness, rank-abundance, NMDS ordination + PERMANOVA on Bray-Curtis distances",
      assumption = "diversity indices are effort-sensitive; the 2024-heavy skew inflates apparent year differences"),
    "diversity_by_transect.csv; diversity_by_year.csv; REPORT: bee_community_composition_nmds.png, bee_species_commonness_rank_abundance.png (pooled + per-transect combined); JOURNAL: diversity_rank_abundance_journal.png")
 
@@ -172,7 +172,8 @@ fw("interactions_network",
    "Plant-bee visitation network (webs + heatmaps)",
    "descriptive",
    "Who visits what: full plant-genus x bee network as webs + heatmaps (raw co-occurrence; read descriptively).",
-   c(note = "raw visitation counts -- NOT preference (see forage_selectivity for the inferential preference test)",
+   c("analysis" = "NODF nestedness of the plant x bee matrix tested against a quasiswap null (vegan::oecosimu); the webs and heatmaps themselves are descriptive",
+     note = "raw visitation counts -- NOT preference (see forage_selectivity for the inferential preference test)",
      scope = "specimen net + iNaturalist photo pooled, CABR only"),
    "bee_plant_network_genus.png; bee_plant_network_species.png; bee_plant_interaction_heatmap_*.png; interactions_*_matrix.csv; bee_genus_specialization_overview.png; bee_specialist_network.png")
 
