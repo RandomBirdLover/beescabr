@@ -170,15 +170,57 @@ write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL,
 # one's iNaturalist taxon_id (+ optional current name), appending answers to manual_taxon_overrides.csv
 # so they apply at BOTH levels on the next build. Mirrors the Holway second-pass prompt; a no-op when
 # non-interactive (then the worklist file is the fallback). Returns the count of ids recorded.
+#' Explain the fill-missing-ids pass before asking about the first name
+#'
+#' These names have already been searched for automatically and not found -- the
+#' verdict is cached in resolved_missing_ids.csv. Presenting them as open work
+#' invites someone to hunt for an id that does not exist. For most, `n` is correct
+#' and the only real question is whether the NAME is still valid, which ITIS answers.
+#'
+#' @param n How many names are being asked about.
+#' @return Invisibly NULL; prints.
+.mo_banner <- function(n) {
+  message("")
+  message("  ", n, " checklist bees still have no iNaturalist id.")
+  message("")
+  message("  These were ALREADY searched for automatically and not found, so this is")
+  message("  a second opinion rather than a first look. Some genuinely have no page on")
+  message("  iNaturalist -- that is expected and documented, and 'n' is the right answer.")
+  message("")
+  message("  For each one, two questions:")
+  message("    1. Is it on iNaturalist under another name?  The search link is printed")
+  message("       with each name; the taxon_id is the number in the address bar.")
+  message("    2. Is the name still valid at all?  ITIS, the US government taxonomy")
+  message("       database, says whether it is accepted or was renamed:")
+  message("       https://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=Scientific_Name")
+  message("")
+  message("  WHAT TO TYPE")
+  message("    345235             a taxon_id you found")
+  message("    345235 New name    the id AND a corrected name")
+  message("    n                  no iNaturalist page; stop asking about it")
+  message("    <Enter>            skip for now")
+  message("    q                  stop, keeping everything entered so far")
+  invisible(NULL)
+}
+
+#' Ask a person about the checklist names that still have no iNaturalist id
+#'
+#' These were already searched for automatically and not found, so this is a second
+#' opinion rather than a first look. `.mo_banner()` says so before the first name,
+#' and points at ITIS for the separate question of whether the name is still valid.
+#'
+#' @param cache_path The resolver's verdict cache.
+#' @param overrides_path Where answers are written.
+#' @param prompt_fn Injection point for reading an answer.
+#' @param ... Passed through to the worklist builder.
+#' @return Invisibly, the answers recorded.
 prompt_missing_taxon_ids <- function(cache_path = RMI_CACHE_PATH, overrides_path = MANUAL_OVERRIDES_PATH,
                                      interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
                                      prompt_fn = readline) {
   if (!isTRUE(interactive_ok)) return(0L)
   open <- .mo_open_worklist(cache_path, load_manual_overrides(overrides_path))
   if (!nrow(open)) return(0L)
-  message(sprintf("\n=== Fill missing taxon_ids: %d bee names need an iNat taxon_id ===", nrow(open)))
-  message("   Look each up on iNaturalist (URL shown). Enter its taxon_id, or 'id Current name' to")
-  message("   also correct the name; 'n' = no id yet, blank = skip, 'q' = stop (keep what's entered).")
+  .mo_banner(nrow(open))
   cols <- c("rank", "name", "taxon_id", "correct_name", "note")
   answers <- list()
   for (i in seq_len(nrow(open))) {

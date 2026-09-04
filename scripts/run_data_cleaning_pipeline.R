@@ -415,11 +415,19 @@ main <- function() {
   tryCatch({
     obs_rev   <- "data/inat_observations/review"
     obs_items <- data.frame(
-      label = c("bee behavior to fix (survey)", "bee flowers to add (non-survey)", "stray transect tags"),
+      label = c(.review_labels_inat(), "stray transect tags"),
       count = c(.n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_survey_generated.csv")),
                 .n_rows(file.path(obs_rev, "qc_review_inat_bee_behavior_nonsurvey_generated.csv")),
                 .n_rows(file.path(obs_rev, "qc_review_inat_mistagged_transects_generated.csv"))),
       file  = c("qc_review_inat_bee_behavior_survey_generated.csv", "qc_review_inat_bee_behavior_nonsurvey_generated.csv", "qc_review_inat_mistagged_transects_generated.csv"),
+      what  = c(paste("On iNaturalist the flower a bee was on lives in an observation field.",
+                      "These survey records have none, so either the bee was not on a flower",
+                      "or the field was never filled in. Each row carries its URL -- open it",
+                      "and add the field, or leave it if there was no flower."),
+                "Same, on records that were not part of a survey. Lower priority.",
+                paste("The observation carries a transect tag that disagrees with the",
+                      "transect the rest of that surveyor's day was on. Usually a typo in",
+                      "the tag; open the URL and correct it.")),
       stringsAsFactors = FALSE)
     resolve_review_gate(obs_items, obs_rev,
                         interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",

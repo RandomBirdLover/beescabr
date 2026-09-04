@@ -428,7 +428,7 @@ source("scripts/utils/function_docs.R"); write_functions_md()
 | Function | Arguments | What it does |
 |---|---|---|
 | `apply_manual_overrides` | `df`, `overrides` | PURE |
-| `prompt_missing_taxon_ids` | `cache_path`, `overrides_path`, `interactive_ok`, `prompt_fn` | INTERACTIVE |
+| `prompt_missing_taxon_ids` | `cache_path`, `overrides_path`, `interactive_ok`, `prompt_fn` | Ask a person about the checklist names that still have no iNaturalist id |
 | `write_review_worklist` | `cache_path`, `overrides`, `path` | the file version of the prompt -- writes the open not_found set to cabr_taxon_ids_needs_review.csv with bla... |
 
 **specimen_id_prompt.R**
@@ -553,7 +553,7 @@ source("scripts/utils/function_docs.R"); write_functions_md()
 | `parse_specimen_dates` | `df` | Parse the specimen date column into date_clean + month/day/year, and turn empty strings into NA across char... |
 | `plant_variant_map` | `crosswalk` | from the crosswalk's plant rows (what_for == "plant_taxon"), a variant(lowercased) -> canonical-name lookup... |
 | `resolve_determiners` | `codes`, `roster` | PURE |
-| `resolve_review_gate` | `items`, `review_dir`, `interactive_ok`, `prompt_fn`, `fix_hint`, `blocking` | ONE consolidated review checkpoint so nothing in the review folder gets silently missed |
+| `resolve_review_gate` | `items`, `review_dir`, `interactive_ok`, `prompt_fn`, `fix_hint`, `blocking` | One review checkpoint, so nothing in a review folder is silently missed |
 | `sbc_bee_situation` | `df` | PURE |
 | `standardize_specimen_names` | `df` | Standard scientific-name casing: Genus title-case, species/subspecies lower |
 | `strip_control_chars` | `df` | Defensive: strip embedded control/null bytes from character columns so the saved CSV re-reads cleanly |

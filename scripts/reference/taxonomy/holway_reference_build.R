@@ -585,15 +585,57 @@ resolve_missing_genera <- function(unresolved_genera, known_gkeys, con,
 # in the first pass and are NOT revisited; aff./sp.nov. rows are left alone (nothing
 # to resolve them to). The pick is cached so a later run reuses it with no prompt.
 # ------------------------------------------------------------
+#' Explain one unresolved checklist name, and where to go and settle it
+#'
+#' This step matches every name on the county bee checklist to iNaturalist's number
+#' for it. A handful never match, and the person asked to fix that has no way to know
+#' what failed or which site answers it. Both sites used here are named and linked,
+#' pre-filled with the name in question.
+#'
+#' @param r One unresolved checklist row (`genus`, `species_raw`, `subgenus`).
+#' @return Invisibly NULL; prints.
+.second_pass_prompt <- function(r) {
+  label <- trimws(paste(r$genus %||% "", r$species_raw %||% ""))
+  subg  <- .strip_parens(r$subgenus %||% NA_character_)
+  q     <- gsub(" ", "+", trimws(label))
+  message("")
+  message("  '", label, "'", if (!is.na(subg)) paste0("  subgenus (", subg, ")") else "",
+          " -- on the county checklist, no match on iNaturalist.")
+  message("")
+  message("  WHAT THIS STEP IS DOING")
+  message("    Matching every name on the San Diego County bee checklist to")
+  message("    iNaturalist's number for it, so the pipeline can join on the number")
+  message("    instead of the name. Names get respelled; numbers do not.")
+  message("")
+  message("  WHY THIS ONE DID NOT MATCH -- usually one of two things:")
+  message("    * iNaturalist lists it under a different name (renamed, or a synonym)")
+  message("    * iNaturalist has no page for it at all, which is normal for some bees")
+  message("")
+  message("  WHERE TO FIND OUT -- both links are already filled in:")
+  message("    1. iNaturalist, is it there under another name?")
+  message("       https://www.inaturalist.org/search?q=", q)
+  message("    2. ITIS, the US government taxonomy database. It says whether the name")
+  message("       is currently accepted and what it was renamed to.")
+  message("       https://www.itis.gov/servlet/SingleRpt/SingleRpt",
+          "?search_topic=Scientific_Name&search_value=", q)
+  message("")
+  message("  WHAT TO TYPE")
+  message("    345235        a taxon_id -- the number in an iNaturalist address:")
+  message("                  inaturalist.org/taxa/345235-Colletes-hyalinus")
+  message("    Stelis foo    a corrected name to search instead")
+  message("    n             iNaturalist has no page for it; stop asking")
+  message("    <Enter>       skip for now; it comes back next run")
+  invisible(NULL)
+}
+
 # .second_pass_resolve(): IMPURE. Resolve ONE unresolved Described row interactively.
 # Returns the chosen FULL taxon (with ancestors) or NULL if skipped / not found.
 .second_pass_resolve <- function(con, r, request_fn = inat_request, prompt_fn = readline) {
   key   <- holway_search_term(r$source_sheet, r$genus, r$species_raw)
   label <- trimws(paste(r$genus %||% "", r$species_raw %||% ""))
   subg  <- .strip_parens(r$subgenus %||% NA_character_)
-  message(sprintf("\n[2nd pass] Unresolved: '%s'%s", label,
-                  if (!is.na(subg)) sprintf("  subgenus (%s)", subg) else ""))
-  raw <- trimws(prompt_fn("  taxon_id, a name to search, 'n' = no iNat id yet, or blank to skip: "))
+  .second_pass_prompt(r)
+  raw <- trimws(prompt_fn("   > "))
   if (raw == "" || tolower(raw) %in% c("skip", "s")) return(NULL)
   if (tolower(raw) %in% c("n", "no", "noid", "none")) {
     decision_put(con, key, "no_inat_id")

@@ -161,3 +161,96 @@ test_that("PASS 2 says answers are saved and not asked again", {
   expect_match(txt, "verified_taxa.csv", fixed = TRUE)
   expect_match(txt, "not asked again", ignore.case = TRUE)
 })
+
+# The crosswalk reviewer lists its keys but never says what a tag or a field IS,
+# what happens to the observation either way, or where to look an unknown one up.
+# PIPELINE_GUIDE tells you to "look the field up on iNat" and the prompt hands you
+# no link. Same standard as the taxon prompts: say what is happening, what the
+# answer decides, and give the address.
+src("project_info/review/qc_review_mastercrosswalk.R")
+
+# this reviewer writes with cat(), so capture stdout rather than messages
+.printed <- function(expr) paste(capture.output(expr), collapse = "\n")
+
+test_that("the crosswalk banner explains what is being decided", {
+  txt <- .printed(.rk_help("fields"))
+  expect_match(txt, "inaturalist.org", fixed = TRUE)     # where to look one up
+  expect_match(txt, "kept", ignore.case = TRUE)          # what happens to the observation
+  expect_match(txt, "dropped|drops|removed", perl = TRUE)
+})
+
+test_that("it distinguishes ignoring a field from excluding an observation", {
+  txt <- .printed(.rk_help("fields"))
+  expect_match(txt, "the observation is kept", ignore.case = TRUE)
+})
+
+# Taro's second sticking point, verbatim: "this doesn't tell me what I'm reviewing,
+# why, what to look up" -- and iNaturalist and ITIS are both used heavily here with
+# neither explained. The prompt said only:
+#
+#   [2nd pass] Unresolved: 'Stelis anthocopae'  subgenus (Stelis)
+#     taxon_id, a name to search, 'n' = no iNat id yet, or blank to skip:
+#
+# Nothing about what the step is doing, why this name failed, which two sites
+# answer it, or what a taxon_id looks like when you find one.
+test_that("the Holway second pass says what it is doing and where to look", {
+  r <- list(source_sheet = "Described", genus = "Stelis", species_raw = "anthocopae",
+            subgenus = "(Stelis)")
+  txt <- .said(.second_pass_prompt(r))
+  expect_match(txt, "checklist", ignore.case = TRUE)          # what the step is
+  expect_match(txt, "inaturalist.org/search", fixed = TRUE)   # where to look, 1
+  expect_match(txt, "itis.gov", fixed = TRUE)                 # where to look, 2
+  expect_match(txt, "Stelis+anthocopae", fixed = TRUE)        # both pre-filled
+  expect_match(txt, "renam", ignore.case = TRUE)              # why it can fail
+})
+
+test_that("it explains what a taxon_id looks like", {
+  r <- list(source_sheet = "Described", genus = "Stelis", species_raw = "anthocopae",
+            subgenus = NA_character_)
+  txt <- .said(.second_pass_prompt(r))
+  expect_match(txt, "taxa/", fixed = TRUE)   # the number in an iNaturalist URL
+})
+
+# "Fill missing taxon_ids: 17 bee names need an iNat taxon_id" -- the same defect as
+# PASS 1 had. Those 17 are the names resolve_missing_ids.R ALREADY searched for and
+# could not resolve: CLAUDE.md documents them as bees iNaturalist has never published.
+# The banner presented them as work, when for most the correct answer is 'n' and the
+# only real question is whether the NAME is valid, which is an ITIS question.
+src("reference/prompts/manual_overrides.R")
+
+test_that("the fill-missing banner says these were already searched for", {
+  txt <- .said(.mo_banner(17))
+  expect_match(txt, "already", ignore.case = TRUE)
+  expect_match(txt, "itis.gov", fixed = TRUE)      # where to check the name is real
+  expect_match(txt, "n", fixed = TRUE)             # the expected answer
+})
+
+# The review gate is shared by the specimen and iNaturalist checkpoints, and both
+# read badly for the same reasons: it printed a folder rather than a path you can
+# open, said "the raw .xlsx" when there are nineteen of them, and labelled two rows
+# "bee behavior to fix" and "bee flowers to add" when both mean one thing -- the
+# flower was never recorded on the observation.
+src("specimens/specimen_clean_helpers.R")
+
+test_that("the gate prints a path you can open, not just a folder", {
+  it <- data.frame(label = "duplicate IDs", count = 2L,
+                   file = "qc_review_specimen_duplicates_generated.csv",
+                   stringsAsFactors = FALSE)
+  txt <- .said(resolve_review_gate(it, "data/specimens/specimens_clean/review",
+                                   interactive_ok = FALSE))
+  expect_match(txt, "data/specimens/specimens_clean/review/qc_review_specimen_duplicates_generated.csv",
+               fixed = TRUE)
+})
+
+test_that("each row can carry a plain-language explanation", {
+  it <- data.frame(label = "duplicate IDs", count = 2L, file = "d.csv",
+                   what = "two specimens share one museum number", stringsAsFactors = FALSE)
+  txt <- .said(resolve_review_gate(it, "review", interactive_ok = FALSE))
+  expect_match(txt, "two specimens share one museum number", fixed = TRUE)
+})
+
+test_that("the iNat flower rows say what is actually missing", {
+  labs <- .review_labels_inat()
+  expect_false(any(grepl("behavior", labs, ignore.case = TRUE)))
+  expect_true(all(grepl("flower", labs, ignore.case = TRUE)))
+})

@@ -159,6 +159,9 @@ REF_PACKAGES <- c("vegan", "iNEXT", "bipartite")
   c(inat_citation(asof),
     if (nzchar(iucn_v)) iucn_citation(iucn_v, asof) else
       "IUCN Red List of Threatened Species. https://www.iucnredlist.org -- not fetched for this run; the status column reads \"Not Evaluated\".",
+    paste("Integrated Taxonomic Information System (ITIS). https://www.itis.gov.",
+          "-- consulted when iNaturalist has no page for a checklist name, to tell a",
+          "real-but-unpublished bee from a name that was renamed or withdrawn."),
     paste("Holway, D.A. San Diego County Bee Species Checklist, v3. University of",
           "California, San Diego. -- the county species list every checklist tier is",
           "compared against."),

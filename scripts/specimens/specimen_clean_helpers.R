@@ -248,13 +248,46 @@ resolve_flag_gate <- function(n_flags, interactive_ok, prompt_fn = readline) {
 #   issues, batch mode    -> print the summary loudly, return "continue" (never blocks automation)
 #   issues, interactive   -> heads-up (blocking = FALSE) is Enter-to-continue; a blocking
 #                            checkpoint uses the STANDARD skip/stop prompt.
+#' The iNaturalist review-gate labels
+#'
+#' "bee behavior to fix" and "bee flowers to add" were two names for one thing, and
+#' neither said what was actually missing. On iNaturalist the flower lives in an
+#' observation field, so if it is absent either the bee was not on a flower or
+#' nobody filled that field in. Naming the field is what makes it fixable.
+#'
+#' @return The two labels, survey first.
+.review_labels_inat <- function()
+  c("flower not recorded on the observation (survey)",
+    "flower not recorded on the observation (non-survey)")
+
+#' One review checkpoint, so nothing in a review folder is silently missed
+#'
+#' Prints each outstanding issue with a path you can open and, where given, a
+#' sentence saying what it means and how to fix it. A folder name plus a bare
+#' filename is not a path a newcomer can act on.
+#'
+#' @param items Data frame of `label`, `count`, `file`, and optionally `what` --
+#'   the plain-language explanation shown under the label.
+#' @param review_dir Folder the files sit in; joined to `file` for the full path.
+#' @param interactive_ok FALSE prints the summary and continues, never blocking
+#'   an unattended run.
+#' @param prompt_fn Injection point for reading the answer.
+#' @param fix_hint Where the fix is made, named in the prompt.
+#' @param blocking TRUE offers to stop so the fix can happen now; FALSE is a
+#'   heads-up that continues on Enter.
+#' @return `"clean"` when nothing is outstanding, `"continue"`, or `"stop"`.
 resolve_review_gate <- function(items, review_dir, interactive_ok, prompt_fn = readline,
                                 fix_hint = "the raw .xlsx", blocking = TRUE) {
   items <- items[!is.na(items$count) & items$count > 0, , drop = FALSE]
   if (!nrow(items)) return("clean")
-  message("\n  ⚠ REVIEW NEEDED -- ", review_dir)
-  for (i in seq_len(nrow(items)))
-    message(sprintf("     %-34s %4d  -> %s", items$label[i], items$count[i], items$file[i]))
+  message("\n  ⚠ REVIEW NEEDED")
+  for (i in seq_len(nrow(items))) {
+    message(sprintf("     %s  (%d)", items$label[i], items$count[i]))
+    if ("what" %in% names(items) && !is.na(items$what[i]) && nzchar(items$what[i]))
+      message("         ", items$what[i])
+    # a path you can open, not a folder plus a filename to join up yourself
+    message("         ", file.path(review_dir, items$file[i]))
+  }
   if (!interactive_ok) { message("     (batch mode: logged above, continuing)"); return("continue") }
   if (!blocking) {   # heads-up only -- the run never stops here; the fix happens elsewhere, later
     prompt_fn(sprintf("  Review these in %s when you can (each row has its url).  [Enter] to continue: ", fix_hint))
