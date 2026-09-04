@@ -35,11 +35,13 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
 if (!exists("inext_estimates_tidy")) source("scripts/analysis/inext_estimates.R")
+if (!exists("rare_out_name")) source("scripts/analysis/rarefaction_names.R")
 
 # One tidy estimates table per DIMENSION, both ranks stacked, instead of three raw
 # iNEXT dumps per rank. run_inext() fills this; section 4 writes it out.
 EST_ACC <- new.env(parent = emptyenv())
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction/fair_method_2021_2023")  # iNEXT is JOURNAL-only; lives with the other rarefaction output
+# iNEXT is JOURNAL-only. Each comparison gets the folder its window declares.
+OUT_JOURNAL   <- function(dim) file.path(DIR_JOURNAL, "richness/rarefaction", rare_window_dir(dim))
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # (report iNEXT is skipped -- report uses vegan rarefaction)
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
@@ -47,9 +49,9 @@ WINDOW_MONTHS <- 3:9
 QVALS         <- c(0, 1, 2)     # Hill orders
 NBOOT         <- 50             # bootstrap reps for CIs (raise to 100+ for final)
 # which paper each rarefaction dimension belongs to
-JOURNAL_DIMS  <- c("by_method", "by_observer")
-rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL else OUT_REPORT
-dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+JOURNAL_DIMS  <- names(RARE_WINDOWS)
+rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL(dimdir) else OUT_REPORT
+for (.d in JOURNAL_DIMS) dir.create(OUT_JOURNAL(.d), recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 set.seed(1)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
@@ -108,7 +110,7 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
   # write straight into the accumulation folder (journal); dimension + method baked into the
   # filename, e.g. rarefaction_by_method_species_inext_size.png. No by_<dim>/ subfolders.
   dimdir <- sub(paste0("_", rank, "$"), "", key)   # "by_method_species" -> "by_method"
-  outsub <- OUT_JOURNAL; dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
+  outsub <- OUT_JOURNAL(dimdir); dir.create(outsub, recursive = TRUE, showWarnings = FALSE)
   pre    <- paste0("rarefaction_", dimdir, "_inext")   # rank appended LAST, e.g. rarefaction_by_method_inext_size_species
   sub <- scope_cap(scope = "survey records only", method = "lethal + non-lethal pooled", rank = rank)
   th  <- theme(plot.title = element_text(face = "bold", colour = BEE_INK$primary, hjust = 0.5),  # house ink, centred
@@ -159,9 +161,14 @@ for (rk in names(RANKS)) {
   gl_y <- abun_list(rec_win, "year", kc)
   run_inext(gl_y, paste0("by_year_", rk), "Did some years have more richness of bees than others?", rk,
             cols = setNames(grDevices::colorRampPalette(BEE_SEQ)(length(gl_y)), names(gl_y)))   # year -> blue sequential
-  run_inext(abun_list(rec_fair, "surveyor", kc, c("beeple", "intern")),
-            paste0("by_observer_", rk), "At equal effort, do interns or beeple find more bees?", rk,
-            cols = c(intern = BEE_TEAL[[5]], beeple = BEE_TEAL[[2]]))   # intern = house ink (focus) / beeple = stone (background)
+  # by_observer runs in its OWN window (May-Sep 2024, non-lethal only), where both
+  # groups photographed. Running it on rec_fair produced a duplicate of by_method:
+  # in 2021-2023 only interns netted and only beeple photographed, so that was the
+  # same split with different labels. See RARE_WINDOWS in rarefaction_names.R.
+  w_obs <- rare_window_records(rec, "by_observer")
+  run_inext(abun_list(w_obs, "surveyor", kc, rare_window("by_observer")$levels),
+            paste0("by_observer_", rk), rare_window("by_observer")$title, rk,
+            cols = BEE_OBSERVER_COL)   # declared in theme_beescabr.R: observer contrast, teal family, never the method colors
   run_inext(abun_list(rec_fair, "obs_type", kc, c("observation", "specimen")),
             paste0("by_method_", rk), "At equal effort, do photos or specimens find more bees?", rk,
             cols = c(observation = unname(BEE_METHOD_COL["nonlethal"]), specimen = unname(BEE_METHOD_COL["lethal"])))   # method colors
@@ -169,8 +176,8 @@ for (rk in names(RANKS)) {
 
 # ---- 4. one estimates table per comparison (both ranks, all three bases) -----
 for (dimdir in ls(EST_ACC)) {
-  f <- file.path(OUT_JOURNAL, paste0("rarefaction_", dimdir, "_inext_estimates.csv"))
+  f <- file.path(OUT_JOURNAL(dimdir), rare_out_name(dimdir, kind = "estimates"))
   write.csv(EST_ACC[[dimdir]], f, row.names = FALSE)
   message(sprintf("  %-11s: %d estimate rows -> %s", dimdir, nrow(EST_ACC[[dimdir]]), basename(f)))
 }
-message("Wrote rarefaction_by_{method,observer}_inext_estimates.csv into journal richness/rarefaction/ (iNEXT is journal-only)")
+message("Wrote the effort-standardized estimates into each comparison's window folder under journal richness/rarefaction/ (iNEXT is journal-only)")

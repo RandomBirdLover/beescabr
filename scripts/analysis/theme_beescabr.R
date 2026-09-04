@@ -72,6 +72,19 @@ BEE_EVIDENCE       <- c(specimen = BEE_TEAL[[6]], research = BEE_TEAL[[4]], need
 BEE_EVIDENCE_LABEL <- c(specimen = "specimen voucher", research = "iNat research-grade",
                         needs_id = "iNat needs-ID")
 
+# WHO surveyed: beeple (volunteers) vs interns (NPS). This is an OBSERVER contrast, not a
+# method contrast, so it takes the non-urgent TEAL family and deliberately shares no colour
+# with BEE_METHOD_COL. The two questions get drawn side by side -- "do photos or specimens
+# find more bees" and "do beeple or interns find more bees" -- and if they shared a palette
+# a reader would fuse them into one claim. Interns deep (the group under study), beeple pale
+# (the background they are measured against).
+BEE_OBSERVER_COL   <- c(beeple = BEE_TEAL[[2]], intern = BEE_TEAL[[5]])
+BEE_OBSERVER_LABEL <- c(beeple = "beeple (volunteers)", intern = "interns (NPS)")
+# Interns netting (2021-2023) vs interns photographing (2024) gets NO palette of its own:
+# it is lethal-vs-non-lethal with the observer held constant, so it reuses BEE_METHOD_COL.
+# The same question asked of a subset must not change colour, or the subset reads as a
+# different question. Recorded here so nobody adds a third method palette later.
+
 # Neutral chart ink (single-series lines/bars) is just a stop of BEE_TEAL used directly: deep teal
 # BEE_TEAL[[5]] for focus, pale BEE_TEAL[[2]] for background. There is no separate neutral/accent token
 # family -- TEAL covers everything non-urgent, RED (BEE_RARE) covers rare/urgent.

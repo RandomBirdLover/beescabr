@@ -37,7 +37,7 @@ RUNNING_ALL <- TRUE
 # three files, which is why the check exists.
 .modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",
               "conservation_status.R", "plant_names.R", "forage_selectivity.R",
-              "explorer_photo_helpers.R", "inat_taxon_links.R", "transect_years.R", "inext_estimates.R",
+              "explorer_photo_helpers.R", "inat_taxon_links.R", "transect_years.R", "inext_estimates.R", "rarefaction_names.R",
               "rarefaction_combined.R",   # runs AFTER both rarefaction scripts, not in the loop
               "findings_summaries.R")   # runs LAST (after every analysis) -- excluded from the auto-loop
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)

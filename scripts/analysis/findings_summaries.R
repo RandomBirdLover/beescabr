@@ -135,21 +135,21 @@ fw("genera_and_species_accumulation",
      assumption = "assumes roughly even sampling; effort is 2024-heavy + seasonal, so treat as approximate"),
    "richness/accumulation/: transect_accumulation_summary.csv; REPORT bee_taxa_accumulation_by_transect_{species,genus}.png (transect completeness); JOURNAL accumulation_by_effort_journal_{species,genus}.png (lethal vs non-lethal, fair window)")
 
-fw("rarefaction_inext",
+fw("richness_at_equal_effort",
    "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
    "estimator",
-   "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
+   "iNEXT is an R package that answers: at EQUAL sampling effort, do photos or specimens find more kinds of bee (fair_method_2021_2023), and do beeple or interns (fair_observer_2024)? Raw counts cannot answer it because the groups were not sampled equally. iNEXT levels them by coverage (how completely each group was sampled) and reports three views: q0 = how many kinds, q1 = weighted toward common kinds, q2 = weighted hard toward the most common.",
    c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
-     assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
-   "richness/rarefaction/fair_method_2021_2023/rarefaction_by_{method,observer}_{species,genus}.png -- ONE figure per comparison, iNEXT curves with vegan points as the cross-check (+ the matching .csv). rarefaction_by_{method,observer}_inext_estimates.csv holds both ranks and all three standardizations (asymptotic / equal_size / equal_coverage) in one table, keyed by a `basis` column")
+     assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate. CONFOUND in fair_method_2021_2023: in Mar-Oct 2021-2023 only interns netted and only beeple photographed, so photos-vs-specimens is also beeple-vs-interns on the same records, and a difference there cannot be attributed to the method rather than to who was surveying. fair_observer_2024 is the control: May-Sep 2024, both groups photographing, so method is held constant and the observer effect is measured cleanly. Read the two together, never either alone."),
+   "richness/rarefaction/fair_method_2021_2023/bee_richness_photos_vs_specimens_{species,genus}_rarefaction.png and richness/rarefaction/fair_observer_2024/bee_richness_beeple_vs_interns_{species,genus}_rarefaction.png -- ONE figure per comparison, iNEXT curves with vegan points as the cross-check (+ the matching .csv). The _effort_standardized_estimates.csv beside each holds both ranks and all three standardizations (asymptotic / equal_size / equal_coverage) in one table, keyed by a `basis` column")
 
-fw("rarefaction_vegan",
+fw("richness_rarefied_to_smallest_group",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
    "estimator",
-   "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
+   "vegan is an R package doing the older, simpler version of the same levelling: cut every group down to the smallest group's record count and see what is left. It is the report's rarefaction figures, and in the journal it is the cross-check on iNEXT. The two agreeing is what makes the result trustworthy.",
    c("analysis" = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
-   "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves; its rarefied numbers are in fair_method_2021_2023/rarefaction_by_{method,observer}_vegan.csv, both ranks in one table")
+   "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves; its rarefied numbers are in each window folder's _rarefied_to_smallest_group.csv, both ranks in one table")
 
 fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",

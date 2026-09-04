@@ -32,21 +32,22 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction/fair_method_2021_2023")  # the rarefaction family, split out of accumulation (44 files in one folder);
+OUT_JOURNAL   <- function(dim) file.path(DIR_JOURNAL, "richness/rarefaction", rare_window_dir(dim))  # the rarefaction family, split out of accumulation (44 files in one folder);
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # the dimension is baked into each filename, no by_<dim>/ subfolders
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
 WINDOW_MONTHS <- 3:9
 # which paper each rarefaction dimension belongs to
-JOURNAL_DIMS  <- c("by_method", "by_observer")
+if (!exists("rare_out_name")) source("scripts/analysis/rarefaction_names.R")
+JOURNAL_DIMS  <- names(RARE_WINDOWS)
 # journal-dimension rarefy tables, both ranks stacked; written once after the rank loop.
 VEG_ACC       <- new.env(parent = emptyenv())
 # ALL rarefaction is a richness-by-effort method, so every dimension (by_transect, by_year,
 # and the journal by_method/by_observer) lives together in richness/accumulation -- next to the
 # accumulation curves + Chao2. (It is NOT filed under richness/diversity, which holds the
 # community-structure analyses: evenness, NMDS/PERMANOVA, rank-abundance.)
-rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL else OUT_REPORT
-dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE)
+rare_base <- function(dimdir) if (dimdir %in% JOURNAL_DIMS) OUT_JOURNAL(dimdir) else OUT_REPORT
+for (.d in JOURNAL_DIMS) dir.create(OUT_JOURNAL(.d), recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_REPORT,  recursive = TRUE, showWarnings = FALSE)
 is_true <- function(x) toupper(str_squish(as.character(x))) == "TRUE"
 # scope_cap(): use the SHARED helper from theme_beescabr.R -- adds Source + data-as-of, one canonical order (no local override).
@@ -190,10 +191,12 @@ for (rk in names(RANKS)) {
   message(sprintf("Vegan rarefaction, %s rank:", rk))
   # 1. transect + 2. year (Mar-Sep) -- both drawn ONCE, combined across ranks, AFTER this loop
   #    (see below); no per-rank transect/year bar figures are produced, only the combined charts.
-  # 3. observer: beeple vs intern (fair window -- lethal vs non-lethal comparison)
-  draw(comm(filter(rec_fair, surveyor %in% c("beeple", "intern")), "surveyor", kc),
-       paste0("by_observer_", rk), "At equal effort, do interns or beeple find more bees?", rk,
-       c(intern = BEE_TEAL[[5]], beeple = BEE_TEAL[[2]]))   # intern = house ink (focus), beeple = stone (background)
+  # 3. observer: beeple vs intern -- its OWN window (May-Sep 2024, non-lethal only), where
+  #    both groups photographed. On the 2021-2023 fair window this was a duplicate of the
+  #    method comparison, since only interns netted and only beeple photographed there.
+  w_obs <- rare_window_records(rec, "by_observer")
+  draw(comm(w_obs, "surveyor", kc), paste0("by_observer_", rk),
+       rare_window("by_observer")$title, rk, BEE_OBSERVER_COL)
   # 4. method: observations (iNaturalist) vs specimens (fair window)
   draw(comm(rec_fair, "obs_type", kc), paste0("by_method_", rk),
        "At equal effort, do photos or specimens find more bees?", rk,
@@ -288,11 +291,11 @@ message("  by_year combined (genus + species): bee_richness_by_year_rarefaction.
 
 # one vegan table per journal dimension, both ranks stacked
 for (dimdir in ls(VEG_ACC)) {
-  f <- file.path(rare_base(dimdir), paste0("rarefaction_", dimdir, "_vegan.csv"))
+  f <- file.path(rare_base(dimdir), rare_out_name(dimdir, kind = "rarefied"))
   write.csv(VEG_ACC[[dimdir]], f, row.names = FALSE)
   message(sprintf("  %-11s: %d rarefy rows -> %s", dimdir, nrow(VEG_ACC[[dimdir]]), basename(f)))
 }
 
 message("Wrote rarefaction_by_{transect,year}_bars_combined (report) + ",
-        "rarefaction_by_{method,observer}_vegan.csv (journal)\n",
+        "bee_richness_photos_vs_specimens_rarefied_to_smallest_group.csv (journal)\n",
         "  into richness/rarefaction/ of each paper.")

@@ -20,16 +20,21 @@ if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(ggplot2) })
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")
+if (!exists("rare_out_name")) source("scripts/analysis/rarefaction_names.R")
 
-RC_DIR <- file.path(DIR_REPORT, "richness/rarefaction/fair_method_2021_2023")
-rc_rd  <- function(f) { p <- file.path(RC_DIR, f)
+# each comparison reads and writes inside the folder its window declares
+rc_dir <- function(dim) file.path(DIR_REPORT, "richness/rarefaction", rare_window_dir(dim))
+rc_rd  <- function(dim, f) { p <- file.path(rc_dir(dim), f)
                         if (file.exists(p)) read.csv(p, stringsAsFactors = FALSE) else NULL }
 
 # one combined figure + table per (comparison, rank)
 rc_one <- function(dim, rank) {
-  size <- rc_rd(sprintf("rarefaction_by_%s_inext_curve_size_%s.csv",     dim, rank))
-  cov  <- rc_rd(sprintf("rarefaction_by_%s_inext_curve_coverage_%s.csv", dim, rank))
-  veg  <- rc_rd(sprintf("rarefaction_by_%s_vegan_%s.csv",             dim, rank))
+  size <- rc_rd(dim, sprintf("rarefaction_by_%s_inext_curve_size_%s.csv",     dim, rank))
+  cov  <- rc_rd(dim, sprintf("rarefaction_by_%s_inext_curve_coverage_%s.csv", dim, rank))
+  # vegan writes ONE table per comparison holding both ranks, so select the rank here
+  veg  <- rc_rd(dim, rare_out_name(dim, kind = "rarefied"))
+  if (!is.null(veg)) veg <- veg[veg$rank == rank, , drop = FALSE]
+  if (!is.null(veg) && !nrow(veg)) veg <- NULL
   if (is.null(size) || is.null(cov)) return(invisible(NULL))
 
   QL <- c("0" = "q = 0  richness", "1" = "q = 1  Shannon", "2" = "q = 2  Simpson")
@@ -63,7 +68,7 @@ rc_one <- function(dim, rank) {
   if (!is.null(pts)) g <- g + geom_point(data = pts, aes(x, y, colour = group),
                                          inherit.aes = FALSE, size = 2.4, shape = 21, stroke = 0.9, fill = "white")
 
-  bee_ggsave(file.path(RC_DIR, sprintf("rarefaction_by_%s_%s.png", dim, rank)), g,
+  bee_ggsave(file.path(rc_dir(dim), rare_out_name(dim, rank, "figure")), g,
              width = 10, height = 9.5, bg = "white")
 
   tbl <- dat %>% mutate(estimator = "iNEXT") %>% select(panel, estimator, group, x, y, lo, hi)
@@ -72,16 +77,16 @@ rc_one <- function(dim, rank) {
                 x = rarefied_to, y = rarefied_richness,
                 lo = rarefied_richness - 1.96 * rarefied_se,
                 hi = rarefied_richness + 1.96 * rarefied_se))
-  write.csv(tbl, file.path(RC_DIR, sprintf("rarefaction_by_%s_%s.csv", dim, rank)), row.names = FALSE)
+  write.csv(tbl, file.path(rc_dir(dim), rare_out_name(dim, rank, "table")), row.names = FALSE)
   invisible(TRUE)
 }
 
 n <- 0
-for (d in c("method", "observer")) for (r in c("species", "genus"))
+for (d in sub("^by_", "", names(RARE_WINDOWS))) for (r in c("species", "genus"))
   if (!is.null(rc_one(d, r))) n <- n + 1
 
 # the *_curve_* CSVs are an INTERMEDIATE: rarefaction_inext.R writes them only so this
 # script can draw the curves. Leaving them would trade 16 figures for 8 tables nobody
 # reads. The numbers a person wants are in the combined table beside each figure.
-unlink(Sys.glob(file.path(RC_DIR, "*_inext_curve_*.csv")))
-message(sprintf("Combined rarefaction: %d figure+table pairs (iNEXT with vegan cross-check) in %s", n, RC_DIR))
+for (d in names(RARE_WINDOWS)) unlink(Sys.glob(file.path(rc_dir(d), "*_inext_curve_*.csv")))
+message(sprintf("Combined rarefaction: %d figure+table pairs (iNEXT with vegan cross-check) across %d window folders", n, length(RARE_WINDOWS)))
