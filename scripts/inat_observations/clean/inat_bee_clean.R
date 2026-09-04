@@ -260,7 +260,7 @@ ibc_fix_behavior <- function(clean) {
 # they join the same per-surveyor "pins to fix" worklist as other bad pins.
 #
 # TOLERANCE, and why it is not zero: cabr_boundary (NPS) is digitized slightly seaward
-# of the City/County coastline (see dev-docs/ARCGIS_SPATIAL_MAPPING.md), and GPS itself drifts
+# of the City/County coastline (see dev-docs/SPATIAL_MAPPING.md), and GPS itself drifts
 # a few metres. A pin standing on the shore can therefore sit just outside a land
 # polygon while being perfectly correct. Only pins more than tol_m beyond the land are
 # called water. Missing coords, or no land layer at all, never flag -- we do not guess.

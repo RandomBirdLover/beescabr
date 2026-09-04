@@ -49,6 +49,6 @@ layers under `data/spatial/shapefiles/` belong in git.
 | Job | Layer |
 |---|---|
 | Is this record at CABR? | `cabr_survey_box` |
-| Which transect is it on? | `cabr_bee_transects` (nearest within a threshold) |
+| Which transect is it on? | `cabr_bee_transects` — nearest line within **50 m** (`IBC_OFF_TRANSECT_M`). Casual iNaturalist coordinates drift to hundreds of metres, so a tighter buffer would drop real survey records. |
 | Is it a walk-in, not a survey? | `cabr_survey_access_routes` |
 | County / Point Loma tiers | the two boundary layers |

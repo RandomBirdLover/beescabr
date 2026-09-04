@@ -36,7 +36,7 @@
 #      here should be edited or clipped to force containment.
 #
 # Full provenance for every layer, the superseded 2026-06-22 approach, and
-# the reasoning behind all of the above: dev-docs/ARCGIS_SPATIAL_MAPPING.md
+# the reasoning behind all of the above: dev-docs/SPATIAL_MAPPING.md
 
 library(sf)
 

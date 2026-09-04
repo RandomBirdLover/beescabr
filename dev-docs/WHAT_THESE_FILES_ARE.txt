@@ -41,7 +41,7 @@ HOW THE CODE IS PUT TOGETHER
   WEBSITE_GUIDE.md     How a page reaches the public site, the page layout
                        standard, and how to publish from your own account.
 
-  ARCGIS_SPATIAL_MAPPING.md  Where each spatial layer came from and how it was
+  SPATIAL_MAPPING.md  Where each spatial layer came from and how it was
                        prepared.
 
 
