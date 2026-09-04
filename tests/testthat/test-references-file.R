@@ -47,3 +47,32 @@ test_that("references are sorted by author, the way a reference list is read", {
 test_that("no line wraps past a terminal width", {
   expect_lt(max(nchar(strsplit(references_text(), "\n")[[1]])), 90)
 })
+
+# REFERENCES_CITED.txt listed only statistical methods, and was missing two of
+# those: Bray-Curtis (the dissimilarity behind EVERY PERMANOVA and NMDS result)
+# and Patefield 1981 (the null the H2' p-value is tested against). A p-value with
+# no stated null is not reportable.
+#
+# It also cited no DATA source at all -- not iNaturalist, whose observers produced
+# every record, not the IUCN Red List, not the Holway checklist the whole county
+# tier is built from, not the boundary layers. citations.R already knew how to
+# write the first two; the references file simply never asked it.
+test_that("the two missing methods are cited", {
+  txt <- paste(references_text(), collapse = " ")
+  expect_match(txt, "Bray", fixed = TRUE)
+  expect_match(txt, "Patefield", fixed = TRUE)
+})
+
+test_that("the data sources are cited, not just the statistics", {
+  txt <- paste(references_text(), collapse = " ")
+  for (src in c("iNaturalist", "IUCN", "Holway", "National Park Service"))
+    expect_match(txt, src, fixed = TRUE, info = src)
+})
+
+test_that("the file separates data sources from methods", {
+  txt <- paste(references_text(), collapse = "\n")
+  expect_match(txt, "DATA SOURCES", fixed = TRUE)
+  expect_match(txt, "METHODS", fixed = TRUE)
+  expect_lt(regexpr("DATA SOURCES", txt, fixed = TRUE),
+            regexpr("METHODS", txt, fixed = TRUE))   # the data comes first
+})
