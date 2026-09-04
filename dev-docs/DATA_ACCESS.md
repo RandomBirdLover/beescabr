@@ -34,6 +34,28 @@ maps), plus `checklists/`, `reference/`, `analysis/` and `secrets/`.
 Needs R, and `beescabr.Rproj` opened in RStudio first — that sets the working
 directory every path assumes.
 
+```
+config.R                                  loads first, on its own
+   |                                      every script sources it; you never run it
+   v
+1. run_data_cleaning_pipeline.R           ingest + clean       slow, asks questions
+   |
+   v
+2. run_all_analysis_pipeline.R            figures + tables     fast, silent
+   |
+   v
+3. run_publishing_materials_pipeline.R    the public site      fast, silent
+```
+
+```r
+source("scripts/run_data_cleaning_pipeline.R")
+source("scripts/run_all_analysis_pipeline.R")
+source("scripts/run_publishing_materials_pipeline.R")
+```
+
+**Run them in that order.** Each stage reads what the one before it wrote, and
+stage 3 stops rather than publish a page older than the data.
+
 **Everything else is in `PIPELINE_GUIDE.md`**: installing, API keys, the run menu
 (pick **Offline run** to use the `data/` you were handed), and the three stages.
 

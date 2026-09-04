@@ -10,31 +10,37 @@ Browse the public field guides, checklists, and interactive maps online — no c
 
 Includes the bee field guides (species + genus), park summary tables, least-sampled bees, the survey-transect and bee-bounty maps, and an interactive **Bee Occurrence Explorer** (filter every record by genus, species, transect, and method).
 
-**Publishing is its own pipeline stage** — `scripts/run_publishing_materials_pipeline.R` — alongside data cleaning and analysis. The pipeline runs in three stages, each with its own runner:
-
-1. `scripts/run_data_cleaning_pipeline.R` — ingest iNaturalist → DuckDB cache → cleaned tables
-2. `scripts/run_all_analysis_pipeline.R` — every figure, table, and report/journal HTML
-3. `scripts/run_publishing_materials_pipeline.R` — re-render the **public** pages and sync them into `docs/` (which GitHub Pages serves)
-
-```
-source("scripts/run_publishing_materials_pipeline.R")                     # rebuild the public site into docs/ (then git push to deploy)
-Sys.setenv(BEESCABR_DEPLOY = "1"); source("scripts/run_publishing_materials_pipeline.R")   # also commit + push docs/ (auto-deploy)
-```
-
-`docs/` is committed to git; GitHub Pages redeploys on every push. The publish modules live in `scripts/website/` (the primitive alone is `source("scripts/website/publish_pages.R")`), the way cleaning lives in `scripts/inat_observations/` and analysis in `scripts/analysis/`.
+The site is built by stage 3 of the pipeline, below. `docs/` is committed to git,
+and GitHub Pages redeploys on every push.
 
 ---
 
 ## Running it
 
-```r
-source("scripts/run_data_cleaning_pipeline.R")        # 1. ingest + clean
-source("scripts/run_all_analysis_pipeline.R")         # 2. figures + tables
-source("scripts/run_publishing_materials_pipeline.R") # 3. publish the site
+```
+config.R                                  loads first, on its own
+   |                                      every script sources it; you never run it
+   v
+1. run_data_cleaning_pipeline.R           ingest + clean       slow, asks questions
+   |
+   v
+2. run_all_analysis_pipeline.R            figures + tables     fast, silent
+   |
+   v
+3. run_publishing_materials_pipeline.R    the public site      fast, silent
 ```
 
+```r
+source("scripts/run_data_cleaning_pipeline.R")
+source("scripts/run_all_analysis_pipeline.R")
+source("scripts/run_publishing_materials_pipeline.R")
+```
+
+**Run them in that order.** Each stage reads what the one before it wrote, and
+stage 3 stops rather than publish a page older than the data.
+
 Open `beescabr.Rproj` in RStudio first -- that sets the working directory, which
-every path in the project assumes. Run them in that order.
+every path in the project assumes.
 
 **The full guide is `dev-docs/PIPELINE_GUIDE.md`**: first run on a new machine,
 API keys, the files you maintain by hand, what each stage does, starting a new

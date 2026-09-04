@@ -70,3 +70,12 @@ source("scripts/run_publishing_materials_pipeline.R")   # build only
 
 Then commit and push `docs/` when you are happy. Safer than auto-deploy —
 `docs/` is the one output the public sees.
+
+To build **and** commit + push `docs/` in one step:
+
+```r
+Sys.setenv(BEESCABR_DEPLOY = "1"); source("scripts/run_publishing_materials_pipeline.R")
+```
+
+That publishes the moment it finishes. Use the two-step version unless you have
+already looked at the pages.

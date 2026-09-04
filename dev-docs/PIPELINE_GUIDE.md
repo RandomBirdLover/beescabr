@@ -6,16 +6,30 @@
 
 # Part 1 — Running it
 
-```r
-source("scripts/run_data_cleaning_pipeline.R")        # 1. ingest + clean   (slow, interactive)
-source("scripts/run_all_analysis_pipeline.R")         # 2. figures + tables (fast, silent)
-source("scripts/run_publishing_materials_pipeline.R") # 3. the public site  (fast, silent)
 ```
+config.R                                  loads first, on its own
+   |                                      every script sources it; you never run it
+   v
+1. run_data_cleaning_pipeline.R           ingest + clean       slow, asks questions
+   |
+   v
+2. run_all_analysis_pipeline.R            figures + tables     fast, silent
+   |
+   v
+3. run_publishing_materials_pipeline.R    the public site      fast, silent
+```
+
+```r
+source("scripts/run_data_cleaning_pipeline.R")
+source("scripts/run_all_analysis_pipeline.R")
+source("scripts/run_publishing_materials_pipeline.R")
+```
+
+**Run them in that order.** Each stage reads what the one before it wrote, and
+stage 3 stops rather than publish a page older than the data.
 
 Open `beescabr.Rproj` in RStudio first — that sets the working directory, which
 every path assumes.
-
-Stage 1 is the only slow one, and the only one that asks questions.
 
 ## First run on a new machine
 
