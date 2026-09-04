@@ -19,6 +19,11 @@
 | The specimen spell-check is a **heuristic** | It flags for review; it is not an authority |
 | Spatial tiers use **iNat place boundaries** | User-contributed, so edges move |
 | "Museum Collection" means **CABR survey specimens only** | Not all SDNHM holdings |
+| The **plant–bee network uses ALL records** | Both methods, survey and non-survey. A survey-only network loses most of its edges, and "who visits what" is not an effort question. |
+| **Bee** phenology uses all records; **plant** phenology is survey-only | A bee only looks seasonal if somebody was out looking. Plant bloom is recorded on the survey walk, so restricting it keeps the effort even. |
+
+Every figure states its own scope in the caption. These two are here because the
+*reason* for the scope is not obvious from the scope itself.
 
 ## Data problems
 

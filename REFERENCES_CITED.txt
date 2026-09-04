@@ -1,0 +1,79 @@
+REFERENCES CITED
+================
+
+The statistical methods behind the figures and tables in this folder, and
+where each comes from. The short form appears in each folder's
+WHAT_THESE_FILES_ARE.txt; the full reference is here.
+
+A reference marked [pkg] was checked against the installed package's own
+documentation or citation(). The rest were typed by hand and are worth a
+spot-check before publication.
+
+METHODS
+-------
+
+[pkg] Almeida-Neto, M., Guimaraes, P., Guimaraes, P.R., Loyola, R.D. &
+        Ulrich, W. (2008). A consistent metric for nestedness analysis in
+        ecological systems: reconciling concept and measurement. Oikos 117,
+        1227-1239.
+
+Anderson, M.J. (2001). A new method for non-parametric multivariate analysis
+        of variance. Austral Ecology 26, 32-46.
+
+[pkg] Bluthgen, N., Menzel, F. & Bluthgen, N. (2006). Measuring
+        specialization in species interaction networks. BMC Ecology 6, 9.
+
+Chao, A. (1987). Estimating the population size for capture-recapture data
+        with unequal catchability. Biometrics 43, 783-791.
+
+Chao, A., Gotelli, N.J., Hsieh, T.C., Sander, E.L., Ma, K.H., Colwell, R.K. &
+        Ellison, A.M. (2014). Rarefaction and extrapolation with Hill
+        numbers: a framework for sampling and estimation in species diversity
+        studies. Ecological Monographs 84, 45-67. -- Hsieh, T.C., Ma, K.H. &
+        Chao, A. (2016). iNEXT: an R package for rarefaction and
+        extrapolation of species diversity (Hill numbers). Methods in Ecology
+        and Evolution 7, 1451-1456.
+
+[pkg] Dormann, C.F., Fruend, J., Bluethgen, N. & Gruber, B. (2009). Indices,
+        graphs and null models: analyzing bipartite ecological networks. The
+        Open Ecology Journal 2, 7-24.
+
+[pkg] Hurlbert, S.H. (1971). The nonconcept of species diversity: a critique
+        and alternative parameters. Ecology 52, 577-586. -- Heck, K.L., van
+        Belle, G. & Simberloff, D. (1975). Explicit calculation of the
+        rarefaction diversity measurement and the determination of sufficient
+        sample size. Ecology 56, 1459-1461.
+
+[pkg] Kruskal, J.B. (1964). Multidimensional scaling by optimizing
+        goodness-of-fit to a nonmetric hypothesis. Psychometrika 29, 1-28.
+
+[pkg] Miklos, I. & Podani, J. (2004). Randomization of presence-absence
+        matrices: comments and new algorithms. Ecology 85, 86-92.
+
+Pielou, E.C. (1966). The measurement of diversity in different types of
+        biological collections. Journal of Theoretical Biology 13, 131-144.
+
+[pkg] R Core Team. stats::chisq.test -- Pearson chi-square test of
+        independence. Part of base R; see the R citation below.
+
+Rayleigh test of circular uniformity. No package call to cite: computed in
+        this repo from the resultant vector as Z = nR^2 with p ~ exp(-Z), the
+        standard large-sample approximation.
+
+Shannon, C.E. (1948). A mathematical theory of communication. Bell System
+        Technical Journal 27, 379-423.
+
+Simpson, E.H. (1949). Measurement of diversity. Nature 163, 688.
+
+SOFTWARE
+--------
+
+  R 4.6.0 -- R version 4.6.0 (2026-04-24)
+
+  vegan 2.7.5
+  iNEXT 3.0.2
+  bipartite 2.24
+
+Versions are read from the session that generated this file, so they describe
+the numbers in this folder rather than whatever is installed later.
+

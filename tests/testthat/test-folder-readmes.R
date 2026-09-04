@@ -141,3 +141,39 @@ test_that("citations match what the installed packages themselves say", {
   expect_true(any(grepl("Almeida-Neto.*2008", src)))     # vegan nestedtemp.Rd
   expect_true(any(grepl("Miklos & Podani 2004", src)))   # the null the p-value rests on
 })
+
+# method_comparison/ holds two different comparisons -- nets vs photos, and beeple
+# vs interns -- and the observer half of the second one is NOT in this folder: the
+# rarefaction lives under richness/rarefaction/fair_observer_2024/, because it is
+# rarefaction. Someone standing in the folder named for comparisons, looking for
+# beeple vs interns, has to be told where it went.
+test_that("the method_comparison note says where the observer results live", {
+  n <- FOLDER_NOTES[["method_comparison"]]
+  expect_match(n, "beeple", ignore.case = TRUE)
+  expect_match(n, "fair_observer_2024", fixed = TRUE)
+})
+
+# write_folder_readmes(root) resolves each note as <root>/<folder>. Given the wrong
+# root every folder simply does not exist, so the loop skips them all and returns 0
+# -- silently. That happened: a regeneration reported success and wrote nothing,
+# and the tests missed it because they checked FOLDER_NOTES rather than the file.
+test_that("write_folder_readmes writes the note text, not just returns a count", {
+  root <- file.path(tempdir(), "fr"); on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  dir.create(file.path(root, "method_comparison"), recursive = TRUE, showWarnings = FALSE)
+  n <- write_folder_readmes(root)
+  expect_gt(n, 0)
+  f <- file.path(root, "method_comparison", "WHAT_THESE_FILES_ARE.txt")
+  expect_true(file.exists(f))
+  expect_match(paste(readLines(f, warn = FALSE), collapse = " "),
+               "fair_observer_2024", fixed = TRUE)
+})
+
+test_that("a root with none of the folders warns instead of returning 0 quietly", {
+  root <- file.path(tempdir(), "empty"); dir.create(root, showWarnings = FALSE)
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  said <- character(0)
+  withCallingHandlers(
+    expect_equal(write_folder_readmes(root), 0),
+    message = function(m) { said <<- c(said, conditionMessage(m)); invokeRestart("muffleMessage") })
+  expect_match(paste(said, collapse = " "), root, fixed = TRUE)
+})

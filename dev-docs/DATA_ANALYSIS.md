@@ -17,7 +17,7 @@ flowchart TD
   RICH[richness/<br/>how many are there?]
   INT[interactions/<br/>who visits what?]
   PHEN[phenology/<br/>when?]
-  METH[method_comparison/<br/>nets vs photos]
+  METH[method_comparison/<br/>who caught more, and how?<br/>nets vs photos · beeple vs interns]
   REF[reference/<br/>guides + maps for people]
 
   COV --> OUT
@@ -46,11 +46,11 @@ Everything lands under `data/analysis/<year>_generated/`. One folder per questio
 | `coverage/transect_effort` | per-transect sampling effort | 2 | 2 |
 | `richness/accumulation` | have we found them all? (Chao2) | 3 | 2 |
 | `richness/diversity` | Shannon / Simpson / NMDS | 4 | 3 |
-| `richness/rarefaction` | richness at equal effort | 2 | 6 |
+| `richness/rarefaction` | richness at equal effort — by method, and by observer | 2 | 6 |
 | `interactions/networks` | the plant–bee web, H2′ and NODF | 6 | 10 |
 | `interactions/top_plants` | the plants bees visit most | 2 | 3 |
 | `phenology/` | activity through the year, survey effort by month | 6 | 10 |
-| `method_comparison/yield` | what each method turned up | 2 | 6 |
+| `method_comparison/yield` | what each **method** turned up, and each **contributor** | 2 | 6 |
 | `method_comparison/efficiency` | rarefied to equal effort | — | 1 |
 | `method_comparison/effort` | survey trips by method | — | 1 |
 | `reference/field_guide` | the species and genus guides | — | 4 |
@@ -61,6 +61,13 @@ Everything lands under `data/analysis/<year>_generated/`. One folder per questio
 **Start at `findings_index.csv`** in that folder: one row per analysis, with its
 type, its key finding in a sentence, and the file holding the numbers. Each folder
 also has its own `WHAT_THESE_FILES_ARE.txt`.
+
+**Two comparisons run here, and they are not the same question.** *Method* is nets
+vs photos; *observer* is beeple vs interns. They were confounded before 2024 — only
+interns netted, only beeple photographed — so each has its own window below, and the
+observer results live under `richness/rarefaction/fair_observer_2024/` rather than in
+`method_comparison/`. Read them together: lethal beats non-lethal, but with method
+held constant beeple beat interns, so the gap is the netting rather than the people.
 
 Anything under a `website/` subfolder is a draft page; publishing copies it to
 `docs/`. Anything under `fair_method_2021_2023/` or `fair_observer_2024/` is
@@ -115,13 +122,3 @@ These hold everywhere unless the table below overrides them.
 | NPS summary (`nps_summary_tables.R`) | descriptive (all) | species | shown | — | plain counts, no test |
 
 ---
-
-## Two decisions that took discussion
-
-**Plant–bee network uses ALL records**, both methods, survey and non-survey.
-A survey-only network loses most of the edges, and the question ("who visits
-what") is not an effort question. The scope is captioned on the figure.
-
-**Bee phenology uses all records; plant phenology uses survey-only.**
-A bee can only look seasonal if somebody was out looking — but plant bloom is
-recorded on the survey walk, so restricting it keeps the effort even.

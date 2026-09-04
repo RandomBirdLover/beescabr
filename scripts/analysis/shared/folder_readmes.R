@@ -174,7 +174,17 @@ FOLDER_NOTES <- list(
   "method_comparison" = paste(
     "Netting versus photographing. Everything here is restricted to a like-for-like",
     "window so the two methods are compared on equal footing rather than on how many",
-    "records each happened to produce."),
+    "records each happened to produce.",
+    "\n\nTwo different comparisons run in this project and only one of them is here.",
+    "METHOD is nets vs photos, and that is this folder. OBSERVER is beeple vs",
+    "interns, and its rarefaction lives under",
+    "richness/rarefaction/fair_observer_2024/ -- filed by what the analysis IS",
+    "rather than by what it compares. The yield files here do split by contributor",
+    "as well (bee_yield_by_contributor.csv).",
+    "\n\nRead the two together. Before 2024 only interns netted and only beeple",
+    "photographed, so method and observer were confounded: lethal beats non-lethal,",
+    "but with method held constant beeple beat interns. The gap is the netting,",
+    "not the people."),
   "phenology" = paste(
     "When things happen through the year: when each bee genus is active, when the",
     "plants bloom, and when we actually surveyed. The effort files matter because a",
@@ -339,6 +349,13 @@ write_folder_readmes <- function(root) {
     writeLines(txt, file.path(dir, "WHAT_THESE_FILES_ARE.txt"))
     n <- n + 1
   }
+  # Nothing matched means the root is wrong, not that there was nothing to do: the
+  # loop skips a folder that does not exist, so a bad root wrote 0 notes and said
+  # "wrote 0" as though that were a result. It cost a regeneration that looked fine.
+  if (!n) message("  folder notes: none of the ", length(FOLDER_NOTES),
+                  " folders exist under '", root, "' -- nothing written. ",
+                  "Pass the season folder, e.g. data/analysis/<year>_generated.")
+
   # one full reference list for the whole analysis folder, beside the tree-level
   # note rather than inside a season folder: the references do not change per year
   # data/analysis/, NOT the season folder: the references do not change per year,
