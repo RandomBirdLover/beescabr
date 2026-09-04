@@ -48,9 +48,9 @@ HOW THE CODE IS PUT TOGETHER
 THE SCIENCE BEHIND THE NUMBERS
 ==============================
 
-  ANALYSIS_DECISIONS.md  For each figure and test: its scope, the ranks it runs
-                       at, the parameters, the statistical test, and the
-                       reasoning. This is the methods reference for a paper.
+  DATA_ANALYSIS.md     Every analysis: a flow chart of what runs, where each
+                       figure and table lands, and the scope, parameters and
+                       statistical test behind each one.
 
   LIMITATIONS.md       Everything the pipeline knowingly trades away. Read it
                        before quoting a number in something permanent.

@@ -4,7 +4,7 @@
 # already read -- @param per argument, @return for the result.
 #
 # The doc is GENERATED from those blocks (dev-docs/FUNCTIONS.md). That is the
-# whole point: the master table in ANALYSIS_DECISIONS.md drifted to half-true
+# whole point: the master table in DATA_ANALYSIS.md drifted to half-true
 # because it was hand-kept, and a reference nobody can trust is worse than none.
 # These tests fail when a function joins the API without docs, and when the
 # generated file no longer matches the source.

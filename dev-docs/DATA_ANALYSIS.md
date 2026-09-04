@@ -1,7 +1,80 @@
-# Analysis decisions
+# Analysis
 
-The **why** behind every figure and test: scope, ranks, method handling,
-parameters, and the statistical test. This is the methods reference for a paper.
+Every analysis, what it produces, and where it lands.
+
+## The flow
+
+```mermaid
+flowchart TD
+  CLEAN[(cleaned tables<br/>iNat bees · specimens · plants · per-survey)] --> COV
+  CLEAN --> RICH
+  CLEAN --> INT
+  CLEAN --> PHEN
+  CLEAN --> METH
+  CLEAN --> REF
+
+  COV[coverage/<br/>what have we missed?]
+  RICH[richness/<br/>how many are there?]
+  INT[interactions/<br/>who visits what?]
+  PHEN[phenology/<br/>when?]
+  METH[method_comparison/<br/>nets vs photos]
+  REF[reference/<br/>guides + maps for people]
+
+  COV --> OUT
+  RICH --> OUT
+  INT --> OUT
+  PHEN --> OUT
+  METH --> OUT
+  REF --> OUT
+  OUT[data/analysis/2026_generated/] --> IDX[findings_index.csv<br/>one row per analysis]
+  REF --> WEB[docs/<br/>the public site]
+```
+
+## Where to find a figure or a table
+
+Everything lands under `data/analysis/<year>_generated/`. One folder per question:
+
+| Folder | Answers | png | csv |
+|---|---|---|---|
+| `coverage/bee_bounties` | which bees need which method next | 2 | 3 |
+| `coverage/checklist_gaps` | CABR taxa not on the Holway county list | 1 | 3 |
+| `coverage/footprint` | the park's share of county diversity | 1 | 3 |
+| `coverage/id_resolution` | what needs identifying most | 1 | 2 |
+| `coverage/least_sampled` | the go-find-it sheet | — | 2 |
+| `coverage/off_transect` | bees in the park but off the transects | 1 | 3 |
+| `coverage/records_by_evidence` | what backs each genus and species | 3 | 5 |
+| `coverage/transect_effort` | per-transect sampling effort | 2 | 2 |
+| `richness/accumulation` | have we found them all? (Chao2) | 3 | 2 |
+| `richness/diversity` | Shannon / Simpson / NMDS | 4 | 3 |
+| `richness/rarefaction` | richness at equal effort | 2 | 6 |
+| `interactions/networks` | the plant–bee web, H2′ and NODF | 6 | 10 |
+| `interactions/top_plants` | the plants bees visit most | 2 | 3 |
+| `phenology/` | activity through the year, survey effort by month | 6 | 10 |
+| `method_comparison/yield` | what each method turned up | 2 | 6 |
+| `method_comparison/efficiency` | rarefied to equal effort | — | 1 |
+| `method_comparison/effort` | survey trips by method | — | 1 |
+| `reference/field_guide` | the species and genus guides | — | 4 |
+| `reference/nps_summary` | plain counts, no interpretation | — | 11 |
+| `reference/conservation` | IUCN status | 5 | 3 |
+| `reference/occurrence_map`, `bee_plant`, `transects` | the interactive pages | 1 | — |
+
+**Start at `findings_index.csv`** in that folder: one row per analysis, with its
+type, its key finding in a sentence, and the file holding the numbers. Each folder
+also has its own `WHAT_THESE_FILES_ARE.txt`.
+
+Anything under a `website/` subfolder is a draft page; publishing copies it to
+`docs/`. Anything under `fair_method_2021_2023/` or `fair_observer_2024/` is
+restricted to one of the windows below.
+
+## The three fair windows
+
+| Window | Compares | Controls for | Confounded with |
+|---|---|---|---|
+| `fair_method_2021_2023` (Mar–Oct) | lethal vs non-lethal | year | **observer** — only interns netted, only beeple photographed |
+| `fair_observer_2024` (May–Sep) | beeple vs interns | method, year | *nothing — this is the clean one* |
+| *(not built)* interns 2021–23 vs 2024 | lethal vs non-lethal | observer | year |
+
+Read the first two together. Neither means much alone.
 
 ## Global conventions
 
@@ -18,16 +91,6 @@ These hold everywhere unless the table below overrides them.
 | **Off-transect specimens are not surveys** | 115 of 980. They count toward park totals, but are excluded from per-survey effort. |
 | **Show every genus** | No arbitrary top-N in genus figures |
 | **On-transect means within 50 m** | `IBC_OFF_TRANSECT_M`. Casual iNaturalist coordinates drift to hundreds of metres, so a tighter buffer would drop real survey records. 7,440 of 11,396 records resolve to a transect. |
-
-## The three fair windows
-
-| Window | Compares | Controls for | Confounded with |
-|---|---|---|---|
-| `fair_method_2021_2023` (Mar–Oct) | lethal vs non-lethal | year | **observer** — only interns netted, only beeple photographed |
-| `fair_observer_2024` (May–Sep) | beeple vs interns | method, year | *nothing — this is the clean one* |
-| *(not built)* interns 2021–23 vs 2024 | lethal vs non-lethal | observer | year |
-
-Read the first two together. Neither means much alone.
 
 ## Master table
 
@@ -52,14 +115,6 @@ Read the first two together. Neither means much alone.
 | NPS summary (`nps_summary_tables.R`) | descriptive (all) | species | shown | — | plain counts, no test |
 
 ---
-
-## Analysis types, and what each owes you
-
-| Type | Claim | Confounders |
-|---|---|---|
-| **Descriptive** | reports what was observed | inherits sampling bias *by design*; say so |
-| **Inferential** | claims something beyond the data | must be controlled and stated |
-| **Estimator** | standardises effort | assumes roughly even effort within a group |
 
 ## Two decisions that took discussion
 

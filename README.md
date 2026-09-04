@@ -134,7 +134,7 @@ All of them live in `dev-docs/` unless noted.
 | 5 | **PIPELINE_GUIDE.md** | **The main guide.** Part 1: running a season, start to finish. Part 2: how the code is built. |
 | 6 | **LIMITATIONS.md** | What this pipeline knowingly trades away, and which data problems only a protocol change can fix. |
 | 7 | *(generated)* | What every analysis output is: `data/analysis/<year>_generated/findings_index.csv`, one row per analysis, plus a note in each folder. |
-| 8 | **ANALYSIS_DECISIONS.md** | The *why* behind each analysis: scope, parameters, statistical tests. |
+| 8 | **DATA_ANALYSIS.md** | Every analysis: the flow, where each figure and table lands, and the parameters behind them. |
 | 9 | **ARCGIS_SPATIAL_MAPPING.md** | Where every boundary and transect layer came from, and the known coastal discrepancy. |
 | 10 | **SPECIMEN_CHANGELOG.md** | Version history of the specimen spreadsheet, and how to bump it. |
 | 11 | **TESTS_GUIDE.md** | What the test suite covers and how to run it. |

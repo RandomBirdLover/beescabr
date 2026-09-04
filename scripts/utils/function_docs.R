@@ -4,7 +4,7 @@
 # know what to pass it. This module locates that set, reads the roxygen block
 # above each one, and renders dev-docs/FUNCTIONS.md from what it finds.
 #
-# Generated, not hand-kept, on purpose -- the ANALYSIS_DECISIONS master table
+# Generated, not hand-kept, on purpose -- the DATA_ANALYSIS.md master table
 # drifted to half-true because a human had to remember to update it.
 # Run it: source("scripts/utils/function_docs.R"); write_functions_md()
 # Enforced by tests/testthat/test-function-docs.R.
