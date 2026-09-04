@@ -13,6 +13,8 @@
 if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 suppressPackageStartupMessages({ library(sf); library(leaflet) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 if (!exists("PATHS"))        source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
 if (!exists("transects_in_year")) source("scripts/analysis/transect_years.R")
@@ -100,11 +102,11 @@ m <- htmlwidgets::prependContent(m, htmltools::tags$style(htmltools::HTML(BEE_MA
 
 # ---- 4. save one self-contained HTML (like every other map in the project) ----
 .sc <- requireNamespace("rmarkdown", quietly = TRUE) && isTRUE(try(rmarkdown::pandoc_available(), silent = TRUE))
-htmlwidgets::saveWidget(m, file.path(normalizePath(OUT_DIR), "cabr_bee_transects_map.html"),
+htmlwidgets::saveWidget(m, file.path(normalizePath(.web(OUT_DIR)), "cabr_bee_transects_map.html"),
                         selfcontained = .sc, libdir = if (.sc) NULL else "lib",
                         title = "Cabrillo National Monument -- Native Bee Survey Transects")
-if (.sc) unlink(c(file.path(normalizePath(OUT_DIR), "lib"),
-                  Sys.glob(file.path(normalizePath(OUT_DIR), "*_files"))), recursive = TRUE)
+if (.sc) unlink(c(file.path(normalizePath(.web(OUT_DIR)), "lib"),
+                  Sys.glob(file.path(normalizePath(.web(OUT_DIR)), "*_files"))), recursive = TRUE)
 message(sprintf("Wrote cabr_bee_transects_map.html to %s  (%d transects, %s m total)",
                 OUT_DIR, nrow(tran), format(sum(tran$len_m), big.mark = ",", trim = TRUE)))
 

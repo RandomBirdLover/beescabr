@@ -23,7 +23,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/records_by_evidence")
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/records_by_evidence/fair_method_2021_2023")
 OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/records_by_evidence")
 SPECIES_RANKS <- c("species", "subspecies")
 MIN_REPORT    <- 50    # report (all records) figure cutoff

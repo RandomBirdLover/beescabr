@@ -26,34 +26,34 @@ DOCS_DIR <- "docs"
 # One manifest drives both the file copy and the landing-page cards.
 # ADD NEW PUBLIC PAGES HERE (src is relative to SRC_DIR; out is the docs/ name).
 PUBLISH_PAGES <- list(
-  list(src = "reference/occurrence_map/bee_occurrence_explorer.html", out = "occurrence_explorer.html",
+  list(src = "reference/occurrence_map/website/bee_occurrence_explorer.html", out = "occurrence_explorer.html",
        title = "Bee Occurrence Explorer", icon = "\U0001F50E", tag = "Field guide",
        blurb = "Pick a bee and see every place in the park it has been recorded, on a map you can filter by year, transect, and method, along with the months the bee is active."),
-  list(src = "reference/field_guide/bee_field_guide_species.html", out = "field_guide_species.html",
+  list(src = "reference/field_guide/website/bee_field_guide_species.html", out = "field_guide_species.html",
        title = "Bee Field Guide (Species)", icon = "\U0001F41D", tag = "Field guide",
        blurb = "Every bee species recorded at Cabrillo, with conservation status, how often we find it, the flowers it visits, and a link to its photos on iNaturalist."),
-  list(src = "reference/field_guide/bee_field_guide_genus.html", out = "field_guide_genus.html",
+  list(src = "reference/field_guide/website/bee_field_guide_genus.html", out = "field_guide_genus.html",
        title = "Bee Field Guide (Genus)", icon = "\U0001F41D", tag = "Field guide",
        blurb = "The same guide organized by genus. Useful for every bee, and especially for the ones that can only be identified to genus."),
-  list(src = "reference/bee_plant/bee_plant_explorer.html", out = "bee_plant_explorer.html",
+  list(src = "reference/bee_plant/website/bee_plant_explorer.html", out = "bee_plant_explorer.html",
        title = "Bee and Plant Explorer", icon = "\U0001F33C", tag = "Field guide",
        blurb = "Which flowers each bee has been recorded on, and which bees have been recorded on each plant. Read it from either end, and check the record count before drawing a conclusion."),
-  list(src = "coverage/least_sampled/least_sampled_bees.html", out = "least_sampled_bees.html",
+  list(src = "coverage/least_sampled/website/least_sampled_bees.html", out = "least_sampled_bees.html",
        title = "Least-Sampled Bees", icon = "❗", tag = "Priorities",
        blurb = "The bees we know the least about across both survey methods. New records of these help the most."),
-  list(src = "coverage/bee_bounties/specimen_bee_bounty_map.html", out = "specimen_bounty_map.html",
+  list(src = "coverage/bee_bounties/website/specimen_bee_bounty_map.html", out = "specimen_bounty_map.html",
        title = "Specimen Bee Bounty Map", icon = "\U0001F52C", tag = "Priorities",
        blurb = "Where to net the specimens the park's collection is still missing, bee by bee."),
-  list(src = "coverage/bee_bounties/inaturalist_bee_bounty_map.html", out = "inaturalist_bounty_map.html",
+  list(src = "coverage/bee_bounties/website/inaturalist_bee_bounty_map.html", out = "inaturalist_bounty_map.html",
        title = "iNaturalist Bee Bounty Map", icon = "\U0001F4F7", tag = "Priorities",
        blurb = "Where to photograph the bees that iNaturalist is still missing for the park."),
-  list(src = "reference/transects/cabr_bee_transects_map.html", out = "transects_map.html",
+  list(src = "reference/transects/website/cabr_bee_transects_map.html", out = "transects_map.html",
        title = "Survey Transect Map", icon = "\U0001F5FA\UFE0F", tag = "Monitoring program",
        blurb = "The four fixed trails our surveyors walk, known as the transects, mapped across the park."),
-  list(src = "reference/nps_summary/nps_summary_tables.html", out = "summary_tables.html",
+  list(src = "reference/nps_summary/website/nps_summary_tables.html", out = "summary_tables.html",
        title = "Park Summary Tables", icon = "\U0001F4CA", tag = "Monitoring program",
        blurb = "The program at a glance. How many species, genera, and plants we have recorded, and the number of surveys and surveyors behind them."),
-  list(src = "phenology/bee_trends_explorer.html", out = "bee_trends.html",
+  list(src = "phenology/website/bee_trends_explorer.html", out = "bee_trends.html",
        title = "Bee Trends Explorer", icon = "\U0001F4C8", tag = "Monitoring program",
        blurb = "An early look at how each bee's share of the records moves year to year. Six seasons in, so treat every line as a first look, not a conclusion.")
 )
@@ -255,7 +255,7 @@ build_landing_html <- function(cards, date, hero_v) {
 # data-as-of date: read the same "data as of YYYY-MM-DD" the summary page prints,
 # so the landing footer matches. Falls back to a phrase if the page is absent.
 landing_date <- function() {
-  f <- file.path(SRC_DIR, "reference/nps_summary/nps_summary_tables.html")
+  f <- file.path(SRC_DIR, "reference/nps_summary/website/nps_summary_tables.html")
   if (file.exists(f)) {
     txt <- readLines(f, warn = FALSE)
     m <- regmatches(txt, regexpr("data as of [0-9]{4}-[0-9]{2}-[0-9]{2}", txt))

@@ -102,5 +102,7 @@ g <- ggplot(plot_df, aes(x = pct, y = measure, colour = pct)) +
   theme_beescabr(12) +
   theme(legend.position = "none", panel.grid.major.y = element_blank(),
         plot.title = element_text(hjust = 0.5))
-bee_ggsave(file.path(OUT_DIR, "cabr_share_of_county.png"), g, width = 9.5, height = 4.8, bg = "white")
+# RETIRED: every number here is on cabr_county_map.png, which also shows WHERE
+# Cabrillo is. The over-representation figure moved into that map's subtitle.
+# bee_ggsave(file.path(OUT_DIR, "cabr_share_of_county.png"), g, width = 9.5, height = 4.8, bg = "white")
 message("Wrote cabr_share_of_county.{png,csv} to ", OUT_DIR)

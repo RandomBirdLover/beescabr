@@ -32,7 +32,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction")  # the rarefaction family, split out of accumulation (44 files in one folder);
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction/fair_method_2021_2023")  # the rarefaction family, split out of accumulation (44 files in one folder);
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # the dimension is baked into each filename, no by_<dim>/ subfolders
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
@@ -134,7 +134,7 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
   # curves: JOURNAL only. The REPORT dropped its rarefaction curves -- the bars (observed vs
   # rarefied) are the report's rarefaction figure (Taro's call). Journal keeps both for review.
   if (dimdir %in% JOURNAL_DIMS) {
-    bee_ggsave(file.path(outdir, paste0(pre, vlab, "_curves_", rank, ".png")), g1, width = 8, height = 5.4, bg = "white")
+  # SUPERSEDED in the fair window by rarefaction_combined.R: bee_ggsave(file.path(outdir, paste0(pre, vlab, "_curves_", rank, ".png")), g1, width = 8, height = 5.4, bg = "white")
   }
   # RAREFIED-ONLY bars (raw observed counts dropped for clarity, per project decision): the raw
   # vs rarefied pairing cluttered the figure, and the rarefied bar is the one that carries the
@@ -162,7 +162,7 @@ draw <- function(M, key, title, rank, cols = NULL, group_fill = FALSE) {
     theme_beescabr(11) +
     theme(panel.grid.major.x = element_blank(),
           plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-  bee_ggsave(file.path(outdir, paste0(pre, vlab, "_bars_", rank, ".png")), g2, width = 8, height = 5, bg = "white")
+  # SUPERSEDED in the fair window by rarefaction_combined.R: bee_ggsave(file.path(outdir, paste0(pre, vlab, "_bars_", rank, ".png")), g2, width = 8, height = 5, bg = "white")
   message(sprintf("  %-22s: rarefied to %d records; %s",
                   key, minN, paste(sprintf("%s=%.0f", tab$group, tab$rarefied_richness), collapse = "  ")))
 }

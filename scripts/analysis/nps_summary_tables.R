@@ -18,6 +18,8 @@
 # =============================================================
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_code_of")) try(source("scripts/analysis/conservation_status.R"), silent = TRUE)   # IUCN status lookup (optional)
@@ -75,7 +77,7 @@ part <- kv(
   dedicated_surveyors        = dedic_n,
   public_contributors        = public_n,
   total_contributors         = dedic_n + public_n)
-write.csv(part, file.path(OUT_DIR, "nps_participation_generated.csv"), row.names = FALSE)
+write.csv(part, file.path(OUT_DIR, "nps_participation.csv"), row.names = FALSE)
 # (transect count is in nps_participation above; the transect NAMES list is reference/design
 #  info, not a summary output, so it lives in data/project_info/, not here.)
 
@@ -297,7 +299,7 @@ df_to_html(checklist,       cap_chk,    "Bee species checklist", italic_cols = c
 df_to_html(subsp_checklist, cap_sschk,  "Bee subspecies checklist", italic_cols = c("subspecies", "genus")),  # then subspecies
 df_to_html(plant_checklist, cap_pchk,   "Plant genera checklist", italic_cols = "plant_genus"),
 '</body></html>')
-writeLines(html, file.path(OUT_DIR, "nps_summary_tables.html"))
+writeLines(html, file.path(.web(OUT_DIR), "nps_summary_tables.html"))
 
 # ---- PNG (the four compact summary tables; long checklists stay CSV/HTML) ----
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
@@ -328,8 +330,11 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                           grid::unit(1.3, "lines"), grid::unit(nr[3], "null"),
                           grid::unit(1.3, "lines"), grid::unit(nr[4], "null"))
   G <- gridExtra::arrangeGrob(grobs = grobs, ncol = 1, heights = heights)
-  bee_ggsave(file.path(OUT_DIR, "nps_summary_tables.png"), G,
-                  width = 8.5, height = 0.30 * sum(nr) + 0.34 * 4 + 1.5, limitsize = FALSE, bg = "white")
+  # PNG of a table RETIRED 2026-09-03: a table rendered as an image goes blurry the
+  # moment anyone zooms, and the same table is already written as .html (readable,
+  # zoomable, searchable) and .csv (usable). Nothing was lost by dropping it.
+  #bee_ggsave(file.path(OUT_DIR, "nps_summary_tables.png"), G,
+  # width = 8.5, height = 0.30 * sum(nr) + 0.34 * 4 + 1.5, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("NPS summary tables written to ", OUT_DIR, ":")

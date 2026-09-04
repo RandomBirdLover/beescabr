@@ -24,7 +24,8 @@ if (!exists("PATHS"))     source("scripts/config.R")
 if (!exists("scope_cap")) source("scripts/analysis/theme_beescabr.R")
 if (!exists("inat_photo_link")) source("scripts/analysis/inat_taxon_links.R")   # iNat logo -> taxon photo page
 
-OUT      <- file.path(DIR_REPORT, "phenology/bee_trends_explorer.html")
+OUT      <- file.path(DIR_REPORT, "phenology/website/bee_trends_explorer.html")
+dir.create(dirname(OUT), recursive = TRUE, showWarnings = FALSE)
 MIN_YEAR    <- 2021
 PARTIAL_YR  <- 2026
 MIN_RECORDS <- 50

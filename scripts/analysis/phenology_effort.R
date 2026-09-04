@@ -28,7 +28,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_SEQ")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL <- file.path(DIR_JOURNAL, "phenology")   # fair-window effort calendar + grid
+OUT_JOURNAL <- file.path(DIR_JOURNAL, "phenology/fair_method_2021_2023")   # fair-window effort calendar + grid
 OUT_REPORT  <- file.path(DIR_REPORT,  "phenology")   # all-records effort calendar + grid
 MONTH_ABB <- month.abb
 MCOL      <- c("lethal" = unname(BEE_METHOD_COL["lethal"]), "non-lethal" = unname(BEE_METHOD_COL["nonlethal"]))

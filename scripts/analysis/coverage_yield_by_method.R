@@ -33,7 +33,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "method_comparison/yield")   # fair-window backing table
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "method_comparison/yield/fair_method_2021_2023")   # fair-window backing table
 OUT_REPORT    <- file.path(DIR_REPORT,  "method_comparison/yield")   # all-records contributor/method figures
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")
@@ -180,7 +180,51 @@ plot_report <- function(rank, file) {
           plot.subtitle = element_text(size = 8.7, hjust = 0.5))
   bee_ggsave(file, g, width = 9.5, height = 6.4, bg = "white")
 }
-plot_report("species", file.path(OUT_REPORT, "bee_yield_by_contributor_and_method_species.png"))
-plot_report("genus",   file.path(OUT_REPORT, "bee_yield_by_contributor_and_method_genus.png"))
+# ---- BOTH RANKS ON ONE FIGURE ----------------------------------------------
+# The per-rank versions printed the Records column TWICE: records by contributor
+# and by method do not depend on rank, so those four bars were identical in both
+# files. Here Records appears once and the two rank-dependent columns carry both
+# ranks -- species solid, genera hatched, the house rule.
+plot_report_both <- function(file) {
+  L <- rbind(transform(rbind(report_long(tbl_c, "By Contributor", "species"),
+                             report_long(tbl_m, "By Method",      "species")), rank = "Species"),
+             transform(rbind(report_long(tbl_c, "By Contributor", "genus"),
+                             report_long(tbl_m, "By Method",      "genus")),   rank = "Genus"))
+  L$group <- factor(L$group, levels = GRP_LEVELS)
+  L$rank  <- factor(L$rank,  levels = c("Species", "Genus"))
+  # Records is rank-independent: keep one copy, and label the other columns generically
+  L$metric2 <- ifelse(grepl("^Records$", L$metric), "Records",
+                ifelse(grepl("Group-Exclusive", L$metric), "Taxa only that group found", "Taxa recorded"))
+  L <- L[!(L$metric2 == "Records" & L$rank == "Genus"), , drop = FALSE]
+  L$panel <- factor(paste0(L$section, ": ", L$metric2),
+                    levels = c(paste0("By Contributor: ", c("Records", "Taxa recorded", "Taxa only that group found")),
+                               paste0("By Method: ",      c("Records", "Taxa recorded", "Taxa only that group found"))))
+  g <- ggplot(L, aes(x = group, y = value, fill = group)) +
+    ggpattern::geom_col_pattern(aes(pattern = rank), position = position_dodge(0.78), width = 0.7,
+      pattern_fill = "white", pattern_colour = NA, pattern_angle = 45,
+      pattern_density = 0.08, pattern_spacing = 0.03, pattern_key_scale_factor = 0.4) +
+    ggpattern::scale_pattern_manual(values = c(Species = "none", Genus = "stripe"), name = NULL) +
+    geom_text(aes(label = value, group = rank), position = position_dodge(0.78),
+              vjust = -0.35, size = 2.5, colour = BEE_INK$secondary) +
+    facet_wrap(~ panel, scales = "free", ncol = 3) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
+    scale_fill_manual(values = GRP_COL, guide = "none") +
+    labs(title = "Did any one method or contributor find every bee?",
+         subtitle = "Interns, beeple, and the public each turn up taxa the others miss. No single group or method sees it all.\nSpecies solid, genera hatched. Records are the same at either rank, so they are shown once.",
+         caption = paste0(
+           scope_cap(scope  = "all records, no window; every specimen + every iNaturalist photo (survey or not)",
+                     method = "lethal vs non-lethal", rank = "species + genus"),
+           "\n",
+           str_wrap(paste0(
+             "Interns' bar = their specimens + 2024 photos, so the contributor and method views reconcile to the ",
+             "same total. Group-exclusive = a taxon only that group recorded."), 108)),
+         x = "contributor group or method", y = NULL) +
+    theme_beescabr(11) +
+    theme(axis.text.x = element_text(size = 8.5), panel.grid.major.x = element_blank(),
+          plot.title = element_text(hjust = 0.5), legend.position = "top",
+          plot.subtitle = element_text(size = 8.7, hjust = 0.5))
+  bee_ggsave(file, g, width = 10.5, height = 6.8, bg = "white")
+}
+plot_report_both(file.path(OUT_REPORT, "bee_yield_by_contributor_and_method.png"))
 
-message("\nWrote JOURNAL table (_journal.csv) + REPORT figure (_report_{species,genus}.png) + report CSVs to journal_paper_2026/ + nps_report_2026/")
+message("\nWrote JOURNAL table (_journal.csv) + REPORT figure (bee_yield_by_contributor_and_method.png, both ranks) + report CSVs to journal_paper_2026/ + nps_report_2026/")

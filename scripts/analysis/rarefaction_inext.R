@@ -34,7 +34,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(iNEXT
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction")  # iNEXT is JOURNAL-only; lives with the other rarefaction output
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/rarefaction/fair_method_2021_2023")  # iNEXT is JOURNAL-only; lives with the other rarefaction output
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/rarefaction")  # (report iNEXT is skipped -- report uses vegan rarefaction)
 SPECIES_RANKS <- c("species", "subspecies")
 TRANSECTS     <- c("BST", "UPMON", "TP", "OT")
@@ -114,14 +114,21 @@ run_inext <- function(gl, key, title, rank, cols = NULL) {
          x = "records sampled (sample size)", y = "diversity (Hill numbers)",
          caption = scope_cap(scope = "survey records only", method = "lethal + non-lethal pooled", rank = rank,
                              sig = bee_test("iNEXT size-based rarefaction/extrapolation", "Hill q0/q1/q2"))) + th, cols)
-  bee_ggsave(file.path(outsub, paste0(pre, "_size_", rank, ".png")), g1, width = 10, height = 4.2, bg = "white")
+  # SUPERSEDED by rarefaction_combined.R (one figure per comparison, both estimators): 
+  # bee_ggsave(file.path(outsub, paste0(pre, "_size_", rank, ".png")), g1, width = 10, height = 4.2, bg = "white")
   # coverage-based curves (type 3): x-axis = sample completeness, the fair basis
   g3 <- add_cols(iNEXT::ggiNEXT(out, type = 3, facet.var = "Order.q") +
     labs(title = title, subtitle = "Effort-standardized richness (Hill numbers) -- a fair diversity comparison across methods/observers.",
          x = "sample completeness (coverage)", y = "diversity (Hill numbers)",
          caption = scope_cap(scope = "survey records only", method = "lethal + non-lethal pooled", rank = rank,
                              sig = bee_test("iNEXT coverage-based rarefaction/extrapolation", "Hill q0/q1/q2"))) + th, cols)
-  bee_ggsave(file.path(outsub, paste0(pre, "_coverage_", rank, ".png")), g3, width = 10, height = 4.2, bg = "white")
+  # SUPERSEDED by rarefaction_combined.R (one figure per comparison, both estimators): 
+  # bee_ggsave(file.path(outsub, paste0(pre, "_coverage_", rank, ".png")), g3, width = 10, height = 4.2, bg = "white")
+  # the CURVES themselves, so rarefaction_combined.R can draw both estimators on one
+  # pair of axes instead of leaving eight separate figures for one comparison.
+  .cv <- out$iNextEst
+  if (!is.null(.cv$size_based))     write.csv(.cv$size_based,     file.path(outsub, paste0(pre, "_curve_size_", rank, ".csv")),     row.names = FALSE)
+  if (!is.null(.cv$coverage_based)) write.csv(.cv$coverage_based, file.path(outsub, paste0(pre, "_curve_coverage_", rank, ".csv")), row.names = FALSE)
   # asymptotic diversity estimates (the extrapolated ceiling) + observed
   write.csv(out$AsyEst, file.path(outsub, paste0(pre, "_asymptotic_", rank, ".csv")), row.names = FALSE)
   # standardized to a common COVERAGE (default: the lowest coverage among groups) --

@@ -31,6 +31,8 @@
 # =============================================================
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table"))  try(source("scripts/analysis/conservation_status.R"), silent = TRUE)  # IUCN (optional)
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")                                # plant common names
@@ -241,7 +243,7 @@ bee_sort_mark_js(),
 'if(!isNaN(na)&&!isNaN(nc))return(na-nc)*d;return a.localeCompare(c)*d;});',
 'rows.forEach(function(r){b.appendChild(r);});beeMarkSort(h,d);});});',
 '</script></body></html>')
-writeLines(html, file.path(OUT_DIR, "least_sampled_bees.html"))
+writeLines(html, file.path(.web(OUT_DIR), "least_sampled_bees.html"))
 
 # ---- 5. PNG table image (gridExtra) -----------------------------------------
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
@@ -267,8 +269,11 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                         gp = grid::gpar(fontsize = 7, col = BEE_TABLE[["subtext"]], lineheight = 1.15))
   g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
                                 heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(2.2, "lines")))
-  bee_ggsave(file.path(OUT_DIR, "least_sampled_bees.png"), g,
-                  width = if (HAVE_IUCN) 15 else 14, height = 0.24 * nrow(disp) + 1.9, limitsize = FALSE, bg = "white")
+  # PNG of a table RETIRED 2026-09-03: a table rendered as an image goes blurry the
+  # moment anyone zooms, and the same table is already written as .html (readable,
+  # zoomable, searchable) and .csv (usable). Nothing was lost by dropping it.
+  #bee_ggsave(file.path(OUT_DIR, "least_sampled_bees.png"), g,
+  # width = if (HAVE_IUCN) 15 else 14, height = 0.24 * nrow(disp) + 1.9, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote least_sampled_bees.{csv,html,png} to ", OUT_DIR)

@@ -37,7 +37,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplo
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style (colors by method)
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/id_resolution")   # fair-window: completeness, targets(journal), specimen, photo
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "coverage/id_resolution/fair_method_2021_2023")   # fair-window: completeness, targets(journal), specimen, photo
 OUT_REPORT    <- file.path(DIR_REPORT,  "coverage/id_resolution")   # all-records: targets(report) + the keyable worklist CSV
 SPECIES_RANKS <- c("species", "subspecies")
 dir.create(OUT_JOURNAL, recursive = TRUE, showWarnings = FALSE); dir.create(OUT_REPORT, recursive = TRUE, showWarnings = FALSE)
@@ -96,11 +96,18 @@ message(sprintf("Targets with specimen-backed (keyable) records: %d genera, %d s
 draw_targets <- function(dat, scope, file, split_done) {
   n_total <- nrow(dat); n_resolved <- sum(dat$resolved); pct_resolved <- 100 * n_resolved / n_total
   # per-target counts
+  # EVERY genus in scope, not only those with something left to identify. Building
+  # this from unresolved records alone dropped the nearly-finished genera -- Halictus
+  # at 96%, Anthophora 97%, Xenoglossa 99% simply vanished from the fair-window
+  # panel -- so the two charts listed different genera and the wins were invisible.
+  all_targets <- dat %>% filter(!is.na(target), target != "", !grepl("^\\(", target)) %>%
+    distinct(target)
   un <- dat %>% filter(!resolved) %>% group_by(target) %>%
     summarise(specimen_unresolved = sum(method == "specimen"),
               photo_unresolved    = sum(method == "photo"),
-              unresolved_total = n(), .groups = "drop") %>%
-    filter(!grepl("^\\(", target))   # drop the coarse-rank buckets (epifamily..tribe): genus-level rows only
+              unresolved_total = n(), .groups = "drop")
+  un <- all_targets %>% left_join(un, by = "target") %>%
+    mutate(across(c(specimen_unresolved, photo_unresolved, unresolved_total), ~ coalesce(.x, 0L)))
   rs_all <- dat %>% filter(resolved, !is.na(genus), genus != "") %>% count(genus, name = "resolved_species")
   rs_l   <- dat %>% filter(resolved, method == "specimen", !is.na(genus), genus != "") %>% count(genus, name = "resolved_lethal")
   rs_n   <- dat %>% filter(resolved, method == "photo",    !is.na(genus), genus != "") %>% count(genus, name = "resolved_nonlethal")

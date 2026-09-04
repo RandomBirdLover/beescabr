@@ -27,6 +27,8 @@
 # Run from the repo root:  Rscript scripts/analysis/bee_plant_explorer.R
 # =============================================================
 suppressMessages({ library(dplyr); library(stringr); library(jsonlite) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 # ---- the index: one entry per bee and one per plant genus --------------------
 # PURE. pairs = data.frame(bee, plant, n) as written by bee_plant_matrix.R. Returns
@@ -216,6 +218,6 @@ function setMode(m){
 draw();
 </script></body></html>')
 
-  writeLines(html, file.path(OUT_DIR, "bee_plant_explorer.html"))
-  message("  wrote ", file.path(OUT_DIR, "bee_plant_explorer.html"))
+  writeLines(html, file.path(.web(OUT_DIR), "bee_plant_explorer.html"))
+  message("  wrote ", file.path(.web(OUT_DIR), "bee_plant_explorer.html"))
 }

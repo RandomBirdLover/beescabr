@@ -19,6 +19,8 @@
 if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")
@@ -493,7 +495,7 @@ fit_genusbox();
 draw();
 </script></body></html>')
 
-out <- file.path(OUT_DIR, "bee_occurrence_explorer.html")
+out <- file.path(.web(OUT_DIR), "bee_occurrence_explorer.html")
 # fill the scope marker now that the sprintf template is built (see the titlebox above)
 # Colors: the CSS lives inside a sprintf template, so it cannot interpolate R values
 # directly without disturbing the argument list. Every color is written as a token and

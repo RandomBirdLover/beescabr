@@ -28,6 +28,7 @@ dir.create(FIND_DIR, recursive = TRUE, showWarnings = FALSE)
   txt <- as.character(outputs)
   # many entries name their folder outright ("method_comparison/yield/x.png")
   dirs <- regmatches(txt, gregexpr("[a-z_]+/[a-z_]+(/[a-z_]+)*", txt))[[1]]
+  dirs <- sub("/(website|fair_[a-z0-9_]+)(/.*)?$", "", dirs)
   for (d in dirs) {                                # the match may swallow the filename too
     while (grepl("/", d)) {
       if (dir.exists(file.path(DIR_REPORT, d))) return(file.path(DIR_REPORT, d))
@@ -45,7 +46,12 @@ dir.create(FIND_DIR, recursive = TRUE, showWarnings = FALSE)
       stem <- sub("[.](csv|png|html).*$", "", f)
       if (nzchar(stem)) hit <- .all_outputs[startsWith(basename(.all_outputs), stem)]
     }
-    if (length(hit)) return(dirname(hit[[1]]))
+    if (length(hit)) {
+      d <- dirname(hit[[1]])
+      # a findings file belongs with the DATA, not inside website/ or fair_window/
+      d <- sub("/(website|fair_[a-z0-9_]+)$", "", d)
+      return(d)
+    }
   }
   FIND_DIR
 }
@@ -78,7 +84,7 @@ fs   <- .rd(file.path(DIR_REPORT, "interactions/networks/forage_selectivity_summ
 h2   <- .rd(file.path(DIR_REPORT, "interactions/networks/bee_genus_specialization_h2.csv"))
 acc  <- .rd(file.path(DIR_REPORT, "richness/accumulation/transect_accumulation_summary.csv"))
 holw <- .rd(file.path(DIR_REPORT, "coverage/checklist_gaps/cabr_bees_not_on_county_checklist.csv"))
-yld_m <- .rd(file.path(DIR_JOURNAL, "method_comparison/yield/coverage_yield_by_method_journal.csv"))
+yld_m <- .rd(file.path(DIR_JOURNAL, "method_comparison/yield/fair_method_2021_2023/coverage_yield_by_method_journal.csv"))
 lsb   <- .rd(file.path(DIR_REPORT, "coverage/least_sampled/least_sampled_bees.csv"))
 .pick <- function(df, g, col) if (is.null(df)) "-" else {
   key <- if (!is.null(df$grp)) df$grp else df$method   # yield_by_method keys on method
@@ -135,7 +141,7 @@ fw("rarefaction_inext",
    "Effort-standardized richness comparison (Hill q0/q1/q2) by method and observer; size- + coverage-based curves.",
    c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation (journal only; the report uses the vegan curves/bars)",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate"),
-   "journal richness/rarefaction/: rarefaction_by_{method,observer}_inext_{size,coverage}_{species,genus}.png (+ _asymptotic/_by_size/_by_coverage _{species,genus}.csv)")
+   "richness/rarefaction/fair_method_2021_2023/rarefaction_by_{method,observer}_{species,genus}.png -- ONE figure per comparison, iNEXT curves with vegan points as the cross-check (+ the matching .csv, and _inext_asymptotic/_by_size/_by_coverage tables)")
 
 fw("rarefaction_vegan",
    "Rarefaction (vegan) -- curves + rarefied-richness bars",
@@ -143,7 +149,7 @@ fw("rarefaction_vegan",
    "Classic individual-based rarefaction; the report's rarefaction figures, plus a cross-check on iNEXT in the journal.",
    c("analysis" = "vegan rarefaction to the lowest group's record total",
      assumption = "assumes even sampling within a group"),
-   "richness/rarefaction/: report rarefaction_by_{transect,year}_{curves,bars}_{species,genus}.png (+ .csv); journal same as *_vegan_*")
+   "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves")
 
 fw("diversity_indices",
    "Community diversity (Shannon / Simpson / NMDS)",
@@ -168,7 +174,7 @@ fw("interactions_network",
    "Who visits what: full plant-genus x bee network as webs + heatmaps (raw co-occurrence; read descriptively).",
    c(note = "raw visitation counts -- NOT preference (see forage_selectivity for the inferential preference test)",
      scope = "specimen net + iNaturalist photo pooled, CABR only"),
-   "bee_plant_network_genus.png; bee_plant_network_species.png; bee_plant_interaction_heatmap_*.png; interactions_*_matrix.csv; interactions_bee_genus_network.png")
+   "bee_plant_network_genus.png; bee_plant_network_species.png; bee_plant_interaction_heatmap_*.png; interactions_*_matrix.csv; bee_genus_specialization_overview.png; bee_specialist_network.png")
 
 fw("interactions_top_plants",
    "Top plants bees visit",
@@ -183,14 +189,14 @@ fw("bee_field_guide",
    "Per-species reference: peak day, active months, most-recorded flowers, diet breadth, status, IUCN, and an availability-corrected Forage-preference column (species-level, same matched month/year/method test as the genus guide; ~19 species selective, shown only where a species has >=50 plant-visit records, so it fills in as sampling grows).",
    c(note = "'Most-recorded flowers' = where it was seen most; 'Forage preference' is the matched-test result (Selective -> plant / Generalist / too few records)",
      threshold = "forage preference gated at >=50 plant-visit records -- most species read 'too few records to judge' today"),
-   "bee_field_guide_species.html; bee_field_guide_species.csv; bee_field_guide_species.png")
+   "website/bee_field_guide_species.html; bee_field_guide_species.csv")
 
 fw("bee_field_guide_genus",
    "Bee field guide -- by genus",
    "descriptive (+ inferential Forage-preference column)",
    "Per-genus companion guide; carries the inferential Forage-preference column from the selectivity test.",
    c(note = "Most-recorded flowers/Most-used plant are descriptive; Forage preference is the matched-test result"),
-   "bee_field_guide_genus.html; bee_field_guide_genus.csv; bee_field_guide_genus.png")
+   "website/bee_field_guide_genus.html; bee_field_guide_genus.csv")
 
 fw("rare_bee_plants",
    "Plants the park's rare / at-risk bees were recorded on",
@@ -223,7 +229,7 @@ fw("yield_by_method",
    c(note   = "shows each method's unique + shared taxa contribution",
      scope  = "ALL records (survey filter off), since 'what each method detects' wants every record",
      tier   = "YIELD -- see method_comparison/effort for sampling work and method_comparison/efficiency for richness at equal effort"),
-   "method_comparison/yield/yield_by_method.png; coverage_method_resolution.csv; yield_by_method_taxa.csv")
+   "method_comparison/yield/yield_by_method_report.png; bee_yield_by_contributor_and_method.png; coverage_method_resolution_report.csv; yield_by_method_taxa_report.csv")
 
 fw("effort_by_method",
    "Effort by method (survey trips)",
@@ -238,7 +244,7 @@ fw("efficiency_by_method",
    "Richness at EQUAL sampling effort (rarefaction): both methods sub-sampled to the smaller method's record total, at species and genus rank. At species level lethal stays ahead (47 vs 33); at genus level the two are even (23 vs 23) -- non-lethal's raw genus lead was an effort artifact.",
    c(tier   = "EFFICIENCY -- third tier; removes the effort imbalance that makes raw yield unfair to compare",
      "analysis" = "Hurlbert rarefaction to the smaller method's total records, survey records only"),
-   "method_comparison/efficiency/efficiency_by_method_species.png; method_comparison/efficiency/efficiency_by_method_genus.png")
+   "method_comparison/efficiency/efficiency_by_method_both_ranks.png (both ranks on one figure: species solid, genera hatched)")
 
 fw("bees_found_off_transect",
    "Off-transect coverage",
@@ -274,7 +280,7 @@ fw("coverage_cabr_share_of_county",
    "descriptive",
    "How much of San Diego County's native-bee diversity the tiny CABR site captures.",
    character(0),
-   "cabr_share_of_county.csv; cabr_share_of_county.png; cabr_county_map.png")
+   "cabr_share_of_county.csv; cabr_county_map.png (the lollipop figure was retired: every number it showed is on the map, which also shows where Cabrillo is)")
 
 fw("coverage_cabr_county_map",
    "CABR county locator map -- speck of area, big share of bees",
@@ -309,7 +315,7 @@ fw("least_sampled_bees",
      coverage    = "both (thin) = a few of each method; photo-only = never netted (also a specimen bounty); specimen-only = never photographed (also an iNat bounty)",
      context     = "when (peak months + active span), where (top transect), flower (top plant genera) pooled across both methods, + an example iNat photo URL",
      vs_bounties = "bee_bounties lists taxa MISSING from one method; this keeps the under-sampled species and adds the find-it context in one sheet"),
-   "least_sampled_bees.csv; least_sampled_bees.html; least_sampled_bees.png")
+   "least_sampled_bees.csv; website/least_sampled_bees.html (the table PNG was retired: an image of a table blurs when zoomed)")
 
 fw("transect_effort",
    "Per-transect sampling effort",
@@ -323,7 +329,7 @@ fw("phenology_effort",
    "descriptive",
    "Survey effort across months and years -- the context for every seasonal/annual pattern in the other analyses.",
    c(note = "documents the effort skew (interns ~Mar-Oct, beeple year-round; 2024-heavy) that the inferential tests control for"),
-   "effort_by_month.csv; effort_by_month.png; effort_year_month_grid.png")
+   "survey_effort_by_month.csv; survey_effort_by_month.png; fair_method_2021_2023/effort_by_month_journal.png; fair_method_2021_2023/effort_year_month_grid_journal.png")
 
 fw("nps_summary_tables",
    "NPS descriptive summary tables -- plain counts, no interpretation",
@@ -332,7 +338,7 @@ fw("nps_summary_tables",
    c(scope    = "ALL records (not survey-only); the report's factual backbone that every other analysis interprets",
      contents = "participation (dedicated surveyors + public contributors, deduped from the roster, plus surveys by method + year span), bee + plant genus/species counts, method breakdown, and bee/plant checklists",
      no_stats = "descriptive by design -- no p-values or estimators here; the inferential findings live in the other summaries"),
-   "nps_participation_generated.csv; nps_bees_summary.csv; nps_bee_checklist_species.csv; nps_bee_checklist_genus.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_checklist_genus.csv; nps_summary_tables.{html,png}")
+   "nps_participation.csv; nps_bees_summary.csv; nps_bee_checklist_species.csv; nps_bee_checklist_genus.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_checklist_genus.csv; nps_summary_tables.{html,png}")
 
 # ---- master index -----------------------------------------------------------
 idx <- do.call(rbind, .index)

@@ -27,6 +27,8 @@
 # =============================================================
 
 suppressPackageStartupMessages({ library(dplyr); library(stringr) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("iucn_table")) source("scripts/analysis/conservation_status.R")   # shared IUCN lookups
 if (!exists("plant_label")) source("scripts/analysis/plant_names.R")          # shared plant common-name labels
@@ -211,7 +213,7 @@ bee_sort_mark_js(),
 'return a.localeCompare(c)*d;});',
 'ROWS.forEach(function(r){B.appendChild(r);});beeMarkSort(h,d);});});})();',
 '</script></body></html>')
-writeLines(html, file.path(OUT_DIR, "bee_field_guide_genus.html"))
+writeLines(html, file.path(.web(OUT_DIR), "bee_field_guide_genus.html"))
 
 # ---- 4. PNG table image (gridExtra) -----------------------------------------
 if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE)) {
@@ -238,8 +240,11 @@ if (requireNamespace("gridExtra", quietly = TRUE) && requireNamespace("ggplot2",
                         gp = grid::gpar(fontsize = 7, col = BEE_TABLE[["subtext"]], lineheight = 1.15))
   g   <- gridExtra::arrangeGrob(scap, g, cap, ncol = 1,
                                 heights = grid::unit.c(grid::unit(2.4, "lines"), grid::unit(1, "null"), grid::unit(3.4, "lines")))
-  bee_ggsave(file.path(OUT_DIR, "bee_field_guide_genus.png"), g,
-                  width = 17, height = 0.26 * nrow(disp) + 2.3, limitsize = FALSE, bg = "white")
+  # PNG of a table RETIRED 2026-09-03: a table rendered as an image goes blurry the
+  # moment anyone zooms, and the same table is already written as .html (readable,
+  # zoomable, searchable) and .csv (usable). Nothing was lost by dropping it.
+  #bee_ggsave(file.path(OUT_DIR, "bee_field_guide_genus.png"), g,
+  # width = 17, height = 0.26 * nrow(disp) + 2.3, limitsize = FALSE, bg = "white")
 } else message("  (gridExtra/ggplot2 not available -- skipped PNG; CSV + HTML written)")
 
 message("Wrote bee_field_guide_genus.{csv,html,png} to ", OUT_DIR)

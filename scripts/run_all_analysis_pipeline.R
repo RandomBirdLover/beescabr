@@ -38,6 +38,7 @@ RUNNING_ALL <- TRUE
 .modules <- c("theme_beescabr.R", "utils_analysis.R", "not_on_holway.R",
               "conservation_status.R", "plant_names.R", "forage_selectivity.R",
               "explorer_photo_helpers.R", "inat_taxon_links.R", "transect_years.R",
+              "rarefaction_combined.R",   # runs AFTER both rarefaction scripts, not in the loop
               "findings_summaries.R")   # runs LAST (after every analysis) -- excluded from the auto-loop
 .scripts <- setdiff(sort(list.files("scripts/analysis", pattern = "\\.R$")), .modules)
 
@@ -62,6 +63,10 @@ if (!exists("run_analysis_script")) source("scripts/utils/analysis_run.R")
 # LAST: roll up every analysis into plain-language <name>_findings.csv tables +
 # a master findings_index.csv (data/analysis/findings_generated/). Runs after the loop so it
 # can read the fresh per-analysis outputs it summarises. Best-effort like the rest.
+message("\n===== rarefaction_combined.R (one figure per comparison, both estimators) =====")
+tryCatch(source("scripts/analysis/rarefaction_combined.R"),
+         error = function(e) message("  rarefaction_combined failed: ", conditionMessage(e)))
+
 message("\n===== findings_summaries.R (plain-language finding rollups) =====")
 tryCatch(source("scripts/analysis/findings_summaries.R"),
          error = function(e) message("  !! findings rollup skipped: ", conditionMessage(e)))

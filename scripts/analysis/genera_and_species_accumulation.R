@@ -53,7 +53,7 @@ if (!exists("PATHS")) source("scripts/config.R")   # PATHS$specimen_clean, PATHS
 # master_per_survey_info_generated.csv is not in config's PATHS list; name it here.
 PER_SURVEY_INFO <- PATHS$per_survey
 
-OUT_JOURNAL     <- file.path(DIR_JOURNAL, "richness/accumulation")  # method small-multiples (fair window)
+OUT_JOURNAL     <- file.path(DIR_JOURNAL, "richness/accumulation/fair_method_2021_2023")  # method small-multiples (fair window)
 OUT_REPORT      <- file.path(DIR_REPORT,  "richness/accumulation")  # per-transect completeness + Chao2 table
 TRANSECTS       <- c("BST", "UPMON", "TP", "OT")          # the lines, in legend order
 SPECIES_RANKS   <- c("species", "subspecies")             # ranks that resolve to a species

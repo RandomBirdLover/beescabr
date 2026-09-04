@@ -38,7 +38,7 @@ suppressPackageStartupMessages({ library(dplyr); library(stringr); library(vegan
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_TRANSECT")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity")  # fair-window rank-abundance (method contrast)
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity/fair_method_2021_2023")  # fair-window rank-abundance (method contrast)
 OUT_REPORT    <- file.path(DIR_REPORT,  "richness/diversity")  # evenness, NMDS/PERMANOVA, park-shape rank-abundance, backing CSVs
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")

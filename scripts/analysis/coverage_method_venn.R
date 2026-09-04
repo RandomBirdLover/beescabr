@@ -155,7 +155,8 @@ res_cat <- function(df, method) {
 # ---- run BOTH scopes --------------------------------------------------------
 run_scope <- function(scope, spec, inat, subfn) {
   sfx <- paste0("_", scope)
-  od  <- file.path(if (scope == "journal") DIR_JOURNAL else DIR_REPORT, YIELD_SUB)   # straight into the paper folder
+  od  <- file.path(if (scope == "journal") DIR_JOURNAL else DIR_REPORT,
+                   if (scope == "journal") file.path(YIELD_SUB, "fair_method_2021_2023") else YIELD_SUB)   # straight into the paper folder
   dir.create(od, recursive = TRUE, showWarnings = FALSE)
   sets <- list(
     species = list(lethal = species_set(spec), nonlethal = species_set(inat)),

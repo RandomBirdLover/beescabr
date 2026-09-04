@@ -25,7 +25,7 @@ suppressPackageStartupMessages({
 # ---- config -----------------------------------------------------------------
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
-OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity")           # fair-window per-transect effort
+OUT_JOURNAL   <- file.path(DIR_JOURNAL, "richness/diversity/fair_method_2021_2023")           # fair-window per-transect effort
 COV_EFFORT    <- file.path(DIR_REPORT,  "coverage/transect_effort")     # sampling effort is a COVERAGE concept, not diversity
 SPECIES_RANKS <- c("species", "subspecies")
 GENUS_RANKS   <- c("species", "subspecies", "subgenus", "complex", "genus")

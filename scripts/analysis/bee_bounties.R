@@ -28,6 +28,8 @@
 if (!exists("beescabr_require")) source("scripts/config.R")
 beescabr_require()
 suppressPackageStartupMessages({ library(dplyr); library(stringr); library(ggplot2); library(sf) })
+# interactive pages live in a website/ subfolder beside the figures they came from
+.web <- function(d) { p <- file.path(d, "website"); dir.create(p, recursive = TRUE, showWarnings = FALSE); p }
 
 if (!exists("PATHS")) source("scripts/config.R")
 if (!exists("BEE_METHOD_COL")) source("scripts/analysis/theme_beescabr.R")   # shared house style
@@ -438,11 +440,11 @@ m2 <- htmlwidgets::prependContent(m2, htmltools::tags$style(htmltools::HTML(BEE_
 # fall back to a lib/ folder only if pandoc is missing, so the pipeline never hard-fails.
 .sc <- requireNamespace("rmarkdown", quietly = TRUE) && isTRUE(try(rmarkdown::pandoc_available(), silent = TRUE))
 .libd <- if (.sc) NULL else "lib"    # self-contained -> no external lib dir; fallback -> a shared lib/ folder
-htmlwidgets::saveWidget(m1, file.path(normalizePath(OUT_DIR), "specimen_bee_bounty_map.html"),
+htmlwidgets::saveWidget(m1, file.path(normalizePath(.web(OUT_DIR)), "specimen_bee_bounty_map.html"),
                         selfcontained = .sc, libdir = .libd, title = "Specimen Bee Bounty -- Where to Net a Voucher")
-htmlwidgets::saveWidget(m2, file.path(normalizePath(OUT_DIR), "inaturalist_bee_bounty_map.html"),
+htmlwidgets::saveWidget(m2, file.path(normalizePath(.web(OUT_DIR)), "inaturalist_bee_bounty_map.html"),
                         selfcontained = .sc, libdir = .libd, title = "iNaturalist Bee Bounty -- Where to Photograph")
-if (.sc) unlink(c(file.path(normalizePath(OUT_DIR), "lib"),                                   # tidy: self-contained html inlines everything, so
-                  Sys.glob(file.path(normalizePath(OUT_DIR), "*_map_files"))), recursive = TRUE) # the lib/ + *_map_files dep dirs are just leftovers
+if (.sc) unlink(c(file.path(normalizePath(.web(OUT_DIR)), "lib"),                                   # tidy: self-contained html inlines everything, so
+                  Sys.glob(file.path(normalizePath(.web(OUT_DIR)), "*_map_files"))), recursive = TRUE) # the lib/ + *_map_files dep dirs are just leftovers
 message(sprintf("Wrote specimen_bee_bounty_map.html + inaturalist_bee_bounty_map.html (%s) to %s",
                 if (.sc) "self-contained single files" else "interactive; shared lib/ folder", OUT_DIR))
