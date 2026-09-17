@@ -31,6 +31,60 @@ suppressWarnings(suppressMessages(library(dplyr)))
 # `term` at `want_rank`: prefer an exact normalized name + rank match, else the
 # first same-rank hit, else the first result with a real id. Returns
 # list(id, name, rank) or NULL. (A suggestion only -- the human still confirms.)
+# A trinomial is a subspecies name. Parenthetical forms ("(Complex) Colletes
+# hyalinus") are not, whatever their word count.
+.spid_is_subspecies_name <- function(term) {
+  if (is.null(term) || length(term) != 1 || is.na(term)) return(FALSE)
+  t <- trimws(gsub("\\s+", " ", as.character(term)))
+  if (!nzchar(t) || grepl("[()]", t)) return(FALSE)
+  length(strsplit(t, " ")[[1]]) == 3L
+}
+
+# The subspecies the lookup already holds for the SAME species, minus the name we
+# are asking about. iNaturalist almost always has a page for a checklist subspecies;
+# what it does not have is the spelling on the label. The specimen data carries this
+# one subspecies as "gaudialis" (118 rows), "gaudiale" (18) and "gaudiais" (2), so a
+# no-match on a trinomial is a typo to correct far more often than a bee to skip.
+.spid_sibling_subspecies <- function(term, lookup) {
+  empty <- data.frame(scientific_name = character(0), taxon_id = integer(0),
+                      stringsAsFactors = FALSE)
+  if (!.spid_is_subspecies_name(term) || is.null(lookup) || !nrow(lookup)) return(empty)
+  if (!all(c("scientific_name", "taxon_id", "rank") %in% names(lookup))) return(empty)
+  t  <- trimws(gsub("\\s+", " ", as.character(term)))
+  sp <- paste(strsplit(t, " ")[[1]][1:2], collapse = " ")
+  nm <- trimws(gsub("\\s+", " ", as.character(lookup$scientific_name)))
+  id <- suppressWarnings(as.integer(lookup$taxon_id))
+  keep <- tolower(lookup$rank) == "subspecies" &
+          !is.na(id) &                                       # an id-less row is no help
+          tolower(nm) != tolower(t) &                        # not the name being asked about
+          startsWith(tolower(nm), paste0(tolower(sp), " "))
+  keep[is.na(keep)] <- FALSE
+  if (!any(keep)) return(empty)
+  data.frame(scientific_name = nm[keep], taxon_id = id[keep], stringsAsFactors = FALSE)
+}
+
+# The lines shown above the search instructions when the name is a subspecies.
+# Empty for anything else, so the caller can paste it in unconditionally.
+.spid_subspecies_help <- function(term, lookup = NULL) {
+  if (!.spid_is_subspecies_name(term)) return(character(0))
+  t   <- trimws(gsub("\\s+", " ", as.character(term)))
+  sp  <- paste(strsplit(t, " ")[[1]][1:2], collapse = " ")
+  sib <- .spid_sibling_subspecies(t, lookup)
+  out <- c(sprintf("    This is a SUBSPECIES (three words). iNaturalist files it under the"),
+           sprintf("    species %s, and the last word is where spelling differs.", sp))
+  if (nrow(sib)) {
+    out <- c(out, "",
+             sprintf("    %s already has a subspecies on iNaturalist:", sp),
+             sprintf("        %-32s taxon_id %d", sib$scientific_name, sib$taxon_id),
+             "    If the label means that bee, the spelling differs; paste that number.")
+  } else {
+    out <- c(out,
+             sprintf("    Search %s, open it, then look under Taxonomy for the", sp),
+             "    subspecies list. Check the spelling there against the label.")
+  }
+  out
+}
+
 suggest_taxon <- function(cands, term, want_rank = "species") {
   if (is.null(cands) || !length(cands)) return(NULL)
   want_nm <- .spid_norm(term); want_rk <- tolower(trimws(as.character(want_rank %||% "")))
@@ -122,10 +176,18 @@ flag_specimen_ids <- function(flags) {
 
 resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prompt_fn = readline,
                                                    interactive_ok = TRUE, verbose = TRUE, id_map = NULL,
-                                                   known_missing_path = RMI_CACHE_DEFAULT) {
+                                                   known_missing_path = RMI_CACHE_DEFAULT,
+                                                   lookup = NULL,
+                                                   lookup_path = PATHS[["taxonomy_lookup"]]) {
   if (!interactive_ok || is.null(add_df) || !nrow(add_df) || !"taxon_id" %in% names(add_df))
     return(list(additions = add_df, stopped = FALSE))
   if (is.null(fetch_fn)) fetch_fn <- function(nm) inat_fetch_taxa_by_name(nm)
+  # Read once, not per name. A missing lookup is not an error here; it only means
+  # the subspecies near-match cannot be offered.
+  if (is.null(lookup) && !is.null(lookup_path) && file.exists(lookup_path))
+    lookup <- tryCatch(read.csv(lookup_path, stringsAsFactors = FALSE,
+                                colClasses = "character"),
+                       error = function(e) NULL)
   add_df$taxon_id <- suppressWarnings(as.integer(add_df$taxon_id))
   need <- which(is.na(add_df$taxon_id))
   if (!length(need)) return(list(additions = add_df, stopped = FALSE))
@@ -186,14 +248,16 @@ resolve_specimen_additions_interactive <- function(add_df, fetch_fn = NULL, prom
       if (is.null(sug) && verbose) {
         search_url <- paste0("https://www.inaturalist.org/search?q=", gsub(" ", "+", trimws(term)))
         message("")
-        message("    ", term, " -- iNaturalist returned no match for this name.")
+        message("    ", term, ": iNaturalist returned no match for this spelling.")
+        for (ln in .spid_subspecies_help(term, lookup)) message(ln)
+        message("")
         message("    To find its taxon_id by hand:")
         message("      1. open  ", search_url)
         message("      2. click the bee in the results")
         message("      3. the taxon_id is the number in the address bar:")
         message("           inaturalist.org/taxa/345235-Colletes-hyalinus")
         message("                                 ^^^^^^")
-        message("    Nothing there? Press s -- it is asked again next run, and a")
+        message("    Nothing there? Press s. It is asked again next run, and a")
         message("    checklist bee with no iNaturalist page is normal (17 of them).")
       }
       msg <- if (is.null(sug))

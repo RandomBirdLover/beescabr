@@ -218,3 +218,72 @@ test_that("resolve_specimen_taxa (driver) seeds a flag + fills ids with NO type 
   expect_true(all(!is.na(out$taxon_id)))          # both ids filled
   expect_equal(out$tribe[out$scientific_name == "Melissodes microstictus"], "Eucerini")
 })
+
+# --- subspecies help ---------------------------------------------------------
+# A trinomial that iNaturalist will not match is almost never a bee without a
+# page. It is a spelling difference in the last word: the specimen data holds
+# "gaudialis" 118 times, "gaudiale" 18 and "gaudiais" twice, all one subspecies
+# iNaturalist publishes as 345235. The prompt said only "no match for this name",
+# which reads as "this bee is not on iNaturalist" and invites a skip.
+LK <- data.frame(
+  scientific_name = c("Colletes hyalinus", "Colletes hyalinus gaudialis",
+                      "Colletes hyalinus hyalinus", "Colletes fulgidus",
+                      "(Complex) Colletes hyalinus"),
+  taxon_id = c(217441L, 345235L, 1052957L, 99L, NA_integer_),
+  rank = c("species", "subspecies", "subspecies", "species", "complex"),
+  stringsAsFactors = FALSE)
+
+test_that(".spid_is_subspecies_name spots a trinomial", {
+  .impl()
+  expect_true(.spid_is_subspecies_name("Colletes hyalinus gaudiais"))
+  expect_true(.spid_is_subspecies_name("  Colletes   hyalinus   gaudiais "))
+  expect_false(.spid_is_subspecies_name("Colletes hyalinus"))
+  expect_false(.spid_is_subspecies_name("Colletes"))
+  expect_false(.spid_is_subspecies_name("(Complex) Colletes hyalinus"))
+  expect_false(.spid_is_subspecies_name(""))
+  expect_false(.spid_is_subspecies_name(NA))
+})
+
+test_that(".spid_sibling_subspecies finds the subspecies iNat does have", {
+  .impl()
+  sib <- .spid_sibling_subspecies("Colletes hyalinus gaudiais", LK)
+  expect_equal(nrow(sib), 2L)
+  expect_true(all(c(345235L, 1052957L) %in% sib$taxon_id))
+})
+
+test_that(".spid_sibling_subspecies excludes the name itself, other species, and id-less rows", {
+  .impl()
+  sib <- .spid_sibling_subspecies("Colletes hyalinus gaudialis", LK)
+  expect_equal(sib$taxon_id, 1052957L)                     # its own row dropped
+  expect_false(any(grepl("fulgidus", sib$scientific_name)))  # different species
+  expect_false(any(is.na(sib$taxon_id)))                     # the complex row has no id
+})
+
+test_that(".spid_sibling_subspecies returns nothing when the species is unknown", {
+  .impl()
+  expect_equal(nrow(.spid_sibling_subspecies("Andrena prunorum foo", LK)), 0L)
+  expect_equal(nrow(.spid_sibling_subspecies("Colletes hyalinus", LK)), 0L)
+  expect_equal(nrow(.spid_sibling_subspecies("Colletes hyalinus foo", NULL)), 0L)
+})
+
+test_that(".spid_subspecies_help says the word subspecies and offers the near match", {
+  .impl()
+  ln <- paste(.spid_subspecies_help("Colletes hyalinus gaudiais", LK), collapse = " ")
+  expect_match(ln, "subspecies")
+  expect_match(ln, "Colletes hyalinus gaudialis", fixed = TRUE)
+  expect_match(ln, "345235", fixed = TRUE)
+  expect_match(ln, "spelling")
+})
+
+test_that(".spid_subspecies_help still explains the rank with no near match", {
+  .impl()
+  ln <- paste(.spid_subspecies_help("Andrena prunorum foo", LK), collapse = " ")
+  expect_match(ln, "subspecies")
+  expect_match(ln, "Andrena prunorum", fixed = TRUE)   # points at the parent species
+  expect_false(grepl("345235", ln, fixed = TRUE))
+})
+
+test_that(".spid_subspecies_help is silent for a plain species", {
+  .impl()
+  expect_length(.spid_subspecies_help("Colletes hyalinus", LK), 0L)
+})
