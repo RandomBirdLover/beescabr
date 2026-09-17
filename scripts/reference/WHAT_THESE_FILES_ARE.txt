@@ -10,13 +10,13 @@ Writes to data/reference/.
 THE THREE FOLDERS, SPLIT BY HOW THEY RUN
 ========================================
 
-Not by topic -- by when and how each one runs, which is what you need to know
+Not by topic, but by when and how each one runs, which is what you need to know
 before you touch any of them:
 
     taxonomy/   builds the lookups. Runs unattended, every pipeline run.
     prompts/    asks a PERSON. Only does anything in an interactive session;
                 the pipeline skips them, so an unattended run never blocks.
-    refresh/    calls an EXTERNAL API. Not part of a normal run -- the values
+    refresh/    calls an EXTERNAL API. Not part of a normal run, because the values
                 are cached, and you refresh them deliberately.
 
 
@@ -53,7 +53,7 @@ THE ONLINE TOOLS
   refresh/refresh_iucn_status.R
   refresh/refresh_plant_common_names.R
 
-These call an external API and are NOT part of a normal run -- the values are
+These call an external API and are NOT part of a normal run, because the values are
 baked into the cleaned tables and cached. Refresh them deliberately:
 
     Sys.setenv(BEESCABR_REFRESH = "1"); source("scripts/run_data_cleaning_pipeline.R")

@@ -2,7 +2,7 @@ WHAT THIS FOLDER IS
 ===================
 
 All the code. Every number, figure and table in data/ was produced by something
-in here, and nothing in data/ should ever be edited by hand to fix a result --
+in here, and nothing in data/ should ever be edited by hand to fix a result,
 the fix goes in the script that wrote it.
 
 The folders mirror data/: scripts/specimens/ writes data/specimens/, and so on.
@@ -33,7 +33,7 @@ config.R
 ========
 
 Every path, id and constant the project uses, in one file. If a script needs to
-know where something lives, it asks config.R -- no script hardcodes a path.
+know where something lives, it asks config.R. No script hardcodes a path.
 
 It never installs anything. To set up a new machine:
 
@@ -76,7 +76,7 @@ TESTS
     library(testthat); test_dir("tests/testthat")
 
 About 1500 of them, and they should all pass. They are the fastest way to find
-out whether a change broke something. Write the test first -- CLAUDE.md explains
+out whether a change broke something. Write the test first; CLAUDE.md explains
 why, and the tests that already exist are the examples.
 
 

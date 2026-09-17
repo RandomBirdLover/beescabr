@@ -582,3 +582,36 @@ test_that("mask_out_of_park_flowers hides not-in-park plants as 'flower - angios
   expect_equal(out$flower_visited[2], "Encelia californica")                       # TRUE untouched
   expect_equal(out$flower_visited[3], "unresolved")                                # NA untouched
 })
+
+# --- naming the workbook to fix specimens in --------------------------------
+# The mid-run note used to say "the raw .xlsx". There are twenty of them, so it
+# has to name the current one. Sorting them as text puts V9 after V20, which is
+# why the version is parsed as a number.
+test_that(".trs_workbook picks the highest version number, not the last name", {
+  src("specimens/specimen_raw_worklist.R")
+  d <- file.path(tempdir(), "trs_wb"); dir.create(d, showWarnings = FALSE)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  for (f in c("cabr_bee_specimens_record_V9_2026_06_21.xlsx",
+              "cabr_bee_specimens_record_V20_2026_09_17.xlsx",
+              "cabr_bee_specimens_record_V1_2026_05_04.xlsx"))
+    file.create(file.path(d, f))
+  expect_equal(basename(.trs_workbook(d)), "cabr_bee_specimens_record_V20_2026_09_17.xlsx")
+  expect_equal(.trs_workbook(d), file.path(d, "cabr_bee_specimens_record_V20_2026_09_17.xlsx"))
+})
+
+test_that(".trs_workbook ignores files that are not specimen records", {
+  src("specimens/specimen_raw_worklist.R")
+  d <- file.path(tempdir(), "trs_wb2"); dir.create(d, showWarnings = FALSE)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  file.create(file.path(d, "cabr_bee_specimens_record_V3_2026_06_01.xlsx"))
+  file.create(file.path(d, "~$cabr_bee_specimens_record_V99_lockfile.xlsx"))  # Excel lock file
+  file.create(file.path(d, "notes_V99.xlsx"))
+  expect_equal(basename(.trs_workbook(d)), "cabr_bee_specimens_record_V3_2026_06_01.xlsx")
+})
+
+test_that(".trs_workbook still returns a usable phrase when the folder is empty", {
+  src("specimens/specimen_raw_worklist.R")
+  d <- file.path(tempdir(), "trs_wb3"); dir.create(d, showWarnings = FALSE)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  expect_match(.trs_workbook(d), "specimen workbook")
+})

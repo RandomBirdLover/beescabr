@@ -2,14 +2,14 @@ WHAT THIS FOLDER IS
 ===================
 
 Notes for whoever maintains the pipeline. Not for the public, and not for
-readers of the results -- these explain how the machinery works and why it was
+readers of the results. These explain how the machinery works and why it was
 built the way it is.
 
 The results themselves are elsewhere: data/analysis/ for the figures and tables,
 docs/ for the public website. Each of those folders has its own note.
 
 If you are running the pipeline and nothing has gone wrong, you do not need this
-folder at all -- the README covers a whole season, start to finish.
+folder at all, because the README covers a whole season, start to finish.
 
 
 IF SOMETHING NEEDS YOU
@@ -60,7 +60,7 @@ HOW THE CODE IS PUT TOGETHER
                        for writing one.
 
 
-GENERATED -- DO NOT EDIT THESE
+GENERATED, DO NOT EDIT THESE
 ==============================
 
   FUNCTIONS.md         Every function called from more than one file: what it

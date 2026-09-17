@@ -421,7 +421,7 @@ plt_resolve_names <- function(names_vec, cache = NULL, resolve_fn = plt_resolve_
 # =============================================================
 # ORCHESTRATOR
 # =============================================================
-#' Build the plant taxonomy lookup -- the authority on what a plant taxon is
+#' Build the plant taxonomy lookup, the authority on what a plant taxon is
 #'
 #' @param all_taxa_path Every plant name seen anywhere in the project.
 #' @param crosswalk_path Hand-maintained name corrections.

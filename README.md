@@ -62,7 +62,7 @@ source("scripts/run_publishing_materials_pipeline.R")
 **Run them in that order.** Each stage reads what the one before it wrote, and
 stage 3 stops rather than publish a page older than the data.
 
-Open `beescabr.Rproj` in RStudio first -- that sets the working directory, which
+Open `beescabr.Rproj` in RStudio first. That sets the working directory, which
 every path in the project assumes.
 
 **The full guide is `dev-docs/PIPELINE_GUIDE.md`**: first run on a new machine,
@@ -103,7 +103,7 @@ beescabr/
   tests/testthat/                       # unit tests; never touch the real data or the network
   dev-docs/                             # developer documentation (see the map below)
   docs/                                 # the PUBLIC SITE, served by GitHub Pages
-  data/                                 # gitignored -- NOT on GitHub (see .gitignore and DATA_ACCESS.md)
+  data/                                 # gitignored, NOT on GitHub (see .gitignore and DATA_ACCESS.md)
     inat_observations/                  # cache/ (DuckDB), inat_clean/, review/ QC worklists
     specimens/                          # records/ (versioned workbooks), specimens_clean/
     project_info/

@@ -155,7 +155,7 @@ apply_manual_overrides <- function(df, overrides = NULL) {
   ) |> distinct(rank, name, .keep_all = TRUE) |> arrange(rank, name)
 }
 
-# write_review_worklist(): the file version of the prompt -- writes the open not_found set to
+# write_review_worklist(): the file version of the prompt, writes the open not_found set to
 # cabr_taxon_ids_needs_review.csv with blank taxon_id / correct_name columns to fill in. Always runs
 # (the non-interactive fallback for the interactive prompt below).
 write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL, path = TAXON_REVIEW_PATH) {

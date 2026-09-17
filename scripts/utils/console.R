@@ -49,6 +49,48 @@ bx_need <- function(what, where = "") {
   if (!is.null(what) && nzchar(what))
     .BX_NEED$items[[length(.BX_NEED$items) + 1L]] <- c(what = what, where = where)
 }
+#' The rollup line for specimens with no identification yet
+#'
+#' Kept apart from the iNaturalist-id item on purpose. These are physical specimens in
+#' a drawer that nobody has put a name to; the other is a checklist name with no
+#' iNaturalist number. Different job, different place, so one line each.
+#'
+#' It was missing from the rollup entirely: 186 specimens, the largest outstanding
+#' task, mentioned once mid-run in a note that said "the raw .xlsx" (there are 19 of
+#' them) and referred the reader to a TODO in a code comment.
+#'
+#' @param n How many specimens need identifying.
+#' @return A `bx_need()` item, or NULL when there are none.
+needs_specimen_ids <- function(n) {
+  if (!length(n) || is.na(n) || n <= 0L) return(NULL)
+  c(what  = sprintf("%d specimen%s need%s identifying", n,
+                    if (n == 1L) "" else "s", if (n == 1L) "s" else ""),
+    where = "data/specimens/specimens_clean/review/qc_review_specimen_cleanup_worklist_generated.csv")
+}
+
+#' Lay out the "NEEDS YOU" rollup
+#'
+#' Every item carries a full folder path, because a bare filename is not something
+#' the operator can open. The longest is 78 characters, so padding them all into one
+#' aligned column runs well past the banner and wraps wherever the terminal happens
+#' to end. An item that does not fit puts its path on its own indented line instead.
+#'
+#' @param items List of `c(what=, where=)` vectors, as `bx_need()` stores them.
+#' @param width Console width to fit within.
+#' @return A character vector of lines, ready to print.
+need_lines <- function(items, width = BX_WIDTH) {
+  if (!length(items)) return(character(0))
+  w <- max(vapply(items, function(x) nchar(x[["what"]]), 0L))
+  unlist(lapply(items, function(x) {
+    what <- x[["what"]]; where <- x[["where"]]
+    if (!nzchar(where)) return(sprintf("    ▸ %s", what))
+    one <- sprintf("    ▸ %-*s  %s", w, what, where)
+    # 6 = the "    ▸ " prefix; a path that still overflows on its own line is
+    # left whole rather than broken -- a half path cannot be pasted.
+    if (nchar(one) <= width) one else c(sprintf("    ▸ %s", what), sprintf("        %s", where))
+  }), use.names = FALSE)
+}
+
 #' Print the "NEEDS YOU" rollup at the end of a run
 #'
 #' @return Invisibly, nothing. Prints an all-clear line when nothing is queued.
@@ -56,6 +98,5 @@ bx_need_print <- function() {
   it <- .BX_NEED$items
   if (!length(it)) { message("  Nothing needs you right now — all clear ✓"); return(invisible()) }
   message("  NEEDS YOU  (all optional — nothing is blocked):")
-  w <- max(vapply(it, function(x) nchar(x[["what"]]), 0L))
-  for (x in it) message(sprintf("    ▸ %-*s  %s", w, x[["what"]], x[["where"]]))
+  for (ln in need_lines(it)) message(ln)
 }

@@ -39,14 +39,14 @@ STAT_SOURCES <- list(
        full = paste("Chao, A., Gotelli, N.J., Hsieh, T.C., Sander, E.L., Ma, K.H., Colwell, R.K.",
                     "& Ellison, A.M. (2014). Rarefaction and extrapolation with Hill numbers: a",
                     "framework for sampling and estimation in species diversity studies.",
-                    "Ecological Monographs 84, 45-67. -- Hsieh, T.C., Ma, K.H. & Chao, A. (2016).",
+                    "Ecological Monographs 84, 45-67. Hsieh, T.C., Ma, K.H. & Chao, A. (2016).",
                     "iNEXT: an R package for rarefaction and extrapolation of species diversity",
                     "(Hill numbers). Methods in Ecology and Evolution 7, 1451-1456."),
        use = "Hill-number rarefaction and extrapolation; iNEXT R package."),
   list(pat = "individual-based rarefaction|rarefaction to (a |the )?common|rarefaction to equal|vegan rarefaction|rarefied to",
        src = "Hurlbert 1971, Heck, van Belle & Simberloff 1975", verified = TRUE,
        full = paste("Hurlbert, S.H. (1971). The nonconcept of species diversity: a critique and",
-                    "alternative parameters. Ecology 52, 577-586. -- Heck, K.L., van Belle, G. &",
+                    "alternative parameters. Ecology 52, 577-586. Heck, K.L., van Belle, G. &",
                     "Simberloff, D. (1975). Explicit calculation of the rarefaction diversity",
                     "measurement and the determination of sufficient sample size. Ecology 56,",
                     "1459-1461."),
@@ -118,7 +118,7 @@ STAT_SOURCES <- list(
        use = "Rayleigh test of seasonal concentration; computed in this repo."),
   list(pat = "chi-square|chisq",
        src = "base R", verified = TRUE,
-       full = paste("R Core Team. stats::chisq.test -- Pearson chi-square test of independence.",
+       full = paste("R Core Team. stats::chisq.test: Pearson chi-square test of independence.",
                     "Part of base R; see the R citation below."),
        use = "chi-square test of independence; stats::chisq.test."),
   list(pat = "bipartite|network diagram|plotweb",
@@ -158,21 +158,21 @@ REF_PACKAGES <- c("vegan", "iNEXT", "bipartite")
 
   c(inat_citation(asof),
     if (nzchar(iucn_v)) iucn_citation(iucn_v, asof) else
-      "IUCN Red List of Threatened Species. https://www.iucnredlist.org -- not fetched for this run; the status column reads \"Not Evaluated\".",
+      "IUCN Red List of Threatened Species. https://www.iucnredlist.org (not fetched for this run; the status column reads \"Not Evaluated\").",
     paste("Integrated Taxonomic Information System (ITIS). https://www.itis.gov.",
-          "-- consulted when iNaturalist has no page for a checklist name, to tell a",
+          "Consulted when iNaturalist has no page for a checklist name, to tell a",
           "real-but-unpublished bee from a name that was renamed or withdrawn."),
     paste("Hung, K.-L.J., Mullins, J.L., Rightmyer, M.G., Wall, M., Berrian, J.,",
           "Ascher, J.S., Yanega, D., Davids, J.A. & Holway, D.A. (2026). Checklist,",
           "Version 3. In An Annotated Checklist of the Bees (Hymenoptera: Anthophila)",
           "of San Diego County, California. UC San Diego Library Digital Collections.",
-          "https://doi.org/10.6075/J0NZ88MD -- the county species list every checklist",
+          "https://doi.org/10.6075/J0NZ88MD The county species list every checklist",
           "tier is compared against."),
     paste("National Park Service, Land Resources Division. Cabrillo National Monument",
-          "administrative boundary. -- the authoritative park outline."),
+          "administrative boundary. The authoritative park outline."),
     paste("City of San Diego. Community Plan districts (Peninsula, CPCODE 30).",
-          "-- the Point Loma tier boundary."),
-    paste("San Diego Natural History Museum (SDNHM). -- accession numbers for the",
+          "The Point Loma tier boundary."),
+    paste("San Diego Natural History Museum (SDNHM). Accession numbers for the",
           "deposited specimens."))
 }
 
@@ -201,7 +201,7 @@ references_text <- function(sources = STAT_SOURCES) {
                         indent = "", exdent = "        "), "")
 
   out <- c(out, "SOFTWARE", strrep("-", 8), "",
-           .wrap(paste0("R ", getRversion(), " -- ", R.version.string), indent = "  "), "")
+           .wrap(paste0("R ", getRversion(), ": ", R.version.string), indent = "  "), "")
   for (p in REF_PACKAGES) {
     if (!requireNamespace(p, quietly = TRUE)) next
     out <- c(out, .wrap(sprintf("%s %s", p, utils::packageVersion(p)), indent = "  "))
@@ -237,7 +237,7 @@ FOLDER_NOTES <- list(
     "\n\nTwo different comparisons run in this project and only one of them is here.",
     "METHOD is nets vs photos, and that is this folder. OBSERVER is beeple vs",
     "interns, and its rarefaction lives under",
-    "richness/rarefaction/fair_observer_2024/ -- filed by what the analysis IS",
+    "richness/rarefaction/fair_observer_2024/, filed by what the analysis IS",
     "rather than by what it compares. The yield files here do split by contributor",
     "as well (bee_yield_by_contributor.csv).",
     "\n\nRead the two together. Before 2024 only interns netted and only beeple",
@@ -358,7 +358,7 @@ folder_readme_text <- function(rel, what, findings, subdirs, hints = character(0
 
   out <- c(out,
     .wrap(paste("Every file here is regenerated by",
-                "source('scripts/run_all_analysis_pipeline.R') -- nothing in this folder is",
+                "source('scripts/run_all_analysis_pipeline.R'). Nothing in this folder is",
                 "hand-maintained. If a number looks wrong, the fix is in the script that",
                 "wrote it.")),
     "",
@@ -412,7 +412,7 @@ write_folder_readmes <- function(root) {
   # loop skips a folder that does not exist, so a bad root wrote 0 notes and said
   # "wrote 0" as though that were a result. It cost a regeneration that looked fine.
   if (!n) message("  folder notes: none of the ", length(FOLDER_NOTES),
-                  " folders exist under '", root, "' -- nothing written. ",
+                  " folders exist under '", root, "'. Nothing written. ",
                   "Pass the season folder, e.g. data/analysis/<year>_generated.")
 
   # one full reference list for the whole analysis folder, beside the tree-level

@@ -29,7 +29,7 @@ Chao, A. (1987). Estimating the population size for capture-recapture data
 Chao, A., Gotelli, N.J., Hsieh, T.C., Sander, E.L., Ma, K.H., Colwell, R.K. &
         Ellison, A.M. (2014). Rarefaction and extrapolation with Hill
         numbers: a framework for sampling and estimation in species diversity
-        studies. Ecological Monographs 84, 45-67. -- Hsieh, T.C., Ma, K.H. &
+        studies. Ecological Monographs 84, 45-67. Hsieh, T.C., Ma, K.H. &
         Chao, A. (2016). iNEXT: an R package for rarefaction and
         extrapolation of species diversity (Hill numbers). Methods in Ecology
         and Evolution 7, 1451-1456.
@@ -39,7 +39,7 @@ Chao, A., Gotelli, N.J., Hsieh, T.C., Sander, E.L., Ma, K.H., Colwell, R.K. &
         Open Ecology Journal 2, 7-24.
 
 [pkg] Hurlbert, S.H. (1971). The nonconcept of species diversity: a critique
-        and alternative parameters. Ecology 52, 577-586. -- Heck, K.L., van
+        and alternative parameters. Ecology 52, 577-586. Heck, K.L., van
         Belle, G. & Simberloff, D. (1975). Explicit calculation of the
         rarefaction diversity measurement and the determination of sufficient
         sample size. Ecology 56, 1459-1461.
@@ -53,7 +53,7 @@ Chao, A., Gotelli, N.J., Hsieh, T.C., Sander, E.L., Ma, K.H., Colwell, R.K. &
 Pielou, E.C. (1966). The measurement of diversity in different types of
         biological collections. Journal of Theoretical Biology 13, 131-144.
 
-[pkg] R Core Team. stats::chisq.test -- Pearson chi-square test of
+[pkg] R Core Team. stats::chisq.test: Pearson chi-square test of
         independence. Part of base R; see the R citation below.
 
 Rayleigh test of circular uniformity. No package call to cite: computed in
@@ -68,7 +68,7 @@ Simpson, E.H. (1949). Measurement of diversity. Nature 163, 688.
 SOFTWARE
 --------
 
-  R 4.6.0 -- R version 4.6.0 (2026-04-24)
+  R 4.6.0: R version 4.6.0 (2026-04-24)
 
   vegan 2.7.5
   iNEXT 3.0.2

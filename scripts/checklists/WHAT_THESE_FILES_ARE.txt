@@ -10,7 +10,7 @@ THE FILES
 =========
 
   checklist_build.R      the shared builder every list below uses
-  cabr_bee_checklist.R   Cabrillo -- THE ONE THAT MATTERS
+  cabr_bee_checklist.R   Cabrillo, THE ONE THAT MATTERS
   pl_bee_checklist.R     Point Loma
   sd_bee_checklist.R     San Diego County
 
@@ -22,5 +22,5 @@ taxon, with columns saying which source each came from. A taxon backed by a
 specimen is settled; one backed only by a photograph rests on somebody's
 identification.
 
-The county list is a CROSS-CHECK. It never adds a species -- it only tells you
+The county list is a CROSS-CHECK. It never adds a species; it only tells you
 whether the county authority also has it.

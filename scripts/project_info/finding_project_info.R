@@ -91,7 +91,7 @@ FPI_INTERN_LOG     <- "data/project_info/surveys/survey_date_sources/master_inte
   bx_kv("Review queue", tags, " unknown tags \U00B7 ", fields, " fields \U00B7 ", windows, " survey-date windows")
   if (tags || fields)
     bx_cont("tags/fields: words on an observation the project has not seen before. ",
-            "Sorted in the REVIEW step below -- no file to open.")
+            "Sorted in the REVIEW step below, so there is no file to open.")
   if (windows) {
     bx_cont("windows: a survey day on the beeple calendar with no tagged survey near it.")
     bx_cont("Rule on each in  ", FPI_REVIEW)
@@ -294,7 +294,7 @@ fpi_membership <- function(base, signals, roster, boundary_path) {
         status == "exclude" ~ paste0("exclude tag: ", exclude_tag),
         status == "keep" & surveyor_type == "unknown" ~ "tagged, but observer not in roster for this year -> onboard",
         status == "keep" ~ "valid Cabrillo survey tag",
-        status == "flag" ~ "in CABR, no survey tag -- review",
+        status == "flag" ~ "in CABR, no survey tag, review",
         TRUE ~ "outside CABR, no survey tag")
     ) |>
     transmute(obs_id, kind, observer, observed_on, surveyor_type, survey_year,

@@ -154,7 +154,7 @@ clear_observations <- function(con) {
   invisible(n)
 }
 
-# Highest stored observation id -- the incremental fetch cursor. 0 when empty.
+# Highest stored observation id, the incremental fetch cursor. 0 when empty.
 # NB: returns NUMERIC (double), never as.integer(). iNat observation ids already
 # run into the hundreds of millions and will cross the 32-bit integer ceiling
 # (~2.1 billion), where as.integer() silently yields NA -> id_above = NA -> the

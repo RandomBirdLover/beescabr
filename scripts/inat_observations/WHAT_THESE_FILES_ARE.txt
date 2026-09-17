@@ -20,7 +20,7 @@ At the top sit the two tools you run rather than the pipeline: authorize_inat.R
 observation-field ids the project reads).
 
 Dependencies point DOWN that list and never up. If a cleaning script needs
-something from the API, it goes through the cache -- it does not make its own
+something from the API, it goes through the cache. It does not make its own
 request.
 
 

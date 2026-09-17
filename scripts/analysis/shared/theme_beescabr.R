@@ -449,7 +449,7 @@ bee_caption <- scope_cap   # descriptive alias for new call sites
 #     only swap in ragg's smoother anti-aliasing.
 # HD output: more pixels so figures stay sharp when enlarged/stretched on a screen or in slides.
 BEE_HD <- 2   # base-graphics upscale: multiplies pixel width/height AND res together -> same layout, 2x resolution
-bee_ggsave <- function(filename, plot = ggplot2::last_plot(), ..., dpi = 400) {   # 400 dpi (was 300) -- inches-based, so just more pixels, same layout
+bee_ggsave <- function(filename, plot = ggplot2::last_plot(), ..., dpi = 400) {   # 400 dpi (was 300), inches-based, so just more pixels, same layout
   dev <- if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png else NULL
   ggplot2::ggsave(filename, plot = plot, dpi = dpi, device = dev, ...)
 }

@@ -574,11 +574,24 @@ main <- function() {
   # so a returning user sees everything that wants their attention in ONE place at the end. ----
   .maps_dir <- "data/inat_observations/review/location/by_surveyors"
   .n_maps <- if (dir.exists(.maps_dir)) length(list.files(.maps_dir, pattern = "^cabr_pins_to_fix_.*\\.html$")) else 0L
-  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), "review/location/by_surveyors/")
+  # a path you can paste, not a fragment to work out the rest of
+  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), .maps_dir)
+  # specimens nobody has named yet -- the biggest job of the four, and the only one
+  # that needs someone at a microscope rather than at a screen
+  .wl <- "data/specimens/specimens_clean/review/qc_review_specimen_cleanup_worklist_generated.csv"
+  .n_noid <- if (file.exists(.wl)) {
+    d <- tryCatch(utils::read.csv(.wl, stringsAsFactors = FALSE), error = function(e) NULL)
+    if (is.null(d) || !"reason" %in% names(d)) 0L else sum(grepl("needs_id", d$reason))
+  } else 0L
+  .it <- needs_specimen_ids(.n_noid)
+  if (!is.null(.it)) bx_need(.it[["what"]], .it[["where"]])
+
   .n_tax <- .n_rows("data/reference/generated/cabr_taxon_ids_needs_review.csv")
-  if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax), "cabr_taxon_ids_needs_review.csv")
+  if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax),
+                          "data/reference/generated/cabr_taxon_ids_needs_review.csv")
   .n_dupe <- .n_rows("data/specimens/specimens_clean/review/qc_review_specimen_duplicates_generated.csv")
-  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe), "qc_review_specimen_duplicates_generated.csv")
+  if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe),
+                           "data/specimens/specimens_clean/review/qc_review_specimen_duplicates_generated.csv")
 
   message("")
   bx_rule()

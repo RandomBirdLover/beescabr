@@ -37,7 +37,7 @@ suppressPackageStartupMessages({library(dplyr); library(stringr)})
 }
 
 # holway_name_set(): lower-case binomials Holway lists, from BOTH its scientific_name and its complex
-# column -- a complex counts as covered when Holway carries its member species (Holway files
+# column, because a complex counts as covered when Holway carries its member species (Holway files
 # Nomada formula/suavis/texana under complex "Nomada vegana"). character(0) if the path is missing.
 holway_name_set <- function(holway_path) {
   if (is.null(holway_path) || !nzchar(holway_path) || !file.exists(holway_path)) return(character(0))

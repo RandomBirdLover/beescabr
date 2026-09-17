@@ -33,8 +33,8 @@ actually did. The old roster mixed the two and recorded a volunteer as having
 surveyed six times when the record showed none.
 
 A person is joined by person_id, never by name. Names appear in three forms in
-this project -- "Sam O'Dell" in a log, "S O'Dell" on a museum label, a handle on
-iNaturalist -- and two people share a first name.
+this project ("Sam O'Dell" in a log, "S O'Dell" on a museum label, a handle on
+iNaturalist) and two people share a first name.
 
 
 THE SURVEYS

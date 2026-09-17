@@ -4,7 +4,7 @@ WHAT THIS FOLDER IS
 One script per figure or table. Together they produce everything in
 data/analysis/.
 
-Writes to data/analysis/<year>_generated/ -- never edit the output, edit the
+Writes to data/analysis/<year>_generated/. Never edit the output, edit the
 script.
 
 The subfolders mirror the topic folders in data/analysis/, so a script sits in
@@ -22,7 +22,7 @@ WHERE A NEW FILE GOES, IN ONE RULE
 ----------------------------------
 
     a topic folder     it produces that topic's output
-    shared/            it produces NOTHING -- other scripts source it for its
+    shared/            it produces NOTHING. Other scripts source it for its
                        functions. Sourcing a file in here must never write
                        anything to disk. Any write call lives inside a function
                        body, so nothing happens until a caller asks for it.
@@ -32,21 +32,21 @@ That is why findings_summaries.R and render_palette.R sit at the top rather than
 in shared/: both of them RUN. findings_summaries.R writes a findings file into
 every topic folder plus the index a reader starts from; render_palette.R draws
 the theme swatch into dev-docs/. Filing either under shared/ would make the
-folder stop meaning anything -- you would have to open a file to find out
+folder stop meaning anything, and you would have to open a file to find out
 whether sourcing it has side effects.
 
 
 SOME OF THESE PRODUCE WEB PAGES, AND THAT IS FINE
 =================================================
 
-About ten scripts here write .html as well as .png and .csv -- the explorers,
+About ten scripts here write .html as well as .png and .csv: the explorers,
 the field guide, the bounty tables, the transect map. They still belong here,
 not in scripts/website/.
 
 A script that computes a page is an analysis. It writes into
 data/analysis/<topic>/website/, beside the CSV of the same numbers. Afterwards
 scripts/website/publish_pages.R copies those pages into docs/ and wraps them in
-the site -- that folder is the only thing that writes into docs/.
+the site, because that folder is the only thing that writes into docs/.
 
 Rule of thumb: if you are changing what a page SAYS, the fix is here, in the
 script that computed it. If you are changing how the SITE is assembled, the fix
@@ -65,7 +65,7 @@ defines functions for another script to use belongs in shared/, AND must be
 listed in .modules in
 run_all_analysis_pipeline.R, or the runner will execute it as though it drew a
 figure. tests/testthat/test-analysis-modules.R checks the two agree, and fails
-if they drift -- which they already had, by three files, before the check
+if they drift, which they already had, by three files, before the check
 existed.
 
 
@@ -88,7 +88,7 @@ WHAT AN ANALYSIS SCRIPT LOOKS LIKE
 
 Read the cleaned tables, compute, then write a figure and the table behind it
 into the same folder. Every figure carries a caption saying its scope, its
-method and where the data came from -- scope_cap() builds it, and a figure that
+method and where the data came from. scope_cap() builds it, and a figure that
 ran a statistical test also passes bee_test().
 
 If you are adding one, copy the shape of a short existing script rather than

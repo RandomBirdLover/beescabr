@@ -22,7 +22,7 @@ WHY SOME WEB PAGES ARE NOT BUILT HERE
 
 This is the confusing bit, so it is worth stating plainly.
 
-About ten scripts in scripts/analysis/ also produce .html -- the occurrence
+About ten scripts in scripts/analysis/ also produce .html: the occurrence
 explorer, the plant explorer, the field guide, the bounty tables, the transect
 map. They are NOT in this folder, and that is deliberate.
 
@@ -41,8 +41,8 @@ So:
         -> docs/*.html
 
 If you are changing what a page SAYS, the fix is in the analysis script that
-computed it. If you are changing how the SITE is assembled -- navigation, the
-landing page, the wrapper -- the fix is here.
+computed it. If you are changing how the SITE is assembled (navigation, the
+landing page, the wrapper) the fix is here.
 
 
 RUN IT WITH
@@ -50,7 +50,7 @@ RUN IT WITH
 
     source("scripts/run_publishing_materials_pipeline.R")
 
-Run the analysis pipeline first -- this one only copies and wraps what that
+Run the analysis pipeline first. This one only copies and wraps what that
 produced, so anything stale there ends up on the site.
 
 Colors and styling come from scripts/analysis/theme_beescabr.R, the same source

@@ -1,7 +1,7 @@
 WHAT THIS FOLDER IS
 ===================
 
-Small shared helpers. Nothing in here knows anything about bees -- that is the
+Small shared helpers. Nothing in here knows anything about bees, and that is the
 test for whether code belongs here.
 
 Writes nothing of its own.
@@ -17,7 +17,7 @@ Installs the packages the project needs. Run it once on a new machine.
 The LIST of packages lives in config.R, not here. config.R is sourced by every
 script, so if it installed anything, every run would hit the network just to
 read a constant. The list is a constant; installing is a script you choose to
-run. To add a dependency, add it to BEESCABR_PACKAGES in config.R -- that is the
+run. To add a dependency, add it to BEESCABR_PACKAGES in config.R. That is the
 whole change.
 
 

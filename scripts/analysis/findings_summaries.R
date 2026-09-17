@@ -99,7 +99,7 @@ h2_sig <- if (!is.null(h2)) sum(suppressWarnings(as.numeric(h2$H2prime_p)) < 0.0
 
 # ============================ INFERENTIAL ====================================
 fw("forage_selectivity",
-   "Forage selectivity -- does a bee genus favor plants beyond availability?",
+   "Forage selectivity: does a bee genus favor plants beyond availability?",
    "inferential",
    sprintf("%s of %s bee genera show a real plant preference; the set is stable across abundance/month/year/method controls.",
            .chr(fs_sel), .chr(fs_tot)),
@@ -120,7 +120,7 @@ fw("interactions_genus_species_webs",
    c(question    = "Within a genus, do the species divide up plant genera (niche partitioning) beyond chance?",
      "analysis"      = "H2' specialization vs a null that permutes species labels within (month x method) strata",
      controls_for = "flight season (month) and survey method; NOT year (species overlap in years -> would kill power)",
-     effect_of_control = "Melissodes and Habropoda drop to non-significant -- their apparent partitioning was seasonal/method timing",
+     effect_of_control = "Melissodes and Habropoda drop to non-significant; their apparent partitioning was seasonal/method timing",
      caveats     = "borderline p-values can jitter; only significant genera are shown in the figures"),
    "bee_genus_specialization_h2.csv; bee_genus_specialization_overview.png; genus_species_webs/*.png")
 
@@ -159,19 +159,19 @@ if (!exists("BEE_METHOD_LABEL")) source("scripts/analysis/shared/theme_beescabr.
 }
 
 fw("richness_at_equal_effort",
-   "Rarefaction/extrapolation (iNEXT, Hill numbers) -- JOURNAL only",
+   "Rarefaction/extrapolation (iNEXT, Hill numbers), JOURNAL only",
    "estimator",
    sprintf("At equal effort, 2021-2023: %s In 2024 with method held constant: %s Read together, the method gap is the netting rather than the people.",
            .rare_headline("by_method"), .rare_headline("by_observer")),
-   c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation, Hill numbers q0/q1/q2 (journal only; the report uses the vegan curves/bars). iNEXT levels groups by COVERAGE -- how completely each was sampled -- so groups with unequal effort can be compared; q0 = how many kinds, q1 = weighted toward common kinds, q2 = weighted hard toward the most common",
+   c("analysis" = "iNEXT size- and coverage-based rarefaction/extrapolation, Hill numbers q0/q1/q2 (journal only; the report uses the vegan curves/bars). iNEXT levels groups by COVERAGE (how completely each was sampled) so groups with unequal effort can be compared; q0 = how many kinds, q1 = weighted toward common kinds, q2 = weighted hard toward the most common",
      assumption = "standardizes by sample size/coverage but still sensitive to uneven effort; read CIs as approximate. CONFOUND in fair_method_2021_2023: in Mar-Oct 2021-2023 only interns netted and only beeple photographed, so lethal-vs-non-lethal is also beeple-vs-interns on the same records, and a difference there cannot be attributed to the method rather than to who was surveying. fair_observer_2024 is the control: May-Sep 2024, both groups photographing, so method is held constant and the observer effect is measured cleanly. Read the two together, never either alone."),
-   "richness/rarefaction/fair_method_2021_2023/bee_richness_lethal_vs_nonlethal_both_ranks_rarefaction.png and richness/rarefaction/fair_observer_2024/bee_richness_beeple_vs_interns_both_ranks_rarefaction.png -- ONE figure per comparison, both ranks and all three Hill orders on it, iNEXT curves with vegan points as the cross-check (+ the matching .csv, which also keeps the coverage-standardised curves the figure omits). The _effort_standardized_estimates.csv beside each holds both ranks and all three standardizations (asymptotic / equal_size / equal_coverage) in one table, keyed by a `basis` column")
+   "richness/rarefaction/fair_method_2021_2023/bee_richness_lethal_vs_nonlethal_both_ranks_rarefaction.png and richness/rarefaction/fair_observer_2024/bee_richness_beeple_vs_interns_both_ranks_rarefaction.png: ONE figure per comparison, both ranks and all three Hill orders on it, iNEXT curves with vegan points as the cross-check (+ the matching .csv, which also keeps the coverage-standardised curves the figure omits). The _effort_standardized_estimates.csv beside each holds both ranks and all three standardizations (asymptotic / equal_size / equal_coverage) in one table, keyed by a `basis` column")
 
 fw("richness_rarefied_to_smallest_group",
-   "Rarefaction (vegan) -- curves + rarefied-richness bars",
+   "Rarefaction (vegan): curves + rarefied-richness bars",
    "estimator",
    "The report's rarefaction figures, plus the cross-check on iNEXT in the journal: vegan's rarefied numbers sit on the iNEXT curves, and the two agreeing is what makes the comparison trustworthy.",
-   c("analysis" = "vegan rarefaction to the lowest group's record total -- the older, simpler levelling: cut every group down to the smallest group's record count and count what is left",
+   c("analysis" = "vegan rarefaction to the lowest group's record total, the older, simpler levelling: cut every group down to the smallest group's record count and count what is left",
      assumption = "assumes even sampling within a group"),
    "richness/rarefaction/: report bee_richness_by_{transect,year}_rarefaction.png (+ _{species,genus}.csv). The method/observer comparison is drawn by rarefaction_combined.R into fair_method_2021_2023/, where vegan appears as the cross-check on the iNEXT curves; its rarefied numbers are in each window folder's _rarefied_to_smallest_group.csv, both ranks in one table")
 
@@ -188,7 +188,7 @@ fw("phenology_activity",
    "estimator",
    "When bees (per genus/species) and flowering plants are active across the year; Rayleigh tests seasonal concentration.",
    c("analysis" = "circular-mean activity ridgelines + Rayleigh test of seasonal concentration",
-     confound = "seasonal survey effort (interns ~Mar-Oct) can drive apparent bee seasonality -- read timing, not intensity"),
+     confound = "seasonal survey effort (interns ~Mar-Oct) can drive apparent bee seasonality; read timing, not intensity"),
    "bee_genus_activity_by_month.png; bee_species_activity_by_month.png; plant_bloom_timing_for_bees.png; *_rayleigh.csv")
 
 # ============================ DESCRIPTIVE ====================================
@@ -197,7 +197,7 @@ fw("interactions_network",
    "inferential",
    "Who visits what: full plant-genus x bee network as webs + heatmaps (raw co-occurrence; read descriptively).",
    c("analysis" = "NODF nestedness of the plant x bee matrix tested against a quasiswap null (vegan::oecosimu); the webs and heatmaps themselves are descriptive",
-     note = "raw visitation counts -- NOT preference (see forage_selectivity for the inferential preference test)",
+     note = "raw visitation counts, NOT preference (see forage_selectivity for the inferential preference test)",
      scope = "specimen net + iNaturalist photo pooled, CABR only"),
    "bee_plant_network_genus.png; bee_plant_network_species.png; bee_plant_interaction_heatmap_*.png; interactions_*_matrix.csv; bee_genus_specialization_overview.png; bee_specialist_network.png")
 
@@ -209,15 +209,15 @@ fw("interactions_top_plants",
    "interactions_top_plants.csv; interactions_top_plants.png; interactions_top_plants_by_month.csv/png")
 
 fw("bee_field_guide",
-   "Bee field guide -- by species",
+   "Bee field guide, by species",
    "descriptive (+ inferential Forage-preference column)",
    "Per-species reference: peak day, active months, most-recorded flowers, diet breadth, status, IUCN, and an availability-corrected Forage-preference column (species-level, same matched month/year/method test as the genus guide; ~19 species selective, shown only where a species has >=50 plant-visit records, so it fills in as sampling grows).",
    c(note = "'Most-recorded flowers' = where it was seen most; 'Forage preference' is the matched-test result (Selective -> plant / Generalist / too few records)",
-     threshold = "forage preference gated at >=50 plant-visit records -- most species read 'too few records to judge' today"),
+     threshold = "forage preference gated at >=50 plant-visit records; most species read 'too few records to judge' today"),
    "website/bee_field_guide_species.html; bee_field_guide_species.csv")
 
 fw("bee_field_guide_genus",
-   "Bee field guide -- by genus",
+   "Bee field guide, by genus",
    "descriptive (+ inferential Forage-preference column)",
    "Per-genus companion guide; carries the inferential Forage-preference column from the selectivity test.",
    c(note = "Most-recorded flowers/Most-used plant are descriptive; Forage preference is the matched-test result"),
@@ -226,8 +226,8 @@ fw("bee_field_guide_genus",
 fw("rare_bee_plants",
    "Plants the park's rare / at-risk bees were recorded on",
    "descriptive",
-   "Which plants the rare (< threshold records) and IUCN-threatened bees were RECORDED on -- management-facing. Bars = where sightings fall (NOT a preference: too few records to correct for availability). Threatened bees with >=20 records also get an availability-corrected PREFERRED plant, which can differ from the most-recorded one (e.g. Bombus californicus recorded most on milkvetch but prefers paintbrush; B. sonorus prefers stinkweed).",
-   c(recorded_vs_preferred = "bars = recorded-on (availability-blended); PREFERRED (starred) = availability-corrected, shown only where n>=20 -- same matched test as the genus webs",
+   "Which plants the rare (< threshold records) and IUCN-threatened bees were RECORDED on. Management-facing. Bars = where sightings fall (NOT a preference: too few records to correct for availability). Threatened bees with >=20 records also get an availability-corrected PREFERRED plant, which can differ from the most-recorded one (e.g. Bombus californicus recorded most on milkvetch but prefers paintbrush; B. sonorus prefers stinkweed).",
+   c(recorded_vs_preferred = "bars = recorded-on (availability-blended); PREFERRED (starred) = availability-corrected, shown only where n>=20, the same matched test as the genus webs",
      note = "low counts: read as 'where the few sightings concentrate', not visit rates or preference",
      threatened_source = "IUCN threatened set read live from the IUCN cache"),
    "reference/conservation/plants_anchoring_rare_bees.csv/png; rare_bee_forage_preference.csv/png")
@@ -235,7 +235,7 @@ fw("rare_bee_plants",
 fw("bee_bounties",
    "Collecting / photo bounties (method gaps)",
    "descriptive",
-   "Taxa recorded by one method but not the other -- worklist for what to net (voucher) or photograph next.",
+   "Taxa recorded by one method but not the other: a worklist for what to net (voucher) or photograph next.",
    c(note = "gap = present in one method, absent in the other; directs future effort"),
    "coverage/bee_bounties/specimen_bee_bounty.csv/png; inaturalist_bee_bounty.csv/png; *_bounty_map.png")
 
@@ -250,25 +250,25 @@ fw("coverage_cabr_vs_holway",
 fw("yield_by_method",
    "Yield by method (lethal vs non-lethal Venn)",
    "inferential",
-   "How the lethal and non-lethal methods overlap in the taxa they detect -- each method's unique + shared species and genera (the yield tier of the effort/yield/efficiency comparison).",
+   "How the lethal and non-lethal methods overlap in the taxa they detect: each method's unique + shared species and genera (the yield tier of the effort/yield/efficiency comparison).",
    c("analysis" = "Pearson chi-square test of independence on the 2x2 of survey method x taxonomic resolution (species-level vs coarser); stats::chisq.test, written to coverage_method_resolution_chisq_report.txt. The Venn itself is descriptive",
      note   = "shows each method's unique + shared taxa contribution",
      scope  = "ALL records (survey filter off), since 'what each method detects' wants every record",
-     tier   = "YIELD -- see method_comparison/effort for sampling work and method_comparison/efficiency for richness at equal effort"),
+     tier   = "YIELD. See method_comparison/effort for sampling work and method_comparison/efficiency for richness at equal effort"),
    "method_comparison/yield/yield_by_method_report.png; bee_yield_by_contributor_and_method.png; coverage_method_resolution_report.csv; yield_by_method_taxa_report.csv")
 
 fw("effort_by_method",
    "Effort by method (survey trips)",
    "descriptive",
-   "Sampling WORK per method: survey trips, lethal vs non-lethal. The honest denominator for reading yield -- non-lethal logged far more trips than lethal, so raw yield can't be compared directly (see efficiency tier).",
-   c(tier = "EFFORT -- first of the three method-comparison tiers (effort -> yield -> efficiency)"),
+   "Sampling WORK per method: survey trips, lethal vs non-lethal. The honest denominator for reading yield: non-lethal logged far more trips than lethal, so raw yield can't be compared directly (see efficiency tier).",
+   c(tier = "EFFORT, first of the three method-comparison tiers (effort -> yield -> efficiency)"),
    "method_comparison/effort/coverage_effort_by_method.png; coverage_effort_by_method.csv")
 
 fw("efficiency_by_method",
    "Efficiency by method (rarefied to equal effort)",
    "descriptive",
-   "Richness at EQUAL sampling effort (rarefaction): both methods sub-sampled to the smaller method's record total, at species and genus rank. At species level lethal stays ahead (47 vs 33); at genus level the two are even (23 vs 23) -- non-lethal's raw genus lead was an effort artifact.",
-   c(tier   = "EFFICIENCY -- third tier; removes the effort imbalance that makes raw yield unfair to compare",
+   "Richness at EQUAL sampling effort (rarefaction): both methods sub-sampled to the smaller method's record total, at species and genus rank. At species level lethal stays ahead (47 vs 33); at genus level the two are even (23 vs 23), so non-lethal's raw genus lead was an effort artifact.",
+   c(tier   = "EFFICIENCY, third tier; removes the effort imbalance that makes raw yield unfair to compare",
      "analysis" = "Hurlbert rarefaction to the smaller method's total records, survey records only"),
    "method_comparison/efficiency/efficiency_by_method_both_ranks.png (both ranks on one figure: species solid, genera hatched)")
 
@@ -289,16 +289,16 @@ fw("coverage_id_targets",
 fw("coverage_yield_by_method",
    "Yield by method (lethal vs non-lethal)",
    "descriptive",
-   sprintf("Fair footing (survey-only, Mar-Oct, 2021-2023): at SPECIES level lethal netting records more species (%s vs %s) and far more method-exclusive species (%s vs %s) despite fewer records; but at GENUS level the two are even -- non-lethal edges ahead (%s vs %s genera; exclusive %s vs %s). So lethal's species advantage is mostly ID RESOLUTION (specimens key to species, photos stall at genus), not detection.",
+   sprintf("Fair footing (survey-only, Mar-Oct, 2021-2023): at SPECIES level lethal netting records more species (%s vs %s) and far more method-exclusive species (%s vs %s) despite fewer records; but at GENUS level the two are even, with non-lethal edging ahead (%s vs %s genera; exclusive %s vs %s). So lethal's species advantage is mostly ID RESOLUTION (specimens key to species, photos stall at genus), not detection.",
            .pick(yld_m, "lethal", "species"),           .pick(yld_m, "nonlethal", "species"),
            .pick(yld_m, "lethal", "exclusive_species"), .pick(yld_m, "nonlethal", "exclusive_species"),
            .pick(yld_m, "lethal", "genera"),            .pick(yld_m, "nonlethal", "genera"),
            .pick(yld_m, "lethal", "exclusive_genera"),  .pick(yld_m, "nonlethal", "exclusive_genera")),
    c(scope    = "SURVEY-ONLY, March-October, 2021-2023 (year-clipped so both methods share the window)",
-     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (general public and intern iNat photos are NOT included -- see the REPORT figure bee_yield_by_contributor_and_method_* for the all-records contributor view that adds them)",
-     controls_for = "season (Mar-Oct) + year (2021-2023) + survey scope -- removes non-lethal's 3 extra years",
+     groups   = "in this window lethal = intern net specimens; non-lethal = beeple survey photos (general public and intern iNat photos are NOT included; see the REPORT figure bee_yield_by_contributor_and_method_* for the all-records contributor view that adds them)",
+     controls_for = "season (Mar-Oct) + year (2021-2023) + survey scope, which removes non-lethal's 3 extra years",
      species_vs_genus = "species-level = detection + ID resolution; genus-level = detection alone (photos not penalised for stalling at genus)",
-     takeaway = "specimens win on species-level yield/efficiency; detection (genus) is about even -- the gap is ID resolution, not who finds more bees"),
+     takeaway = "specimens win on species-level yield/efficiency; detection (genus) is about even, so the gap is ID resolution, not who finds more bees"),
    "method_comparison/yield/coverage_yield_by_method_journal.csv (table only; the journal figure is the method Venn, method_comparison/yield/yield_by_method_journal.png). REPORT all-records contributor/method view: bee_yield_by_contributor_and_method_{species,genus}.png")
 
 fw("coverage_cabr_share_of_county",
@@ -309,9 +309,9 @@ fw("coverage_cabr_share_of_county",
    "cabr_share_of_county.csv; cabr_county_map.png (the lollipop figure was retired: every number it showed is on the map, which also shows where Cabrillo is)")
 
 fw("coverage_cabr_county_map",
-   "CABR county locator map -- speck of area, big share of bees",
+   "CABR county locator map: speck of area, big share of bees",
    "descriptive",
-   "A locator map placing tiny Cabrillo National Monument on the San Diego County map: CABR is a fraction of a percent of the county by AREA yet carries a disproportionately large share of its native-bee species and genera -- the visual companion to the share-of-county figures.",
+   "A locator map placing tiny Cabrillo National Monument on the San Diego County map: CABR is a fraction of a percent of the county by AREA yet carries a disproportionately large share of its native-bee species and genera. The visual companion to the share-of-county figures.",
    c(measures    = "area % straight from the NPS official CABR polygon vs the San Diego County polygon (same CRS); species/genus shares from the CABR official checklist vs the Holway county checklist",
      the_numbers = "the actual area % and diversity shares are computed and tabulated by coverage_cabr_share_of_county (cabr_share_of_county.csv); this script is the map that dramatizes them",
      scope       = "checklist-level (all records feeding each checklist), not survey-only"),
@@ -320,21 +320,21 @@ fw("coverage_cabr_county_map",
 fw("records_per_genus_by_evidence",
    "Evidence backing each genus",
    "descriptive",
-   "How much (and what kind of) evidence backs each bee genus -- lethal specimen vs non-lethal iNat photo, per genus.",
+   "How much (and what kind of) evidence backs each bee genus: lethal specimen vs non-lethal iNat photo, per genus.",
    character(0),
    "coverage/records_by_evidence/: records_by_evidence_{report,journal}_genus.{csv,png}")
 
 fw("records_per_species_by_evidence",
    "Evidence backing each species",
    "descriptive",
-   "How much (and what kind of) evidence backs each bee SPECIES -- lethal specimen vs non-lethal iNat photo, one row per species (genus-only records excluded); species with <10 records flagged as thin.",
+   "How much (and what kind of) evidence backs each bee SPECIES: lethal specimen vs non-lethal iNat photo, one row per species (genus-only records excluded); species with <10 records flagged as thin.",
    character(0),
    "coverage/records_by_evidence/: records_by_evidence_{report,journal}_species.{csv,png}")
 
 fw("least_sampled_bees",
-   "Least-sampled bees -- go-find-it sheet",
+   "Least-sampled bees, a go-find-it sheet",
    "descriptive",
-   sprintf("The %s bee species with <50 records TOTAL across both methods -- under-detected by netting AND iNaturalist -- each with its per-method split and when/where/on-what-flower context. Coverage split: %s.",
+   sprintf("The %s bee species with <50 records TOTAL across both methods, under-detected by netting AND iNaturalist, each with its per-method split and when/where/on-what-flower context. Coverage split: %s.",
            .chr(.n(lsb)),
            if (is.null(lsb)) "run to populate" else paste(sprintf("%d %s", as.integer(table(lsb$coverage)), names(table(lsb$coverage))), collapse = ", ")),
    c(threshold   = "least sampled = < 50 records total (both methods pooled), the report's low-record floor",
@@ -347,23 +347,23 @@ fw("transect_effort",
    "Per-transect sampling effort",
    "descriptive",
    "How many bee records each transect has produced, split by method (lethal vs non-lethal) and as a total; specimens summarised by transect (their reliable spatial unit).",
-   c(note = "raw per-transect richness is NOT charted -- unequal effort biases it; the effort-standardized version is rarefaction by_transect"),
+   c(note = "raw per-transect richness is NOT charted, because unequal effort biases it; the effort-standardized version is rarefaction by_transect"),
    "transect_effort_{report,journal}.png; transect_effort_total_{report,journal}.png; survey_effort_by_transect_richness.csv; transect_effort_journal.csv")
 
 fw("phenology_effort",
    "Survey effort by month",
    "descriptive",
-   "Survey effort across months and years -- the context for every seasonal/annual pattern in the other analyses.",
+   "Survey effort across months and years: the context for every seasonal/annual pattern in the other analyses.",
    c(note = "documents the effort skew (interns ~Mar-Oct, beeple year-round; 2024-heavy) that the inferential tests control for"),
    "survey_effort_by_month.csv; survey_effort_by_month.png; fair_method_2021_2023/effort_by_month_journal.png; fair_method_2021_2023/effort_year_month_grid_journal.png")
 
 fw("nps_summary_tables",
-   "NPS descriptive summary tables -- plain counts, no interpretation",
+   "NPS descriptive summary tables: plain counts, no interpretation",
    "descriptive",
-   "The bare descriptive tables for the data-focused NPS report: participation (deduped surveyors + public contributors, trips, span), bee totals (genera/species/records), plant totals, methods, and full genus/species checklists -- deliberately counts only, no tests or interpretation.",
+   "The bare descriptive tables for the data-focused NPS report: participation (deduped surveyors + public contributors, trips, span), bee totals (genera/species/records), plant totals, methods, and full genus/species checklists. Deliberately counts only, no tests or interpretation.",
    c(scope    = "ALL records (not survey-only); the report's factual backbone that every other analysis interprets",
      contents = "participation (dedicated surveyors + public contributors, deduped from the roster, plus surveys by method + year span), bee + plant genus/species counts, method breakdown, and bee/plant checklists",
-     no_stats = "descriptive by design -- no p-values or estimators here; the inferential findings live in the other summaries"),
+     no_stats = "descriptive by design; no p-values or estimators here; the inferential findings live in the other summaries"),
    "nps_participation.csv; nps_bees_summary.csv; nps_bee_checklist_species.csv; nps_bee_checklist_genus.csv; nps_methods.csv; nps_plants_summary.csv; nps_plant_checklist_genus.csv; nps_summary_tables.{html,png}")
 
 # ---- master index -----------------------------------------------------------
