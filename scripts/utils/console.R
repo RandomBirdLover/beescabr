@@ -37,6 +37,31 @@ bx_act  <- function(...)        message("  Â» ", paste0(...))                # Â
 #'
 #' @return Invisibly, nothing.
 bx_need_reset <- function() .BX_NEED$items <- list()
+#' Report a stage that FAILED, in a voice a note cannot be confused with
+#'
+#' bx_note() is for things that are fine ("CABR reaches past the County line --
+#' expected"). It was also carrying real failures: the bee taxonomy lookup died
+#' mid-build, said "note: taxonomy lookup failed: ...", and every later stage
+#' joined against a lookup four days old while the run finished with a tick.
+#'
+#' @param stage What was being built, in words ("bee taxonomy lookup").
+#' @param cause The error message.
+#' @param stale The file that was therefore NOT rebuilt, if any.
+#' @return Invisibly, nothing. Also queues a NEEDS YOU item.
+bx_fail <- function(stage, cause, stale = NULL) {
+  message("")
+  message("  \u2717 FAILED: ", stage)
+  message("      ", cause)
+  if (!is.null(stale) && nzchar(stale)) {
+    message("      This did NOT rebuild, so the rest of the run used the old file:")
+    message("        ", stale)
+    bx_need(sprintf("%s FAILED, re-run after fixing", stage), stale)
+  } else {
+    bx_need(sprintf("%s FAILED", stage), "")
+  }
+  invisible(NULL)
+}
+
 #' Queue an item for the end-of-run "NEEDS YOU" rollup
 #'
 #' Nothing here blocks the pipeline. It is how a stage says "a human should look

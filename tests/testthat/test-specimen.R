@@ -615,3 +615,38 @@ test_that(".trs_workbook still returns a usable phrase when the folder is empty"
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   expect_match(.trs_workbook(d), "specimen workbook")
 })
+
+# --- the raw-workbook counts belong in the REVIEW NEEDED box -----------------
+# The stage printed the same workbook instruction twice: once as a note under the
+# raw-worklist counts, once inside the REVIEW NEEDED box via .specimen_fix_hint().
+# Four of the five facts matched, so the box read as the complete version and the
+# note above it -- the only place the needs_id count appeared -- got skipped.
+test_that(".raw_worklist_counts reads the three reasons off the worklist", {
+  src("specimens/specimen_raw_worklist.R")
+  p <- tempfile(fileext = ".csv")
+  write.csv(data.frame(ucsd_id = 1:6, reason = c("needs_id", "needs_id", "needs_id",
+                                                 "missing_specimen", "duplicate id", "needs_id")),
+            p, row.names = FALSE)
+  k <- .raw_worklist_counts(p)
+  expect_equal(unname(k[["needs_id"]]), 4L)
+  expect_equal(unname(k[["missing"]]), 1L)
+  expect_equal(unname(k[["duplicate"]]), 1L)
+})
+
+test_that(".raw_worklist_counts returns zeros for a missing or empty worklist", {
+  src("specimens/specimen_raw_worklist.R")
+  expect_equal(unname(.raw_worklist_counts(tempfile())), c(0L, 0L, 0L))
+  p <- tempfile(fileext = ".csv")
+  write.csv(data.frame(ucsd_id = integer(0), reason = character(0)), p, row.names = FALSE)
+  expect_equal(unname(.raw_worklist_counts(p)), c(0L, 0L, 0L))
+})
+
+test_that("the needs-id review row says it is not a five-minute job", {
+  src("specimens/specimen_raw_worklist.R")
+  r <- .needs_id_review_row(162L)
+  expect_equal(r$count, 162L)
+  expect_match(r$label, "identif")
+  expect_match(r$what, "expert|microscope")
+  expect_match(r$file, "worklist")
+  expect_null(.needs_id_review_row(0L))
+})

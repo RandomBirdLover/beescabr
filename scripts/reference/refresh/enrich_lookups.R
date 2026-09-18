@@ -113,6 +113,11 @@ IUCN_SYNONYM    <- c("Bombus sonorus"      = "Bombus pensylvanicus",
 # rl_species() handles the same species fine and reports zero assessments, so it is
 # used to tell the two apart. Zero assessments is Not Evaluated -- a real answer.
 .IUCN_EMPTY_ERR <- "incorrect number of dimensions"
+# Most San Diego native bees are not in IUCN's taxonomy at all, and the API says so
+# with a 404. That is a real answer -- the bee is Not Evaluated -- not a lookup that
+# failed. Read as a failure it made every batch 0-of-N, told the operator to try again
+# later (which can never help), and was never cached, so it re-queried every run.
+.IUCN_ABSENT_ERR <- "No results returned for query"
 
 .iucn_fetch_one <- function(binom, key, fetch_fn = NULL, probe_fn = NULL) {
   q  <- if (binom %in% names(IUCN_SYNONYM)) unname(IUCN_SYNONYM[binom]) else binom
@@ -132,6 +137,8 @@ IUCN_SYNONYM    <- c("Bombus sonorus"      = "Bombus pensylvanicus",
     if (!is.na(n) && n == 0L)
       return(list(ok = TRUE, error = NA_character_, code = "NE", year = "", note = ""))
   }
+  if (is.null(res) && !is.na(err) && grepl(.IUCN_ABSENT_ERR, err, fixed = TRUE))
+    return(list(ok = TRUE, error = NA_character_, code = "NE", year = "", note = ""))
   if (is.null(res))
     return(list(code = NA_character_, year = NA_character_, note = "", ok = FALSE, error = err))
   code <- tryCatch(res$red_list_category$code, error = function(e) NULL)
@@ -185,7 +192,9 @@ IUCN_SYNONYM    <- c("Bombus sonorus"      = "Bombus pensylvanicus",
   if (auth)
     "  The token was rejected. Check data/secrets/iucn_api.env, then run again."
   else
-    "  Usually the Red List was briefly unreachable. Try again later; nothing is lost.")
+    "  A bee shown to be not evaluated on IUCN has no Red List record, which is normal.",
+  if (auth) NULL else
+    "  The rest are usually a brief outage; try again later, nothing is lost.")
 
 #' Where the status cache lives
 #' @param n Species in it.

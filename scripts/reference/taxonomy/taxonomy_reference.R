@@ -482,6 +482,9 @@ specimen_additions_to_lookup <- function(lookup, additions) {
     }
   }
   missing_parents <- if (length(mp)) bind_rows(mp) else empty_mp
+  # Nothing new is the ordinary case once the curated rows are all in the lookup.
+  # Return without binding, so a type mismatch in an empty frame can never matter.
+  if (!nrow(added)) return(list(lookup = lookup, added = added, missing_parents = missing_parents))
   list(lookup = bind_rows(lookup, added), added = added, missing_parents = missing_parents)
 }
 
@@ -493,6 +496,13 @@ load_specimen_additions <- function(path) {
   a <- tryCatch(suppressWarnings(readr::read_csv(path, show_col_types = FALSE)), error = function(e) NULL)
   if (is.null(a) || !nrow(a) || !"rank" %in% names(a)) return(tibble(rank = character()))
   if ("taxon_id" %in% names(a)) a$taxon_id <- suppressWarnings(as.integer(a$taxon_id))
+  # A column blank on every row reads as <logical>. With rows to add it binds fine
+  # (an all-NA logical is "unspecified"), but subset to zero new rows it becomes
+  # logical(0), which cannot combine with the lookup's <character> -- and the whole
+  # lookup build dies. Same hazard the .chr loop below guards, at the other entry point.
+  .flags <- c("in_holway", "in_inat", "in_cabr_specimens", "verified", "itis_valid")
+  for (nm in setdiff(names(a), c("taxon_id", .flags)))
+    if (is.logical(a[[nm]])) a[[nm]] <- as.character(a[[nm]])   # as.character(NA) -> NA_character_
   a[!is.na(a$rank) & trimws(a$rank) != "", , drop = FALSE]
 }
 

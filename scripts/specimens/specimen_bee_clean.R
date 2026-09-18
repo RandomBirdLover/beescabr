@@ -287,6 +287,12 @@ clean_specimens <- function(interactive_ok = (Sys.getenv("BEESCABR_NONINTERACTIV
     file  = basename(c(flags_out, dupes_out, locmiss_out, missing_out)),
     what  = .review_what_specimens(),
     stringsAsFactors = FALSE)
+  # The raw-workbook worklist lives in this same folder, so it belongs in this box too.
+  # Left out, it was mentioned only in a narration line further up that the box's own
+  # (identical) fix instructions taught people to scroll past.
+  if (!exists(".needs_id_review_row")) source("scripts/specimens/specimen_raw_worklist.R")
+  .nid <- .needs_id_review_row(.raw_worklist_counts(TRS_WORKLIST_OUT)[["needs_id"]])
+  if (!is.null(.nid)) review_items <- rbind(review_items, .nid)
   if (resolve_review_gate(review_items, review_dir, interactive_ok, prompt_fn,
                           fix_hint = .specimen_fix_hint()) == "stop")
     stop("Stopping so you can review/fix the flagged rows in the raw .xlsx, then re-run. Review files: ", review_dir)

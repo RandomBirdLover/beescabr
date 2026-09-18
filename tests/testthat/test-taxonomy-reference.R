@@ -425,3 +425,47 @@ test_that("backfill_parent_taxonomy does NOT bleed a fine rank across families (
   expect_true(is.na(out$subtribe[out$species == "phaceliae" & !is.na(out$species)]))  # Colletidae -> still NA
   expect_equal(out$subtribe[out$species == "daggetti" & !is.na(out$species)], "Halictina")  # Halictidae -> filled
 })
+
+# --- a curated addition with an all-blank text column ------------------------
+# common_name is blank on every row of specimen_additions.csv, so readr types the
+# column <logical>. With a row to add that binds fine (an all-NA logical is
+# "unspecified"), but subset to zero new rows it becomes logical(0), which cannot
+# combine with the lookup's <character>. That is a total failure of the lookup
+# build reported as a calm note, and the run then reuses a days-old lookup.
+.wr <- function(lines) { p <- tempfile(fileext = ".csv"); writeLines(lines, p); p }
+
+test_that("load_specimen_additions types an all-blank text column as character", {
+  src("reference/taxonomy/taxonomy_reference.R")
+  p <- .wr(c("rank,scientific_name,taxon_id,genus,species,common_name",
+             "species,Melissodes microstictus,747170,Melissodes,microstictus,",
+             "species,Andrena atypica,,Andrena,atypica,"))
+  a <- load_specimen_additions(p)
+  expect_type(a$common_name, "character")
+  expect_true(all(is.na(a$common_name)))       # blank stays blank, never the string "NA"
+  expect_type(a$taxon_id, "integer")            # the existing coercion still holds
+})
+
+test_that("load_specimen_additions leaves the real TRUE/FALSE flags logical", {
+  src("reference/taxonomy/taxonomy_reference.R")
+  p <- .wr(c("rank,scientific_name,taxon_id,in_holway,in_inat,verified,common_name",
+             "species,Melissodes microstictus,747170,FALSE,TRUE,FALSE,"))
+  a <- load_specimen_additions(p)
+  expect_type(a$in_holway, "logical")
+  expect_type(a$in_inat, "logical")
+  expect_type(a$verified, "logical")
+})
+
+test_that("specimen_additions_to_lookup survives having nothing new to add", {
+  src("reference/taxonomy/taxonomy_reference.R")
+  p <- .wr(c("rank,scientific_name,taxon_id,genus,species,common_name",
+             "species,Melissodes microstictus,747170,Melissodes,microstictus,"))
+  adds <- load_specimen_additions(p)
+  lookup <- data.frame(taxon_id = 747170L, scientific_name = "Melissodes microstictus",
+                       common_name = "long-horned bee", rank = "species",
+                       genus = "Melissodes", species = "microstictus",
+                       stringsAsFactors = FALSE)
+  out <- specimen_additions_to_lookup(lookup, adds)   # the addition is ALREADY in the lookup
+  expect_equal(nrow(out$added), 0L)
+  expect_equal(nrow(out$lookup), 1L)                  # lookup returned intact, no error
+  expect_type(out$lookup$common_name, "character")
+})

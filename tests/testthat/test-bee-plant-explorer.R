@@ -89,3 +89,32 @@ test_that("it works in the bee direction too", {
 test_that("an empty index gives an empty order, not an error", {
   expect_equal(bpe_order(list()), character(0))
 })
+
+# --- the explorer must not read another script's output ----------------------
+# It read bee_plant_pairs.csv, which bee_plant_matrix.R writes. The runner sources
+# scripts alphabetically, so the explorer (28th) ran one position BEFORE the matrix
+# (29th) that produces its input: every page was built from the PREVIOUS run's file.
+# Proof on disk: the published page was written at 16:56:43, its own input at
+# 16:56:45. The page showed 78 species / 499 pairs while the data held 79 / 509.
+test_that("bpe_pairs_from_source derives pairs itself, matching bpm_pairs", {
+  src("analysis/reference/bee_plant_explorer.R")
+  recs <- data.frame(
+    taxon_id        = c(1L, 1L, 2L, 2L, 3L),
+    taxon_rank      = rep("species", 5),
+    plant_genus     = c("Encelia", "Isocoma", "Encelia", "Encelia", "Rhus"),
+    scientific_name = c("Bombus crotchii", "Bombus crotchii", "Halictus ligatus",
+                        "Halictus ligatus", "Perdita rara"),
+    stringsAsFactors = FALSE)
+  lookup <- data.frame(taxon_id = 1:3, rank = rep("species", 3),
+                       scientific_name = c("Bombus crotchii", "Halictus ligatus", "Perdita rara"),
+                       genus = c("Bombus", "Halictus", "Perdita"),
+                       stringsAsFactors = FALSE)
+  got  <- bpe_pairs_from_source(recs, lookup, plant_lookup = NULL)
+  want <- bpm_pairs(recs, lookup, name_col = "scientific_name", plant_lookup = NULL)
+  expect_equal(got, want)
+})
+
+test_that("the explorer no longer depends on bee_plant_pairs.csv", {
+  txt <- paste(readLines("../../scripts/analysis/reference/bee_plant_explorer.R"), collapse = "\n")
+  expect_false(grepl("bee_plant_pairs.csv", txt, fixed = TRUE))
+})

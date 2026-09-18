@@ -168,3 +168,44 @@ test_that("an ordinary failure is not probed away", {
   expect_false(r$ok)
   expect_match(r$error, "401", fixed = TRUE)
 })
+
+# --- a bee IUCN has no record of is Not Evaluated, not a failed lookup -------
+# Most San Diego native bees are not in IUCN's taxonomy at all, and the API answers
+# "No results returned for query. (HTTP 404)". Only "incorrect number of dimensions"
+# was recognised as benign, so all four batches in a run reported 0-of-N and advised
+# trying again later -- which can never help. It is a real answer: Not Evaluated.
+.stop_with <- function(msg) function(...) stop(msg, call. = FALSE)
+
+test_that("a 404 from the Red List is recorded as NE, not a failure", {
+  src("reference/refresh/enrich_lookups.R")
+  r <- .iucn_fetch_one("Agapostemon texanus", key = "k",
+                       fetch_fn = .stop_with("No results returned for query. (HTTP 404)"),
+                       probe_fn = .stop_with("should not be called"))
+  expect_true(r$ok)
+  expect_equal(r$code, "NE")
+  expect_true(is.na(r$error))
+})
+
+test_that("the zero-assessment path still works", {
+  src("reference/refresh/enrich_lookups.R")
+  r <- .iucn_fetch_one("Andrena atypica", key = "k",
+                       fetch_fn = .stop_with("incorrect number of dimensions"),
+                       probe_fn = function(...) list(assessments = list()))
+  expect_true(r$ok); expect_equal(r$code, "NE")
+})
+
+test_that("a genuine transport error is still a failure", {
+  src("reference/refresh/enrich_lookups.R")
+  r <- .iucn_fetch_one("Bombus crotchii", key = "k",
+                       fetch_fn = .stop_with("Timeout was reached"),
+                       probe_fn = .stop_with("Timeout was reached"))
+  expect_false(r$ok)
+  expect_match(r$error, "Timeout")
+})
+
+test_that("the partial note does not blame the server for absent species", {
+  src("reference/refresh/enrich_lookups.R")
+  txt <- paste(.iucn_partial_note(n_fail = 46, n_total = 46, auth = FALSE), collapse = " ")
+  expect_false(grepl("briefly unreachable", txt, fixed = TRUE))
+  expect_match(txt, "not evaluated|Not Evaluated")
+})

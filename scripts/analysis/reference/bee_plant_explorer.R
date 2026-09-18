@@ -62,6 +62,31 @@ bpe_order <- function(side) {
   nm[order(-k, nm)]
 }
 
+#' Bee/plant pairs, derived from the cleaned tables
+#'
+#' Wraps bee_plant_matrix.R's `bpm_pairs()` so this page computes its own pairs
+#' instead of reading the CSV that script writes. Same inputs, same function, so
+#' the two pages can never disagree -- which they did, by one bee species and ten
+#' pairs, for as long as the explorer ran before the matrix.
+#'
+#' @param recs Cleaned bee records (iNat + specimens), with taxon_id, taxon_rank,
+#'   plant_genus and scientific_name.
+#' @param lookup The bee taxonomy lookup.
+#' @param plant_lookup The plant taxonomy lookup, or NULL.
+#' @return The pairs data frame `bpm_pairs()` returns.
+bpe_pairs_from_source <- function(recs, lookup, plant_lookup = NULL) {
+  # Into its OWN environment: a plain source() would run that file's build block
+  # (its guard flag has to be visible where the file is evaluated) and its OUT_DIR
+  # would overwrite this page's, sending the html to the wrong folder.
+  fn <- if (exists("bpm_pairs")) bpm_pairs else {
+    e <- new.env(parent = globalenv())
+    assign("BPM_SOURCED_FOR_HELPERS", TRUE, envir = e)
+    sys.source("scripts/analysis/reference/bee_plant_matrix.R", envir = e)
+    get("bpm_pairs", envir = e)
+  }
+  fn(recs, lookup, name_col = "scientific_name", plant_lookup = plant_lookup)
+}
+
 # ---- build (skipped when a test sources this file for the helper) -------------
 if (!exists("BPE_SOURCED_FOR_HELPERS")) {
   if (!exists("PATHS"))           source("scripts/config.R")
@@ -71,11 +96,17 @@ if (!exists("BPE_SOURCED_FOR_HELPERS")) {
 
   OUT_DIR <- file.path(DIR_REPORT, "reference/bee_plant")
   dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-  PAIRS <- file.path(DIR_REPORT, "reference/nps_summary/bee_plant_pairs.csv")
-  if (!file.exists(PAIRS))
-    stop("bee_plant_pairs.csv not found. Run scripts/analysis/reference/bee_plant_matrix.R first.")
-
-  pairs <- read.csv(PAIRS, stringsAsFactors = FALSE)
+  # Built from the stage-1 cleaned tables, NOT from bee_plant_matrix.R's output file.
+  # Reading that file made this page one whole run stale: the runner sources scripts
+  # alphabetically, so the explorer runs one position ahead of the matrix that writes
+  # its input. The page said 78 species / 499 pairs while the data held 79 / 509.
+  rd    <- function(p) read.csv(p, stringsAsFactors = FALSE, check.names = FALSE)
+  .keep <- c("taxon_id", "taxon_rank", "plant_genus", "scientific_name")
+  pairs <- bpe_pairs_from_source(
+    bind_rows(rd(PATHS$inat_clean)     %>% select(all_of(.keep)),
+              rd(PATHS$specimen_clean) %>% select(all_of(.keep))),
+    read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE),
+    plant_lookup = read.csv(PATHS$plant_taxonomy_lookup, stringsAsFactors = FALSE))
   ix    <- bpe_index(pairs)
 
   # iNat links come from the reference table by taxon_id (never by matching a name).

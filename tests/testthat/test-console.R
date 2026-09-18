@@ -32,3 +32,38 @@ test_that("need_lines handles an item with no path", {
   expect_length(ln, 1L)
   expect_equal(trimws(ln), "▸ look at the map")
 })
+
+# --- a failed stage must not read like an FYI --------------------------------
+# The bee taxonomy lookup died mid-build and the run said
+#   "note: taxonomy lookup failed: Can't combine ..."
+# in the same calm voice as "note: CABR reaches past the County line -- expected".
+# Every later stage then joined against a lookup four days old, and the run still
+# finished with a tick. A failure that leaves stale output needs its own voice.
+test_that("bx_fail names the stage, the cause, and what is now stale", {
+  m <- capture_messages(bx_fail("bee taxonomy lookup", "Can't combine common_name",
+                                stale = "data/reference/sd_bee_taxonomy_lookup_generated.csv"))
+  txt <- paste(m, collapse = " ")
+  expect_match(txt, "FAILED")
+  expect_match(txt, "bee taxonomy lookup")
+  expect_match(txt, "Can't combine common_name", fixed = TRUE)
+  expect_match(txt, "sd_bee_taxonomy_lookup_generated.csv", fixed = TRUE)
+  expect_false(grepl("note:", txt, fixed = TRUE))   # never the calm-FYI prefix
+})
+
+test_that("bx_fail works without a stale-file argument", {
+  m <- capture_messages(bx_fail("verification prompt", "boom"))
+  txt <- paste(m, collapse = " ")
+  expect_match(txt, "FAILED")
+  expect_match(txt, "verification prompt")
+  expect_match(txt, "boom")
+})
+
+test_that("a failed stage is queued for the NEEDS YOU rollup", {
+  bx_need_reset()
+  bx_fail("bee taxonomy lookup", "boom",
+          stale = "data/reference/sd_bee_taxonomy_lookup_generated.csv")
+  txt <- paste(capture_messages(bx_need_print()), collapse = " ")
+  expect_match(txt, "bee taxonomy lookup")
+  expect_match(txt, "did not rebuild|FAILED")
+  bx_need_reset()
+})

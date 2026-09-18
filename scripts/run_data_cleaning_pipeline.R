@@ -422,8 +422,18 @@ main <- function() {
   # Reads the Holway reference table (step 4) + the cache, writes sd_bee_taxonomy_lookup_generated.csv
   # (+ the internal complex map). Wrapped so a taxonomy failure never kills the run.
   if (file.exists(PATHS$holway_reference)) {
+    # A failure here leaves the PREVIOUS lookup on disk, and every stage after this
+    # joins against it. Say so loudly; a "note:" let a four-day-old lookup through a
+    # whole run that still ended with a tick.
+    .lk_before <- if (file.exists(PATHS$taxonomy_lookup)) file.mtime(PATHS$taxonomy_lookup) else NA
     tryCatch(build_taxonomy_lookup(con),
-             error = function(e) bx_note("taxonomy lookup failed: ", conditionMessage(e)))
+             error = function(e) bx_fail("bee taxonomy lookup", conditionMessage(e),
+                                         stale = PATHS$taxonomy_lookup))
+    # Belt and braces: even a silent non-write is caught, not just a thrown error.
+    if (!is.na(.lk_before) && file.exists(PATHS$taxonomy_lookup) &&
+        identical(file.mtime(PATHS$taxonomy_lookup), .lk_before))
+      bx_fail("bee taxonomy lookup", "finished without writing the file",
+              stale = PATHS$taxonomy_lookup)
     # PASS 2 -- VERIFY new-to-Holway taxa: prompt to confirm each is a real ID (not a misID) and
     # record it in verified_taxa.csv so it stops being flagged. Interactive only; never kills the run.
     tryCatch({
@@ -431,7 +441,7 @@ main <- function() {
         .lkv <- suppressMessages(utils::read.csv(PATHS$taxonomy_lookup, stringsAsFactors = FALSE, check.names = FALSE))
         prompt_verify_taxa(.lkv, interactive_ok = TRUE)
       }
-    }, error = function(e) bx_note("verification prompt failed: ", conditionMessage(e)))
+    }, error = function(e) bx_fail("verification prompt", conditionMessage(e)))
   } else {
     bx_kv("Bee lookup", "skipped — no Holway reference table")
   }
@@ -575,7 +585,7 @@ main <- function() {
   .maps_dir <- "data/inat_observations/review/location/by_surveyors"
   .n_maps <- if (dir.exists(.maps_dir)) length(list.files(.maps_dir, pattern = "^cabr_pins_to_fix_.*\\.html$")) else 0L
   # a path you can paste, not a fragment to work out the rest of
-  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), .maps_dir)
+  if (.n_maps > 0) bx_need(sprintf("Send %d surveyors their maps", .n_maps), paste0(.maps_dir, "/"))
   # specimens nobody has named yet -- the biggest job of the four, and the only one
   # that needs someone at a microscope rather than at a screen
   .wl <- "data/specimens/specimens_clean/review/qc_review_specimen_cleanup_worklist_generated.csv"
@@ -587,7 +597,8 @@ main <- function() {
   if (!is.null(.it)) bx_need(.it[["what"]], .it[["where"]])
 
   .n_tax <- .n_rows("data/reference/generated/cabr_taxon_ids_needs_review.csv")
-  if (.n_tax > 0) bx_need(sprintf("%d bee names need an iNat id", .n_tax),
+  # Not a to-do that can be cleared today: iNaturalist has no page for these yet.
+  if (.n_tax > 0) bx_need(sprintf("%d bee names will need an iNat id eventually, please keep checking for them", .n_tax),
                           "data/reference/generated/cabr_taxon_ids_needs_review.csv")
   .n_dupe <- .n_rows("data/specimens/specimens_clean/review/qc_review_specimen_duplicates_generated.csv")
   if (.n_dupe > 0) bx_need(sprintf("%d duplicate specimen IDs", .n_dupe),

@@ -33,6 +33,34 @@ local({
 TRS_RECORDS_DIR     <- "data/specimens/records"
 TRS_RECORDS_PATTERN <- "^cabr_bee_specimens_record_V"
 # The newest specimen workbook, by V number -- "the raw .xlsx" names nineteen files.
+# The three reasons, counted off the worklist the step just wrote. clean_specimens()
+# reads it back rather than having the count threaded through two scripts.
+.raw_worklist_counts <- function(path) {
+  z <- c(needs_id = 0L, missing = 0L, duplicate = 0L)
+  if (is.null(path) || !file.exists(path)) return(z)
+  d <- tryCatch(utils::read.csv(path, stringsAsFactors = FALSE), error = function(e) NULL)
+  if (is.null(d) || !nrow(d) || !"reason" %in% names(d)) return(z)
+  r <- as.character(d$reason)
+  c(needs_id  = sum(grepl("needs_id", r), na.rm = TRUE),
+    missing   = sum(grepl("missing_specimen", r), na.rm = TRUE),
+    duplicate = sum(grepl("duplicate", r), na.rm = TRUE))
+}
+
+# The REVIEW NEEDED row for specimens nobody has named yet. It sits in the box
+# because that is where the operator decides whether to stop, but it is the one
+# item there that a re-run can never clear, so the text says so.
+.needs_id_review_row <- function(n, file = basename(TRS_WORKLIST_OUT)) {
+  if (!length(n) || is.na(n) || n <= 0L) return(NULL)
+  data.frame(
+    label = "not identified yet",
+    count = as.integer(n),
+    file  = file,
+    what  = paste("These need a bee expert at a microscope, so this one is not a",
+                  "now job -- it is here so you can see the whole picture before",
+                  "deciding. It stays on the list until the determinations come back."),
+    stringsAsFactors = FALSE)
+}
+
 .trs_workbook <- function(dir = "data/specimens/records") {
   f <- list.files(dir, pattern = "^cabr_bee_specimens_record_V[0-9]+_.*[.]xlsx$")
   if (!length(f)) return(file.path(dir, "the specimen workbook"))
@@ -79,9 +107,10 @@ tidy_raw_specimens <- function(write = TRUE) {
                       " name a specimen that is not in the collection")
   if (n_dup)  bx_cont(n_dup, " museum number", if (n_dup == 1L) " is" else "s are",
                       " used twice")
-  bx_note("Fix these in the current workbook. Find each row by its ucsd_id / sdnhm_id.")
-  bx_cont(.trs_workbook())
-  bx_cont("Save a NEW version when done (next number, today's date), never edit an old one.")
+  # No fix instructions here on purpose. The REVIEW NEEDED box a moment later prints
+  # them via .specimen_fix_hint(); saying them twice made the box look like the
+  # complete version of this block, so this block -- the only place needs_id appeared
+  # -- was the one people skipped.
 
   if (write) {
     dir.create(dirname(TRS_WORKLIST_OUT), recursive = TRUE, showWarnings = FALSE)
