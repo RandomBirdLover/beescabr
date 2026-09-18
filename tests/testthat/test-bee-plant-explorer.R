@@ -97,6 +97,8 @@ test_that("an empty index gives an empty order, not an error", {
 # Proof on disk: the published page was written at 16:56:43, its own input at
 # 16:56:45. The page showed 78 species / 499 pairs while the data held 79 / 509.
 test_that("bpe_pairs_from_source derives pairs itself, matching bpm_pairs", {
+  # helpers only; the flag must be in globalenv or the build runs against real data/
+  src_helpers("analysis/bee_plant_matrix.R", "BPM_SOURCED_FOR_HELPERS")
   src("analysis/reference/bee_plant_explorer.R")
   recs <- data.frame(
     taxon_id        = c(1L, 1L, 2L, 2L, 3L),

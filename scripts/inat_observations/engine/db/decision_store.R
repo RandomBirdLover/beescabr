@@ -94,6 +94,19 @@ decisions_for_taxa <- function(con, taxon_ids) {
 decisions_all_terms <- function(con)
   as.character(DBI::dbGetQuery(con, "SELECT search_term FROM holway_decisions")$search_term)
 
+#' The search terms answered with one particular action
+#'
+#' The Holway pass records "iNaturalist has no page for this bee" here, and the
+#' taxon-id prompt in manual_overrides.R had no way to see it -- so one run asked
+#' the operator about the same six bees twice, minutes apart.
+#'
+#' @param con An open cache connection.
+#' @param action The recorded action, e.g. "no_inat_id".
+#' @return The search terms carrying that action.
+decision_terms_with_action <- function(con, action = "no_inat_id")
+  as.character(DBI::dbGetQuery(con, "SELECT search_term FROM holway_decisions WHERE action = ?",
+                               params = list(action))$search_term)
+
 #' Forget a decision, so the next build asks about it again
 #'
 #' The alternative to wiping the whole table. Nearly every saved answer is still

@@ -123,12 +123,16 @@ resolve_missing_taxon_ids <- function(df, cache_path = RMI_CACHE, fetch_fn = NUL
   if (!"checked_season" %in% names(cache)) cache$checked_season <- NA_integer_
   ck <- function(rank, term, parent) paste(rank, tolower(trimws(term)), parent %||% "", sep = "|")
 
-  n_new <- 0L; n_hit <- 0L; n_again <- 0L
+  # n_cached is separate on purpose: it counts ids replayed straight from the verdict
+  # cache with no API call. Lumped into n_hit, they were announced as fresh finds --
+  # "10 now have a number" in a run that found nothing, right before "17 still have none".
+  n_new <- 0L; n_hit <- 0L; n_again <- 0L; n_cached <- 0L
   for (i in need) {
     key <- ck(rk[i], term[i], parent[i])
     c_row <- cache[cache$key == key, ]
     fresh <- nrow(c_row) && !.rmi_stale(c_row$status[1])
-    if (fresh) { id <- suppressWarnings(as.integer(c_row$taxon_id[1])) }
+    if (fresh) { id <- suppressWarnings(as.integer(c_row$taxon_id[1]))
+                 if (!is.na(id)) n_cached <- n_cached + 1L }
     else {
       if (nrow(c_row)) n_again <- n_again + 1L else n_new <- n_new + 1L
       # searched again every run, so the stamp records when it was LAST looked for
@@ -141,7 +145,7 @@ resolve_missing_taxon_ids <- function(df, cache_path = RMI_CACHE, fetch_fn = NUL
                                 status = if (is.na(id)) "not_found_or_ambiguous" else "filled",
                                 checked_season = as.integer(season)))
     }
-    if (!is.na(id)) { df$taxon_id[i] <- id; n_hit <- n_hit + 1L }
+    if (!is.na(id)) { df$taxon_id[i] <- id; if (!fresh) n_hit <- n_hit + 1L }
   }
   dir.create(dirname(cache_path), recursive = TRUE, showWarnings = FALSE)
   suppressWarnings(write_csv(distinct(cache, key, .keep_all = TRUE), cache_path))
@@ -152,7 +156,9 @@ resolve_missing_taxon_ids <- function(df, cache_path = RMI_CACHE, fetch_fn = NUL
     if (n_new)   message(sprintf("    %d looked up for the first time", n_new))
     if (n_again) message(sprintf("    %d looked up again -- they had no page last time, and", n_again),
                          "\n      iNaturalist may have published them since")
-    message(sprintf("    %d now have a number. The rest are looked for again every run.", n_hit))
+    if (n_cached) message(sprintf("    %d already had a number from a previous run", n_cached))
+    message(sprintf("    %d of the %d searched just got one. The rest are looked for again every run.",
+                    n_hit, n_again + n_new))
     message("    ", cache_path)
   }
   df

@@ -31,10 +31,13 @@ source("scripts/analysis/shared/not_on_holway.R")
 
 # the analysis scripts that emit a PUBLIC html page. ADD NEW PUBLIC PAGES HERE
 # (and add the matching row to PUBLISH_PAGES in scripts/website/publish_pages.R).
+# bee_plant_explorer.R and bee_trends_explorer.R were published but never listed
+# here, so their pages went onto the public site as whatever the last analysis run
+# left on disk. test-publish.R now fails if a PUBLISH_PAGES row has no builder here.
 PUBLIC_PAGES <- c(
   "bee_field_guide.R", "bee_field_guide_genus.R", "nps_summary_tables.R",
   "least_sampled_bees.R", "bee_bounties.R", "transect_map.R",
-  "bee_occurrence_explorer.R")
+  "bee_occurrence_explorer.R", "bee_plant_explorer.R", "bee_trends_explorer.R")
 
 # refresh basemap: clear the cached tiles so the static transect map redraws with CURRENT
 # tiles on every publish (the interactive Leaflet maps load theirs live in the browser)

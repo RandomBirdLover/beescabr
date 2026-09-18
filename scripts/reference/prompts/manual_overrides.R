@@ -125,7 +125,8 @@ apply_manual_overrides <- function(df, overrides = NULL) {
 # .mo_open_worklist(): the resolver's not_found taxa (from resolved_missing_ids.csv) that are NOT
 # yet answered in the overrides -> tibble(rank, name, inat_search_url), title-cased + sorted. Shared
 # by the worklist writer and the interactive prompt so both show the exact same open set.
-.mo_open_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL) {
+.mo_open_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL,
+                              no_page_terms = character(0)) {
   empty <- tibble(rank = character(), name = character(), inat_search_url = character())
   cache <- if (file.exists(cache_path))
     tryCatch(suppressWarnings(read_csv(cache_path, show_col_types = FALSE)), error = function(e) NULL) else NULL
@@ -139,7 +140,13 @@ apply_manual_overrides <- function(df, overrides = NULL) {
   if (is.null(overrides)) overrides <- load_manual_overrides()
   answered <- if (nrow(overrides)) paste(tolower(trimws(overrides$rank)), .mo_norm(overrides$name)) else character(0)
   key  <- paste(tolower(trimws(rank)), .mo_norm(name))
-  keep <- !is.na(name) & trimws(name) != "" & !(key %in% answered)   # drop already-answered taxa
+  # Also drop what the Holway pass already recorded as having no iNaturalist page.
+  # Matched on the NAME alone, because that decision is keyed by a bare search term
+  # with no rank. Safe: a Described key is always two or three words, while a
+  # genus/subgenus/complex worklist entry is one, so they cannot collide.
+  no_page <- if (length(no_page_terms)) .mo_norm(no_page_terms) else character(0)
+  keep <- !is.na(name) & trimws(name) != "" & !(key %in% answered) &
+          !(.mo_norm(name) %in% no_page)
   if (!any(keep)) return(empty)
   # Bind the filtered vectors ONCE up front. Inlining name[keep] a second time inside
   # tibble() would bind to the freshly-built (already-filtered) `name` column and re-index
@@ -158,8 +165,9 @@ apply_manual_overrides <- function(df, overrides = NULL) {
 # write_review_worklist(): the file version of the prompt, writes the open not_found set to
 # cabr_taxon_ids_needs_review.csv with blank taxon_id / correct_name columns to fill in. Always runs
 # (the non-interactive fallback for the interactive prompt below).
-write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL, path = TAXON_REVIEW_PATH) {
-  open <- .mo_open_worklist(cache_path, overrides)
+write_review_worklist <- function(cache_path = RMI_CACHE_PATH, overrides = NULL, path = TAXON_REVIEW_PATH,
+                                  no_page_terms = character(0)) {
+  open <- .mo_open_worklist(cache_path, overrides, no_page_terms)
   wl <- tibble(rank = open$rank, name = open$name, taxon_id = NA_integer_,
                correct_name = NA_character_, note = NA_character_, inat_search_url = open$inat_search_url)
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
@@ -248,9 +256,9 @@ merge_manual_overrides <- function(new, existing = NULL) {
 #' @return Invisibly, the answers recorded.
 prompt_missing_taxon_ids <- function(cache_path = RMI_CACHE_PATH, overrides_path = MANUAL_OVERRIDES_PATH,
                                      interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",
-                                     prompt_fn = readline) {
+                                     prompt_fn = readline, no_page_terms = character(0)) {
   if (!isTRUE(interactive_ok)) return(0L)
-  open <- .mo_open_worklist(cache_path, load_manual_overrides(overrides_path))
+  open <- .mo_open_worklist(cache_path, load_manual_overrides(overrides_path), no_page_terms)
   if (!nrow(open)) return(0L)
   .mo_banner(nrow(open))
   cols <- c("rank", "name", "taxon_id", "correct_name", "note")

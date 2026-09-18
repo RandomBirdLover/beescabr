@@ -278,9 +278,13 @@ build_taxonomy_lookup <- function(con) {
   # INTERACTIVE: ask you for the ids the auto-search couldn't find (appends to manual_taxon_overrides.csv),
   # then re-apply so anything you enter fills THIS run's lookup. Non-interactive (Rscript) -> skipped,
   # and the worklist file below is the fallback.
-  prompt_missing_taxon_ids()
+  # Names the Holway pass already answered with "no iNaturalist page". Without this
+  # the same bees are asked twice in one run: once there, once here.
+  .no_page <- tryCatch(decision_terms_with_action(con, "no_inat_id"),
+                       error = function(e) character(0))
+  prompt_missing_taxon_ids(no_page_terms = .no_page)
   bee_taxonomy_lookup <- apply_manual_overrides(bee_taxonomy_lookup)
-  write_review_worklist()   # the still-open not_found set (after your answers) -> the "look these up" file
+  write_review_worklist(no_page_terms = .no_page)   # the still-open not_found set -> the "look these up" file
   # re-apply the verified memory: rows appended AFTER build_bee_taxonomy_lookup (the specimen-additions
   # merge) missed the verified_ids pass, so a taxon you verified would otherwise re-ask every run.
   bee_taxonomy_lookup <- apply_verified_ids(bee_taxonomy_lookup, verified_ids)

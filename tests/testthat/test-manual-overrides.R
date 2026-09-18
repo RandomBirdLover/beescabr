@@ -249,3 +249,43 @@ test_that("none and skip are shown as having the same consequence", {
                info = "the shared consequence is indented under one option")
   expect_match(lines[i_again], "[Nn]either|[Bb]oth|Either", info = "says it covers both")
 })
+
+# --- don't re-ask what the Holway pass already answered ----------------------
+# One run asked the operator about the same six bees twice. PASS 1 (the Holway
+# "Described" second pass) asks about checklist rows with no taxon_id and records
+# "none" as a no_inat_id decision in DuckDB, keyed by a bare name ("Stelis
+# anthocopae"). This prompt reads a CSV of the resolver's not-found set, keyed by
+# "rank name", and subtracts only manual_taxon_overrides.csv. Neither looks at the
+# other, so all six came back minutes later as items 12-17 of 17.
+.mk_cache <- function(keys, status = "not_found_or_ambiguous") {
+  p <- tempfile(fileext = ".csv")
+  write.csv(data.frame(key = keys, status = status, stringsAsFactors = FALSE), p, row.names = FALSE)
+  p
+}
+
+test_that(".mo_open_worklist drops names already recorded as having no iNat page", {
+  src("reference/prompts/manual_overrides.R")
+  p <- .mk_cache(c("species|stelis anthocopae|127831",
+                   "subspecies|megachile subnigra angelica|52784",
+                   "species|hesperapis cactorum|999"))
+  none <- .mo_open_worklist(p, overrides = load_manual_overrides(tempfile()))
+  expect_equal(nrow(none), 3L)                       # nothing subtracted without the terms
+  out <- .mo_open_worklist(p, overrides = load_manual_overrides(tempfile()),
+                           no_page_terms = c("Stelis anthocopae", "Megachile subnigra angelica"))
+  expect_equal(nrow(out), 1L)
+  expect_match(out$name, "Hesperapis")
+})
+
+test_that("the no-page match ignores case and spacing, and needs no rank", {
+  src("reference/prompts/manual_overrides.R")
+  p <- .mk_cache("species|stelis anthocopae|127831")
+  out <- .mo_open_worklist(p, overrides = load_manual_overrides(tempfile()),
+                           no_page_terms = "  STELIS   ANTHOCOPAE ")
+  expect_equal(nrow(out), 0L)
+})
+
+test_that("no_page_terms defaults to changing nothing", {
+  src("reference/prompts/manual_overrides.R")
+  p <- .mk_cache(c("species|stelis anthocopae|1", "species|hesperapis cactorum|2"))
+  expect_equal(nrow(.mo_open_worklist(p, overrides = load_manual_overrides(tempfile()))), 2L)
+})

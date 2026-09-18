@@ -616,3 +616,28 @@ test_that("the note tells you how to fix it, not just that it happened", {
   expect_match(txt, "magick", fixed = TRUE)
   expect_match(txt, "install_requirements", fixed = TRUE)
 })
+
+# --- "10 now have a number" counted cache replays as fresh discoveries -------
+# n_hit was bumped for every row that ended up with an id, including the ones
+# short-circuited straight from the verdict cache with no API call. So a run where
+# nothing new was found announced "10 now have a number" and then, seconds later,
+# "17 checklist bees still have no iNaturalist id" -- which reads as a contradiction.
+test_that("resolve_missing_taxon_ids separates cached ids from ids found this run", {
+  src("reference/taxonomy/resolve_missing_ids.R")
+  cache <- tempfile(fileext = ".csv")
+  write.csv(data.frame(
+    key = c("species|andrena atypica|1", "species|stelis anthocopae|2"),
+    taxon_id = c(4242L, NA_integer_),
+    status = c("filled", "not_found_or_ambiguous"),
+    stringsAsFactors = FALSE), cache, row.names = FALSE)
+  df <- data.frame(rank = c("species", "species"),
+                   scientific_name = c("Andrena atypica", "Stelis anthocopae"),
+                   genus = c("Andrena", "Stelis"), taxon_id = c(NA_integer_, NA_integer_),
+                   stringsAsFactors = FALSE)
+  msg <- capture_messages(
+    resolve_missing_taxon_ids(df, cache_path = cache, fetch_fn = function(...) list()))
+  txt <- paste(msg, collapse = " ")
+  expect_false(grepl("1 now have a number", txt, fixed = TRUE))
+  expect_match(txt, "already had a number")   # the cached one, named as already known
+  expect_match(txt, "0")                       # nothing newly found this run
+})

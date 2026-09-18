@@ -217,3 +217,37 @@ test_that("a crash part way through is a failure, not a silent success", {
                                    "Error in build_content_pages() : object 'x' not found")))
   expect_true(publish_run_failed(character(0)))       # never ran at all
 })
+
+# --- every published page must have a builder that rebuilds it --------------
+# PUBLISH_PAGES (what gets copied into docs/) and PUBLIC_PAGES (what gets rebuilt
+# first) are two hand-kept lists, and they drifted: 10 rows were published while
+# only 7 scripts were rebuilt. bee_plant_explorer.html and bee_trends.html were
+# copied to the public site from whatever the last analysis run happened to leave
+# on disk. The pipeline's own comment calls this out -- "A page that did not
+# rebuild would be published STALE, silently" -- but that guard only covers pages
+# already in PUBLIC_PAGES, so a page missing from it is not merely unguarded, it
+# is invisible.
+.pub_builder_for <- function(src, root = "../..") {
+  hits <- list.files(file.path(root, "scripts/analysis"), pattern = "[.]R$",
+                     recursive = TRUE, full.names = TRUE)
+  hits[vapply(hits, function(f)
+    any(grepl(basename(src), readLines(f, warn = FALSE), fixed = TRUE)), logical(1))]
+}
+
+test_that("every PUBLISH_PAGES row is rebuilt by a script in PUBLIC_PAGES", {
+  src("website/publish_pages.R")
+  pub <- sub("^.*PUBLIC_PAGES <- c\\(", "",
+             paste(readLines("../../scripts/run_publishing_materials_pipeline.R"), collapse = " "))
+  pub <- strsplit(sub("\\).*$", "", pub), ",")[[1]]
+  public_pages <- trimws(gsub('"', "", pub))
+  expect_true(length(public_pages) > 0)
+
+  missing <- character(0)
+  for (row in PUBLISH_PAGES) {
+    b <- basename(.pub_builder_for(row$src))
+    if (!length(b)) { missing <- c(missing, paste0(row$out, " (no builder found)")); next }
+    if (!any(b %in% public_pages))
+      missing <- c(missing, sprintf("%s <- %s", row$out, paste(b, collapse = "/")))
+  }
+  expect_equal(missing, character(0))
+})
