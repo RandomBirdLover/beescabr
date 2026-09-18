@@ -293,7 +293,7 @@ inat_plant_clean <- function(membership_path = IPC_MEMBERSHIP,
   # plant_genus + full-binomial plant_species (the plant IS the taxon here) -- uniform
   # with the bee + specimen tables so analysis can group on the same two columns everywhere.
   if (!exists("plant_name_parts")) source("scripts/reference/taxonomy/plant_lookup_join.R")
-  .pp <- plant_name_parts(df$scientific_name)
+  .pp <- plant_name_parts(df$scientific_name, df$taxon_id)   # id lets the lookup reject above-genus taxa
   df$plant_genus <- .pp$plant_genus; df$plant_species <- .pp$plant_species
 
   clean <- df |> select(any_of(IPC_COLUMN_ORDER))

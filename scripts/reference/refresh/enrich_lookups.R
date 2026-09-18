@@ -319,11 +319,11 @@ enrich_iucn_columns <- function(df, species_col = "scientific_name", rank_col = 
 PGC_DIR        <- "data/checklists/plants"
 PGC_CACHE_FILE <- file.path(PGC_DIR, "plant_genus_common_generated.csv")
 
-.pgc_read_cache <- function() {
-  if (!file.exists(PGC_CACHE_FILE))
+.pgc_read_cache <- function(path = PGC_CACHE_FILE) {
+  if (!file.exists(path))
     return(data.frame(genus = character(0), common_name = character(0),
                       source = character(0), retrieved_on = character(0), stringsAsFactors = FALSE))
-  read.csv(PGC_CACHE_FILE, stringsAsFactors = FALSE, check.names = FALSE)
+  read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
 }
 
 # local seed: names the in-park plant taxonomy files already carry (via plant_names.R)
@@ -363,24 +363,35 @@ PGC_CACHE_FILE <- file.path(PGC_DIR, "plant_genus_common_generated.csv")
 
 # Resolve a common name for each plant genus. Returns a named vector (genus -> common name,
 # Title-cased; NA where none). Incremental + offline-safe (never shrinks a good cache).
-resolve_plant_common <- function(genera, force = FALSE, verbose = TRUE) {
+resolve_plant_common <- function(genera, force = FALSE, verbose = TRUE,
+                                 fetch_fn = .pgc_fetch_one, reach_fn = .pgc_api_reachable,
+                                 cache_path = PGC_CACHE_FILE, sleep_fn = function() Sys.sleep(0.5)) {
   genera  <- unique(str_squish(genera)); genera <- genera[!is.na(genera) & genera != ""]
   local   <- .pgc_local_map()                                   # RAW-spelling local seed
-  cache   <- .pgc_read_cache()
+  cache   <- .pgc_read_cache(cache_path)
   cached_map <- setNames(str_squish(cache$common_name), str_squish(cache$genus))
   cached_map <- cached_map[!is.na(cached_map) & nzchar(cached_map)]
-  have    <- union(names(cached_map), names(local)[!is.na(local) & nzchar(local %||% "")])
-  need    <- if (force) genera else setdiff(genera, have)
+  # CHECKED is not the same as NAMED. `have` used to count only genera that came back
+  # WITH a common name, so the ~70 that genuinely have none (Apioideae, Cichorieae and
+  # other non-genus ranks among them) were re-fetched on EVERY run: "fetched 0 new",
+  # 35 seconds of throttled waiting, nothing written. A blank row means "asked, none".
+  checked <- union(str_squish(cache$genus), names(local)[!is.na(local) & nzchar(local %||% "")])
+  need    <- if (force) genera else setdiff(genera, checked)
 
-  fetched <- character(0)
-  if (length(need) > 0 && requireNamespace("httr2", quietly = TRUE) && .pgc_api_reachable()) {
+  fetched <- character(0); asked <- character(0)
+  if (length(need) > 0 && beescabr_offline()) {
+    # The menu promised no iNaturalist calls. Keep the promise; the cache still serves.
+    if (verbose) message(sprintf("  plant common names: %d unknown, not looked up (offline run).", length(need)))
+  } else if (length(need) > 0 && requireNamespace("httr2", quietly = TRUE) && reach_fn()) {
     if (verbose) message(sprintf("  plant common names: fetching %d genera from iNaturalist...", length(need)))
     for (i in seq_along(need)) {
-      cn <- .pgc_fetch_one(need[i]); if (!is.na(cn) && nzchar(cn)) fetched[need[i]] <- cn
+      cn <- fetch_fn(need[i]); asked <- c(asked, need[i])
+      if (!is.na(cn) && nzchar(cn)) fetched[need[i]] <- cn
       if (verbose && i %% 10 == 0) message(sprintf("    ...%d/%d", i, length(need)))
-      Sys.sleep(0.5)
+      sleep_fn()
     }
-    if (verbose) message(sprintf("  plant common names: fetched %d new.", length(fetched)))
+    if (verbose) message(sprintf("  plant common names: fetched %d new, %d have none (recorded, not asked again).",
+                                 length(fetched), length(setdiff(asked, names(fetched)))))
   } else if (length(need) > 0 && verbose) {
     for (ln in .pgc_unresolved_note(length(need))) message(ln)
   }
@@ -390,6 +401,9 @@ resolve_plant_common <- function(genera, force = FALSE, verbose = TRUE) {
   for (g in names(cached_map)) acc[[g]] <- list(v = unname(cached_map[g]), s = "cache (prior fetch)")
   for (g in names(local)) if (!is.na(local[g]) && nzchar(local[g] %||% "")) acc[[g]] <- list(v = unname(local[g]), s = "in-park plant taxonomy")
   for (g in names(fetched)) acc[[g]] <- list(v = unname(fetched[g]), s = "iNaturalist taxa API")
+  # asked and came back with nothing: remembered as a blank, so it is not asked again
+  for (g in setdiff(asked, names(fetched)))
+    if (is.null(acc[[g]])) acc[[g]] <- list(v = NA_character_, s = "iNaturalist taxa API (no common name)")
   if (length(acc) > 0) {
     out <- data.frame(genus = names(acc),
                       common_name = vapply(acc, function(x) x$v, character(1)),
@@ -397,8 +411,8 @@ resolve_plant_common <- function(genera, force = FALSE, verbose = TRUE) {
                       retrieved_on = as.character(Sys.Date()), stringsAsFactors = FALSE)
     out <- out[order(out$genus), , drop = FALSE]
     if (nrow(out) >= nrow(cache)) {                              # never shrink a good cache
-      dir.create(PGC_DIR, recursive = TRUE, showWarnings = FALSE)
-      write.csv(out, PGC_CACHE_FILE, row.names = FALSE)
+      dir.create(dirname(cache_path), recursive = TRUE, showWarnings = FALSE)
+      write.csv(out, cache_path, row.names = FALSE)
     }
   }
 

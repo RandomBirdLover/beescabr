@@ -61,16 +61,41 @@ nearest_within <- function(dmat, buffer_m, tie_breaker = "TP") {
 #' @param buffer_m The buffer used.
 #' @param assigned,ambiguous,unassigned Counts.
 #' @return One string.
-near_transect_caption <- function(buffer_m, assigned, ambiguous, unassigned, tagged) {
+near_transect_caption <- function(buffer_m, assigned, ambiguous, unassigned, tagged,
+                                  no_transect = 0) {
   f <- function(x) format(x, big.mark = ",", trim = TRUE)
+  # The distance rule applies to iNaturalist records only. Netted specimens take their
+  # transect from the collection label, so a specimen without one was never measured
+  # against any route -- saying it "was further than 10 m" is a claim nothing tested.
+  far <- max(0, unassigned - no_transect)
+  not_shown <- paste0(f(far), " were further than ", buffer_m, " m from every route",
+                      if (no_transect > 0)
+                        paste0(", and ", f(no_transect),
+                               " netted specimens carry no transect on the label; neither is shown. ")
+                      else " and are not shown. ")
   paste0("Every bee record placed on a transect, from two kinds of evidence. ",
-         f(tagged), " carry a transect the surveyor recorded, and keep it. A further ",
+         f(tagged), " carry a transect the surveyor recorded, and keep it -- for a netted ",
+         "specimen that is the collection label, not a distance. A further ",
          f(assigned), " carry none and are placed by falling within ", buffer_m,
          " m of a route -- mostly public observations rather than surveys. ",
-         f(unassigned), " were further than ", buffer_m,
-         " m from every route and are not shown. ", f(ambiguous),
+         not_shown, f(ambiguous),
          " lay within reach of two routes and went to the nearer one, or to TP where ",
          "the two were exactly equidistant.")
+}
+
+#' The figure's own arithmetic, so the run message cannot drift from it
+#'
+#' The console line added tagged + assigned and left out the netted specimens the
+#' figure plots, reporting 9,506 on a transect where the figure showed 10,371.
+#'
+#' @param tagged iNaturalist records carrying a transect tag.
+#' @param specimens Netted specimens whose label names a transect.
+#' @param assigned Records placed by falling inside the buffer.
+#' @param unassigned Everything not shown.
+#' @return A list: on_transect and total.
+near_transect_tally <- function(tagged, specimens, assigned, unassigned) {
+  on <- tagged + specimens + assigned
+  list(on_transect = on, total = on + unassigned)
 }
 
 #' A recorded transect always beats a geometric guess
@@ -139,7 +164,8 @@ sp_ok  <- .sp_tr %in% TRANSECT_LEVELS
 n_spec <- sum(sp_ok)
 # specimens with no transect are not shown either, and were being left out of the
 # "not shown" count -- so the caption's numbers did not add up to the total.
-n_unassigned <- n_unassigned + sum(!sp_ok)
+n_no_transect <- sum(!sp_ok)   # specimens with no transect on the label: never distance-tested
+n_unassigned <- n_unassigned + n_no_transect
 
 tbl <- rbind(
   data.frame(transect = pts$near_transect[!is.na(pts$near_transect)],
@@ -166,7 +192,7 @@ g <- ggplot(tbl, aes(transect, value, fill = method)) +
        subtitle = "Every record placed on a transect, not only the ones tagged as surveys.",
        x = "transect", y = "records",
        caption = str_wrap(near_transect_caption(RNT_BUFFER_M, n_assigned, n_ambiguous,
-                                                n_unassigned, n_tagged + n_spec), 74)) +
+                                                n_unassigned, n_tagged + n_spec, n_no_transect), 74)) +
   theme_beescabr(11) +
   theme(axis.text = element_text(size = 7, colour = BEE_INK$muted),
         legend.position = "top", plot.title = element_text(hjust = 0.5),
@@ -189,7 +215,7 @@ g_total <- ggplot(tot, aes(transect, n_records, fill = transect)) +
        subtitle = "Every record placed on a transect, not only the ones tagged as surveys.",
        x = "transect", y = "records",
        caption = str_wrap(near_transect_caption(RNT_BUFFER_M, n_assigned, n_ambiguous,
-                                                n_unassigned, n_tagged + n_spec), 74)) +
+                                                n_unassigned, n_tagged + n_spec, n_no_transect), 74)) +
   theme_beescabr(11) +
   theme(axis.text = element_text(size = 7, colour = BEE_INK$muted),
         legend.position = "top", plot.title = element_text(hjust = 0.5),
@@ -197,9 +223,11 @@ g_total <- ggplot(tot, aes(transect, n_records, fill = transect)) +
 bee_ggsave(file.path(RNT_OUT, "records_near_transect_total.png"), g_total,
            width = 6.4, height = 5, bg = "white")
 
-message(sprintf("  %s tagged + %s placed within %d m = %s on a transect; %s further away.",
-                format(n_tagged, big.mark = ","), format(n_assigned, big.mark = ","),
-                RNT_BUFFER_M, format(n_tagged + n_assigned, big.mark = ","),
+.tally <- near_transect_tally(n_tagged, n_spec, n_assigned, n_unassigned)
+message(sprintf("  %s tagged (incl. %s netted specimens) + %s placed within %d m = %s on a transect; %s further away.",
+                format(n_tagged + n_spec, big.mark = ","), format(n_spec, big.mark = ","),
+                format(n_assigned, big.mark = ","), RNT_BUFFER_M,
+                format(.tally$on_transect, big.mark = ","),
                 format(n_unassigned, big.mark = ",")))
 message("  ", file.path(RNT_OUT, "records_near_transect.csv"))
 

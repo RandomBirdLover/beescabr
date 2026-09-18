@@ -625,19 +625,26 @@ test_that("the note tells you how to fix it, not just that it happened", {
 test_that("resolve_missing_taxon_ids separates cached ids from ids found this run", {
   src("reference/taxonomy/resolve_missing_ids.R")
   cache <- tempfile(fileext = ".csv")
-  write.csv(data.frame(
-    key = c("species|andrena atypica|1", "species|stelis anthocopae|2"),
-    taxon_id = c(4242L, NA_integer_),
-    status = c("filled", "not_found_or_ambiguous"),
-    stringsAsFactors = FALSE), cache, row.names = FALSE)
   df <- data.frame(rank = c("species", "species"),
                    scientific_name = c("Andrena atypica", "Stelis anthocopae"),
-                   genus = c("Andrena", "Stelis"), taxon_id = c(NA_integer_, NA_integer_),
+                   family = c("Andrenidae", "Megachilidae"),
+                   genus = c("Andrena", "Stelis"),
+                   species = c("atypica", "anthocopae"),
+                   taxon_id = c(NA_integer_, NA_integer_),
                    stringsAsFactors = FALSE)
+  # First pass with nothing found: lets the function write the cache in its own key format,
+  # rather than this test guessing at it.
+  suppressMessages(resolve_missing_taxon_ids(df, cache_path = cache,
+                                             fetch_fn = function(...) list(), verbose = FALSE))
+  cc <- read.csv(cache, stringsAsFactors = FALSE)
+  expect_equal(nrow(cc), 2L)
+  cc$status[1] <- "filled"; cc$taxon_id[1] <- 4242L      # one now answered from a previous run
+  write.csv(cc, cache, row.names = FALSE)
+
   msg <- capture_messages(
     resolve_missing_taxon_ids(df, cache_path = cache, fetch_fn = function(...) list()))
   txt <- paste(msg, collapse = " ")
   expect_false(grepl("1 now have a number", txt, fixed = TRUE))
-  expect_match(txt, "already had a number")   # the cached one, named as already known
-  expect_match(txt, "0")                       # nothing newly found this run
+  expect_match(txt, "1 already had a number")            # the cached one, named as already known
+  expect_match(txt, "0 of the 1 searched")               # nothing newly found this run
 })

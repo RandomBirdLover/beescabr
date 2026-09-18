@@ -99,7 +99,7 @@ test_that("an empty index gives an empty order, not an error", {
 test_that("bpe_pairs_from_source derives pairs itself, matching bpm_pairs", {
   # helpers only; the flag must be in globalenv or the build runs against real data/
   src_helpers("analysis/bee_plant_matrix.R", "BPM_SOURCED_FOR_HELPERS")
-  src("analysis/reference/bee_plant_explorer.R")
+  src_helpers("analysis/reference/bee_plant_explorer.R", "BPE_SOURCED_FOR_HELPERS")
   recs <- data.frame(
     taxon_id        = c(1L, 1L, 2L, 2L, 3L),
     taxon_rank      = rep("species", 5),

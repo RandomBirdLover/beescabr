@@ -79,6 +79,16 @@ BEESCABR_PACKAGES <- c(
   # setup still missing them. One list, everything installed.
   "askpass", "getPass", "ragg")
 
+#' TRUE when this run must not touch the network
+#'
+#' Menu option 3 ("Offline run") promises "no iNaturalist calls at all". It sets
+#' BEESCABR_SKIP_INGEST=1, which only the observation pull ever checked -- so an
+#' offline run still made ~88 requests for plant common names and missing taxon ids.
+#' Every network-touching step reads this, so the promise means one thing everywhere.
+#'
+#' @return TRUE when BEESCABR_SKIP_INGEST is "1".
+beescabr_offline <- function() identical(Sys.getenv("BEESCABR_SKIP_INGEST", "0"), "1")
+
 # beescabr_require(): the per-script dependency guard. CHECKS, never installs.
 #
 # Every script used to carry its own for(pkg in ...) install.packages() block. That

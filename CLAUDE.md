@@ -60,6 +60,14 @@ the test first, written to fail.
 - **DuckDB code** — use a temp database and guard with
   `skip_if_not_installed("duckdb")` (helper `skip_if_no_store()` /
   `open_temp_store()` in `test-db.R`). Never touch the real cache in a test.
+- **Analysis / figure scripts** — a script that writes files ends in a build block
+  guarded by `if (!exists("<X>_SOURCED_FOR_HELPERS"))`. In a test, load it with
+  `src_helpers("analysis/<file>.R", "<X>_SOURCED_FOR_HELPERS")`, **never** plain
+  `src()`. A bare `src()` runs the build against the real `data/` folder and
+  overwrites the operator's figures and CSVs as a side effect of running the suite.
+  This has happened: two tests silently regenerated `records_near_transect.png` and
+  `bee_plant_explorer.html` mid-suite. `test-no-unguarded-build-source.R` now fails
+  if any test sources a guarded script without its flag.
 
 ## Architecture conventions
 

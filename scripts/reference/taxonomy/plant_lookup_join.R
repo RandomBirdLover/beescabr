@@ -39,7 +39,7 @@ local({
 #   "Isocoma menziesii sedoides"  -> genus "Isocoma",  species "Isocoma menziesii"  (rolled to binomial)
 #   "Madia" / "Madia sp."         -> genus "Madia",    species NA  (no species named)
 #   "Cactaceae" (family)          -> genus NA,         species NA  (not a genus)
-plant_name_parts <- function(x) {
+plant_name_parts <- function(x, taxon_id = NULL, lookup_path = NULL) {
   x  <- trimws(gsub("\\s+", " ", as.character(x)))
   gs <- lapply(x, function(s) {
     if (is.na(s) || s == "") return(c(NA_character_, NA_character_))
@@ -49,8 +49,37 @@ plant_name_parts <- function(x) {
             paste(w[1], w[2]) else NA_character_
     c(w[1], sp)
   })
-  list(plant_genus   = vapply(gs, `[`, character(1), 1),
-       plant_species = vapply(gs, `[`, character(1), 2))
+  out <- list(plant_genus   = vapply(gs, `[`, character(1), 1),
+              plant_species = vapply(gs, `[`, character(1), 2))
+  # Word 1 of a name is only a genus if the reference table says so. "Angiospermae",
+  # "Faboideae", "Madieae" and ten more are real taxa ABOVE genus; they do not end in
+  # "aceae", so the test above misses them and they landed in a column called
+  # plant_genus. The lookup records each at its true rank with a BLANK genus column.
+  #
+  # The test is that BLANK GENUS COLUMN, not rank == "genus". Rank would also blank
+  # every species row, and would throw away section/subgenus names (Trachynia ->
+  # Brachypodium, Cepa -> Allium) whose genus the lookup already knows.
+  #
+  # Joined on taxon_id, never on the name we just split (CLAUDE.md, Taxon identity).
+  # Fails OPEN: an id that is blank, or absent from the lookup, keeps its answer --
+  # a stale lookup must not silently blank real genera.
+  if (!is.null(taxon_id) && length(taxon_id) == length(x)) {
+    lp <- if (!is.null(lookup_path)) lookup_path
+          else if (exists("PATHS")) PATHS$plant_taxonomy_lookup else NULL
+    lk <- if (!is.null(lp) && file.exists(lp))
+            tryCatch(suppressWarnings(suppressMessages(
+              read_csv(lp, show_col_types = FALSE, col_types = cols(.default = "c")))),
+              error = function(e) NULL) else NULL
+    if (!is.null(lk) && nrow(lk) && all(c("taxon_id", "genus") %in% names(lk))) {
+      id <- trimws(as.character(taxon_id)); id[id == "" | id == "NA"] <- NA_character_
+      m  <- match(id, trimws(as.character(lk$taxon_id)))
+      m[is.na(id)] <- NA_integer_                   # match(NA, x) finds NA -- never allow it
+      above <- !is.na(m) & (is.na(lk$genus[m]) | trimws(lk$genus[m]) == "")
+      out$plant_genus[above]   <- NA_character_
+      out$plant_species[above] <- NA_character_
+    }
+  }
+  out
 }
 
 #' Attach plant taxon ids to records carrying a flower name
@@ -85,6 +114,10 @@ attach_flower_ids <- function(df, lookup_path = NULL) {
   m   <- ifelse(is.na(m), mr, m)
   df$flower_taxon_id <- lk$taxon_id[m]
   df$flower_in_park  <- ifelse(is.na(m), NA, toupper(trimws(lk$in_cabr_park_at_all[m])) == "TRUE")
+  # Re-split now that each flower has an id. The first call above ran before
+  # flower_taxon_id existed, so the rank gate had nothing to join on.
+  .pp <- plant_name_parts(df$flower_visited, df$flower_taxon_id, lookup_path)
+  df$plant_genus <- .pp$plant_genus; df$plant_species <- .pp$plant_species
   df
 }
 

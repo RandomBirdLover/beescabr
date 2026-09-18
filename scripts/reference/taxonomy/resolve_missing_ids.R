@@ -127,6 +127,10 @@ resolve_missing_taxon_ids <- function(df, cache_path = RMI_CACHE, fetch_fn = NUL
   # cache with no API call. Lumped into n_hit, they were announced as fresh finds --
   # "10 now have a number" in a run that found nothing, right before "17 still have none".
   n_new <- 0L; n_hit <- 0L; n_again <- 0L; n_cached <- 0L
+  # An offline run promised no iNaturalist calls. Cached verdicts still apply; only
+  # the searches stop. Without this, 17 live searches ran inside an "offline" run.
+  .off <- if (exists("beescabr_offline")) beescabr_offline() else FALSE
+  if (.off) fetch_fn <- function(nm) list()
   for (i in need) {
     key <- ck(rk[i], term[i], parent[i])
     c_row <- cache[cache$key == key, ]
@@ -156,6 +160,7 @@ resolve_missing_taxon_ids <- function(df, cache_path = RMI_CACHE, fetch_fn = NUL
     if (n_new)   message(sprintf("    %d looked up for the first time", n_new))
     if (n_again) message(sprintf("    %d looked up again -- they had no page last time, and", n_again),
                          "\n      iNaturalist may have published them since")
+    if (.off) message("    (offline run: not searched, cached answers only)")
     if (n_cached) message(sprintf("    %d already had a number from a previous run", n_cached))
     message(sprintf("    %d of the %d searched just got one. The rest are looked for again every run.",
                     n_hit, n_again + n_new))

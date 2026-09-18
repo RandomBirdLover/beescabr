@@ -253,6 +253,8 @@ merge_manual_overrides <- function(new, existing = NULL) {
 #' @param overrides_path Where answers are written.
 #' @param interactive_ok FALSE skips the prompts entirely, for an unattended run.
 #' @param prompt_fn Injection point for reading an answer.
+#' @param no_page_terms Names the Holway pass already recorded as having no
+#'   iNaturalist page, so this prompt does not ask about them a second time.
 #' @return Invisibly, the answers recorded.
 prompt_missing_taxon_ids <- function(cache_path = RMI_CACHE_PATH, overrides_path = MANUAL_OVERRIDES_PATH,
                                      interactive_ok = interactive() && Sys.getenv("BEESCABR_NONINTERACTIVE", "0") != "1",

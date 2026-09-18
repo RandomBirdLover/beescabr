@@ -110,3 +110,33 @@ test_that("shown plus not-shown equals the total", {
   txt <- near_transect_caption(10, placed, 45L, not_shown, tagged)
   expect_match(txt, "2,153", fixed = TRUE)
 })
+
+# --- the run message dropped the netted specimens ---------------------------
+# The figure places tagged iNat records + specimens carrying a transect + records
+# within the buffer. The console line added only the first and third, so it said
+# 9,506 on a transect when the figure plotted 10,371, and its total came to 11,689
+# against a real 12,554. The caption was right; only the message was short.
+test_that("near_transect_tally counts the specimens the figure plots", {
+  src_helpers("analysis/coverage/records_near_transect.R", "RNT_SOURCED_FOR_HELPERS")
+  t <- near_transect_tally(tagged = 7562, specimens = 865, assigned = 1944, unassigned = 2183)
+  expect_equal(t$on_transect, 7562 + 865 + 1944)
+  expect_equal(t$total, 7562 + 865 + 1944 + 2183)
+  expect_equal(t$total, 12554)                      # reconciles with the whole dataset
+})
+
+test_that("the caption separates 'too far' from 'never measured'", {
+  src_helpers("analysis/coverage/records_near_transect.R", "RNT_SOURCED_FOR_HELPERS")
+  cap <- near_transect_caption(10, assigned = 1944, ambiguous = 45,
+                               unassigned = 2183, tagged = 8427, no_transect = 115)
+  expect_match(cap, "2,068")                         # the ones actually measured and too far
+  expect_match(cap, "115")                           # specimens with no transect on the label
+  expect_false(grepl("2,183 were further", cap, fixed = TRUE))
+})
+
+test_that("the caption still works when no specimens lack a transect", {
+  src_helpers("analysis/coverage/records_near_transect.R", "RNT_SOURCED_FOR_HELPERS")
+  cap <- near_transect_caption(10, assigned = 100, ambiguous = 2,
+                               unassigned = 50, tagged = 500, no_transect = 0)
+  expect_match(cap, "50")
+  expect_false(grepl("carry no transect", cap, fixed = TRUE))
+})
