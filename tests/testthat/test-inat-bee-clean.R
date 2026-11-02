@@ -129,3 +129,37 @@ test_that("location_needs_fix is not a clean-table column, and ibc_location_revi
   expect_false("location_needs_fix" %in% names(rev))            # the flag itself isn't carried
   expect_equal(nrow(ibc_location_review(df[df$location_needs_fix == FALSE, ])), 0)  # none flagged -> empty
 })
+
+# ibc_specimen_flag(): a photo of a COLLECTED specimen (Specimen? = yes) is not a live-bee record.
+# The field-name spellings are crosswalk-driven (the 'specimen?' row's inat_field_variants), so a
+# "yes" in any OTHER obs-field is unaffected. Blank / "no" / missing field all -> "no".
+test_that("ibc_specimen_flag flags only affirmative Specimen?, crosswalk-driven", {
+  src("inat_observations/inat_bee_clean.R")
+  cw <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble(
+    name                = c("specimen?", "bee_on_flower"),
+    inat_field_variants = c("specimen?; specimen collected?", "insect on flower")), cw)
+  ex <- tibble(
+    id                          = c("1", "2", "3", "4", "5"),
+    `field:Specimen?`           = c("Y", "", "no", NA, ""),
+    `field:In bloom?`           = c("", "yes", "", "", ""),    # a "yes" in a DIFFERENT field -> ignored
+    `field:Specimen collected?` = c("", "", "", "", "yes"))    # a variant spelling -> caught
+  out <- ibc_specimen_flag(ex, cw)
+  expect_equal(out$specimen, c("yes", "no", "no", "no", "yes"))
+  expect_equal(names(out), c("obs_id", "specimen"))
+})
+
+test_that("ibc_specimen_flag is all 'no' when the crosswalk row or file is absent", {
+  src("inat_observations/inat_bee_clean.R")
+  cw <- tempfile(fileext = ".csv")
+  readr::write_csv(tibble(name = "bee_on_flower", inat_field_variants = "insect on flower"), cw)
+  ex <- tibble(id = c("1", "2"), `field:Something` = c("yes", "no"))
+  expect_equal(ibc_specimen_flag(ex, cw)$specimen, c("no", "no"))                   # no 'specimen?' row
+  expect_equal(ibc_specimen_flag(ex, "does/not/exist.csv")$specimen, c("no", "no")) # missing crosswalk file
+})
+
+# the clean table keeps a 'specimen' column so an updated Specimen? re-applies fresh each run.
+test_that("'specimen' is a clean-table column", {
+  src("inat_observations/inat_bee_clean.R")
+  expect_true("specimen" %in% IBC_COLUMN_ORDER)
+})

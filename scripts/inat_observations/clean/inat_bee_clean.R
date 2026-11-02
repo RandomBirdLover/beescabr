@@ -57,6 +57,7 @@ IBC_OUT_CLEAN      <- PATHS$inat_clean
 IBC_FIX_SURVEY     <- "data/inat_observations/review/qc_review_inat_bee_behavior_survey_generated.csv"     # behavior fields to fix -- SURVEY obs
 IBC_FIX_NONSURVEY  <- "data/inat_observations/review/qc_review_inat_bee_behavior_nonsurvey_generated.csv"  # behavior fields to fix -- CASUAL (non-survey) obs
 IBC_LOCATION_REVIEW <- "data/inat_observations/review/location/qc_review_inat_bee_location_generated.csv"  # heads-up worklist: survey pins to re-check on iNat (lives with the per-observer maps)
+IBC_SPECIMEN_REVIEW <- "data/inat_observations/review/qc_review_inat_specimen_photos_generated.csv"       # obs flagged Specimen? = yes (photo of a collected specimen) -- removed from the clean table
 IBC_LOOKUP         <- PATHS$taxonomy_lookup   # taxon_id -> taxonomy fill
 IBC_OFF_TRANSECT_M <- 50   # a pin farther than this from EVERY transect line is "off transect"
 IBC_ROAD_BUFFER_M  <- 10   # off-transect AND within this of the access road = walk-in (not a survey)
@@ -76,7 +77,7 @@ IBC_TAXONOMY_COLS <- c("scientific_name", "common_name",
 
 # final column order for the clean table
 IBC_COLUMN_ORDER <- c("obs_id", "observer", "observed_on", "is_survey", "survey_note", "survey_source",
-                      "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata",
+                      "surveyor_type", "survey_method", "survey_year", "transect", "is_10min", "is_metadata", "specimen",
                       IBC_ANNOT_COLS, "flower_answered_no", "flower_taxon_id", "flower_in_park", "plant_genus", "plant_species", "bee_situation",
                       "taxon_id", "taxon_rank", "quality_grade",
                       IBC_TAXONOMY_COLS,
@@ -169,6 +170,25 @@ ibc_annotations <- function(ex_full, crosswalk_path) {
     out$flower_visited <- val
   }
   out
+}
+
+# ---- specimen photos -------------------------------------------------------
+# ibc_specimen_flag(): PURE. "yes" when an obs's Specimen? obs-field is affirmative -- a photo of a
+# COLLECTED specimen, not a live-bee field record -- else "no". Field-name spellings come from the
+# crosswalk 'specimen?' row's inat_field_variants, so a new spelling is a crosswalk edit, not a code
+# change (mirrors ibc_annotations). No crosswalk row / no such field / blank / "no" all -> "no".
+ibc_specimen_flag <- function(ex_full, crosswalk_path, concept = "specimen?") {
+  ids <- as.character(ex_full$id)
+  if (!file.exists(crosswalk_path)) return(tibble(obs_id = ids, specimen = "no"))
+  cw  <- suppressWarnings(read_csv(crosswalk_path, show_col_types = FALSE))
+  raw <- cw$inat_field_variants[tolower(trimws(cw$name)) == concept]
+  variants <- tolower(trimws(unlist(strsplit(paste(raw, collapse = ";"), "[;,]"))))
+  variants <- variants[nzchar(variants)]
+  fcols <- grep("^field:", names(ex_full), value = TRUE)
+  fcols <- fcols[tolower(sub("^field:", "", fcols)) %in% variants]
+  .yes  <- function(x) trimws(tolower(as.character(x))) %in% c("yes", "y", "true", "1", "t")
+  is_yes <- if (length(fcols)) Reduce(`|`, lapply(ex_full[fcols], .yes)) else rep(FALSE, length(ids))
+  tibble(obs_id = ids, specimen = ifelse(is_yes, "yes", "no"))
 }
 
 # ---- bee situation ---------------------------------------------------------
@@ -431,7 +451,17 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
   if (!exists("attach_flower_ids")) source("scripts/reference/taxonomy/plant_lookup_join.R")
   df <- attach_flower_ids(df)                 # flower_taxon_id + flower_in_park from the plant lookup
 
+  df <- df |>
+    left_join(ibc_specimen_flag(ex_full, crosswalk_path), by = "obs_id") |>
+    mutate(specimen = coalesce(specimen, "no"))   # photo of a collected specimen? (crosswalk-driven)
+
   clean <- df |> select(any_of(IBC_COLUMN_ORDER))
+
+  # specimen photos: an obs marked Specimen? = yes is a photo of a COLLECTED specimen, not a
+  # live-bee record -- drop it from the clean table (kept as a review artifact). The 'specimen'
+  # column stays, reading "no" on every surviving row; re-applied fresh each run from iNaturalist.
+  specimen_photos <- clean |> filter(specimen == "yes")
+  clean           <- clean |> filter(specimen != "yes")
 
   # hand-back worklists (review artifacts, kept OUT of the clean table):
   #   * fix_behavior    -- behavioral fields to fix; SPLIT into a survey + a non-survey file
@@ -457,6 +487,8 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
     write.csv(fix_nonsurvey, IBC_FIX_NONSURVEY, row.names = FALSE, na = "")
     dir.create(dirname(IBC_LOCATION_REVIEW), recursive = TRUE, showWarnings = FALSE)
     write.csv(location_review, IBC_LOCATION_REVIEW, row.names = FALSE, na = "")
+    dir.create(dirname(IBC_SPECIMEN_REVIEW), recursive = TRUE, showWarnings = FALSE)
+    write.csv(specimen_photos, IBC_SPECIMEN_REVIEW, row.names = FALSE, na = "")
   }
   n_walk    <- sum(df$status == "keep" & df$spatial_cat == "walk_in")
   n_bad     <- sum(df$location_needs_fix)
@@ -470,10 +502,11 @@ inat_bee_clean <- function(membership_path = IBC_MEMBERSHIP,
         format(sum(!clean$is_survey), big.mark = ","), " other")
   bx_out(basename(out_clean))
   bx_cont("spatial: ", format(n_walk, big.mark = ","), " walk-in re-marked NOT survey · ", format(n_bad, big.mark = ","), " pins off-transect → review")
+  bx_cont("specimen: ", format(nrow(specimen_photos), big.mark = ","), " photo(s) of collected specimens removed → ", basename(IBC_SPECIMEN_REVIEW))
   bx_cont("annotations: ", format(n_fv, big.mark = ","), " obs with flower_visited")
   bx_cont("fix_behavior: ", format(n_noplant, big.mark = ","), " on-flower but no plant · ", format(n_missing, big.mark = ","), " missing all fields · ", format(n_badflow, big.mark = ","), " non-plant/unresolved flower · ", format(n_notgen, big.mark = ","), " flower not to genus (family-level)")
   bx_out(IBC_FIX_SURVEY); bx_out(IBC_FIX_NONSURVEY)   # the path, not just the name
-  invisible(list(clean = clean, fix_behavior = fix_behavior, location_review = location_review))
+  invisible(list(clean = clean, fix_behavior = fix_behavior, location_review = location_review, specimen_photos = specimen_photos))
 }
 
 if (!exists("BEESCABR_SOURCED_BY_RUNNER") && sys.nframe() == 0)
