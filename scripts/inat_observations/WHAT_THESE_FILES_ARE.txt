@@ -45,6 +45,21 @@ THE CLEANING SCRIPTS
 review/ writes the QC files: probable misidentifications, records outside the
 park, tags that matched no survey. Those are questions for a person, not errors.
 
+inat_bee_clean.R does not decide which records are surveys. The brain did that
+(scripts/project_info/, see THE RULES in its WHAT_THESE_FILES_ARE.txt): the tag
+is the evidence, a surveyor's transect for the day is the majority tag, and the
+50 m rescue only pulls untagged records in, never tagged ones out. This script
+looks that answer up by obs_id and adds taxonomy, coordinates and the crosswalk
+annotations.
+
+Its last step drops photos of collected specimens: any record whose Specimen?
+obs-field is yes. The field-name spellings come from the crosswalk's specimen?
+row (inat_field_variants), so a new spelling is a crosswalk edit. The dropped
+rows go to data/inat_observations/review/qc_review_inat_specimen_photos_generated.csv.
+The specimen column stays in the clean table (blank reads as no) so a field
+corrected on iNaturalist takes effect on the next run. A specimen photo nobody
+marked cannot be told from a live bee and stays in.
+
 
 TESTING NETWORK CODE
 ====================

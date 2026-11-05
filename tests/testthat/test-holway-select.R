@@ -96,6 +96,30 @@ test_that("resolved subspecies scientific_name gets the ssp. display form", {
   expect_equal(row$taxon_id, 313836L)
 })
 
+# A ranks row can lack the rarer rank columns (subphylum, subclass, suborder, infraorder,
+# epifamily). The clean row must still carry every rank column, blank, with no warning --
+# `ranks$col` on a tibble warns "Unknown or uninitialised column" and then tibble() silently
+# DROPS the NULL, so the schema used to shrink by five columns.
+test_that("tidy_holway_ref_row keeps every rank column, blank, when ranks lacks some", {
+  src("reference/holway_reference_build.R")
+  ranks <- tibble::tibble(
+    taxon_id = 1L, rank = "species",
+    taxon_kingdom_name = "Animalia", taxon_phylum_name = "Arthropoda",
+    taxon_class_name = "Insecta", taxon_order_name = "Hymenoptera",
+    taxon_superfamily_name = "Apoidea", taxon_family_name = "Andrenidae",
+    taxon_subfamily_name = NA_character_, taxon_tribe_name = NA_character_,
+    taxon_subtribe_name = NA_character_, taxon_genus_name = "Andrena",
+    taxon_species_name = "Andrena foo", taxon_subspecies_name = NA_character_,
+    subgenus = NA_character_, complex = NA_character_, complex_taxon_id = NA_integer_)
+  expect_no_warning(
+    row <- tidy_holway_ref_row(ranks, scientific_name = "Andrena foo",
+                               common_name = NA_character_, source_sheet = "Described"))
+  missing_ranks <- c("subphylum", "subclass", "suborder", "infraorder", "epifamily")
+  expect_true(all(missing_ranks %in% names(row)))
+  expect_true(all(is.na(unlist(row[missing_ranks]))))
+  expect_equal(row$family, "Andrenidae")          # the present ranks are untouched
+})
+
 test_that("holway_resolution_plan builds the right search per row type", {
   src("reference/holway.R"); src("reference/holway_reference_build.R")
   p_ss <- holway_resolution_plan("Described", "Ashmeadiella", split_holway_species("cactorum basalis"))

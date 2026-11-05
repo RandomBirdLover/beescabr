@@ -210,51 +210,77 @@ tag that was mistyped; ignore the rest.
 
 ### Unknown fields → ACTION NEEDED
 
-Structured key-value fields, which *do* need a decision:
+Structured key-value fields, which *do* need a decision. The run opens the
+interactive review (`review_unknowns("fields")` in
+`project_info/review/qc_review_mastercrosswalk.R`) and asks about each one:
 
 ```
-1. Look the field up on iNat, by id or name
-2. Add a row to the crosswalk:
-       relevant      ->  type = obs_field
-       not relevant  ->  type = ignore
-3. Re-run -- it disappears from the block
+<Enter>  accept the suggested concept   -> field name appended to that row's inat_field_variants
+3        file into concept number 3     -> same, for the row you pick (3,5 files it into both)
+i        ignore                         -> appended to the `ignore` row; never asked again
+n        new concept                    -> asks for a name and a what_for, adds the row
+s        skip for now                   -> asked again next run
+q        save and quit
 ```
+
+Every answer is a crosswalk edit; nothing else changes. Re-run and the field is gone from the block.
+
+Two things decide whether a field ever reaches this block. It is scoped to fields that appear on observations by people in the roster (`people_manual.csv`), so a field only non-project users have filled in is never asked about. And it can only see fields that are in the cache, so a field added on iNaturalist after the last pull does not show up until a run with a fresh pull (menu option **1** or **4**, not **3**). Deleting a field on iNaturalist and adding a differently named one in its place means a fresh pull before the new name can be asked about.
 
 ## The crosswalk
 
-`data/project_info/crosswalk/master_crosswalk_manual.csv` controls `inat_bee_clean.R` and `inat_plant_clean.R`. Adding or editing rows changes script behavior without touching any R code.
+`data/project_info/crosswalk/master_crosswalk_manual.csv` is read by the brain
+(`finding_project_info.R`), the three iNat clean scripts, the specimen clean and the plant
+taxonomy build. One row per **concept** (`name`); the other columns list the spellings that
+concept goes by in each data source. Adding a spelling to a row, or adding a row, changes script
+behavior without touching any R code. A new row that needs new *behavior* (not just a new
+spelling) is a code change too: the scripts find a concept by its `name`.
 
 ### Column reference
 
-| Column | What it holds |
-|--------|---------------|
-| `name` | Human-readable tag or field name |
-| `field_id` | iNat observation field ID(s); blank for tags and derived fields |
-| `category` | Grouping label (Transect, Beeple, Intern, Exclude, Field, Timing-Weather, Derived, Location) |
-| `type` | Controls how the script handles this row — see Type values below |
-| `datatype` | Expected value type: `text`, `taxon`, `numeric`, `time` |
-| `allowed_values` | Pipe-separated valid values; `"fill in"` = auto-fetch from iNat API on next run |
-| `applies_to` | Which export this row applies to: `bee`, `plant`, `both`, or `exclude` |
-| `method_context` | Survey method(s): `non-lethal`, `lethal`, `both`, or `n/a` |
-| `current_location` | Where the script looks for this value: `tag_list`, `obs_field`, `description (notes)`, `tag_list (photo-metadata tags)` |
-| `inat_variants` | Known alternate spellings/capitalizations in raw iNat data |
-| `specimen_plot_variants` | How this tag/field appears in physical plot or specimen sheets |
-| `verified` | `TRUE` = confirmed against real data; `FALSE` = added but not yet spot-checked |
-| `notes` | What this tag/field means and when to use it |
-| `script_rules` | Logic the script applies beyond allowed_values (normalization, derivation heuristics, overrides) |
+Spelling lists are separated by `;` (`,` also works). Matching is case-insensitive, trims
+whitespace, and drops a leading `#`.
 
-### Type values
+| Column | What it holds | Read by |
+|--------|---------------|---------|
+| `name` | The concept. Scripts look rows up by this exact string (`flower_visited`, `bee_on_flower`, `specimen?`, `tp`...), so do not rename one without grepping `scripts/`. For a non-plant row the name itself also counts as a tag spelling. | everything |
+| `what_for` | The group the row belongs to; see the values below. The brain decides survey / exclude / transect from it. | brain, specimen clean, plant lookup |
+| `applies_to_plant_bee_or_both` | `bee`, `plant` or `both`. Informational; the review script fills in `both` on a row it creates. | nobody |
+| `nonlethal_or_lethal` | `nonlethal`, `lethal` or `both`. Informational. | nobody |
+| `where_data_found` | Which of the variant columns are expected to be filled for this row. Informational. | nobody |
+| `specimen_label_variants` | How the concept is written on specimen labels and in the specimen sheet (transect names, plant names). | specimen clean, `collect_plant_names.R` |
+| `inat_field_variants` | iNat observation-field **names** that carry this concept. The review script appends here when you file an unknown field. The brain's unknown-fields block treats every name in this column, on any row, as known. | brain, bee / plant / forage clean |
+| `inat_field_id` | The iNat numeric id(s) of those fields. Informational; the ids the scripts use come from `inat_field_id_map_generated.csv`. | nobody |
+| `inat_field_datatype` | What the field holds (`text`, `taxon`, `yes/no`...). Informational. | nobody |
+| `inat_field_allowed_values` | The field's dropdown values, for a person reading the file. Informational. | nobody |
+| `inat_tag_variants` | iNat **tag** spellings for this concept (`TP; #TP1; TP1/TP2`). The review script appends here when you file an unknown tag. | brain, bee clean |
+| `notes` | What the concept means and when to use it. | nobody |
+| `script_rules` | Any rule a script applies beyond matching the spelling, written out for a human. | nobody |
 
-| type | Meaning |
-|------|---------|
-| `tag` | iNat observation tag (free-text label). Script looks in `tag_list`. |
-| `obs_field` | iNat observation field (structured key-value). Script looks in `ofvs` from the API. |
-| `notes_field` | Value extracted from the free-text description/notes field. |
-| `derived` | Computed by the script from other data; not directly from iNat. |
-| `ignore` | **Field exists in iNat data but is not processed. The observation is kept — only this field is skipped.** Use for survey-irrelevant fields (e.g. `Fasciation`, `Leaf aroma`). |
-| `exclude` | **Tag marks an entire observation to be dropped.** The observation is removed, not just the field. Use for non-Cabrillo projects swept in by the SD County pull, or pilot data excluded by the PI. |
+"Read by nobody" columns are still worth filling: they are the only record of what a field was
+for, and the review script's suggestions use the text in a row to guess where an unknown item
+belongs.
 
-`ignore` and `exclude` are deliberately different: `ignore` = keep the obs, skip the field; `exclude` = drop the obs entirely.
+### `what_for` values
+
+How the brain treats a token (a tag, or an obs-field *value*) that matches a row:
+
+| `what_for` | Meaning |
+|------------|---------|
+| `survey` | A survey tag (`cabr_bee_10_min_survey`, `cabr_bee_general_survey`): the observation is a survey record (`keep`). The behavior rows a survey records (`bee_on_flower`, `flower_visited`, `bee_on_ground`...) carry the same label as a grouping, but the brain only sees tags and field *values*, so a filled-in behavior field is not by itself a survey signal; those rows are read by the clean scripts, by `name`, to build the annotation columns. |
+| `meta_data` | The start/end-time record (`cabr_bee_meta_data`). Counts as a survey signal and sets `is_metadata`. |
+| `transect` | One row per transect (`tp`, `upmon`, `bst`, `ot`). The matched row's `name` becomes the observation's transect. |
+| `exclude` | **The observation is dropped**, whatever else it carries (`project_pilot_observations`, `cabr_bee_lethal_collection`). Exclude wins over survey. |
+| `behavior`, `method`, `location` | Annotations with no bearing on survey status (`feeding`, `mating`, `mark_recapture`, `double_check_location`). |
+| `plant_taxon` | A plant name. Skipped by the tag matcher entirely; used by the plant lookup and the specimen clean. |
+| `ignore` | The one catch-all row. Fields and tags filed here are known-and-irrelevant: the observation is kept, the field is skipped, and the unknown-fields block stops asking. |
+| anything else | Treated as "no survey signal" (the `specimen?` row, say). A row that must not be read as a survey should **not** say `survey`. |
+
+The `specimen?` row is found by `name`, not by `what_for`: `inat_bee_clean.R` reads its
+`inat_field_variants` to know which obs-field spellings mean "photo of a collected specimen".
+
+`ignore` and `exclude` are deliberately different: `ignore` = keep the obs, skip the field;
+`exclude` = drop the obs entirely.
 
 ---
 
@@ -306,6 +332,18 @@ Three things that shape hold:
 | 4 | Clean | `inat_observations/clean/*`, `specimens/specimen_bee_clean.R` | the `*_clean_generated.csv` tables |
 | 5 | Taxonomy | `reference/taxonomy/*` | `sd_bee_taxonomy_lookup_generated.csv` |
 | 6 | Checklists | `checklists/*` | `data/checklists/**` |
+
+## How a beeple photo becomes a survey record
+
+Three rules, applied in this order, and the reason for each. `LIMITATIONS.md` has the consequences.
+
+**1. The tag is the evidence.** The brain reads each observation's tags and obs-field values against the crosswalk. A survey tag means survey (`keep`); an exclude tag wins over everything; an untagged observation inside the park is held as `flag`. Nothing about the pin or the timestamp decides this, because casual coordinates drift and camera clocks are wrong often enough that neither can be trusted.
+
+**2. One transect per surveyor per day, by majority** (`surveys/resolve_beeple_transects_per_survey.R`). The transect a beeple surveyor walked that day is the tag most of their records carry. Records tagged otherwise are relabeled to the majority and written to the mistags review file; a tie goes to review. This label only feeds the per-transect effort figures. Interns are not touched.
+
+**3. The 50 m rescue, one way only** (`surveys/rescue_on_transect_surveys.R`). A `flag` record becomes a survey (`survey_source = inferred_on_transect`) when its observer has a resolved transect that day and the pin is within 50 m of that transect. It never runs in reverse: a tagged record outside the buffer stays a survey, because rule 1 says the tag outranks the pin.
+
+Then the clean step (`inat_observations/clean/inat_bee_clean.R`) joins taxonomy, coordinates and the crosswalk annotations, and as its last action drops any record whose `Specimen?` obs-field is `yes`, a photo of a collected specimen rather than a live bee. Dropped rows go to `data/inat_observations/review/qc_review_inat_specimen_photos_generated.csv`. The `specimen` column is kept in the clean table (blank reads as `no`), so correcting the field on iNaturalist is picked up by the next run. The field-name spellings it recognises are the `inat_field_variants` of the crosswalk's `specimen?` row.
 
 | Design rule | Why |
 |---|---|

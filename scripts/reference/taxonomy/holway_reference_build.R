@@ -495,19 +495,23 @@ tidy_holway_ref_row <- function(ranks, scientific_name, common_name, source_shee
   # prefer iNat's subgenus; fall back to Holway's own (e.g. a resolved tentative
   # species whose iNat ancestry omits the subgenus still keeps "(Micandrena)").
   subg <- if (is.na(ranks$subgenus)) .strip_parens(holway_subgenus) else ranks$subgenus
+  # A rank column iNat didn't return for this taxon is absent from `ranks`. `ranks$col` on a
+  # tibble warns and yields NULL, and tibble() then DROPS a NULL column -- so the row would
+  # lose columns and break the reference-table schema. Read ranks with [[ ]] and blank-fill.
+  rk <- function(col) ranks[[col]] %||% NA_character_
   tibble::tibble(
     taxon_id        = as.integer(ranks$taxon_id),
     scientific_name = sci,
     common_name     = common_name %||% NA_character_,
     rank            = ranks$rank %||% NA_character_,
-    kingdom     = ranks$taxon_kingdom_name,     phylum      = ranks$taxon_phylum_name,
-    subphylum   = ranks$taxon_subphylum_name,   class       = ranks$taxon_class_name,
-    subclass    = ranks$taxon_subclass_name,    order       = ranks$taxon_order_name,
-    suborder    = ranks$taxon_suborder_name,    infraorder  = ranks$taxon_infraorder_name,
-    superfamily = ranks$taxon_superfamily_name, family      = ranks$taxon_family_name,
-    epifamily   = ranks$taxon_epifamily_name,   subfamily   = ranks$taxon_subfamily_name,
-    tribe       = ranks$taxon_tribe_name,       subtribe    = ranks$taxon_subtribe_name,
-    genus       = ranks$taxon_genus_name,       subgenus    = subg,
+    kingdom     = rk("taxon_kingdom_name"),     phylum      = rk("taxon_phylum_name"),
+    subphylum   = rk("taxon_subphylum_name"),   class       = rk("taxon_class_name"),
+    subclass    = rk("taxon_subclass_name"),    order       = rk("taxon_order_name"),
+    suborder    = rk("taxon_suborder_name"),    infraorder  = rk("taxon_infraorder_name"),
+    superfamily = rk("taxon_superfamily_name"), family      = rk("taxon_family_name"),
+    epifamily   = rk("taxon_epifamily_name"),   subfamily   = rk("taxon_subfamily_name"),
+    tribe       = rk("taxon_tribe_name"),       subtribe    = rk("taxon_subtribe_name"),
+    genus       = rk("taxon_genus_name"),       subgenus    = subg,
     complex     = ranks$complex,
     species     = sp_ep,
     subspecies  = ss_ep,

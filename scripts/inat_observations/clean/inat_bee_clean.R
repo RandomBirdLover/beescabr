@@ -28,6 +28,19 @@
 #   optional; absent either one, nothing is re-marked. (The pin-map visualising this is kept as a
 #   reference artifact next to the road layer, not run in the pipeline.)
 #
+# SPECIMEN PHOTOS (the LAST cleaning step)
+#   A photo of a COLLECTED specimen posted to iNat is not a live-bee record. Any obs whose Specimen?
+#   obs-field is affirmative (ibc_specimen_flag) is dropped from the clean table and logged to
+#   IBC_SPECIMEN_REVIEW. The field-name spellings are the crosswalk 'specimen?' row's
+#   inat_field_variants -- a new spelling is a crosswalk edit, not a code change. The 'specimen' column
+#   is KEPT in the clean table (blank -> "no") so a field corrected on iNat re-applies next run. No
+#   crosswalk row / no such field -> nothing is dropped. An unmarked specimen photo cannot be told
+#   from a live bee and stays in.
+#
+#   Survey-or-not is NOT decided here. The brain did that (tag is the evidence; majority transect per
+#   surveyor-day; the 50 m rescue pulls untagged obs in and never pushes tagged obs out) -- see
+#   project_info/WHAT_THESE_FILES_ARE.txt and dev-docs/LIMITATIONS.md.
+#
 # TAXONOMY (2026-07-20) -- now FILLED, not a scaffold:
 #   * scientific_name, common_name, kingdom..subspecies are filled from the taxonomy lookup by
 #     taxon_id (ibc_fill_taxonomy) -- the lookup is built EARLIER in the run. A taxon_id absent
@@ -41,6 +54,7 @@
 #          data/spatial/shapefiles/transects/cabr_bee_transects.shp               (off-transect test)
 #          data/spatial/shapefiles/access_routes_to_transects/cabr_survey_access_routes.shp (Humphreys Rd walk-in)
 # OUTPUT   data/inat_observations/inat_clean/cabr_inat_bee_clean_generated.csv        (one labeled CABR table)
+#          data/inat_observations/review/qc_review_inat_specimen_photos_generated.csv (Specimen? = yes rows dropped above)
 #
 # Run: source("scripts/inat_observations/clean/inat_bee_clean.R"); inat_bee_clean()
 # =============================================================

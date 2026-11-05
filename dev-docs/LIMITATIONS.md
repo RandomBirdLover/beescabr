@@ -23,6 +23,8 @@ field cannot be fixed by code later, which is the main thing this page is for.
 | No camera or device recorded | Camera-vs-phone is unanswerable. |
 | Intern practice photos not flagged | Cannot be separated from real surveys. |
 | Casual iNaturalist coordinate precision | Drifts far enough to move a record off its transect. |
+| **The survey tag is the only evidence a record is a survey** | Pins drift and camera clocks are often wrong, so neither location nor time can say whether a photo was taken on the walk. The tag can. A survey tag on a photo taken off the walk, or on another transect the same day, is counted as a survey record; an untagged survey photo is not. Protocol: tag only the photos taken during the walk, with that walk's transect. |
+| Photos of pinned specimens on iNaturalist | A photo of a collected specimen is not a live-bee record. Observers mark these with the `Specimen?` obs-field; one left unmarked cannot be told from a field photo and stays in the table. |
 | Photos stall above species | *Lasioglossum*, *Ceratina* — a real detection limit, not a data-entry gap. |
 | Plants are **by-catch** | Recorded to say what a bee was on, never as a plant survey. No plant checklist, and availability can only be inferred from use. |
 | Specimen ID backlog | Some specimens sit at genus or tribe until a specialist sees them. |
@@ -36,6 +38,9 @@ field cannot be fixed by code later, which is the main thing this page is for.
 | **Some checklist bees have no iNat taxon** | Real bees carrying no id. A join must fall back to the name or they vanish — the rule is in `CLAUDE.md`. |
 | Many on-transect records are un-attributed | No `surveyor_type`, so they cannot be joined to a person. |
 | On-transect means **within 50 m** | Loose on purpose: casual coordinates drift, and a tighter buffer would drop real survey records. |
+| A surveyor's transect is decided by **majority tag** | For each beeple surveyor-day the transect is the tag most of that day's records carry. The few tagged otherwise are relabeled to the majority and listed in the mistags review; a tie goes to review. Only the per-transect effort figures see this label. |
+| The 50 m rescue runs **one way** | An untagged record is pulled in as a survey only when its observer has a resolved transect that day and the pin sits within 50 m of *that* transect (`survey_source = inferred_on_transect`). A tagged record is never pushed out for sitting outside the buffer, because the tag outranks the pin. A stray tagged record off the walk therefore stays in. |
+| `Specimen? = yes` records are dropped at the clean step | The last step of `inat_bee_clean.R`. Dropped rows go to `qc_review_inat_specimen_photos_generated.csv`; the `specimen` column stays in the table (blank reads as `no`) so a field edited on iNaturalist takes effect on the next run. The field-name spellings come from the crosswalk's `specimen?` row. |
 | Spatial tiers use **iNat place boundaries** | User-contributed, so the edges move. |
 | The specimen spell-check is a **heuristic** | It flags for review; it is not an authority. |
 

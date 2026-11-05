@@ -44,6 +44,32 @@ THE SURVEYS
   surveys/finding_beeple_calendar.R            parses the volunteer calendar PDFs
   surveys/finding_survey_dates.R               when each survey happened
   surveys/resolve_beeple_transects_per_survey.R  which transect each survey covered
+  surveys/rescue_on_transect_surveys.R           untagged records within 50 m of that day's transect
 
 review/ writes the QC files: date windows that do not line up, transects that
 overlap, iNat tags that matched no survey. Questions for a person, not errors.
+
+
+THE RULES
+=========
+
+Three rules decide whether a beeple photo is a survey record, in this order.
+
+  1. The tag is the evidence. A survey tag means survey, an exclude tag wins
+     over everything, an untagged record inside the park is held as flag.
+     Pins drift and camera clocks are wrong often enough that neither the
+     location nor the time can be trusted to say a photo was taken on the walk.
+
+  2. One transect per surveyor per day, by majority. The transect is the tag
+     most of that day's records carry. The rest are relabeled to it and listed
+     in the mistags review; a tie goes to review. Only the per-transect effort
+     figures use this label. Interns are not touched.
+
+  3. The 50 m rescue runs one way. A flag record becomes a survey when its
+     observer has a resolved transect that day and the pin is within 50 m of
+     that transect. A tagged record is never pushed out for sitting outside
+     the buffer, because rule 1 says the tag outranks the pin.
+
+The cost of rule 3 is that a tagged photo taken off the walk stays in. The
+fix is in the field, not in code: tag only the photos taken during the walk.
+dev-docs/LIMITATIONS.md lists the consequences.
